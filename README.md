@@ -1,6 +1,6 @@
 ![MediPaw Logo](frontend/shared/assets/logo/medipaw-symbol.png)
 
-> # **"반려동물의 골든타임, AI가 먼저 읽어냅니다"**
+> # **"반려동물의 골든타임, AI가 먼저 읽어냅니다."**
 >
 > 소형 동물병원의 진료 공백과 업무 과부하를 줄이는  
 > **AI 기반 응급도 분류 및 동물병원 업무 자동화 플랫폼**
