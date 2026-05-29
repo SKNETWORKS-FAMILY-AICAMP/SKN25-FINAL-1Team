@@ -53,7 +53,7 @@ export function DetailPanel({
             >
               {reservationStatusMeta[reservation.status].label}
             </span>
-            <span className="text-xl font-extrabold text-[#0f62fe]">
+            <span className="text-xl font-extrabold text-[#2563eb]">
               {patient.gender === "남자" ? "♂" : patient.gender === "여자" ? "♀" : "-"}
             </span>
           </div>
@@ -79,7 +79,7 @@ export function DetailPanel({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#0f62fe] text-sm font-extrabold text-[#0f62fe]"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#2563eb] text-sm font-extrabold text-[#2563eb]"
         >
           <Pencil className="h-4 w-4" />
           수정

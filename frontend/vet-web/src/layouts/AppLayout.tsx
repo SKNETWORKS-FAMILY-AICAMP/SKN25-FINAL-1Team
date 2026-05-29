@@ -257,8 +257,8 @@ export default function AppLayout({
                   className={[
                     "flex h-11 w-full items-center gap-3 rounded-lg px-4 text-left text-sm font-extrabold transition",
                     isActive
-                      ? "bg-[#edf5ff] text-[#2f7df6]"
-                      : "text-[#20283a] hover:bg-[#f7f9fc] hover:text-[#2f7df6]",
+                      ? "bg-[#edf5ff] text-[#2563eb]"
+                      : "text-[#20283a] hover:bg-[#f7f9fc] hover:text-[#2563eb]",
                   ].join(" ")}
                 >
                   <Icon className="h-5 w-5 shrink-0" strokeWidth={2.2} />
@@ -298,7 +298,7 @@ export default function AppLayout({
             <button
               type="button"
               onClick={onLogout}
-              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2f7df6]"
+              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
             >
               로그아웃
             </button>
@@ -334,7 +334,7 @@ function NotificationPanel({
             type="button"
             onClick={onMarkAllRead}
             disabled={isMarkingRead}
-            className="flex items-center gap-1 text-xs font-bold text-[#2f7df6] transition hover:text-[#1a6de8] disabled:opacity-50"
+            className="flex items-center gap-1 text-xs font-bold text-[#2563eb] transition hover:text-[#1a6de8] disabled:opacity-50"
           >
             <CheckCheck className="h-3.5 w-3.5" />
             모두 읽음
@@ -390,7 +390,7 @@ function AlarmRow({ alarm }: { alarm: AlarmItem }) {
       </div>
 
       {!alarm.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2f7df6]" />
+        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2563eb]" />
       )}
     </li>
   );

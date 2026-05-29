@@ -60,7 +60,7 @@ const GuardianNavbar = ({
 
         <details className="relative">
           <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full px-2 py-1 transition hover:bg-slate-50">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-sm font-black text-blue-600">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-sm font-extrabold text-blue-600">
               {displayName.slice(0, 1)}
             </span>
             <span className="hidden max-w-24 truncate text-sm font-bold text-slate-700 sm:block">

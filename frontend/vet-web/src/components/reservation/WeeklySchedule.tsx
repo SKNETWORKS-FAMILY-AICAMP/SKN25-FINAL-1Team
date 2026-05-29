@@ -51,7 +51,7 @@ export function WeeklySchedule({
                   {String(day.getDate()).padStart(2, "0")} ({weekDayLabels[index]})
                 </span>
                 {isToday && (
-                  <span className="rounded-full bg-[#0f62fe] px-2 py-0.5 text-xs text-white">
+                  <span className="rounded-full bg-[#2563eb] px-2 py-0.5 text-xs text-white">
                     오늘
                   </span>
                 )}

@@ -173,7 +173,7 @@ export function ReservationFormModal({
             <label className="mb-1.5 block text-xs font-extrabold text-[#1d2a57]">
               환자 검색
             </label>
-            <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#0f62fe]">
+            <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2563eb]">
               <input
                 value={searchText}
                 onFocus={() => setIsSearchFocused(true)}
@@ -285,7 +285,7 @@ export function ReservationFormModal({
                   onChange={(event) =>
                     setForm((current) => ({ ...current, memo: event.target.value }))
                   }
-                  className="h-20 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#0f62fe]"
+                  className="h-20 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2563eb]"
                 />
                 <span className="absolute bottom-3 right-3 text-xs font-extrabold text-[#8a94a6]">
                   {form.memo.length} / 200
@@ -311,7 +311,7 @@ export function ReservationFormModal({
                 onSave(selectedPatient, form);
               }
             }}
-            className="h-10 rounded-lg bg-[#0f62fe] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#b8c0cf]"
+            className="h-10 rounded-lg bg-[#2563eb] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#b8c0cf]"
           >
             예약 저장
           </button>
@@ -382,7 +382,7 @@ function DatePickerField({
           ref={calendarButtonRef}
           type="button"
           onClick={toggleCalendar}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[#53617c] hover:bg-[#edf5ff] hover:text-[#0f62fe]"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[#53617c] hover:bg-[#edf5ff] hover:text-[#2563eb]"
           aria-label="예약 날짜 선택"
         >
           <CalendarDays className="h-4 w-4" />
@@ -448,15 +448,15 @@ function DatePickerField({
                     isPast
                       ? "cursor-not-allowed text-[#d1d5db] line-through"
                       : isSelected
-                        ? "bg-[#0f62fe] text-white"
+                        ? "bg-[#2563eb] text-white"
                         : isToday
-                          ? "border border-[#0f62fe] text-[#0f62fe]"
+                          ? "border border-[#2563eb] text-[#2563eb]"
                           : !isCurrentMonth
                             ? "text-[#c0c7d4]"
                             : isHoliday || isSunday
                               ? "text-[#ef4444] hover:bg-[#fff1f2]"
                               : isSaturday
-                                ? "text-[#0f62fe] hover:bg-[#edf5ff]"
+                                ? "text-[#2563eb] hover:bg-[#edf5ff]"
                                 : "text-[#20283a] hover:bg-[#f3f6fb]",
                   ].join(" ")}
                 >
@@ -489,7 +489,7 @@ function SelectField({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-8 w-full appearance-none rounded-lg border border-[#dfe6f1] bg-white px-3 pr-8 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#0f62fe]"
+          className="h-8 w-full appearance-none rounded-lg border border-[#dfe6f1] bg-white px-3 pr-8 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2563eb]"
         >
           <option value="">선택</option>
           {options.map((option) => (

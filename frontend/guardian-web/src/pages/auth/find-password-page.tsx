@@ -226,7 +226,7 @@ const FindPasswordPage = () => {
             {temporaryPassword && (
               <div className="rounded-2xl bg-blue-50 px-4 py-5 text-center">
                 <p className="text-xs font-bold text-blue-600">{successMessage}</p>
-                <p className="mt-2 text-xl font-black text-blue-700">
+                <p className="mt-2 text-xl font-extrabold text-blue-700">
                   {temporaryPassword}
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">

@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse } from "lucide-react";
 
 import { loginGuardian } from "../../api/auth-api";
 import { useAuthStore } from "../../stores/auth-store";
@@ -18,22 +19,22 @@ interface LoginErrorResponse {
 
 const serviceItems = [
   {
-    icon: "AI",
+    icon: MessageCircleMore,
     title: "AI 챗봇 상담",
     description: "반려동물 상태를 입력하면 필요한 상담 흐름을 안내합니다.",
   },
   {
-    icon: "R",
+    icon: CalendarDays,
     title: "병원 예약 및 관리",
     description: "상담 이후 필요한 병원 예약과 예약 내역을 관리할 수 있습니다.",
   },
   {
-    icon: "C",
+    icon: ClipboardCheck,
     title: "상담 후 예약 진행",
     description: "챗봇 상담 결과를 바탕으로 빠르게 예약 절차를 이어갑니다.",
   },
   {
-    icon: "H",
+    icon: HeartPulse,
     title: "상태 기록 및 경과 관리",
     description: "반려동물의 상태 변화와 상담 기록을 한곳에서 확인합니다.",
   },
@@ -170,8 +171,8 @@ const LoginPage = () => {
                 key={item.title}
                 className="flex gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm shadow-blue-100/60"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xs font-bold text-white">
-                  {item.icon}
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                  <item.icon className="h-5 w-5" />
                 </span>
                 <div>
                   <h2 className="text-sm font-bold text-slate-900">{item.title}</h2>

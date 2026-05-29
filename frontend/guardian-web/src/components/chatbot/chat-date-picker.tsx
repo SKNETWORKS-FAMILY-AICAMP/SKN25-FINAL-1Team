@@ -71,21 +71,21 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
           <button
             type="button"
             onClick={prevMonth}
-            className="rounded-lg px-2 py-1 text-xs font-black text-slate-500 hover:bg-white"
+            className="rounded-lg px-2 py-1 text-xs font-extrabold text-slate-500 hover:bg-white"
           >
             ◀
           </button>
           <button
             type="button"
             onClick={nextMonth}
-            className="rounded-lg px-2 py-1 text-xs font-black text-slate-500 hover:bg-white"
+            className="rounded-lg px-2 py-1 text-xs font-extrabold text-slate-500 hover:bg-white"
           >
             ▶
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="ml-2 rounded-lg px-2 py-1 text-xs font-black text-slate-400 hover:bg-white hover:text-rose-500"
+            className="ml-2 rounded-lg px-2 py-1 text-xs font-extrabold text-slate-400 hover:bg-white hover:text-rose-500"
           >
             닫기
           </button>
@@ -154,7 +154,7 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
                     onClick={() =>
                       onSelectSlot(toDateStr(selectedDate), time, s.doctorid ?? 1, label)
                     }
-                    className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-blue-700"
+                    className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-blue-700"
                   >
                     {time}
                   </button>

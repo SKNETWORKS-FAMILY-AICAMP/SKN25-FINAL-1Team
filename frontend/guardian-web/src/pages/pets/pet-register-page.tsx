@@ -253,7 +253,7 @@ const PetRegisterPage = () => {
           </div>
           <div>
             <h1
-              className={`font-black text-slate-950 ${
+              className={`font-extrabold text-slate-950 ${
                 isEditMode ? "text-xl" : "text-2xl"
               }`}
             >
@@ -275,7 +275,7 @@ const PetRegisterPage = () => {
           </section>
         ) : loadMessage ? (
           <section className="mt-6 rounded-2xl border border-red-100 bg-white px-6 py-10 text-center shadow-sm">
-            <h2 className="text-lg font-black text-slate-900">
+            <h2 className="text-lg font-extrabold text-slate-900">
               반려동물 정보를 불러오지 못했습니다
             </h2>
             <p className="mt-3 text-sm font-semibold text-red-500">
@@ -284,7 +284,7 @@ const PetRegisterPage = () => {
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="mt-6 h-11 rounded-xl bg-violet-600 px-6 text-sm font-black text-white transition hover:bg-violet-700"
+              className="mt-6 h-11 rounded-xl bg-violet-600 px-6 text-sm font-extrabold text-white transition hover:bg-violet-700"
             >
               홈으로 돌아가기
             </button>
@@ -303,7 +303,7 @@ const PetRegisterPage = () => {
             <section className="relative overflow-hidden rounded-2xl bg-violet-50 p-6 ring-1 ring-violet-100">
               <div className="flex items-center gap-2 text-violet-700">
                 <PawIcon className="h-5 w-5" />
-                <h2 className="text-lg font-black">안내사항</h2>
+                <h2 className="text-lg font-extrabold">안내사항</h2>
               </div>
               <ul className="mt-6 space-y-4 pr-6 text-sm font-semibold leading-6 text-slate-700">
                 {isEditMode ? (
@@ -349,14 +349,14 @@ const PetRegisterPage = () => {
               <button
                 type="button"
                 onClick={closeModal}
-                className="h-11 min-w-32 rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                className="h-11 min-w-32 rounded-xl border border-slate-200 bg-white px-6 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50"
               >
                 취소
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-sm font-black text-white shadow-sm transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:from-violet-300 disabled:to-indigo-300"
+                className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-sm font-extrabold text-white shadow-sm transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:from-violet-300 disabled:to-indigo-300"
               >
                 <PawIcon className="h-4 w-4" />
                 {isSubmitting

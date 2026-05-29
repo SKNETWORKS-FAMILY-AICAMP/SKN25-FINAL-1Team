@@ -58,7 +58,7 @@ export function DailyTimeline({
                   className={[
                     "flex h-[50px] w-full items-center gap-3 rounded-lg border bg-white px-3 text-left transition",
                     selectedReservationId === reservation.id
-                      ? "border-[#0f62fe] shadow-[0_0_0_2px_rgba(15,98,254,0.08)]"
+                      ? "border-[#2563eb] shadow-[0_0_0_2px_rgba(15,98,254,0.08)]"
                       : "border-[#edf1f6] hover:border-[#b8cdfc]",
                   ].join(" ")}
                 >

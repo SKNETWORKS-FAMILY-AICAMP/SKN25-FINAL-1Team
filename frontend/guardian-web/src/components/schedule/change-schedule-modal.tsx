@@ -154,7 +154,7 @@ const ChangeScheduleModal = ({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4">
       <section className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-          <h2 className="text-lg font-black text-slate-950">예약 변경</h2>
+          <h2 className="text-lg font-extrabold text-slate-950">예약 변경</h2>
           <button
             type="button"
             onClick={onClose}
@@ -173,7 +173,7 @@ const ChangeScheduleModal = ({
               className="h-14 w-14 rounded-full object-cover"
             />
             <div>
-              <p className="text-base font-black text-slate-950">
+              <p className="text-base font-extrabold text-slate-950">
                 {schedule.pet_name}
               </p>
               <p className="mt-1 text-sm font-bold text-slate-500">
@@ -209,7 +209,7 @@ const ChangeScheduleModal = ({
                 >
                   &lt;
                 </button>
-                <h3 className="text-sm font-black text-slate-900">
+                <h3 className="text-sm font-extrabold text-slate-900">
                   {calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월
                 </h3>
                 <button
@@ -221,7 +221,7 @@ const ChangeScheduleModal = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-black text-slate-400">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-extrabold text-slate-400">
                 {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
                   <div key={day} className="py-2">
                     {day}
@@ -253,7 +253,7 @@ const ChangeScheduleModal = ({
             </section>
 
             <section className="rounded-xl border border-slate-100 p-4">
-              <h3 className="text-sm font-black text-slate-900">
+              <h3 className="text-sm font-extrabold text-slate-900">
                 시간 및 진료 시간 선택
               </h3>
               <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -279,7 +279,7 @@ const ChangeScheduleModal = ({
                         type="button"
                         onClick={() => setSelectedSlot(slot)}
                         className={[
-                          "h-10 rounded-lg border text-sm font-black transition",
+                          "h-10 rounded-lg border text-sm font-extrabold transition",
                           isSelected
                             ? "border-blue-600 bg-blue-600 text-white"
                             : "border-blue-100 text-blue-600 hover:bg-blue-50",
@@ -311,7 +311,7 @@ const ChangeScheduleModal = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="h-11 rounded-xl border border-slate-200 px-6 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-11 rounded-xl border border-slate-200 px-6 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             취소
           </button>
@@ -319,7 +319,7 @@ const ChangeScheduleModal = ({
             type="button"
             onClick={handleSubmit}
             disabled={!selectedSlot || isSubmitting}
-            className="h-11 rounded-xl bg-blue-600 px-6 text-sm font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            className="h-11 rounded-xl bg-blue-600 px-6 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
           >
             {isSubmitting ? "변경 중" : "변경하기"}
           </button>

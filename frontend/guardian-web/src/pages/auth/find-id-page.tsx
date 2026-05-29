@@ -199,7 +199,7 @@ const FindIdPage = () => {
             {foundLoginId && (
               <div className="rounded-2xl bg-blue-50 px-4 py-5 text-center">
                 <p className="text-xs font-bold text-blue-600">확인된 로그인 ID</p>
-                <p className="mt-2 text-xl font-black text-blue-700">
+                <p className="mt-2 text-xl font-extrabold text-blue-700">
                   {foundLoginId}
                 </p>
               </div>

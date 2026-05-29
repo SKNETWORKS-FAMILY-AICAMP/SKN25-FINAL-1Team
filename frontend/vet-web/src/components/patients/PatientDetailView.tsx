@@ -102,7 +102,7 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#344055] transition hover:border-[#8bbcff] hover:text-[#0f62fe]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#344055] transition hover:border-[#8bbcff] hover:text-[#2563eb]"
         >
           <ArrowLeft className="h-4 w-4" />
           환자 관리로 돌아가기
@@ -110,7 +110,7 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={openEdit}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2f7df6] transition hover:bg-[#edf5ff]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff]"
         >
           <Settings className="h-4 w-4" />
           수정
@@ -444,7 +444,7 @@ function EditPatientModal({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="h-10 rounded-lg bg-[#2f7df6] px-5 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-wait disabled:opacity-60"
+            className="h-10 rounded-lg bg-[#2563eb] px-5 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-wait disabled:opacity-60"
           >
             {isSaving ? "저장 중..." : "저장"}
           </button>

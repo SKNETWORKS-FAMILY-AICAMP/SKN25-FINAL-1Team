@@ -52,7 +52,7 @@ const ChatMessageList = ({
               type="button"
               onClick={() => onSendMessage(reply)}
               disabled={isStreaming}
-              className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-black text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
+              className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
             >
               {reply}
             </button>

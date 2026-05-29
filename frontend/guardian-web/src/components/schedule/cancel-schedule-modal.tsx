@@ -77,7 +77,7 @@ const CancelScheduleModal = ({
           <WarningIcon />
         </div>
 
-        <h2 className="mt-6 text-xl font-black text-slate-950">
+        <h2 className="mt-6 text-xl font-extrabold text-slate-950">
           예약을 정말 취소하시겠습니까?
         </h2>
 
@@ -96,7 +96,7 @@ const CancelScheduleModal = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="h-11 rounded-xl border border-slate-200 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-11 rounded-xl border border-slate-200 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             아니요
           </button>
@@ -105,7 +105,7 @@ const CancelScheduleModal = ({
             type="button"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="h-11 rounded-xl bg-rose-500 text-sm font-black text-white shadow-lg shadow-rose-100 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            className="h-11 rounded-xl bg-rose-500 text-sm font-extrabold text-white shadow-lg shadow-rose-100 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
           >
             {isSubmitting ? "취소 중" : "네, 취소할게요"}
           </button>

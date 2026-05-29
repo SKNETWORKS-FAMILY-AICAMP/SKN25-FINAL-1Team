@@ -1,6 +1,7 @@
 import type { DashboardScheduleItem } from "../../api/dashboardApi";
 import { Button } from "../common/Button";
 import { Panel } from "../common/Panel";
+import { TriageBadge } from "../common/TriageBadge";
 import {
   CalendarMiniIcon,
   ChevronLeftIcon,
@@ -132,8 +133,6 @@ export function DashboardSchedulePanel({
 }
 
 function ScheduleRow({ item }: { item: DashboardScheduleItem }) {
-  const type = visitTypeStyle[item.type];
-
   return (
     <article className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-[#e8edf4] bg-white px-4 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
       <div className="grid min-w-0 flex-1 grid-cols-[96px_minmax(150px,220px)_1fr] items-center gap-4">
@@ -149,11 +148,7 @@ function ScheduleRow({ item }: { item: DashboardScheduleItem }) {
           {item.breed} · {item.age} · {item.weight} · {item.reason}
         </p>
       </div>
-      <span
-        className={`shrink-0 rounded-md border px-2.5 py-1 text-xs font-extrabold ${type.badge}`}
-      >
-        {type.label}
-      </span>
+      <TriageBadge level={item.type} />
     </article>
   );
 }

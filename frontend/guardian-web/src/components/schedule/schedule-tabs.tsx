@@ -18,7 +18,7 @@ const ScheduleTabs = ({
           type="button"
           onClick={() => onSelectFilter(tab.filter)}
           className={[
-            "h-14 border-b-2 px-1 text-sm font-black transition",
+            "h-14 border-b-2 px-1 text-sm font-extrabold transition",
             selectedFilter === tab.filter
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-slate-500 hover:text-blue-600",

@@ -42,7 +42,7 @@ export function PatientInfoPanel({
             </div>
             <a
               href="#patient-profile"
-              className="mt-3 inline-block text-sm font-extrabold text-[#2f7df6]"
+              className="mt-3 inline-block text-sm font-extrabold text-[#2563eb]"
             >
               상세 프로필 보기
             </a>
@@ -53,7 +53,7 @@ export function PatientInfoPanel({
           onClick={onEdit}
           aria-label="환자 정보 편집"
           disabled={isReadOnly}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#edf5ff] hover:text-[#2f7df6] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#edf5ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
         >
           <Edit3 className="h-5 w-5" />
         </button>
@@ -117,7 +117,7 @@ export function HistoryPanel({ histories }: { histories: EmrResult["emr_history"
             </p>
             <div className="rounded-lg bg-[#f8fafc] p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-extrabold text-[#2f7df6]">처방전</p>
+                <p className="text-sm font-extrabold text-[#2563eb]">처방전</p>
                 {history.prescriptions.length > 2 && (
                   <button
                     type="button"

@@ -45,7 +45,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f8ff] px-6 py-6 text-slate-900">
+    <main className="min-h-screen bg-[#f6f8fb] px-6 py-6 text-slate-900">
       <section className="mx-auto flex min-h-[calc(100vh-48px)] max-w-[1400px] items-center justify-center rounded-3xl border border-slate-200 bg-white px-12 py-10 shadow-sm">
         <div className="grid w-full grid-cols-1 gap-14 lg:grid-cols-2">
           <section className="flex flex-col justify-center">

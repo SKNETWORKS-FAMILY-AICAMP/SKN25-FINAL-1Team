@@ -20,7 +20,7 @@ const PetSelector = ({
   return (
     <aside className="flex min-h-0 flex-col border-b border-slate-100 bg-slate-50/70 lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-3">
-        <h2 className="text-center text-sm font-black text-slate-900">
+        <h2 className="text-center text-sm font-extrabold text-slate-900">
           반려동물
         </h2>
       </div>
@@ -37,7 +37,7 @@ const PetSelector = ({
             </p>
             <Link
               to="/pets/register"
-              className="mt-3 inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-3 text-xs font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
+              className="mt-3 inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-3 text-xs font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
             >
               등록
             </Link>
@@ -64,7 +64,7 @@ const PetSelector = ({
                     alt={`${pet.petname} 프로필`}
                     className="h-11 w-11 rounded-full object-cover ring-2 ring-white"
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-900">
+                  <span className="min-w-0 flex-1 truncate text-sm font-extrabold text-slate-900">
                     {pet.petname}
                   </span>
                 </button>

@@ -55,7 +55,7 @@ export function PatientListView({
         <div className="flex h-[64px] shrink-0 items-center justify-between border-b border-[#e5eaf2] px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-[#151b28]">전체 환자</h2>
-            <span className="rounded-full bg-[#edf5ff] px-2.5 py-1 text-sm font-extrabold text-[#2f7df6]">
+            <span className="rounded-full bg-[#edf5ff] px-2.5 py-1 text-sm font-extrabold text-[#2563eb]">
               {totalCount}
             </span>
           </div>
@@ -122,7 +122,7 @@ export function PatientListView({
                             onOpenDetail(patient);
                           }}
                           disabled={isLoading}
-                          className="h-9 whitespace-nowrap rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2f7df6] transition hover:bg-[#edf5ff] disabled:cursor-wait disabled:opacity-60"
+                          className="h-9 whitespace-nowrap rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] disabled:cursor-wait disabled:opacity-60"
                         >
                           상세보기
                         </button>
@@ -186,7 +186,7 @@ function Pagination({
             className={[
               "h-9 w-9 rounded-lg text-sm font-extrabold",
               page === currentPage
-                ? "bg-[#edf5ff] text-[#0f62fe]"
+                ? "bg-[#edf5ff] text-[#2563eb]"
                 : "text-[#53617c] hover:bg-[#f3f6fb]",
             ].join(" ")}
           >

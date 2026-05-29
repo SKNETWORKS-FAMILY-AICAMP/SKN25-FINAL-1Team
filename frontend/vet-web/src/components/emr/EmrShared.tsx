@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { TriageStatus } from "../../types/emr";
-import { statusStyle } from "../../utils/emrUtils";
+import { TriageBadge } from "../common/TriageBadge";
 
 export function Panel({
   children,
@@ -19,13 +19,5 @@ export function Panel({
 }
 
 export function StatusBadge({ status }: { status: TriageStatus }) {
-  const statusInfo = statusStyle[status];
-
-  return (
-    <span
-      className={`inline-flex h-5 items-center rounded-md border px-2 text-[11px] font-extrabold ${statusInfo.className}`}
-    >
-      {statusInfo.label}
-    </span>
-  );
+  return <TriageBadge level={status} />;
 }

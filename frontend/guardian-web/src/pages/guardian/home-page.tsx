@@ -186,7 +186,7 @@ const HomePage = () => {
       ) : errorMessage ? (
         <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
           <div className="w-full max-w-md rounded-3xl bg-white px-6 py-10 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50">
-            <h1 className="text-xl font-black text-slate-900">
+            <h1 className="text-xl font-extrabold text-slate-900">
               홈 화면을 불러오지 못했습니다
             </h1>
             <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
@@ -195,7 +195,7 @@ const HomePage = () => {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
             >
               다시 시도
             </button>
@@ -205,7 +205,7 @@ const HomePage = () => {
         <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
           <div className="w-full max-w-xl rounded-3xl bg-white px-6 py-12 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50 sm:px-10">
             <PetIllustration />
-            <h1 className="mt-6 text-2xl font-black text-slate-900">
+            <h1 className="mt-6 text-2xl font-extrabold text-slate-900">
               등록된 반려동물이 없어요
             </h1>
             <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-6 text-slate-500">
@@ -216,7 +216,7 @@ const HomePage = () => {
 
             <Link
               to={petRegisterPath}
-              className="mt-7 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              className="mt-7 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
             >
               + 반려동물 등록하기
             </Link>
@@ -230,7 +230,7 @@ const HomePage = () => {
             rightAction={
               <Link
                 to={petRegisterPath}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
               >
                 + 반려동물 등록
               </Link>
@@ -257,7 +257,7 @@ const HomePage = () => {
                   </div>
 
                   <div className="mt-3 min-w-0 flex-1 text-center sm:mt-0 sm:text-left">
-                    <h2 className="text-base font-black text-slate-950">
+                    <h2 className="text-base font-extrabold text-slate-950">
                       {pet.petname}
                     </h2>
                     <p className="mt-1 text-sm font-semibold text-slate-500">
@@ -268,23 +268,23 @@ const HomePage = () => {
                       <div className="grid gap-2 sm:max-w-[620px] sm:grid-cols-3">
                         <Link
                           to={`/pets/${pet.pet_id}`}
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
                           상세 보기
-                        </Link>
-                        <Link
-                          to={`/chatbot?petId=${pet.pet_id}`}
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 px-3 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
-                        >
-                          챗봇 예약
                         </Link>
                         <button
                           type="button"
                           onClick={() => setReservationPet(pet)}
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-emerald-200 px-3 text-sm font-bold text-emerald-600 transition hover:bg-emerald-50"
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
-                          바로 예약
+                          예약하기
                         </button>
+                        <Link
+                          to={`/chatbot?petId=${pet.pet_id}`}
+                          className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-bold text-white transition hover:bg-blue-700"
+                        >
+                          챗봇 상담
+                        </Link>
                       </div>
                     </div>
                   </div>

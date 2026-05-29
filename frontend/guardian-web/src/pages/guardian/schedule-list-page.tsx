@@ -175,7 +175,7 @@ const ScheduleListPage = () => {
                   <CalendarIcon />
                 </div>
 
-                <h2 className="mt-5 text-xl font-black text-slate-950">
+                <h2 className="mt-5 text-xl font-extrabold text-slate-950">
                   {selectedFilter === "upcoming" && "예정된 진료가 없습니다."}
                   {selectedFilter === "past" && "지난 진료가 없습니다."}
                   {selectedFilter === "cancelled" && "취소된 진료가 없습니다."}

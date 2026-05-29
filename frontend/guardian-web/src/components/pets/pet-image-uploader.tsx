@@ -37,7 +37,7 @@ const PetImageUploader = ({
 }: PetImageUploaderProps) => {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-black text-slate-900">대표 사진</h2>
+      <h2 className="text-lg font-extrabold text-slate-900">대표 사진</h2>
       <button
         type="button"
         onClick={() => {
@@ -68,7 +68,7 @@ const PetImageUploader = ({
             <span className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-100 text-violet-600">
               <CameraIcon />
             </span>
-            <span className="mt-6 text-base font-black text-slate-800">
+            <span className="mt-6 text-base font-extrabold text-slate-800">
               사진을 업로드해주세요
             </span>
             <span className="mt-2 text-sm font-semibold text-slate-500">

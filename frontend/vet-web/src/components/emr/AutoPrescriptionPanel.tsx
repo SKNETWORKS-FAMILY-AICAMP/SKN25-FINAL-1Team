@@ -26,7 +26,7 @@ export function AutoPrescriptionPanel({
             type="button"
             onClick={onOpenPreview}
             disabled={isReadOnly}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2f7df6] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
             aria-label="처방전 미리보기"
           >
             <Maximize2 className="h-4 w-4" />

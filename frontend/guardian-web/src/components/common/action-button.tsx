@@ -52,7 +52,7 @@ const ActionButton = ({
       disabled={disabled}
       onClick={onClick}
       className={[
-        "inline-flex items-center justify-center rounded-xl font-black transition focus:outline-none focus:ring-4 focus:ring-blue-100",
+        "inline-flex items-center justify-center rounded-xl font-extrabold transition focus:outline-none focus:ring-4 focus:ring-blue-100",
         variantClassName[variant],
         sizeClassName[size],
         className,

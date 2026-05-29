@@ -48,7 +48,7 @@ export function EditorPanel({
             key={Icon.displayName}
             type="button"
             disabled={isReadOnly}
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#edf5ff] hover:text-[#2f7df6] disabled:cursor-not-allowed disabled:text-[#a8b0bf]"
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#edf5ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:text-[#a8b0bf]"
           >
             <Icon className="h-4 w-4" />
           </button>
@@ -120,7 +120,7 @@ export function PhotoUploadPanel({
             type="button"
             onClick={onAddFile}
             disabled={isReadOnly}
-            className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2f7df6] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             <Plus className="h-6 w-6" />
             추가
@@ -130,7 +130,7 @@ export function PhotoUploadPanel({
           type="button"
           onClick={onAddFile}
           disabled={isReadOnly}
-          className="flex h-16 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2f7df6] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+          className="flex h-16 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
         >
           <FileUp className="h-5 w-5" />
           파일을 드래그하거나 클릭하여 업로드
@@ -233,7 +233,7 @@ export function PrescriptionInputPanel({
             type="button"
             onClick={onGenerate}
             disabled={isReadOnly}
-            className="h-10 rounded-lg bg-[#4a89ff] px-5 text-sm font-extrabold text-white transition hover:bg-[#2f7df6] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+            className="h-10 rounded-lg bg-[#4a89ff] px-5 text-sm font-extrabold text-white transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
           >
             처방전 자동 생성
           </button>

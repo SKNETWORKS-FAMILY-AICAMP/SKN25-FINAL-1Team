@@ -360,7 +360,7 @@ const ChatbotPage = () => {
                         window.location.href = "tel:02-0000-0001";
                       }
                     }}
-                    className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-black transition"
+                    className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold transition"
                   >
                     {actionLabel}
                   </button>
@@ -401,7 +401,7 @@ const ChatbotPage = () => {
                 <>
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-black text-slate-950">
+                      <h2 className="truncate text-base font-extrabold text-slate-950">
                         {todayChatTitle} 새 상담
                       </h2>
                       {chatPhase === "FOLLOWUP_ACTIVE" ? (
@@ -417,7 +417,7 @@ const ChatbotPage = () => {
                     {/* 상태 배지 */}
                     {chatPhase !== "IDLE" && chatPhase !== "SYMPTOM_COLLECTING" && (
                       <span className={[
-                        "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase",
+                        "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase",
                         chatPhase === "BOOKING_CONFIRMED" ? "bg-green-100 text-green-700" :
                         chatPhase === "FOLLOWUP_ACTIVE" ? "bg-blue-100 text-blue-700" :
                         "bg-amber-100 text-amber-700",
@@ -462,7 +462,7 @@ const ChatbotPage = () => {
                       <button
                         type="button"
                         onClick={() => pipeline.setShowDatePicker((v) => !v)}
-                        className="shrink-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-black text-blue-600 transition hover:bg-blue-50"
+                        className="shrink-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50"
                       >
                         직접 날짜 선택하기 📅
                       </button>
@@ -485,7 +485,7 @@ const ChatbotPage = () => {
                 <>
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-black text-slate-950">
+                      <h2 className="truncate text-base font-extrabold text-slate-950">
                         {getHistoryTitle(selectedHistory)}
                       </h2>
                       <p className="text-xs font-bold text-slate-500">
@@ -521,14 +521,14 @@ const ChatbotPage = () => {
               ) : (
                 <>
                   <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-5 sm:px-7">
-                    <h2 className="truncate text-base font-black text-slate-950">
+                    <h2 className="truncate text-base font-extrabold text-slate-950">
                       챗봇 상담
                     </h2>
                   </div>
                   <div className="flex flex-1 items-center justify-center px-6 py-16 text-center">
                     <div>
                       <ChatbotIcon />
-                      <h2 className="mt-7 text-xl font-black text-slate-950">
+                      <h2 className="mt-7 text-xl font-extrabold text-slate-950">
                         상담을 선택해주세요
                       </h2>
                       <p className="mt-3 text-sm font-semibold leading-7 text-slate-500">

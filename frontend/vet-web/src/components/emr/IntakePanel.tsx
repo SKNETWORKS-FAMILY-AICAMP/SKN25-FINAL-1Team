@@ -36,7 +36,7 @@ export function IntakePanel({
           type="button"
           onClick={() => onApplyIntake("all")}
           disabled={isReadOnly}
-          className="h-8 w-full rounded-lg bg-[#edf5ff] text-xs font-extrabold text-[#2f7df6] transition hover:bg-[#dcecff] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
+          className="h-8 w-full rounded-lg bg-[#edf5ff] text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
         >
           사전문진 + 메모 전체 옮기기
         </button>
@@ -50,7 +50,7 @@ export function IntakePanel({
               type="button"
               onClick={() => onApplyIntake("summary")}
               disabled={summary.length === 0 || isReadOnly}
-              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2f7df6] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
+              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>
@@ -78,7 +78,7 @@ export function IntakePanel({
               type="button"
               onClick={() => onApplyIntake("memo")}
               disabled={!memo || isReadOnly}
-              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2f7df6] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
+              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>

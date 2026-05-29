@@ -95,7 +95,7 @@ export default function FirstPasswordChangePage({
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f8ff] px-5 py-4 text-slate-900">
+    <main className="min-h-screen bg-[#f6f8fb] px-5 py-4 text-slate-900">
       <div className="mx-auto mb-2 flex max-w-[1400px] justify-end">
         <button
           type="button"

@@ -247,7 +247,7 @@ const ChangePasswordPage = () => {
               </ActionButton>
               <Link
                 to="/mypage"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50"
               >
                 마이페이지
               </Link>

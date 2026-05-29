@@ -7,7 +7,7 @@
 
 생성 계정:
   보호자(guardian): guardian_test / Test1234!
-  수의사(vet):      vet_test / Test1234!
+  수의사(vet):      admin / Test1234!
 """
 import asyncio
 import os
@@ -79,27 +79,36 @@ async def main():
             await db.commit()
             print("✅ 반려동물 생성: 뽀미 (말티즈 / 3.2kg)")
 
-        # ── 수의사 계정 ──────────────────────────────
-        vet_row = (await db.execute(
+        # ── vet_test 계정 삭제 ───────────────────────
+        vet_test_row = (await db.execute(
             text('SELECT doctorid FROM "doctorDB" WHERE loginid = :id'), {"id": "vet_test"}
         )).fetchone()
+        if vet_test_row:
+            await db.execute(text('DELETE FROM "doctorDB" WHERE loginid = :id'), {"id": "vet_test"})
+            await db.commit()
+            print("🗑️  vet_test 계정 삭제 완료")
 
-        if vet_row:
+        # ── admin 수의사 계정 ─────────────────────────
+        admin_row = (await db.execute(
+            text('SELECT doctorid FROM "doctorDB" WHERE loginid = :id'), {"id": "admin"}
+        )).fetchone()
+
+        if admin_row:
             await db.execute(text("""
                 UPDATE "doctorDB"
                 SET password = :pw, doctor_name = :dname, hospital_name = :hname,
                     hospital_address = :haddr, hospital_number = :hnum, updated_at = now()
                 WHERE loginid = :loginid
             """), {
-                "loginid": "vet_test",
+                "loginid": "admin",
                 "pw": hash_password("Test1234!"),
-                "dname": "테스트수의사",
+                "dname": "관리자",
                 "hname": "MediPaw 동물병원",
                 "haddr": "서울시 강남구 테스트로 1",
                 "hnum": "02-0000-0001",
             })
             await db.commit()
-            print("✅ 수의사 계정 비밀번호 갱신 완료: vet_test")
+            print("✅ admin 계정 비밀번호 갱신 완료: admin")
         else:
             await db.execute(text("""
                 INSERT INTO "doctorDB"
@@ -108,21 +117,21 @@ async def main():
                 VALUES
                   (:loginid, :pw, false, :dname, :hname, :haddr, :hnum, :bnum, now(), now())
             """), {
-                "loginid": "vet_test",
+                "loginid": "admin",
                 "pw": hash_password("Test1234!"),
-                "dname": "테스트수의사",
+                "dname": "관리자",
                 "hname": "MediPaw 동물병원",
                 "haddr": "서울시 강남구 테스트로 1",
                 "hnum": "02-0000-0001",
                 "bnum": "000-00-00001",
             })
             await db.commit()
-            print("✅ 수의사 계정 생성: vet_test / Test1234!")
+            print("✅ admin 계정 생성: admin / Test1234!")
 
     await engine.dispose()
     print("\n완료! 아래 계정으로 로그인하세요:")
     print("  보호자: http://localhost:5173  →  guardian_test / Test1234!")
-    print("  수의사: http://localhost:5174  →  vet_test / Test1234!")
+    print("  수의사: http://localhost:5174  →  admin / Test1234!")
 
 
 if __name__ == "__main__":

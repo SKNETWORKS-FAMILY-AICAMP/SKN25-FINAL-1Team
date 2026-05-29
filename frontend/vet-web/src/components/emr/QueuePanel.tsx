@@ -38,7 +38,7 @@ export function QueuePanel({
         <button
           type="button"
           onClick={onRefresh}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-[#edf5ff] px-2.5 text-[11px] font-extrabold text-[#2f7df6] transition hover:bg-[#dcecff]"
+          className="flex h-8 items-center gap-1.5 rounded-lg bg-[#edf5ff] px-2.5 text-[11px] font-extrabold text-[#2563eb] transition hover:bg-[#dcecff]"
         >
           <RefreshCcw className="h-4 w-4" />
           대기열 새로고침
@@ -117,7 +117,7 @@ function QueueTabButton({
       type="button"
       onClick={onClick}
       className={`h-8 rounded-md text-sm font-extrabold transition ${
-        active ? "bg-white text-[#2f7df6] shadow-sm" : "text-[#697386]"
+        active ? "bg-white text-[#2563eb] shadow-sm" : "text-[#697386]"
       }`}
     >
       {label}

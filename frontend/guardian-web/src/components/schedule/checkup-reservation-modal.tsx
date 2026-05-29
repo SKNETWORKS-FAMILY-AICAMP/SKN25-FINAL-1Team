@@ -73,7 +73,7 @@ const CheckupReservationModal = ({
       <section className="max-h-full w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 sm:px-6">
           <div>
-            <h2 className="text-lg font-black text-slate-950">
+            <h2 className="text-lg font-extrabold text-slate-950">
               바로 예약
             </h2>
           </div>
@@ -91,10 +91,10 @@ const CheckupReservationModal = ({
         {completedReservation ? (
           <div className="px-5 py-5 sm:px-6">
             <div className="rounded-2xl bg-blue-50 px-5 py-5 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-black text-white">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-extrabold text-white">
                 ✓
               </div>
-              <h3 className="mt-3 text-xl font-black text-slate-950">
+              <h3 className="mt-3 text-xl font-extrabold text-slate-950">
                 예약이 완료되었습니다
               </h3>
               <p className="mt-2 text-sm font-semibold text-slate-500">
@@ -116,7 +116,7 @@ const CheckupReservationModal = ({
                   key={label}
                   className="grid grid-cols-[92px_1fr] gap-4 py-3 text-sm"
                 >
-                  <dt className="font-black text-slate-500">{label}</dt>
+                  <dt className="font-extrabold text-slate-500">{label}</dt>
                   <dd className="font-bold text-slate-900">{value}</dd>
                 </div>
               ))}
@@ -137,7 +137,7 @@ const CheckupReservationModal = ({
           >
             <div className="space-y-4 px-5 py-4 sm:px-6">
               <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="truncate text-base font-black text-slate-950">
+                <p className="truncate text-base font-extrabold text-slate-950">
                   {pet.petname}
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-500">
@@ -146,7 +146,7 @@ const CheckupReservationModal = ({
               </div>
 
               <label className="block">
-                <span className="text-sm font-black text-slate-900">
+                <span className="text-sm font-extrabold text-slate-900">
                   예약 날짜
                 </span>
                 <div className="mt-1.5 flex items-center rounded-xl border border-slate-200 bg-white px-4 transition focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
@@ -176,7 +176,7 @@ const CheckupReservationModal = ({
 
               <section>
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-black text-slate-900">
+                  <h3 className="text-sm font-extrabold text-slate-900">
                     가능한 시간
                   </h3>
                   <p className="text-xs font-bold text-slate-400">
@@ -203,7 +203,7 @@ const CheckupReservationModal = ({
                           type="button"
                           onClick={() => setSelectedSlot(slot)}
                           className={[
-                            "h-10 rounded-xl border text-sm font-black transition",
+                            "h-10 rounded-xl border text-sm font-extrabold transition",
                             isSelected
                               ? "border-blue-600 bg-blue-600 text-white"
                               : "border-blue-100 text-blue-600 hover:bg-blue-50",
@@ -222,7 +222,7 @@ const CheckupReservationModal = ({
               </section>
 
               <label className="block">
-                <span className="text-sm font-black text-slate-900">
+                <span className="text-sm font-extrabold text-slate-900">
                   예약 메모
                 </span>
                 <textarea

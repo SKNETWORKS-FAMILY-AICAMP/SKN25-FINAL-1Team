@@ -56,7 +56,7 @@ const ScheduleCard = ({
 
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-lg font-black text-slate-950">
+          <h2 className="text-lg font-extrabold text-slate-950">
             {schedule.pet_name}
           </h2>
 
@@ -67,7 +67,7 @@ const ScheduleCard = ({
           </span>
         </div>
 
-        <p className="mt-2 text-base font-black text-slate-900">
+        <p className="mt-2 text-base font-extrabold text-slate-900">
           {schedule.category}
         </p>
 

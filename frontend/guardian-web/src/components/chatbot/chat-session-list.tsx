@@ -27,7 +27,7 @@ const ChatSessionList = ({
   return (
     <aside className="flex min-h-0 flex-col border-b border-slate-100 bg-white lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-4">
-        <h2 className="text-center text-sm font-black text-slate-900">
+        <h2 className="text-center text-sm font-extrabold text-slate-900">
           상담 기록
         </h2>
       </div>
@@ -52,7 +52,7 @@ const ChatSessionList = ({
                   />
                 </svg>
               </div>
-              <p className="mt-4 text-sm font-black text-slate-800">
+              <p className="mt-4 text-sm font-extrabold text-slate-800">
                 상담 기록을 확인해보세요
               </p>
               <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
@@ -68,7 +68,7 @@ const ChatSessionList = ({
               type="button"
               onClick={onCreateSession}
               disabled={creatingPetId !== null}
-              className="mt-4 flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:bg-blue-300"
+              className="mt-4 flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:bg-blue-300"
             >
               {creatingPetId ? "세션 생성 중" : "새 상담 시작"}
             </button>
@@ -101,7 +101,7 @@ const ChatSessionList = ({
                         onClick={() => onSelectHistory(history.session_id)}
                         className="block w-full px-1 py-3 pr-9 text-left"
                       >
-                        <span className="block truncate text-sm font-black text-slate-900">
+                        <span className="block truncate text-sm font-extrabold text-slate-900">
                           {getHistoryTitle(history)}
                         </span>
                         <span className="mt-2 block text-[10px] font-bold text-slate-400">
@@ -111,7 +111,7 @@ const ChatSessionList = ({
                       <button
                         type="button"
                         onClick={() => onDeleteHistory(history)}
-                        className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-black text-slate-400 transition hover:bg-white hover:text-rose-500"
+                        className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-extrabold text-slate-400 transition hover:bg-white hover:text-rose-500"
                         aria-label="상담 기록 삭제"
                       >
                         x

@@ -32,7 +32,7 @@ export function MiniCalendar({
         <button
           type="button"
           onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#0f62fe]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2563eb]"
           aria-label="이전 달"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -43,7 +43,7 @@ export function MiniCalendar({
         <button
           type="button"
           onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#0f62fe]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2563eb]"
           aria-label="다음 달"
         >
           <ChevronRight className="h-5 w-5" />
@@ -70,9 +70,9 @@ export function MiniCalendar({
               className={[
                 "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold",
                 isToday
-                  ? "bg-[#0f62fe] text-white"
+                  ? "bg-[#2563eb] text-white"
                   : isSelected
-                    ? "bg-[#edf5ff] text-[#0f62fe]"
+                    ? "bg-[#edf5ff] text-[#2563eb]"
                     : isRed
                       ? "text-[#ef4444]"
                       : isMuted

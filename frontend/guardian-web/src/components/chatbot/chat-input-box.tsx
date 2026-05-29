@@ -55,7 +55,7 @@ const ChatInputBox = ({
       {pendingAttachment ? (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-black text-slate-800">
+            <p className="truncate text-sm font-extrabold text-slate-800">
               {pendingAttachment.fileName}
             </p>
             <p className="mt-1 text-xs font-bold text-blue-600">첨부 완료</p>
@@ -63,7 +63,7 @@ const ChatInputBox = ({
           <button
             type="button"
             onClick={onClearPendingAttachment}
-            className="h-9 rounded-xl bg-white px-3 text-xs font-black text-slate-500 transition hover:text-blue-600"
+            className="h-9 rounded-xl bg-white px-3 text-xs font-extrabold text-slate-500 transition hover:text-blue-600"
           >
             삭제
           </button>
@@ -84,7 +84,7 @@ const ChatInputBox = ({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploadingAttachment || isStreaming}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-lg font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-lg font-extrabold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
           aria-label="첨부파일 추가"
         >
           {isUploadingAttachment ? "..." : "+"}

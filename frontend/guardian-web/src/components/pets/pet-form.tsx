@@ -14,7 +14,7 @@ const inputClass =
 const selectClass =
   "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 const errorInputClass = "border-red-400 focus:border-red-500 focus:ring-red-100";
-const labelClass = "text-sm font-black text-slate-800";
+const labelClass = "text-sm font-extrabold text-slate-800";
 
 const FieldError = ({ message }: { message?: string }) =>
   message ? <p className="mt-1 text-[10px] font-semibold text-red-500">{message}</p> : null;
@@ -41,7 +41,7 @@ const getChoiceClass = (
   tone: keyof typeof choiceTone = "slate",
 ) =>
   [
-    "flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-black transition",
+    "flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition",
     isSelected
       ? choiceTone[tone]
       : "border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/60",
@@ -74,7 +74,7 @@ const PetForm = ({
       <section className="p-6">
         <div className="mb-5 flex items-center gap-2 text-violet-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-black">기본 정보</h2>
+          <h2 className="text-lg font-extrabold">기본 정보</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -139,7 +139,7 @@ const PetForm = ({
                   errors.weight ? errorInputClass : ""
                 } ${isDetailMode ? "bg-slate-50" : ""}`}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-extrabold text-slate-500">
                 kg
               </span>
             </div>
@@ -177,7 +177,7 @@ const PetForm = ({
       <section className="border-t border-slate-100 p-6">
         <div className="mb-5 flex items-center gap-2 text-violet-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-black">종류</h2>
+          <h2 className="text-lg font-extrabold">종류</h2>
         </div>
 
         <div>
@@ -250,7 +250,7 @@ const PetForm = ({
       <section className="border-t border-slate-100 p-6">
         <div className="mb-5 flex items-center gap-2 text-violet-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-black">건강 정보</h2>
+          <h2 className="text-lg font-extrabold">건강 정보</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

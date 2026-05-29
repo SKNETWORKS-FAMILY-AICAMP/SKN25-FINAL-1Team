@@ -146,7 +146,7 @@ const EditProfileModal = ({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4">
       <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-          <h2 className="text-lg font-black text-slate-950">회원 정보 수정</h2>
+          <h2 className="text-lg font-extrabold text-slate-950">회원 정보 수정</h2>
           <button
             type="button"
             onClick={onClose}
@@ -209,14 +209,14 @@ const EditProfileModal = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="h-12 rounded-xl border border-slate-200 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-12 rounded-xl border border-slate-200 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-12 rounded-xl bg-blue-600 text-sm font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="h-12 rounded-xl bg-blue-600 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               {isSubmitting ? "저장 중..." : "저장"}
             </button>
@@ -317,7 +317,7 @@ const MypagePage = () => {
         rightAction={
           <Link
             to="/mypage/password"
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-blue-200 bg-white px-5 text-sm font-black text-blue-600 transition hover:bg-blue-50"
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-blue-200 bg-white px-5 text-sm font-extrabold text-blue-600 transition hover:bg-blue-50"
           >
             비밀번호 변경
           </Link>
@@ -334,7 +334,7 @@ const MypagePage = () => {
           <ProfileSkeleton />
         ) : loadMessage ? (
           <section className="rounded-2xl border border-rose-100 bg-white px-6 py-10 text-center shadow-sm">
-            <h2 className="text-lg font-black text-slate-950">
+            <h2 className="text-lg font-extrabold text-slate-950">
               회원 정보를 불러오지 못했습니다.
             </h2>
             <p className="mt-3 text-sm font-bold text-rose-600">
@@ -352,7 +352,7 @@ const MypagePage = () => {
           <SectionCard>
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-black text-slate-950">
+                <h2 className="text-lg font-extrabold text-slate-950">
                   회원 정보
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-slate-500">
@@ -376,10 +376,10 @@ const MypagePage = () => {
                   key={item.label}
                   className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-5"
                 >
-                  <p className="text-xs font-black text-slate-400">
+                  <p className="text-xs font-extrabold text-slate-400">
                     {item.label}
                   </p>
-                  <p className="mt-3 break-words text-base font-black text-slate-950">
+                  <p className="mt-3 break-words text-base font-extrabold text-slate-950">
                     {item.value}
                   </p>
                 </article>

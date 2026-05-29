@@ -31,7 +31,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2f7df6]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
             >
               <Printer className="h-4 w-4" />
               출력
