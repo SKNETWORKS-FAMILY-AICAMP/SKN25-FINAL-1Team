@@ -153,7 +153,7 @@ const ScheduleListPage = () => {
         description="예정된 예약과 지난 예약을 확인할 수 있습니다."
       />
 
-      <section className="rounded-2xl border border-slate-100 bg-white px-6 pb-6 shadow-xl shadow-blue-100/60">
+      <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-8 pb-8 shadow-sm">
         <ScheduleTabs
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
@@ -169,13 +169,13 @@ const ScheduleListPage = () => {
           {isLoading ? (
             <ScheduleSkeleton />
           ) : visibleSchedules.length === 0 ? (
-            <div className="flex min-h-[360px] items-center justify-center py-20 text-center">
+            <div className="flex min-h-[360px] items-center justify-center py-16 text-center">
               <div>
-                <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
+                <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
                   <CalendarIcon />
                 </div>
 
-                <h2 className="mt-5 text-xl font-extrabold text-slate-950">
+                <h2 className="mt-6 text-xl font-bold text-slate-800">
                   {selectedFilter === "upcoming" && "예정된 진료가 없습니다."}
                   {selectedFilter === "past" && "지난 진료가 없습니다."}
                   {selectedFilter === "cancelled" && "취소된 진료가 없습니다."}
@@ -190,7 +190,7 @@ const ScheduleListPage = () => {
                     <ActionButton
                       type="button"
                       onClick={() => navigate("/chatbot")}
-                      size="lg"
+                      size="md"
                       className="mt-6"
                     >
                       챗봇 상담 시작하기

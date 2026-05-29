@@ -142,14 +142,13 @@ const ChangePasswordPage = () => {
 
   return (
     <GuardianLayout>
-      <div className="mx-auto max-w-4xl">
-        <PageHeader
-          title="비밀번호 변경"
-          description="계정 보호를 위해 현재 비밀번호 확인 후 새 비밀번호를 설정합니다."
-        />
+      <PageHeader
+        title="비밀번호 변경"
+        description="계정 보호를 위해 현재 비밀번호 확인 후 새 비밀번호를 설정합니다."
+      />
 
-        <SectionCard>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+      <SectionCard>
+        <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label
                 className="text-sm font-bold text-slate-800"
@@ -253,8 +252,7 @@ const ChangePasswordPage = () => {
               </Link>
             </div>
           </form>
-        </SectionCard>
-      </div>
+      </SectionCard>
     </GuardianLayout>
   );
 };

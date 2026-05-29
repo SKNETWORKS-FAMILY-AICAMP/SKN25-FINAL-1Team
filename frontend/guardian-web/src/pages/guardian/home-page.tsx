@@ -180,13 +180,13 @@ const HomePage = () => {
   return (
     <GuardianLayout>
       {isLoading ? (
-        <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <section className="flex flex-1 items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
         </section>
       ) : errorMessage ? (
-        <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-          <div className="w-full max-w-md rounded-3xl bg-white px-6 py-10 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50">
-            <h1 className="text-xl font-extrabold text-slate-900">
+        <section className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-md rounded-3xl bg-white px-6 py-10 text-center border border-slate-100 shadow-sm">
+            <h1 className="text-xl font-bold text-slate-900">
               홈 화면을 불러오지 못했습니다
             </h1>
             <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
@@ -195,50 +195,57 @@ const HomePage = () => {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-700"
             >
               다시 시도
             </button>
           </div>
         </section>
       ) : !hasPets ? (
-        <section className="flex justify-center pt-20 pb-8">
-          <div className="w-full max-w-2xl rounded-2xl bg-white px-10 py-16 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50">
-            <PetIllustration />
-            <h1 className="mt-8 text-3xl font-extrabold text-slate-900">
-              등록된 반려동물이 없어요
-            </h1>
-            <p className="mx-auto mt-4 max-w-sm text-sm font-semibold leading-6 text-slate-500">
-              반려동물을 등록하면 맞춤 상담과 예약 서비스를
-              <br />
-              더 편리하게 이용하실 수 있습니다.
-            </p>
-
-            <Link
-              to={petRegisterPath}
-              className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-            >
-              + 반려동물 등록하기
-            </Link>
-          </div>
-        </section>
-      ) : (
-        <section className="pb-8">
+        <section className="flex flex-1 flex-col pb-8">
           <PageHeader
             title="내 반려동물"
             description="사랑하는 반려동물의 건강을 관리하고 예약해보세요."
             rightAction={
               <Link
                 to={petRegisterPath}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-700"
+              >
+                + 반려동물 등록하기
+              </Link>
+            }
+          />
+          <div className="flex flex-1 w-full min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+            <div className="text-center">
+              <PetIllustration />
+              <h2 className="mt-8 text-xl font-bold text-slate-800">
+                등록된 반려동물이 없어요
+              </h2>
+              <p className="mx-auto mt-4 max-w-sm text-sm font-semibold leading-6 text-slate-500">
+                반려동물을 등록하면 맞춤 상담과 예약 서비스를
+                <br />
+                더 편리하게 이용하실 수 있습니다.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="flex flex-1 flex-col pb-8">
+          <PageHeader
+            title="내 반려동물"
+            description="사랑하는 반려동물의 건강을 관리하고 예약해보세요."
+            rightAction={
+              <Link
+                to={petRegisterPath}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
               >
                 + 반려동물 등록
               </Link>
             }
           />
 
-          <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-            <div className="mb-3 px-1 text-sm font-bold text-slate-500">
+          <div className="flex-1 min-h-[480px] rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+            <div className="mb-3 text-sm font-bold text-slate-500">
               등록된 반려동물 {petCountLabel}
             </div>
 
@@ -246,7 +253,7 @@ const HomePage = () => {
               {pets.map((pet) => (
                 <article
                   key={pet.pet_id}
-                  className="rounded-xl border border-slate-100 bg-white p-3 transition hover:border-blue-100 hover:shadow-lg hover:shadow-blue-100/50 sm:flex sm:items-center sm:gap-5"
+                  className="rounded-xl border border-slate-100 bg-white p-3 transition hover:border-slate-200 hover:shadow-sm sm:flex sm:items-center sm:gap-5"
                 >
                   <div className="mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-50 sm:mx-0">
                     <img

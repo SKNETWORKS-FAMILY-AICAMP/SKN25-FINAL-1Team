@@ -90,16 +90,16 @@ const formatDateToYyyyMmDd = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const ChatbotIcon = () => (
-  <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#edf5ff]">
-    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
-      <div className="grid h-5 w-6 grid-cols-2 gap-x-1.5 gap-y-1 rounded-md border-2 border-white/90 px-0.5 py-0.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-        <span className="col-span-2 mx-auto h-1 w-3 rounded-full bg-white/90" />
-      </div>
-    </div>
-  </div>
+const MessageCircleIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
+    <path
+      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
 );
 
 const TrashIcon = () => (
@@ -343,8 +343,14 @@ const ChatbotPage = () => {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <GuardianNavbar />
 
-      <main className="mx-auto flex h-[calc(100vh-4rem)] min-h-0 w-full max-w-6xl flex-col px-4 py-4 sm:px-6">
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl shadow-blue-100/50">
+      <main className="mx-auto flex h-[calc(100vh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-6 pt-8 pb-6">
+        <div className="mb-4 shrink-0 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">챗봇 상담</h1>
+            <p className="mt-0.5 text-sm text-slate-500">AI와 증상을 상담하고 간편하게 진료를 예약하세요.</p>
+          </div>
+        </div>
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
 
           {/* 상태 확인 안내 배너 (followup에서 escalationPromptVisible=true 시) */}
           {pipeline.escalationPromptVisible ? (
@@ -374,7 +380,7 @@ const ChatbotPage = () => {
             </div>
           ) : null}
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[160px_260px_1fr]">
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[200px_200px_1fr]">
             <PetSelector
               pets={pets}
               selectedPetId={selectedPetId}
@@ -519,15 +525,17 @@ const ChatbotPage = () => {
                 </>
               ) : (
                 <>
-                  <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-5 sm:px-7">
-                    <h2 className="truncate text-base font-extrabold text-slate-950">
+                  <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-5 sm:px-7">
+                    <h2 className="truncate text-[15px] font-bold text-slate-900">
                       챗봇 상담
                     </h2>
                   </div>
-                  <div className="flex flex-1 items-center justify-center px-6 py-16 text-center">
+                  <div className="flex min-h-[360px] flex-1 items-center justify-center px-6 text-center">
                     <div>
-                      <ChatbotIcon />
-                      <h2 className="mt-7 text-xl font-extrabold text-slate-950">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
+                        <MessageCircleIcon />
+                      </div>
+                      <h2 className="mt-5 text-[15px] font-bold text-slate-800">
                         상담을 선택해주세요
                       </h2>
                       <p className="mt-3 text-sm font-semibold leading-7 text-slate-500">

@@ -21,7 +21,7 @@ const SectionCard = ({
   return (
     <section
       className={[
-        "rounded-3xl border border-slate-100 bg-white",
+        "w-full rounded-2xl border border-slate-100 bg-white shadow-sm",
         paddingClassName[padding],
         className,
       ]

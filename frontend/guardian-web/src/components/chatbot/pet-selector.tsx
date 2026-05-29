@@ -1,3 +1,4 @@
+import { PawPrint } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Pet } from "../../api/pets-api";
@@ -20,24 +21,27 @@ const PetSelector = ({
   return (
     <aside className="flex min-h-0 flex-col border-b border-slate-100 bg-slate-50/70 lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-3">
-        <h2 className="text-center text-sm font-extrabold text-slate-900">
+        <h2 className="text-center text-[15px] font-bold text-slate-900">
           반려동물
         </h2>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {isLoadingPets ? (
-          <div className="mt-8 flex justify-center">
+          <div className="flex min-h-[360px] items-center justify-center">
             <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
           </div>
         ) : pets.length === 0 ? (
-          <div className="mt-6 rounded-2xl bg-white p-3 text-center ring-1 ring-slate-100">
-            <p className="text-xs font-bold leading-5 text-slate-600">
+          <div className="flex min-h-[360px] flex-col items-center justify-center px-2 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
+              <PawPrint className="h-7 w-7" />
+            </div>
+            <p className="mt-3 text-[13px] font-bold leading-5 text-slate-600">
               등록된 반려동물이 없습니다.
             </p>
             <Link
               to="/pets/register"
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
+              className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
             >
               + 반려동물 등록
             </Link>

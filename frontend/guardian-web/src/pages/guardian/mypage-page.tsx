@@ -216,7 +216,7 @@ const EditProfileModal = ({
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-12 rounded-xl bg-blue-600 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="h-12 rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {isSubmitting ? "저장 중..." : "저장"}
             </button>
@@ -317,7 +317,7 @@ const MypagePage = () => {
         rightAction={
           <Link
             to="/mypage/password"
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50"
+            className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
           >
             비밀번호 변경
           </Link>
@@ -352,10 +352,10 @@ const MypagePage = () => {
           <SectionCard>
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-extrabold text-slate-950">
+                <p className="text-sm font-bold text-slate-500">
                   회원 정보
-                </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                </p>
+                <p className="mt-1 text-sm text-slate-400">
                   이름과 휴대폰 번호를 최신 정보로 유지해주세요.
                 </p>
               </div>
@@ -376,10 +376,10 @@ const MypagePage = () => {
                   key={item.label}
                   className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-5"
                 >
-                  <p className="text-xs font-extrabold text-slate-400">
+                  <p className="text-[14px] font-bold text-slate-400">
                     {item.label}
                   </p>
-                  <p className="mt-3 break-words text-base font-extrabold text-slate-950">
+                  <p className="mt-2 break-words text-base font-semibold text-slate-900">
                     {item.value}
                   </p>
                 </article>
