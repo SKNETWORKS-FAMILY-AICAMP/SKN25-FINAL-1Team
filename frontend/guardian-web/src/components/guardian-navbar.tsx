@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../stores/auth-store";
@@ -41,6 +41,18 @@ const GuardianNavbar = ({
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const displayName = guardian?.name || guardian?.loginid || "보호자";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -91,31 +103,38 @@ const GuardianNavbar = ({
           </button>
 
           {/* 계정 드롭다운 — 이름만, 동그라미 없음 */}
-          <details className="relative">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-full px-2 py-1 transition hover:bg-slate-50">
+          <div ref={accountMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsAccountMenuOpen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full px-2 py-1 transition hover:bg-slate-50"
+            >
               <span className="max-w-28 truncate text-sm font-bold text-slate-600">
                 {displayName}님
               </span>
               <span className="text-slate-400">
                 <ChevronDownIcon />
               </span>
-            </summary>
-            <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80">
-              <Link
-                to="/mypage"
-                className="block rounded-xl px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
-              >
-                계정 관리
-              </Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-600"
-              >
-                로그아웃
-              </button>
-            </div>
-          </details>
+            </button>
+            {isAccountMenuOpen && (
+              <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80">
+                <Link
+                  to="/mypage"
+                  onClick={() => setIsAccountMenuOpen(false)}
+                  className="block rounded-xl px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  계정 관리
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  로그아웃
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
