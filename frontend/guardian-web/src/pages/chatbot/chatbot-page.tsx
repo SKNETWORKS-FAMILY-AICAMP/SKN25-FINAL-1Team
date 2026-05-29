@@ -343,8 +343,8 @@ const ChatbotPage = () => {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <GuardianNavbar />
 
-      <main className="mx-auto flex h-[calc(100vh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-6 pt-8 pb-6">
-        <div className="mb-4 shrink-0 flex items-end justify-between">
+      <main className="mx-auto flex h-[calc(100vh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-6 pt-10 pb-6">
+        <div className="mb-6 shrink-0 flex items-end justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">챗봇 상담</h1>
             <p className="mt-0.5 text-sm text-slate-500">AI와 증상을 상담하고 간편하게 진료를 예약하세요.</p>
@@ -530,12 +530,12 @@ const ChatbotPage = () => {
                       챗봇 상담
                     </h2>
                   </div>
-                  <div className="flex min-h-[360px] flex-1 items-center justify-center px-6 text-center">
+                  <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                      <MessageCircleIcon />
+                    </div>
                     <div>
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
-                        <MessageCircleIcon />
-                      </div>
-                      <h2 className="mt-5 text-[15px] font-bold text-slate-800">
+                      <h2 className="mt-5 text-2xl font-bold text-slate-800">
                         상담을 선택해주세요
                       </h2>
                       <p className="mt-3 text-sm font-semibold leading-7 text-slate-500">

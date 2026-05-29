@@ -44,10 +44,10 @@ const ChatSessionList = ({
         </h2>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
         {!selectedPet ? (
-          <div className="flex min-h-[360px] flex-col items-center justify-center px-2 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
+          <div className="flex flex-1 flex-col items-center justify-center px-2 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <HistoryIcon />
             </div>
             <p className="mt-4 text-[13px] font-bold text-slate-800">
