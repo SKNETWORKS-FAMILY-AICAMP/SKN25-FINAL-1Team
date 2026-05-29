@@ -352,10 +352,10 @@ const MypagePage = () => {
           <SectionCard>
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-bold text-slate-500">
+                <p className="text-sm font-bold text-slate-950">
                   회원 정보
                 </p>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-slate-500">
                   이름과 휴대폰 번호를 최신 정보로 유지해주세요.
                 </p>
               </div>

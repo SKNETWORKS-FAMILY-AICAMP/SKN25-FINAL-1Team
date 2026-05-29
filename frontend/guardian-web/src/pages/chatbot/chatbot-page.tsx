@@ -343,14 +343,14 @@ const ChatbotPage = () => {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <GuardianNavbar />
 
-      <main className="mx-auto flex h-[calc(100vh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-6 pt-10 pb-6">
+      <main className="mx-auto flex w-full max-w-[1200px] flex-col px-6 pt-10 pb-6 lg:h-[calc(100vh-4rem)] lg:min-h-0">
         <div className="mb-6 shrink-0 flex items-end justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">챗봇 상담</h1>
             <p className="mt-0.5 text-sm text-slate-500">AI와 증상을 상담하고 간편하게 진료를 예약하세요.</p>
           </div>
         </div>
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:min-h-0 lg:flex-1">
 
           {/* 상태 확인 안내 배너 (followup에서 escalationPromptVisible=true 시) */}
           {pipeline.escalationPromptVisible ? (
@@ -380,7 +380,7 @@ const ChatbotPage = () => {
             </div>
           ) : null}
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[200px_200px_1fr]">
+          <div className="grid lg:min-h-0 lg:flex-1 lg:grid-cols-[200px_200px_1fr]">
             <PetSelector
               pets={pets}
               selectedPetId={selectedPetId}
@@ -401,7 +401,7 @@ const ChatbotPage = () => {
               getHistoryTitle={getHistoryTitle}
             />
 
-            <section className="flex min-h-0 flex-col overflow-hidden bg-white">
+            <section className="flex min-h-[480px] flex-col overflow-hidden bg-white lg:min-h-0">
               {session ? (
                 <>
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
@@ -530,8 +530,8 @@ const ChatbotPage = () => {
                       챗봇 상담
                     </h2>
                   </div>
-                  <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <div className="flex flex-1 flex-col items-center px-6 pt-[150px] text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                       <MessageCircleIcon />
                     </div>
                     <div>

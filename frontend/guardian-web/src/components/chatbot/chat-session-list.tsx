@@ -37,7 +37,7 @@ const ChatSessionList = ({
   getHistoryTitle,
 }: ChatSessionListProps) => {
   return (
-    <aside className="flex min-h-0 flex-col border-b border-slate-100 bg-white lg:border-b-0 lg:border-r">
+    <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-white lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-4">
         <h2 className="text-center text-[15px] font-bold text-slate-900">
           상담 기록
@@ -46,8 +46,8 @@ const ChatSessionList = ({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
         {!selectedPet ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-2 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+          <div className="flex flex-1 flex-col items-center px-2 pt-[150px] text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <HistoryIcon />
             </div>
             <p className="mt-4 text-[13px] font-bold text-slate-800">
