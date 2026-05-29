@@ -26,14 +26,14 @@ const PetSelector = ({
         </h2>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
         {isLoadingPets ? (
-          <div className="flex min-h-[360px] items-center justify-center">
+          <div className="flex flex-1 items-center justify-center">
             <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
           </div>
         ) : pets.length === 0 ? (
-          <div className="flex min-h-[360px] flex-col items-center justify-center px-2 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
+          <div className="flex flex-1 flex-col items-center justify-center px-2 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <PawPrint className="h-7 w-7" />
             </div>
             <p className="mt-3 text-[13px] font-bold leading-5 text-slate-600">

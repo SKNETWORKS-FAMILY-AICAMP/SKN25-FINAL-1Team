@@ -218,7 +218,7 @@ const HomePage = () => {
           <div className="flex flex-1 w-full min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
             <div className="text-center">
               <PetIllustration />
-              <h2 className="mt-8 text-xl font-bold text-slate-800">
+              <h2 className="mt-8 text-2xl font-bold text-slate-800">
                 등록된 반려동물이 없어요
               </h2>
               <p className="mx-auto mt-4 max-w-sm text-sm font-semibold leading-6 text-slate-500">
