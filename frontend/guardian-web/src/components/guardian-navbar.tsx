@@ -5,8 +5,8 @@ import medipawSymbol from "../../../shared/assets/logo/medipaw-symbol.png";
 
 const navItems = [
   { label: "홈", to: "/home" },
-  { label: "예약 내역", to: "/reservations" },
   { label: "챗봇 상담", to: "/chatbot" },
+  { label: "예약 내역", to: "/reservations" },
   { label: "마이페이지", to: "/mypage" },
 ];
 

@@ -86,7 +86,7 @@ const PetIllustration = () => (
   <img
     src="/assets/medi-paw-logo.png"
     alt="반려동물 등록 안내"
-    className="mx-auto h-36 w-auto object-contain"
+    className="mx-auto h-56 w-auto object-contain"
   />
 );
 
@@ -202,13 +202,13 @@ const HomePage = () => {
           </div>
         </section>
       ) : !hasPets ? (
-        <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-          <div className="w-full max-w-xl rounded-3xl bg-white px-6 py-12 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50 sm:px-10">
+        <section className="flex justify-center pt-20 pb-8">
+          <div className="w-full max-w-2xl rounded-2xl bg-white px-10 py-16 text-center shadow-xl shadow-blue-100/60 ring-1 ring-blue-50">
             <PetIllustration />
-            <h1 className="mt-6 text-2xl font-extrabold text-slate-900">
+            <h1 className="mt-8 text-3xl font-extrabold text-slate-900">
               등록된 반려동물이 없어요
             </h1>
-            <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-6 text-slate-500">
+            <p className="mx-auto mt-4 max-w-sm text-sm font-semibold leading-6 text-slate-500">
               반려동물을 등록하면 맞춤 상담과 예약 서비스를
               <br />
               더 편리하게 이용하실 수 있습니다.
@@ -216,7 +216,7 @@ const HomePage = () => {
 
             <Link
               to={petRegisterPath}
-              className="mt-7 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
             >
               + 반려동물 등록하기
             </Link>

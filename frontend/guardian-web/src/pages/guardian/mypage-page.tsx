@@ -317,7 +317,7 @@ const MypagePage = () => {
         rightAction={
           <Link
             to="/mypage/password"
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-blue-200 bg-white px-5 text-sm font-extrabold text-blue-600 transition hover:bg-blue-50"
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50"
           >
             비밀번호 변경
           </Link>

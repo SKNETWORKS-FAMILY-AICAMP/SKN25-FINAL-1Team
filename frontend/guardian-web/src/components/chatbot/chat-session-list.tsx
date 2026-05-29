@@ -36,10 +36,10 @@ const ChatSessionList = ({
         {!selectedPet ? (
           <div className="flex min-h-[420px] items-center justify-center px-2 text-center">
             <div>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+              <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
                 <svg
                   viewBox="0 0 24 24"
-                  className="h-6 w-6"
+                  className="h-8 w-8"
                   fill="none"
                   aria-hidden="true"
                 >

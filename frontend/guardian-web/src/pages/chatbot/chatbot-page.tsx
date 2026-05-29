@@ -91,15 +91,14 @@ const formatDateToYyyyMmDd = (date: Date) => {
 };
 
 const ChatbotIcon = () => (
-  <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 ring-8 ring-blue-50/60">
-    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
-      <div className="grid h-6 w-7 grid-cols-2 gap-x-2 gap-y-1 rounded-lg border-2 border-white/90 px-1 py-1">
+  <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#edf5ff]">
+    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+      <div className="grid h-5 w-6 grid-cols-2 gap-x-1.5 gap-y-1 rounded-md border-2 border-white/90 px-0.5 py-0.5">
         <span className="h-1.5 w-1.5 rounded-full bg-white" />
         <span className="h-1.5 w-1.5 rounded-full bg-white" />
-        <span className="col-span-2 mx-auto h-1 w-4 rounded-full bg-white/90" />
+        <span className="col-span-2 mx-auto h-1 w-3 rounded-full bg-white/90" />
       </div>
     </div>
-    <span className="absolute -top-1 h-3 w-3 rounded-full bg-blue-500" />
   </div>
 );
 
@@ -375,7 +374,7 @@ const ChatbotPage = () => {
             </div>
           ) : null}
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[140px_220px_1fr]">
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[160px_260px_1fr]">
             <PetSelector
               pets={pets}
               selectedPetId={selectedPetId}

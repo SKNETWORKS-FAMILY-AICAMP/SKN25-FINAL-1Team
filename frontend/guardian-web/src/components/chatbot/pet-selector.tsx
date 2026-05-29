@@ -37,9 +37,9 @@ const PetSelector = ({
             </p>
             <Link
               to="/pets/register"
-              className="mt-3 inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-3 text-xs font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700"
             >
-              등록
+              + 반려동물 등록
             </Link>
           </div>
         ) : (

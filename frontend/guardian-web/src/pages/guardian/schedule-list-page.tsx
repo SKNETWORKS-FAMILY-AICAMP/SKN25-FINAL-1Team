@@ -17,7 +17,7 @@ import GuardianLayout from "../../layouts/guardian-layout";
 import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
 
 const CalendarIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
+  <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
     <path
       d="M7 3v4M17 3v4M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
       stroke="currentColor"
@@ -153,7 +153,7 @@ const ScheduleListPage = () => {
         description="예정된 예약과 지난 예약을 확인할 수 있습니다."
       />
 
-      <section className="rounded-2xl border border-slate-100 bg-white px-6 pb-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-100 bg-white px-6 pb-6 shadow-xl shadow-blue-100/60">
         <ScheduleTabs
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
@@ -169,9 +169,9 @@ const ScheduleListPage = () => {
           {isLoading ? (
             <ScheduleSkeleton />
           ) : visibleSchedules.length === 0 ? (
-            <div className="flex min-h-[360px] items-center justify-center py-10 text-center">
+            <div className="flex min-h-[360px] items-center justify-center py-20 text-center">
               <div>
-                <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
+                <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#edf5ff] text-blue-600">
                   <CalendarIcon />
                 </div>
 
@@ -182,7 +182,7 @@ const ScheduleListPage = () => {
                   {selectedFilter === "all" && "아직 예약된 진료가 없습니다."}
                 </h2>
 
-                {selectedFilter === "all" ? (
+                {(selectedFilter === "all" || selectedFilter === "upcoming") ? (
                   <>
                     <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
                       AI 챗봇 상담을 통해 간편하게 예약을 진행해보세요.
