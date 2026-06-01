@@ -5,6 +5,7 @@ SOAP 차트, 감별진단, 처방 초안을 생성합니다.
 """
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 
@@ -26,7 +27,7 @@ def build_chart_prompt(pet: dict, triage_result: dict, patient_context: dict | N
 
     if patient_context and patient_context.get("patient_context", {}).get("emr_history"):
         history_section = (
-            f"[과거 임상 컨텍스트 및 병력]\n" + __import__("json").dumps(
+            f"[과거 임상 컨텍스트 및 병력]\n" + json.dumps(
                 patient_context, ensure_ascii=False, indent=2
             )
         )

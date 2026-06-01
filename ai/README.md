@@ -24,7 +24,7 @@ ai/
 │   ├── useAgentPipeline.ts # 보호자 React 훅 (TypeScript)
 │   └── agentPrompts.ts     # 프론트엔드용 시스템 프롬프트 빌더
 └── docker/
-    ├── docker-compose.yml  # 전체 스택 (DB + RabbitMQ + Backend + 프론트 ×2)
+    ├── docker-compose.yml  # 전체 스택 (DB + Backend + 프론트 ×2)
     ├── Dockerfile.backend
     ├── Dockerfile.guardian
     ├── Dockerfile.vet
@@ -49,8 +49,8 @@ ai/
   │
   ▼ 슬롯 선택 → confirmAppointment
   ├─── [3] Chart Agent ────── SOAP 차트 초안 (background, gpt-4o)
-  ├─── [4] Validation Agent ─ 정합성 검증 (background, gpt-4o)
-  └─── [5] Judge Agent ────── 독립 품질 심사 (fire-and-forget, gpt-4o)
+  ├─── [4] Validation Agent ─ 정합성 검증 (background, gpt-4o, 내부 전용)
+  └─── [5] Judge Agent ────── 독립 품질 심사 (fire-and-forget, gpt-4o-mini, 20% 샘플링, audit.log)
   │
   ▼ need_followup=true 시
 [6] Followup Agent ──────── 경과 모니터링 (예약일까지, 롤링 6턴 윈도우)
@@ -183,12 +183,24 @@ docker compose -f ai/docker/docker-compose.yml up --build
 # 보호자 앱:   http://localhost:5173
 # 수의사 앱:   http://localhost:5174
 # API 문서:    http://localhost:8000/docs
-# RabbitMQ UI: http://localhost:15672
 ```
 
 ### CNN 모델 없이 실행
 모델 파일(.pth)이 없어도 서버는 정상 실행됩니다.
 Vision 엔드포인트는 `prediction: null`로 응답하고 image_url만 반환합니다.
+
+---
+
+## 운영 정책 — Validation / Judge 는 내부 전용
+
+**두 에이전트 결과는 보호자/수의사에게 직접 노출하지 않는다.** 운영팀 내부 품질 모니터링 용도다.
+
+| 에이전트 | 저장 위치 | 노출 정책 |
+|----------|-----------|-----------|
+| Validation | `validation_resultDB` (DB) | 저장만. 수의사 화면 warning 노출 여부는 **추후 결정**. `GET /doctor/emr/{id}/validation` API는 존재하나 UI에서 경고로 띄우지 않음 |
+| Judge | `audit.log` (로그 파일) | 화면 노출 없음. 운영팀 로그 확인 전용. 현재 `emrid % 5 == 0` (20%) 샘플링 |
+
+> Judge 결과에 대한 액션(예: REVIEW_NEEDED 시 알림)은 아직 연결돼 있지 않음 — 액션을 붙이는 시점에 전수 실행 전환 검토.
 
 ---
 
@@ -201,4 +213,4 @@ Vision 엔드포인트는 `prediction: null`로 응답하고 image_url만 반환
 | Judge Agent 완전 독립 호출 | Self-bias 방지 (Zheng et al. 2023) |
 | Followup 롤링 6턴 윈도우 | 컨텍스트 크기 고정, 누적 요약으로 보완 |
 | CNN 실패 시 image_url 보장 | 모델 오류가 예약 흐름 전체를 막지 않도록 |
-| gpt-4o-mini (트리아지/경과) / gpt-4o (차트/검증/심사) | 비용과 정확도 균형 |
+| gpt-4o-mini (트리아지/경과/심사) / gpt-4o (차트/검증) | 비용과 정확도 균형 |

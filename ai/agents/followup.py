@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 
@@ -40,7 +41,7 @@ def build_followup_prompt(
 예약일: {appt_date}
 
 [과거 병력 컨텍스트]
-{__import__('json').dumps(patient_context, ensure_ascii=False) if patient_context else '초진 (과거 기록 없음)'}
+{json.dumps(patient_context, ensure_ascii=False) if patient_context else '초진 (과거 기록 없음)'}
 
 [누적 경과 요약 — 이전 대화에서 추출된 임상 메모]
 {accumulated_summary or '아직 경과 보고 없음 — 이번이 첫 보고입니다.'}

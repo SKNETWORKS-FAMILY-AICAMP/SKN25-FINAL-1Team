@@ -1,9 +1,20 @@
-"""Judge Agent — 독립 품질 심사 (LLM-as-a-Judge).
+"""Judge Agent — 시스템 품질 모니터링 (환자 안전 검증 아님).
 
-Triage Agent와 동일 인스턴스를 쓰면 self-bias가 발생하므로
-완전히 독립된 호출로 평가합니다.
+[포지셔닝 — 최종발표 기준]
+Judge는 '환자 안전'이나 '의료적 정답'을 판정하지 않는다.
+오직 AI 대화 시스템이 운영 품질 기준대로 작동하는지를 모니터링한다.
 
-참고: Zheng et al. 2023 Point-wise Evaluation
+평가 항목 (운영 품질 지표):
+  1. 문진 완전성   — 필수 항목을 대화로 잘 수집했는가
+  2. 질문 효율성   — 불필요하게 많이 되묻지 않고 효율적으로 수집했는가
+  3. 대화 턴 수    — (객관) 보호자 응답까지 걸린 턴 수
+  4. 응답 일관성   — 대화 흐름과 구조화 결과가 논리적으로 일관되는가
+  5. 구조화 품질   — 자연어를 구조화 데이터로 잘 변환했는가
+
+활용: 운영 모니터링 목적. 결과는 audit log에만 남긴다(DB 저장 불필요).
+독립 인스턴스로 호출해 self-enhancement 편향을 줄인다.
+참고: Zheng et al. 2023, "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" (NeurIPS).
+(정책: JUDGE_POLICY.md)
 """
 from __future__ import annotations
 
@@ -16,91 +27,54 @@ from .base import call_openai_once
 logger = logging.getLogger(__name__)
 
 
-def build_judge_prompt(
-    triage_result: dict | None,
-    chat_history: list[dict],
-    chart_result: dict | None = None,
-) -> str:
+def _count_turns(chat_history: list[dict]) -> int:
+    """객관 지표: 보호자(user) 발화 턴 수 — 코드로 직접 계산(LLM 비의존)."""
+    return sum(
+        1 for m in chat_history
+        if (m.get("role") == "user" or m.get("type") == "user")
+        and (m.get("content") or m.get("text"))
+    )
+
+
+def build_judge_prompt(triage_result: dict | None, chat_history: list[dict]) -> str:
     history_text = "\n".join(
-        f"[{'AI' if m.get('type') == 'bot' or m.get('role') == 'assistant' else '보호자'}] {m.get('text') or m.get('content', '')}"
+        f"[{'AI' if (m.get('type') == 'bot' or m.get('role') == 'assistant') else '보호자'}] "
+        f"{m.get('text') or m.get('content', '')}"
         for m in chat_history
-    )
+    ) or "(대화 기록 없음)"
 
-    has_triage = bool(
-        triage_result
-        and triage_result.get("urgency_level")
-        and triage_result.get("symptom_summary")
-    )
+    return f"""당신은 AI 대화 시스템의 '운영 품질 모니터링' 평가자입니다.
+환자 안전이나 의료적 정답을 판단하지 마세요. 오직 AI가 보호자 자연어를 얼마나
+효율적이고 일관되게 '구조화'했는지(운영 품질)만 평가합니다.
 
-    return f"""당신은 MediPaw 독립 품질 심사 AI(LLM-as-a-Judge)입니다.
-다른 AI 에이전트(Triage Agent)가 생성한 결과물을 독립적으로 평가합니다.
-
-[평가 원칙 - Zheng et al. 2023]
-- Point-wise Evaluation: 단일 결과물을 절대 기준으로 평가
-- 절대 자기 강화(Self-enhancement) 편향 없이 객관적으로 평가
-- 수의학 전문 지식과 논문 기반 기준으로만 평가
-- 모호한 경우 반드시 보수적(conservative)으로 판단 — 확신 없으면 낮게 평가
-
-[!!중요 선결 조건!!]
-트리아지 결과(collected_info)가 null이거나 urgency_level/symptom_summary 등 핵심 필드가 없는 경우:
-- completeness: 0~2, accuracy: 0, consistency: 0
-- judge_verdict: "REVIEW_NEEDED"
-- critical_issues에 "트리아지 결과 없음 — collected_info 미반환" 명시
-
-[평가 대상: 트리아지 결과]
+[평가 대상: 구조화 결과(triage가 추출한 구조화 데이터)]
 {json.dumps(triage_result, ensure_ascii=False, indent=2)}
 
-[평가 대상: 채팅 히스토리]
+[평가 대상: 대화 기록]
 {history_text}
 
-{f'[평가 대상: 차트 초안]{chr(10)}{json.dumps(chart_result.get("soap"), ensure_ascii=False, indent=2)}' if chart_result else ''}
+[평가 항목 — 각 0~10, 운영 품질 관점]
+1) 문진 완전성: 필수 항목(주증상·발현시점·증상키워드 등)을 대화로 수집했는가
+2) 질문 효율성: 불필요한 반복 질문 없이 효율적으로 수집했는가
+3) 응답 일관성: 대화 내용과 구조화 결과가 논리적으로 일관되는가
+4) 구조화 품질: 보호자의 일상어를 구조화 필드로 적절히 변환했는가
 
-{'[주의] 트리아지 결과가 null 또는 불완전합니다. 선결 조건에 따라 낮은 점수를 부여하세요.' if not has_triage else ''}
-
-[평가 기준 - "Basic triage in dogs and cats" 논문 기반]
-1) 완전성(0-10): collected_info에 다음 항목이 명시적으로 채워졌는가?
-   - chief_complaint: 비어 있으면 -3점
-   - symptom_onset: 비어 있으면 -2점
-   - symptom_keywords: 2개 미만이면 -2점
-   - symptom_summary: 비어 있으면 -3점
-   - suspected_diseases: 비어 있으면 -1점
-   채팅 히스토리에 언급된 것만으로는 점수를 올릴 수 없음
-
-2) 정확성(0-10): Modified VTL 5단계 분류가 올바른가?
-   - urgency_level/urgency_level_num이 없으면 0점
-   - vtl_basis가 논문 기준과 일치하는지 검증
-
-3) 일관성(0-10): 전체 흐름이 논리적으로 일관되는가?
-   - 채팅 내용과 collected_info 결론이 모순 없는가?
-   - 차트 내용(있는 경우)이 트리아지와 일치하는가?
-
-[응답 형식 - JSON만 출력]
+[응답 형식 — JSON만 출력]
 {{
-  "judge_scores": {{
+  "quality_scores": {{
     "completeness": 8.5,
-    "accuracy": 9.0,
-    "consistency": 8.8
+    "question_efficiency": 9.0,
+    "response_consistency": 8.8,
+    "structuring_quality": 8.0
   }},
-  "score_breakdown": {{
-    "completeness_detail": [
-      "chief_complaint: '실제값 또는 미기재' — 기재됨/미기재 (감점: -N점)",
-      "symptom_onset: '실제값 또는 미기재' — 기재됨/미기재 (감점: -N점)",
-      "symptom_keywords: ['실제값'] — N개, 2개 이상/미달 (감점: -N점)",
-      "symptom_summary: '실제값 앞 30자...' — 기재됨/미기재 (감점: -N점)",
-      "suspected_diseases: ['실제값'] — 기재됨/미기재 (감점: -N점)"
-    ],
-    "accuracy_detail": "urgency_level_num=N — vtl_basis 인용 — Level N 기준과 일치/불일치",
-    "consistency_detail": "채팅 언급 증상 → collected_info 반영 여부 / 차트와 일치 여부"
-  }},
-  "judge_verdict": "PASS 또는 REVIEW_NEEDED",
-  "critical_issues": [],
-  "improvement_points": ["개선 권장 사항 (없으면 빈 배열)"],
-  "judge_reasoning": "완전성/정확성/일관성 실제 값 인용 기반 종합 판정 이유"
+  "monitoring_verdict": "HEALTHY 또는 NEEDS_REVIEW",
+  "notes": "운영 품질 관점의 한두 문장 코멘트(의료 판단 금지)",
+  "improvement_points": ["대화 설계 개선 제안 (없으면 빈 배열)"]
 }}
 
-judge_verdict 기준:
-- PASS: 세 점수 모두 8.0 이상 AND triageResult의 핵심 필드가 모두 채워짐
-- REVIEW_NEEDED: 한 항목이라도 8.0 미만, triageResult가 null/불완전, 또는 critical_issues 존재"""
+monitoring_verdict 기준(운영 품질):
+- HEALTHY: 네 점수 모두 7.0 이상
+- NEEDS_REVIEW: 한 항목이라도 7.0 미만 (= 대화 설계/프롬프트 점검 대상, 환자 위험 신호 아님)"""
 
 
 async def run_judge(
@@ -109,24 +83,30 @@ async def run_judge(
     emrid: int | None,
     scheduleid: int | None,
 ) -> dict:
-    """Judge Agent 실행."""
+    """Judge Agent 실행 — 운영 품질 모니터링. 결과는 호출부에서 audit log로만 기록."""
     triage_result = payload.get("triage_result")
-    chat_history = payload.get("chat_history", [])
-    chart_result = payload.get("chart_result")
+    chat_history = payload.get("chat_history", []) or []
 
-    update_step("품질 심사 중...")
-    system = build_judge_prompt(triage_result, chat_history, chart_result)
-    result = await call_openai_once(
-        "평가를 시작합니다.",
-        system,
-        model="gpt-4o-mini",
-        max_tokens=1500,
-    )
+    turn_count = _count_turns(chat_history)  # 객관 지표(코드 계산)
 
-    update_step("심사 보고서 생성 중...")
+    update_step("운영 품질 모니터링 중...")
+    try:
+        result = await call_openai_once(
+            "운영 품질을 평가하세요.",
+            build_judge_prompt(triage_result, chat_history),
+            model="gpt-4o-mini",
+            max_tokens=800,
+        )
+        if not isinstance(result, dict):
+            result = {}
+    except Exception as exc:
+        logger.warning(f"[Judge] LLM 실패 emrid={emrid}: {exc}")
+        result = {"monitoring_verdict": "NEEDS_REVIEW", "notes": "모니터링 LLM 일시 오류"}
+
+    result["turn_count"] = turn_count  # 객관 지표 병합
+
     logger.info(
-        f"[Judge] emrid={emrid} verdict={result.get('judge_verdict')} "
-        f"scores={result.get('judge_scores')}"
+        "[Judge] emrid=%s verdict=%s scores=%s turns=%s",
+        emrid, result.get("monitoring_verdict"), result.get("quality_scores"), turn_count,
     )
-
     return {"agent": "judge", "emrid": emrid, **result}

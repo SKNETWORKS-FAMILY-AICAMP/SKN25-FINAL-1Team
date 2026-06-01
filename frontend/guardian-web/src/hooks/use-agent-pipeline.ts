@@ -128,10 +128,35 @@ export const useAgentPipeline = ({
     ]);
   };
 
+  /** 주어진 날짜들에서 빈 슬롯을 limit 개까지 모은다. 추천/빠른조회 양쪽에서 재사용. */
+  const collectSlots = async (
+    datesToCheck: string[],
+    limit: number,
+    durationMin: number,
+  ): Promise<{ date: string; start_time: string; doctorid?: number }[]> => {
+    const collected: { date: string; start_time: string; doctorid?: number }[] = [];
+    for (const date of datesToCheck) {
+      if (collected.length >= limit) break;
+      try {
+        const resp = await getAvailableScheduleSlots({ date, duration_min: durationMin });
+        if (resp.code === 200) {
+          for (const slot of (resp.result ?? []).slice(0, 2)) {
+            collected.push({ date, start_time: slot.start_time, doctorid: slot.doctorid });
+            if (collected.length >= limit) break;
+          }
+        }
+      } catch {
+        // ignore per-date errors
+      }
+    }
+    return collected;
+  };
+
   const startSchedulePhase = async (
     pet: Pet,
     collectedInfo: Record<string, unknown>,
     emrid?: number,
+    scheduleTaskId?: string,
   ) => {
     triageResultRef.current = collectedInfo;
     currentPetRef.current = pet;
@@ -141,11 +166,17 @@ export const useAgentPipeline = ({
     appendBot("잠시만요, 예약 가능한 시간을 확인하고 있어요 ⏳");
 
     try {
-      const petPayload = toPetPayload(pet);
-      const { task_id } = await runAgentTask("schedule", {
-        pet: petPayload,
-        triage_result: collectedInfo,
-      });
+      // 서버가 triage 완료 직후 schedule agent를 이미 실행해 둔 경우(schedule_task_id)
+      // 그 결과를 재사용한다 → 중복 LLM 호출 제거 + 진단정보를 클라이언트로 내릴 필요 없음.
+      // task_id가 없으면(구버전 호환) 클라이언트에서 직접 실행한다.
+      let task_id = scheduleTaskId;
+      if (!task_id) {
+        const started = await runAgentTask("schedule", {
+          pet: toPetPayload(pet),
+          triage_result: collectedInfo,
+        });
+        task_id = started.task_id;
+      }
 
       const raw = await streamAgentResult(task_id);
       const schedRes = raw as {
@@ -166,37 +197,18 @@ export const useAgentPipeline = ({
       scheduleResultRef.current = raw;
 
       // Collect available slots
-      // 1차: urgency window 기준 영업일 탐색
+      // 1차: urgency window 기준 영업일 탐색 — 추천 슬롯 3개 제시
       const dates = getDatesForWindow(schedRes.slot_window);
-      const collected: { date: string; start_time: string; doctorid?: number }[] = [];
-
-      const fetchSlots = async (datesToCheck: string[], limit: number) => {
-        for (const date of datesToCheck) {
-          if (collected.length >= limit) break;
-          try {
-            const resp = await getAvailableScheduleSlots({
-              date,
-              duration_min: schedRes.estimated_duration_min,
-            });
-            if (resp.code === 200) {
-              for (const slot of (resp.result ?? []).slice(0, 2)) {
-                collected.push({ date, start_time: slot.start_time, doctorid: slot.doctorid });
-                if (collected.length >= limit) break;
-              }
-            }
-          } catch {
-            // ignore per-date errors
-          }
-        }
-      };
-
-      await fetchSlots(dates, 4);
+      let collected = await collectSlots(dates, 3, schedRes.estimated_duration_min);
 
       // 2차: 1차 탐색에서 슬롯을 못 찾은 경우 최대 21영업일 확장 탐색
       if (collected.length === 0) {
         const windowStart = WINDOW_DAYS[schedRes.slot_window]?.start ?? 1;
-        const extendedDates = getExtendedBusinessDates(windowStart, 21);
-        await fetchSlots(extendedDates, 4);
+        collected = await collectSlots(
+          getExtendedBusinessDates(windowStart, 21),
+          3,
+          schedRes.estimated_duration_min,
+        );
       }
 
       const newSlotMap: Record<string, { date: string; time: string; doctorid: number }> = {};

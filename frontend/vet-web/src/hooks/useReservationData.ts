@@ -104,9 +104,11 @@ export function useReservationData(accessToken: string) {
   );
 
   useEffect(() => {
+    // 토큰이 준비되기 전(auth store hydrate 전) 호출 시 401이 나므로 가드한다.
+    if (!accessToken) return;
     loadReservations();
     loadPatientOptions();
-  }, [loadPatientOptions, loadReservations]);
+  }, [accessToken, loadPatientOptions, loadReservations]);
 
   const patientOptions = useMemo(
     () =>

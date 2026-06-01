@@ -26,6 +26,9 @@ export function usePatientManagement(accessToken: string) {
   const [listRefreshKey, setListRefreshKey] = useState(0);
 
   useEffect(() => {
+    // 토큰이 준비되기 전 호출 시 401이 나므로 가드한다.
+    if (!accessToken) return;
+
     let isMounted = true;
 
     const loadPatients = async () => {
