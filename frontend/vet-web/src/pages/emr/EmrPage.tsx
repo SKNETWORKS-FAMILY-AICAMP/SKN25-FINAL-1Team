@@ -34,7 +34,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     editorValue,
     uploadedFiles,
     prescriptions,
-    isAutoPanelOpen,
     isPrescriptionPreviewOpen,
     isProfileEditOpen,
     previewImage,
@@ -47,11 +46,11 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     setQueueTab,
     setSelectedScheduleId,
     setEditorValue,
-    setIsAutoPanelOpen,
     setIsPrescriptionPreviewOpen,
     setIsProfileEditOpen,
     setPreviewImage,
     autoPrescriptions,
+    isLoadingAutoPresc,
     validationResult,
     followupItems,
     handleRefreshQueue,
@@ -61,6 +60,10 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleAddMockFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
+    handleUpdatePrescription,
+    handleSavePrescription,
+    handleClearAutoPrescription,
+    handleGeneratePrescription,
     handleAddPrescription,
     openPreviewImage,
   } = useEmrData();
@@ -192,23 +195,24 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             <PrescriptionInputPanel
               prescriptions={prescriptions}
               onRemove={handleRemovePrescription}
+              onUpdate={handleUpdatePrescription}
+              onSave={handleSavePrescription}
               onAdd={handleAddPrescription}
-              onGenerate={() => setIsAutoPanelOpen(true)}
+              onGenerate={handleGeneratePrescription}
               accessToken={session.accessToken}
               isReadOnly={isReadOnly}
             />
           </main>
 
-          {isAutoPanelOpen && (
-            <AutoPrescriptionPanel
-              patient={currentEmr?.pet_info}
-              prescriptions={autoPrescriptions}
-              onClose={() => setIsAutoPanelOpen(false)}
-              onLoad={handleLoadAutoPrescription}
-              onOpenPreview={() => setIsPrescriptionPreviewOpen(true)}
-              isReadOnly={isReadOnly}
-            />
-          )}
+          <AutoPrescriptionPanel
+            patient={currentEmr?.pet_info}
+            prescriptions={autoPrescriptions}
+            isLoading={isLoadingAutoPresc}
+            onClose={handleClearAutoPrescription}
+            onLoad={handleLoadAutoPrescription}
+            onOpenPreview={() => setIsPrescriptionPreviewOpen(true)}
+            isReadOnly={isReadOnly}
+          />
         </div>
 
         {currentEmr && isProfileEditOpen && (

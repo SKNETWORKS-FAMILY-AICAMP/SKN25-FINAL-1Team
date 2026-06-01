@@ -151,6 +151,26 @@ export async function fetchEmrValidation(params: {
 // 6순위: 경과 모니터링 (수의사 뷰)
 // ──────────────────────────────────────────────
 
+export interface AutoPrescriptionItem {
+  drug_name: string;
+  form: string;
+  dosage: string;
+  frequency: string;
+  duration_days: number;
+}
+
+export async function generateAutoPrescription(params: {
+  accessToken: string;
+  scheduleId: number;
+}): Promise<AutoPrescriptionItem[]> {
+  const { data } = await apiClient.post<{ code: number; result: AutoPrescriptionItem[] }>(
+    `/doctor/emr/${params.scheduleId}/auto-prescription`,
+    {},
+    { headers: { Authorization: `Bearer ${params.accessToken}` } }
+  );
+  return data.result;
+}
+
 export async function fetchDoctorFollowup(params: {
   accessToken: string;
   emrid: number;

@@ -1,22 +1,34 @@
 """수의사 EMR 관련 엔드포인트 모음.
 
-1순위: GET /doctor/emr/queue            - 오늘의 대기/완료 큐
-        GET /doctor/emr/queue/{id}       - EMR 상세
-3순위: GET /doctor/emr/{id}/report      - AI SOAP 초안 (reportDB)
-4순위: GET /doctor/emr/{id}/triage      - 트리아지 결과
-5순위: GET /doctor/emr/{id}/validation  - 검증 결과
-6순위: GET /doctor/emr/followup/{emrid} - 경과 모니터링 (수의사 뷰)
+1순위: GET  /doctor/emr/queue            - 오늘의 대기/완료 큐
+        GET  /doctor/emr/queue/{id}       - EMR 상세
+3순위: GET  /doctor/emr/{id}/report      - AI SOAP 초안 (reportDB)
+4순위: GET  /doctor/emr/{id}/triage      - 트리아지 결과
+5순위: GET  /doctor/emr/{id}/validation  - 검증 결과
+6순위: GET  /doctor/emr/followup/{emrid} - 경과 모니터링 (수의사 뷰)
+7순위: POST /doctor/emr/{id}/auto-prescription - AI 처방전 자동 생성
 """
+import json
+import re
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import or_
+
+from app.core.config import settings
 from app.core.dependencies import get_current_doctor
 from app.db.session import get_db
 from app.models.doctor import Doctor
+from app.models.drug import Drug
 from app.models.followup import Followup
+from app.models.guardian import Guardian
+from app.models.pet import Pet
+from app.models.triage_result import TriageResult
+from app.models.schedule import Schedule
 from app.crud.emr_queue import (
     get_emr_queue,
     get_emr_detail,
@@ -159,6 +171,160 @@ async def emr_validation(
             "score_breakdown": validation.score_breakdown,
             "created_at": validation.created_at.isoformat() if validation.created_at else None,
         },
+    }
+
+
+# ──────────────────────────────────────────────
+# 7순위: AI 처방전 자동 생성
+# ──────────────────────────────────────────────
+
+@router.post("/{schedule_id}/auto-prescription", status_code=200)
+async def generate_auto_prescription(
+    schedule_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
+):
+    """사전 문진 정보를 바탕으로 AI 처방 초안을 생성한다.
+    triage + drugsDB 후보 약품을 바탕으로 OpenAI로 실시간 생성한다.
+    """
+    # triage + pet + guardian 정보 조회
+    row = (await db.execute(
+        select(Schedule, Guardian, Pet)
+        .join(Guardian, Schedule.emrid == Guardian.emrid)
+        .join(Pet, Guardian.petid == Pet.petid)
+        .where(Schedule.scheduleid == schedule_id)
+        .where(Schedule.deleted_at.is_(None))
+    )).first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="환자 정보를 찾을 수 없습니다.")
+
+    _, guardian, pet = row
+
+    triage = (await db.execute(
+        select(TriageResult).where(TriageResult.emrid == guardian.emrid)
+    )).scalar_one_or_none()
+
+    # 3. 나이 계산
+    today = date.today()
+    birth = pet.birth_date
+    age = 0
+    if birth:
+        age = today.year - birth.year - (
+            (today.month, today.day) < (birth.month, birth.day)
+        )
+
+    # 4. 증상 정보 구성
+    symptoms: list[str] = []
+    suspected_diseases: list[str] = []
+    if triage:
+        if triage.symptom_summary:
+            symptoms.append(triage.symptom_summary)
+        if isinstance(triage.symptom_keywords, list):
+            symptoms.extend(triage.symptom_keywords)
+        if isinstance(triage.suspected_diseases, list):
+            suspected_diseases = triage.suspected_diseases
+
+    # 5. drugsDB에서 후보 약품 조회
+    seen_ids: set[int] = set()
+    candidate_drugs: list[Drug] = []
+
+    # 증상/질환 키워드로 관련 약품 검색
+    search_terms = suspected_diseases[:3] + symptoms[:2]
+    for term in search_terms:
+        if len(term) < 2:
+            continue
+        rows = (await db.execute(
+            select(Drug).where(
+                or_(
+                    Drug.ingredient_kr.ilike(f"%{term}%"),
+                    Drug.ingredient_en.ilike(f"%{term}%"),
+                    Drug.name.ilike(f"%{term}%"),
+                )
+            ).limit(8)
+        )).scalars().all()
+        for d in rows:
+            if d.drugid not in seen_ids:
+                seen_ids.add(d.drugid)
+                candidate_drugs.append(d)
+
+    # 부족하면 일반 약품으로 채움
+    if len(candidate_drugs) < 15:
+        general = (await db.execute(select(Drug).limit(40))).scalars().all()
+        for d in general:
+            if d.drugid not in seen_ids:
+                seen_ids.add(d.drugid)
+                candidate_drugs.append(d)
+                if len(candidate_drugs) >= 40:
+                    break
+
+    drug_list_str = "\n".join(
+        f"- {d.name} (성분: {d.ingredient_kr})"
+        for d in candidate_drugs[:40]
+    )
+
+    prompt = f"""수의사 AI 보조입니다. 환자 문진 정보와 아래 약품 목록을 바탕으로 처방전을 작성하세요.
+
+[환자 정보]
+종류/품종: {pet.species or "강아지"} / {pet.breed or ""}
+체중: {float(pet.weight_kg) if pet.weight_kg else 0}kg, 나이: {age}살
+
+[사전 문진]
+주요 증상: {", ".join(symptoms) if symptoms else "정보 없음"}
+의심 질환: {", ".join(suspected_diseases) if suspected_diseases else "정보 없음"}
+보호자 메모: {guardian.memo or "없음"}
+
+[사용 가능한 약품 목록]
+{drug_list_str}
+
+위 약품 목록에서 증상에 적합한 2~4가지를 선택하고, 각 약품의 투여 형태·용량·빈도·기간을 작성하세요.
+반드시 아래 JSON 형식으로만 응답하세요 (duration은 반드시 정수):
+
+{{
+  "medications": [
+    {{
+      "name": "폴리펜젝트 20(POLYPENJECT 20)",
+      "form": "SC(피하)",
+      "dosage": "10mg/kg",
+      "frequency": "SID",
+      "duration": 5
+    }}
+  ]
+}}"""
+
+    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    response = await client.chat.completions.create(
+        model=settings.OPENAI_MODEL or "gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": "당신은 전문 수의사 AI 보조입니다. 반드시 JSON 형식으로만 응답하고, duration 필드는 반드시 숫자(정수)만 사용하세요.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+    )
+
+    data = json.loads(response.choices[0].message.content)
+    meds = data.get("medications", [])
+
+    def _to_int(val) -> int:
+        m = re.search(r"\d+", str(val or ""))
+        return int(m.group()) if m else 0
+
+    return {
+        "code": 200,
+        "result": [
+            {
+                "drug_name": m.get("name", ""),
+                "form": m.get("form", ""),
+                "dosage": m.get("dosage", ""),
+                "frequency": m.get("frequency", ""),
+                "duration_days": _to_int(m.get("duration", 0)),
+            }
+            for m in meds
+        ],
     }
 
 

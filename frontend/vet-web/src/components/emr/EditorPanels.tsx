@@ -5,6 +5,141 @@ import { searchDrugs } from "../../api/prescriptionApi";
 import type { Prescription, UploadedFile } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
+const FORM_OPTIONS = ["PO(경구)", "IV(정맥)", "SC(피하)", "IM(근육)", "외용", "점안", "흡입"];
+const DOSAGE_OPTIONS = [
+  "0.5mg/kg", "1mg/kg", "2mg/kg", "5mg/kg", "10mg/kg",
+  "0.5ml", "1ml", "2ml", "5ml",
+  "1정", "1/2정", "2정",
+];
+const DURATION_OPTIONS = [3, 5, 7, 10, 14, 30];
+
+function EditableSelect({
+  value,
+  options,
+  onChange,
+  placeholder = "선택",
+  isReadOnly = false,
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  placeholder?: string;
+  isReadOnly?: boolean;
+}) {
+  const isCustomValue = value !== "" && !options.includes(value);
+  const [showInput, setShowInput] = useState(isCustomValue);
+
+  useEffect(() => {
+    if (!value) setShowInput(false);
+  }, [value]);
+
+  if (isReadOnly) return <span className="text-sm text-[#4d5874]">{value || "-"}</span>;
+
+  if (showInput) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => { onChange(""); setShowInput(false); }}
+          className="shrink-0 text-[#a8b0bf] hover:text-[#ef4444]"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => {
+        if (e.target.value === "__custom__") {
+          setShowInput(true);
+          onChange("");
+        } else {
+          onChange(e.target.value);
+        }
+      }}
+      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+    >
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>{o}</option>
+      ))}
+      <option value="__custom__">직접 입력...</option>
+    </select>
+  );
+}
+
+function DurationSelect({
+  value,
+  onChange,
+  isReadOnly = false,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  isReadOnly?: boolean;
+}) {
+  const isCustomValue = value !== 0 && !DURATION_OPTIONS.includes(value);
+  const [showInput, setShowInput] = useState(isCustomValue);
+
+  useEffect(() => {
+    if (!value) setShowInput(false);
+  }, [value]);
+
+  if (isReadOnly) return <span className="text-sm text-[#4d5874]">{value}일</span>;
+
+  if (showInput) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={1}
+          value={value || ""}
+          onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+          className="w-14 rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+          autoFocus
+        />
+        <span className="shrink-0 text-sm text-[#697386]">일</span>
+        <button
+          type="button"
+          onClick={() => { onChange(0); setShowInput(false); }}
+          className="shrink-0 text-[#a8b0bf] hover:text-[#ef4444]"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => {
+        if (e.target.value === "__custom__") {
+          setShowInput(true);
+          onChange(0);
+        } else {
+          onChange(parseInt(e.target.value, 10));
+        }
+      }}
+      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+    >
+      <option value={0}>기간 선택</option>
+      {DURATION_OPTIONS.map((d) => (
+        <option key={d} value={d}>{d}일</option>
+      ))}
+      <option value="__custom__">직접 입력...</option>
+    </select>
+  );
+}
+
 export function EditorPanel({
   value,
   count,
@@ -151,6 +286,8 @@ export function PrescriptionInputPanel({
   onRemove,
   onGenerate,
   onAdd,
+  onUpdate,
+  onSave,
   accessToken,
   isReadOnly = false,
 }: {
@@ -158,6 +295,8 @@ export function PrescriptionInputPanel({
   onRemove: (name: string) => void;
   onGenerate: () => void;
   onAdd?: (drug: DrugSearchResult) => void;
+  onUpdate?: (drug_name: string, field: keyof Prescription, value: string | number) => void;
+  onSave?: () => void;
   accessToken?: string;
   isReadOnly?: boolean;
 }) {
@@ -245,11 +384,11 @@ export function PrescriptionInputPanel({
           <table className="w-full table-fixed text-left">
             <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
               <tr>
-                <th className="px-4 py-3">약제명</th>
-                <th className="px-3 py-3">형태</th>
-                <th className="px-3 py-3">용량</th>
-                <th className="px-3 py-3">기간</th>
-                <th className="w-[64px] px-3 py-3">삭제</th>
+                <th className="w-[28%] px-4 py-3">약제명</th>
+                <th className="w-[20%] px-3 py-3">형태</th>
+                <th className="w-[20%] px-3 py-3">용량</th>
+                <th className="w-[20%] px-3 py-3">기간</th>
+                <th className="w-[12%] px-3 py-3">삭제</th>
               </tr>
             </thead>
             <tbody>
@@ -268,15 +407,35 @@ export function PrescriptionInputPanel({
                     key={prescription.drug_name}
                     className="border-t border-[#edf1f6] text-sm font-bold text-[#4d5874]"
                   >
-                    <td className="px-4 py-3 font-extrabold text-[#20283a]">
+                    <td className="px-4 py-2 font-extrabold text-[#20283a]">
                       {prescription.drug_name}
                     </td>
-                    <td className="px-3 py-3">{prescription.form}</td>
-                    <td className="px-3 py-3">{prescription.dosage}</td>
-                    <td className="px-3 py-3">
-                      {prescription.duration_days}일
+                    <td className="px-2 py-2">
+                      <EditableSelect
+                        value={prescription.form}
+                        options={FORM_OPTIONS}
+                        onChange={(v) => onUpdate?.(prescription.drug_name, "form", v)}
+                        placeholder="형태"
+                        isReadOnly={isReadOnly}
+                      />
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-2">
+                      <EditableSelect
+                        value={prescription.dosage}
+                        options={DOSAGE_OPTIONS}
+                        onChange={(v) => onUpdate?.(prescription.drug_name, "dosage", v)}
+                        placeholder="용량"
+                        isReadOnly={isReadOnly}
+                      />
+                    </td>
+                    <td className="px-2 py-2">
+                      <DurationSelect
+                        value={prescription.duration_days}
+                        onChange={(v) => onUpdate?.(prescription.drug_name, "duration_days", v)}
+                        isReadOnly={isReadOnly}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
                       <button
                         type="button"
                         onClick={() => onRemove(prescription.drug_name)}
@@ -296,6 +455,7 @@ export function PrescriptionInputPanel({
         <div className="flex justify-end gap-2">
           <button
             type="button"
+            onClick={onSave}
             disabled={isReadOnly}
             className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
