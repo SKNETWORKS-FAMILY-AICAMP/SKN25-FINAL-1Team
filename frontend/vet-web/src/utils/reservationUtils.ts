@@ -1,3 +1,17 @@
+import {
+  addDays as addDateFnsDays,
+  addMonths as addDateFnsMonths,
+  eachDayOfInterval,
+  format,
+  isSaturday,
+  isSameDay,
+  isSunday,
+  parse,
+  startOfDay as startOfDateFnsDay,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
+import Holidays from "date-holidays";
 import type {
   PatientDetailResponse,
   PatientListItemResponse,
@@ -76,52 +90,36 @@ export const weeklyBadgeClass: Record<ReservationStatus, string> = {
   normal: "bg-[#edf4ff] text-[#4b76c8]",
 };
 
-const koreanHolidays: Record<string, string> = {
-  "2026-01-01": "신정",
-  "2026-02-16": "설날",
-  "2026-02-17": "설날",
-  "2026-02-18": "설날",
-  "2026-03-01": "삼일절",
-  "2026-03-02": "대체공휴일",
-  "2026-05-01": "근로자의날",
-  "2026-05-05": "어린이날",
-  "2026-05-24": "부처님오신날",
-  "2026-05-25": "대체공휴일",
-  "2026-06-03": "전국동시지방선거",
-  "2026-06-06": "현충일",
-  "2026-07-17": "제헌절",
-  "2026-08-15": "광복절",
-  "2026-08-17": "대체공휴일",
-  "2026-09-24": "추석",
-  "2026-09-25": "추석",
-  "2026-09-26": "추석",
-  "2026-10-03": "개천절",
-  "2026-10-05": "대체공휴일",
-  "2026-10-09": "한글날",
-  "2026-12-25": "성탄절",
-  "2027-01-01": "신정",
-  "2027-02-06": "설날",
-  "2027-02-07": "설날",
-  "2027-02-08": "설날",
-  "2027-02-09": "대체공휴일",
-  "2027-03-01": "삼일절",
-  "2027-05-01": "근로자의날",
-  "2027-05-05": "어린이날",
-  "2027-05-13": "부처님오신날",
-  "2027-06-06": "현충일",
-  "2027-07-17": "제헌절",
-  "2027-08-15": "광복절",
-  "2027-08-16": "대체공휴일",
-  "2027-09-14": "추석",
-  "2027-09-15": "추석",
-  "2027-09-16": "추석",
-  "2027-10-03": "개천절",
-  "2027-10-04": "대체공휴일",
-  "2027-10-09": "한글날",
-  "2027-10-11": "대체공휴일",
-  "2027-12-25": "성탄절",
-  "2027-12-27": "대체공휴일",
+const koreanHolidayProvider = new Holidays("KR", {
+  languages: "ko",
+  types: ["public"],
+});
+
+const holidayNameAliases: Record<string, string> = {
+  "3·1절": "삼일절",
+  석가탄신일: "부처님오신날",
+  기독탄신일: "성탄절",
 };
+
+const oneTimeKoreanHolidays: Record<string, string> = {
+  "2026-06-03": "전국동시지방선거",
+};
+
+const fixedDisplayHolidays: Record<string, string> = {
+  "05-01": "근로자의날",
+};
+
+const substitutionEligibleNames = new Set([
+  "삼일절",
+  "어린이날",
+  "부처님오신날",
+  "광복절",
+  "개천절",
+  "한글날",
+  "성탄절",
+]);
+
+const koreanHolidayCache: Record<number, Record<string, string>> = {};
 
 export function dotDate(value: string) {
   return value ? value.replace(/-/g, ".") : "";
@@ -231,52 +229,40 @@ export function getReservationAt(reservations: ReservationItem[], start: string)
 }
 
 export function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return startOfDateFnsDay(date);
 }
 
 export const TODAY = startOfDay(new Date());
 
 export function addDays(date: Date, amount: number) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + amount);
-  return nextDate;
+  return addDateFnsDays(date, amount);
 }
 
 export function addMonths(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+  return startOfMonth(addDateFnsMonths(date, amount));
 }
 
 export function isSameDate(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function getMonday(date: Date) {
-  const target = startOfDay(date);
-  const day = target.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addDays(target, diff);
+  return isSameDay(left, right);
 }
 
 export function getWeekDays(date: Date) {
-  const monday = getMonday(date);
+  const monday = startOfWeek(date, { weekStartsOn: 1 });
   return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
 }
 
 export function getMonthGrid(date: Date) {
-  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-  const gridStart = addDays(firstDay, -firstDay.getDay());
-  return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+  const monthStart = startOfMonth(date);
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+
+  return eachDayOfInterval({
+    start: gridStart,
+    end: addDays(gridStart, 41),
+  });
 }
 
 export function formatDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
+  return format(date, "yyyy.MM.dd");
 }
 
 export function formatDateWithWeekday(date: Date) {
@@ -284,11 +270,11 @@ export function formatDateWithWeekday(date: Date) {
 }
 
 export function getDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return format(date, "yyyy-MM-dd");
 }
 
 export function formatMonthTitle(date: Date) {
-  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월`;
+  return format(date, "yyyy년 MM월");
 }
 
 export function formatWeekRange(date: Date) {
@@ -312,5 +298,170 @@ export function getControlLabel(
 }
 
 export function getHolidayName(date: Date) {
-  return koreanHolidays[getDateKey(date)];
+  return getKoreanHolidays(date.getFullYear())[getDateKey(date)];
+}
+
+function getKoreanHolidays(year: number) {
+  koreanHolidayCache[year] ??= buildKoreanHolidays(year);
+  return koreanHolidayCache[year];
+}
+
+function buildKoreanHolidays(year: number) {
+  const holidays: Record<string, string> = {};
+  const overlapSubstituteDates: Date[] = [];
+  const baseHolidays = koreanHolidayProvider
+    .getHolidays(year, "ko")
+    .filter((holiday) => holiday.type === "public");
+
+  for (const holiday of baseHolidays) {
+    const dateKey = holiday.date.slice(0, 10);
+    const name = normalizeHolidayName(holiday.name);
+
+    if (name === "설날") {
+      addHolidayRange(
+        holidays,
+        addDays(parseDateKey(dateKey), -1),
+        3,
+        "설날",
+        overlapSubstituteDates
+      );
+      continue;
+    }
+
+    if (name === "추석") {
+      addHolidayRange(
+        holidays,
+        parseDateKey(dateKey),
+        3,
+        "추석",
+        overlapSubstituteDates
+      );
+      continue;
+    }
+
+    setKoreanHoliday(holidays, dateKey, name, overlapSubstituteDates);
+  }
+
+  for (const [monthDay, name] of Object.entries(fixedDisplayHolidays)) {
+    setKoreanHoliday(holidays, `${year}-${monthDay}`, name, overlapSubstituteDates);
+  }
+
+  for (const [dateKey, name] of Object.entries(oneTimeKoreanHolidays)) {
+    if (dateKey.startsWith(`${year}-`)) {
+      setKoreanHoliday(holidays, dateKey, name, overlapSubstituteDates);
+    }
+  }
+
+  addSubstituteHolidays(holidays, overlapSubstituteDates);
+
+  return holidays;
+}
+
+function normalizeHolidayName(name: string) {
+  return holidayNameAliases[name] ?? name;
+}
+
+function addHolidayRange(
+  holidays: Record<string, string>,
+  startDate: Date,
+  length: number,
+  name: string,
+  overlapSubstituteDates: Date[]
+) {
+  for (let index = 0; index < length; index += 1) {
+    const date = addDays(startDate, index);
+    setKoreanHoliday(holidays, getDateKey(date), name, overlapSubstituteDates);
+  }
+}
+
+function setKoreanHoliday(
+  holidays: Record<string, string>,
+  dateKey: string,
+  name: string,
+  overlapSubstituteDates: Date[]
+) {
+  if (holidays[dateKey] && holidays[dateKey] !== name) {
+    overlapSubstituteDates.push(parseDateKey(dateKey));
+    holidays[dateKey] = mergeHolidayNames(holidays[dateKey], name);
+    return;
+  }
+
+  holidays[dateKey] = name;
+}
+
+function addSubstituteHolidays(
+  holidays: Record<string, string>,
+  overlapSubstituteDates: Date[]
+) {
+  const entries = Object.entries(holidays);
+  const seollalKeys = entries
+    .filter(([, name]) => hasHolidayName(name, "설날"))
+    .map(([dateKey]) => dateKey);
+  const chuseokKeys = entries
+    .filter(([, name]) => hasHolidayName(name, "추석"))
+    .map(([dateKey]) => dateKey);
+
+  for (const [dateKey, name] of entries) {
+    const date = parseDateKey(dateKey);
+
+    if (isSubstitutionEligibleName(name) && isWeekend(date)) {
+      addNextSubstituteHoliday(holidays, date);
+    }
+  }
+
+  if (seollalKeys.some((dateKey) => isSunday(parseDateKey(dateKey)))) {
+    addNextSubstituteHoliday(
+      holidays,
+      parseDateKey(seollalKeys[seollalKeys.length - 1])
+    );
+  }
+
+  if (chuseokKeys.some((dateKey) => isSunday(parseDateKey(dateKey)))) {
+    addNextSubstituteHoliday(
+      holidays,
+      parseDateKey(chuseokKeys[chuseokKeys.length - 1])
+    );
+  }
+
+  for (const date of overlapSubstituteDates) {
+    addNextSubstituteHoliday(holidays, date);
+  }
+}
+
+function addNextSubstituteHoliday(holidays: Record<string, string>, fromDate: Date) {
+  let candidate = addDays(fromDate, 1);
+
+  while (isWeekend(candidate) || holidays[getDateKey(candidate)]) {
+    candidate = addDays(candidate, 1);
+  }
+
+  holidays[getDateKey(candidate)] = "대체공휴일";
+}
+
+function mergeHolidayNames(currentName: string, nextName: string) {
+  const names = currentName.split("·");
+
+  if (!names.includes(nextName)) {
+    names.push(nextName);
+  }
+
+  return names.join("·");
+}
+
+function hasHolidayName(currentName: string, targetName: string) {
+  return currentName.split("·").includes(targetName);
+}
+
+function isSubstitutionEligibleName(name: string) {
+  return name
+    .split("·")
+    .some((holidayName) => substitutionEligibleNames.has(holidayName));
+}
+
+function isWeekend(date: Date) {
+  return isSaturday(date) || isSunday(date);
+}
+
+function parseDateKey(dateKey: string) {
+  return parse(dateKey, "yyyy-MM-dd", new Date());
 }

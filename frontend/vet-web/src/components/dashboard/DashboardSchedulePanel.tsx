@@ -15,6 +15,7 @@ interface DashboardSchedulePanelProps {
   schedulesByHour: Record<string, DashboardScheduleItem[]>;
   isLoading: boolean;
   errorMessage: string;
+  holidayName?: string;
   onToday: () => void;
   onPrevDate: () => void;
   onNextDate: () => void;
@@ -24,6 +25,7 @@ export function DashboardSchedulePanel({
   schedulesByHour,
   isLoading,
   errorMessage,
+  holidayName,
   onToday,
   onPrevDate,
   onNextDate,
@@ -35,6 +37,11 @@ export function DashboardSchedulePanel({
           <h2 className="text-lg font-extrabold tracking-normal text-[#151b28]">
             오늘의 일정
           </h2>
+          {holidayName && (
+            <span className="rounded-md bg-[#fff1f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
+              {holidayName}
+            </span>
+          )}
           <div className="hidden items-center gap-2 text-sm font-extrabold text-[#4d5874] lg:flex">
             <ClinicRoomIcon />
             <span>진료실 1</span>

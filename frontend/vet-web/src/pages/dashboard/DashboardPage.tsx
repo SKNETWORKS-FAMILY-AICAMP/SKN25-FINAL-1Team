@@ -19,6 +19,7 @@ import {
   formatSelectedDate,
   groupSchedulesByHour,
 } from "../../utils/dashboardUtils";
+import { getHolidayName } from "../../utils/reservationUtils";
 
 interface DashboardPageProps {
   session: AuthSession;
@@ -48,6 +49,7 @@ export default function DashboardPage({
     () => formatSelectedDate(selectedDate),
     [selectedDate]
   );
+  const holidayName = useMemo(() => getHolidayName(selectedDate), [selectedDate]);
   const apiDate = useMemo(() => formatApiDate(selectedDate), [selectedDate]);
   const schedulesByHour = useMemo(
     () => groupSchedulesByHour(scheduleItems),
@@ -116,6 +118,11 @@ export default function DashboardPage({
               </h1>
               <p className="mt-2 text-sm font-bold tabular-nums text-[#6b7486]">
                 {formattedDate}
+                {holidayName && (
+                  <span className="ml-2 rounded-md bg-[#fff1f2] px-2 py-0.5 text-xs font-extrabold text-[#ef4444]">
+                    {holidayName}
+                  </span>
+                )}
               </p>
             </div>
 
@@ -126,6 +133,7 @@ export default function DashboardPage({
             schedulesByHour={schedulesByHour}
             isLoading={isLoading}
             errorMessage={errorMessage}
+            holidayName={holidayName}
             onToday={() => setSelectedDate(new Date())}
             onPrevDate={() => setSelectedDate((date) => addDays(date, -1))}
             onNextDate={() => setSelectedDate((date) => addDays(date, 1))}
