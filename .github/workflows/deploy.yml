@@ -1,0 +1,37 @@
+name: Deploy to EC2
+
+# main 의 "Docker Build & Push" 가 성공적으로 끝나면 자동 실행.
+# (이미지가 Docker Hub에 올라간 뒤 EC2가 pull 하도록 순서 보장)
+# 수동 실행도 가능 (Actions 탭 → Run workflow).
+on:
+  workflow_run:
+    workflows: ["Docker Build & Push"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 수동 실행이거나, build가 main에서 성공했을 때만 배포
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    steps:
+      - name: EC2에 SSH 접속해서 최신 백엔드로 갱신
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/medipaw
+            # 최신 backend 이미지 받기
+            sudo docker compose -f docker-compose.prod.yml pull backend
+            # 마이그레이션 + 백엔드 재시작 (프론트 :ec2 이미지는 건드리지 않음)
+            sudo docker compose -f docker-compose.prod.yml up -d
+            # 안 쓰는 옛 이미지 정리(디스크 절약)
+            sudo docker image prune -f
+            echo "=== 배포 후 상태 ==="
+            sudo docker compose -f docker-compose.prod.yml ps
