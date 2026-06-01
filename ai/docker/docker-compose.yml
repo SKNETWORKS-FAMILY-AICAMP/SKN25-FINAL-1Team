@@ -1,8 +1,7 @@
-version: "3.9"
-
 # MediPaw 전체 스택
-# 사용법:
-#   1. 프로젝트 루트에 .env 파일 준비 (backend/.env.example 참고)
+# 사용법(가장 쉬움):  ./dev.sh   (레포 루트에서)
+# 수동:
+#   1. cp backend/.env.example backend/.env  (그리고 OPENAI_API_KEY 채우기)
 #   2. docker compose -f ai/docker/docker-compose.yml up --build
 
 services:
