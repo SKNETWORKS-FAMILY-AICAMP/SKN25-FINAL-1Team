@@ -8,6 +8,7 @@ export function AutoPrescriptionPanel({
   isLoading = false,
   onClose,
   onLoad,
+  onApply,
   onOpenPreview,
   isReadOnly = false,
 }: {
@@ -16,6 +17,7 @@ export function AutoPrescriptionPanel({
   isLoading?: boolean;
   onClose: () => void;
   onLoad: () => void;
+  onApply: () => void;
   onOpenPreview: () => void;
   isReadOnly?: boolean;
 }) {
@@ -104,7 +106,8 @@ export function AutoPrescriptionPanel({
         </button>
         <button
           type="button"
-          disabled={isReadOnly}
+          onClick={onApply}
+          disabled={isReadOnly || prescriptions.length === 0}
           className="h-10 flex-1 rounded-lg bg-[#4a89ff] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
         >
           적용

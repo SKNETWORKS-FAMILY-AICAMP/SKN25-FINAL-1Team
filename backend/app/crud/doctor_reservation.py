@@ -151,7 +151,11 @@ async def update_reservation_status(
     status: str,
     vet_memo: str | None = None,
     attachments: list[dict] | None = None,
+    prescriptions: list[dict] | None = None,
 ):
+    from app.models.drug import Drug
+    from app.models.prescription import Prescription
+
     schedule = await get_schedule(db, schedule_id)
     if not schedule:
         return None
@@ -175,6 +179,22 @@ async def update_reservation_status(
 
             emr.vet_memo = vet_memo
             emr.attachments = attachments or []
+
+            if prescriptions:
+                await db.flush()  # doctor_emrid 확정
+                for presc in prescriptions:
+                    drug_row = await db.execute(
+                        select(Drug).where(Drug.name == presc.get("drug_name"))
+                    )
+                    drug = drug_row.scalar_one_or_none()
+                    if drug:
+                        db.add(Prescription(
+                            doctor_emrid=emr.doctor_emrid,
+                            drug_id=drug.drugid,
+                            form=presc.get("form"),
+                            dosage=presc.get("dosage"),
+                            duration_days=presc.get("duration_days"),
+                        ))
 
     await db.commit()
     await db.refresh(schedule)

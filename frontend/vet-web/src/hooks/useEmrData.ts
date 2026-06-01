@@ -141,11 +141,17 @@ export function useEmrData() {
     );
     if (!targetPatient) return;
 
-    // API: 상태 업데이트
+    // API: 상태 업데이트 (처방전 포함)
     try {
       await updateReservationStatus(selectedScheduleId, "진료완료", {
         vet_memo: editorValue,
         attachments: uploadedFiles,
+        prescriptions: prescriptions.length > 0 ? prescriptions.map((p) => ({
+          drug_name: p.drug_name,
+          form: p.form,
+          dosage: p.dosage,
+          duration_days: p.duration_days,
+        })) : undefined,
       });
     } catch (err) {
       console.error("[CompleteVisit] status update failed:", err);
@@ -251,6 +257,17 @@ export function useEmrData() {
     setAutoPrescriptions([]);
   }, []);
 
+  const handleApplyAutoPrescription = useCallback(() => {
+    if (autoPrescriptions.length === 0) return;
+    const text = [
+      "[처방전]",
+      ...autoPrescriptions.map(
+        (p) => `- ${p.drug_name} / ${p.form} / ${p.dosage} / ${p.duration_days}일`
+      ),
+    ].join("\n");
+    setEditorValue((prev: string) => [prev, text].filter(Boolean).join("\n\n"));
+  }, [autoPrescriptions]);
+
   const handleGeneratePrescription = useCallback(async () => {
     if (selectedScheduleId === undefined) return;
     setAutoPrescriptions([]);
@@ -337,6 +354,7 @@ export function useEmrData() {
     handleClearAutoPrescription,
     handleGeneratePrescription,
     handleAddPrescription,
+    handleApplyAutoPrescription,
     openPreviewImage,
   };
 }
