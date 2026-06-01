@@ -245,6 +245,7 @@ async def change_reservation_status(
         request.status,
         vet_memo=request.vet_memo,
         attachments=request.attachments,
+        prescriptions=[p.model_dump() for p in request.prescriptions] if request.prescriptions else None,
     )
 
     if not updated:

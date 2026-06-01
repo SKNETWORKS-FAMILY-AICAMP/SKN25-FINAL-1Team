@@ -65,6 +65,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleClearAutoPrescription,
     handleGeneratePrescription,
     handleAddPrescription,
+    handleApplyAutoPrescription,
     openPreviewImage,
   } = useEmrData();
   const isReadOnly = queueTab === "completed";
@@ -210,6 +211,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             isLoading={isLoadingAutoPresc}
             onClose={handleClearAutoPrescription}
             onLoad={handleLoadAutoPrescription}
+            onApply={handleApplyAutoPrescription}
             onOpenPreview={() => setIsPrescriptionPreviewOpen(true)}
             isReadOnly={isReadOnly}
           />

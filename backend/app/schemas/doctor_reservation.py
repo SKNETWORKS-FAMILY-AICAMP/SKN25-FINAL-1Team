@@ -19,11 +19,19 @@ class ReservationUpdate(BaseModel):
     memo: Optional[str] = None
 
 
+class PrescriptionInput(BaseModel):
+    drug_name: str
+    form: Optional[str] = None
+    dosage: Optional[str] = None
+    duration_days: Optional[int] = None
+
+
 # 예약 상태 변경 요청
 class ReservationStatusUpdate(BaseModel):
     status: str
     vet_memo: Optional[str] = None
     attachments: Optional[list[dict]] = None
+    prescriptions: Optional[list[PrescriptionInput]] = None
 
 
 # 예약 목록 항목 응답

@@ -14,6 +14,12 @@ export const updateReservationStatus = async (
   payload?: {
     vet_memo?: string;
     attachments?: Array<{ id?: number; url: string; label: string }>;
+    prescriptions?: Array<{
+      drug_name: string;
+      form?: string;
+      dosage?: string;
+      duration_days?: number;
+    }>;
   },
 ) => {
 
