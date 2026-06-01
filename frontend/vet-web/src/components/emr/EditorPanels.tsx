@@ -1,4 +1,7 @@
 import { AlignLeft, Bold, FileUp, Italic, List, Plus, Search, Trash2, Underline, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { DrugSearchResult } from "../../api/prescriptionApi";
+import { searchDrugs } from "../../api/prescriptionApi";
 import type { Prescription, UploadedFile } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -147,26 +150,95 @@ export function PrescriptionInputPanel({
   prescriptions,
   onRemove,
   onGenerate,
+  onAdd,
+  accessToken,
   isReadOnly = false,
 }: {
   prescriptions: Prescription[];
   onRemove: (name: string) => void;
   onGenerate: () => void;
+  onAdd?: (drug: DrugSearchResult) => void;
+  accessToken?: string;
   isReadOnly?: boolean;
 }) {
+  const [keyword, setKeyword] = useState("");
+  const [results, setResults] = useState<DrugSearchResult[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!keyword.trim() || !accessToken) {
+      setResults([]);
+      setIsOpen(false);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const drugs = await searchDrugs({ accessToken, keyword });
+        setResults(drugs);
+        setIsOpen(drugs.length > 0);
+      } catch {
+        setResults([]);
+        setIsOpen(false);
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [keyword, accessToken]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (drug: DrugSearchResult) => {
+    onAdd?.(drug);
+    setKeyword("");
+    setResults([]);
+    setIsOpen(false);
+  };
+
   return (
     <Panel>
       <div className="border-b border-[#edf1f6] px-5 py-3">
         <h2 className="text-base font-extrabold text-[#151b28]">처방전</h2>
       </div>
       <div className="space-y-3 px-5 py-4">
-        <div className="relative">
+        <div ref={wrapperRef} className="relative">
           <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
             placeholder="약제명 검색 (예: 아모시실린)"
             readOnly={isReadOnly}
             className="h-10 w-full rounded-lg border border-[#4a89ff] px-4 pr-10 text-sm font-bold outline-none ring-4 ring-[#edf5ff] read-only:border-[#dfe6f1] read-only:bg-[#f8fafc] read-only:text-[#8a94a6] read-only:ring-0"
           />
           <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#4a89ff]" />
+          {isOpen && (
+            <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[#dfe6f1] bg-white shadow-lg">
+              {results.map((drug) => (
+                <li key={drug.drugid}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(drug)}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-[#edf5ff]"
+                  >
+                    <span className="font-extrabold text-[#20283a]">{drug.name}</span>
+                    {drug.ingredient_kr && (
+                      <span className="ml-2 text-xs text-[#8a94a6]">{drug.ingredient_kr}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-lg border border-[#e8edf4]">

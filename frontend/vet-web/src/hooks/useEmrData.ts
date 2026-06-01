@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DrugSearchResult } from "../api/prescriptionApi";
 import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
@@ -231,6 +232,22 @@ export function useEmrData() {
     );
   }, []);
 
+  const handleAddPrescription = useCallback((drug: DrugSearchResult) => {
+    setPrescriptions((items: Prescription[]) => {
+      if (items.some((p) => p.drug_name === drug.name)) return items;
+      return [
+        ...items,
+        {
+          drug_name: drug.name,
+          form: "",
+          dosage: drug.dosage ?? "",
+          frequency: "",
+          duration_days: drug.duration_days ?? 0,
+        },
+      ];
+    });
+  }, []);
+
   const openPreviewImage = useCallback((url: string, label: string) => {
     setPreviewImage({ url, label });
   }, []);
@@ -273,6 +290,7 @@ export function useEmrData() {
     handleAddMockFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
+    handleAddPrescription,
     openPreviewImage,
   };
 }

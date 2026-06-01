@@ -102,6 +102,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.patient import router as patient_router
 from app.api.doctor_reservation import router as doctor_reservation_router
 from app.api.followup import router as followup_router
+from app.api.prescriptions import router as prescriptions_router
 from app.api.emr import router as emr_router
 from app.api.alarm import router as alarm_router
 from app.core.config import settings
@@ -226,6 +227,7 @@ app.include_router(dashboard_router)
 app.include_router(patient_router)
 app.include_router(doctor_reservation_router)
 app.include_router(followup_router)
+app.include_router(prescriptions_router)
 app.include_router(emr_router)
 app.include_router(alarm_router)
 app.include_router(agent_router)

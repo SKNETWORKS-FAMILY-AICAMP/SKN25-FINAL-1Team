@@ -62,6 +62,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleAddMockFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
+    handleAddPrescription,
     openPreviewImage,
   } = useEmrData();
   const [isChecksExpanded, setIsChecksExpanded] = useState(false);
@@ -212,7 +213,9 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             <PrescriptionInputPanel
               prescriptions={prescriptions}
               onRemove={handleRemovePrescription}
+              onAdd={handleAddPrescription}
               onGenerate={() => setIsAutoPanelOpen(true)}
+              accessToken={session.accessToken}
               isReadOnly={isReadOnly}
             />
           </main>
