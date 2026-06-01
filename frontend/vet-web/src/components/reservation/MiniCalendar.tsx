@@ -4,6 +4,7 @@ import {
   TODAY,
   addMonths,
   formatMonthTitle,
+  getHolidayName,
   getMonthGrid,
   isSameDate,
 } from "../../utils/reservationUtils";
@@ -56,6 +57,7 @@ export function MiniCalendar({
         {days.map((day) => {
           const isToday = isSameDate(day, TODAY);
           const isSelected = isSameDate(day, selectedDate);
+          const holidayName = getHolidayName(day);
           const isRed = day.getDay() === 0;
           const isMuted = day.getMonth() !== visibleMonth.getMonth();
 
@@ -63,6 +65,7 @@ export function MiniCalendar({
             <button
               key={day.toISOString()}
               type="button"
+              title={holidayName}
               onClick={() => {
                 onSelectDate(day);
                 setVisibleMonth(new Date(day.getFullYear(), day.getMonth(), 1));
@@ -73,7 +76,7 @@ export function MiniCalendar({
                   ? "bg-[#2563eb] text-white"
                   : isSelected
                     ? "bg-[#edf5ff] text-[#2563eb]"
-                    : isRed
+                    : isRed || holidayName
                       ? "text-[#ef4444]"
                       : isMuted
                         ? "text-[#a4adbd]"
