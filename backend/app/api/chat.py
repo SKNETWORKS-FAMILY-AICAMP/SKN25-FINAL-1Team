@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +6,7 @@ import json
 import asyncio
 import logging
 import uuid
+import base64
 from datetime import date
 from openai import AsyncOpenAI
 from app.db.session import get_db
@@ -31,6 +32,181 @@ logger = logging.getLogger(__name__)
 # 절대 내려보내지 않는다. 전체 triage 결과는 triage_resultDB에 저장되어 수의사만 열람한다.
 # 클라이언트에는 예약 흐름 제어에 필요한 최소 필드만 전달한다.
 _GUARDIAN_SAFE_FIELDS = ("is_triage_complete", "urgency_level_num", "need_followup", "symptom_keywords")
+
+
+def _format_photo_analysis_for_prompt(analysis: dict | None) -> str:
+    if not analysis:
+        return ""
+
+    lines = ["[첨부 사진 AI 분석 참고자료]"]
+    visual = analysis.get("visual_observation")
+    if isinstance(visual, dict):
+        visible_changes = visual.get("visible_changes") or []
+        if visible_changes:
+            lines.append(f"- 사진 관찰: {', '.join(str(item) for item in visible_changes[:4])}")
+        if visual.get("lesion_location"):
+            lines.append(f"- 관찰 위치: {visual['lesion_location']}")
+        if visual.get("question_focus"):
+            lines.append(f"- 다음 질문 초점: {visual['question_focus']}")
+
+    skin = analysis.get("skin")
+    if isinstance(skin, dict):
+        if "error" in skin:
+            lines.append(f"- 피부 모델: 분석 실패({skin['error']})")
+        else:
+            skin_class = skin.get("top_class")
+            lines.append(
+                "- 피부 모델: "
+                f"{skin.get('top_1') or '결과 없음'}; "
+                f"상위 후보: {', '.join(skin.get('details') or [])}"
+            )
+            if skin_class and skin_class != "healthy":
+                lines.append(
+                    "- 답변 지침: 첫 문장에서 사진과 보조 분석상 피부 변화 가능성이 보인다고 짧게 언급한 뒤, "
+                    "가려움·통증·크기 변화·진물/출혈 중 하나를 구체적으로 질문하세요."
+                )
+
+    eye = analysis.get("eye")
+    if isinstance(eye, dict):
+        if "error" in eye:
+            lines.append(f"- 안구 모델: 분석 실패({eye['error']})")
+        else:
+            lines.append(
+                "- 안구 모델: "
+                f"{eye.get('top_1') or '결과 없음'}; "
+                f"상위 후보: {', '.join(eye.get('details') or [])}"
+            )
+
+    lines.append(
+        "- 위 결과는 사진 기반 보조 분류이며, 보호자에게 확정 진단처럼 말하지 말고 "
+        "문진 질문과 내원 필요성 판단의 참고자료로만 사용하세요."
+    )
+    return "\n".join(lines)
+
+
+def _message_content_for_openai(message: dict) -> str:
+    content = message.get("content") or ""
+    photo_analysis = _format_photo_analysis_for_prompt(message.get("photo_analysis"))
+    if photo_analysis:
+        return f"{content}\n\n{photo_analysis}"
+    return content
+
+
+def _mime_type_from_url(image_url: str) -> str:
+    lower = image_url.lower().split("?", 1)[0]
+    if lower.endswith(".png"):
+        return "image/png"
+    if lower.endswith(".webp"):
+        return "image/webp"
+    return "image/jpeg"
+
+
+def _image_data_url_from_s3_url(image_url: str) -> str:
+    from app.utils.s3 import read_object_bytes_from_url
+
+    image_bytes = read_object_bytes_from_url(image_url)
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{_mime_type_from_url(image_url)};base64,{encoded}"
+
+
+def _message_for_openai(message: dict) -> dict:
+    role = message["role"]
+    text_content = _message_content_for_openai(message)
+    image_url = message.get("image_url")
+
+    if role == "user" and image_url:
+        try:
+            return {
+                "role": role,
+                "content": [
+                    {"type": "text", "text": text_content},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": _image_data_url_from_s3_url(image_url),
+                            "detail": "high",
+                        },
+                    },
+                ],
+            }
+        except Exception as exc:
+            logger.warning("[Vision/Chat] OpenAI image payload failed image_url=%s: %s", image_url, exc)
+
+    return {"role": role, "content": text_content}
+
+
+async def _analyze_chat_photo(image_url: str, user_text: str) -> dict | None:
+    try:
+        from app.utils.s3 import read_object_bytes_from_url
+        from ai.services.vision_model import vision_service
+
+        image_bytes = read_object_bytes_from_url(image_url)
+        analysis = {"skin": vision_service.analyze_skin(image_bytes)}
+
+        text = user_text or ""
+        if any(keyword in text for keyword in ("눈", "안구", "눈물", "충혈", "각막")):
+            analysis["eye"] = vision_service.analyze_eye(image_bytes)
+
+        logger.info(
+            "[Vision/Chat] analyzed image_url=%s skin=%s eye=%s",
+            image_url,
+            analysis.get("skin", {}).get("top_class"),
+            analysis.get("eye", {}).get("top_class") if analysis.get("eye") else None,
+        )
+        return analysis
+    except Exception as exc:
+        logger.warning("[Vision/Chat] image analysis failed image_url=%s: %s", image_url, exc, exc_info=True)
+        return {"skin": {"error": "첨부 사진 분석에 실패했습니다."}}
+
+
+async def _describe_chat_photo(image_url: str, user_text: str) -> dict | None:
+    try:
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        response = await client.chat.completions.create(
+            model=settings.OPENAI_VISION_MODEL or settings.OPENAI_MODEL or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "당신은 반려동물 사진에서 보이는 특징만 관찰하는 보조 모델입니다. "
+                        "진단명이나 확정 판단은 하지 마세요. 한국어 JSON만 출력하세요."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "보호자 말: "
+                                f"{user_text or '첨부 사진만 전달됨'}\n"
+                                "사진에서 명확히 보이는 변화만 적어주세요. "
+                                "붉은 부위, 돌출, 털 빠짐, 상처처럼 보이는 부분, 진물/출혈처럼 보이는 흔적이 있으면 포함하세요.\n"
+                                "형식: {\"visible_changes\":[\"...\"],\"lesion_location\":\"...\",\"question_focus\":\"...\"}"
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": _image_data_url_from_s3_url(image_url),
+                                "detail": "high",
+                            },
+                        },
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            max_completion_tokens=400,
+            temperature=0.0,
+            timeout=45.0,
+        )
+        raw = response.choices[0].message.content or "{}"
+        parsed = json.loads(raw)
+        logger.info("[Vision/Chat] visual observation=%s", parsed)
+        return parsed
+    except Exception as exc:
+        logger.warning("[Vision/Chat] visual observation failed image_url=%s: %s", image_url, exc, exc_info=True)
+        return None
 
 
 def _guardian_safe_triage(info: dict | None) -> dict | None:
@@ -108,7 +284,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if not request.content:
+    if not request.content and not request.image_url:
         raise HTTPException(status_code=400, detail="메시지를 입력해주세요.")
 
     session = await get_chat_session(db, session_id, current_user.userid)
@@ -120,7 +296,15 @@ async def send_message(
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
-    await add_message(db, session, "user", request.content, request.image_url)
+    photo_analysis = None
+    if request.image_url:
+        photo_analysis = await _analyze_chat_photo(request.image_url, request.content)
+        visual_observation = await _describe_chat_photo(request.image_url, request.content)
+        if visual_observation:
+            photo_analysis = photo_analysis or {}
+            photo_analysis["visual_observation"] = visual_observation
+
+    await add_message(db, session, "user", request.content, request.image_url, photo_analysis=photo_analysis)
 
     from app.crud.patient import build_patient_context
     
@@ -128,9 +312,9 @@ async def send_message(
     emr_history = patient_context_data["patient_context"]["emr_history"] # For backward compatibility with Triage prompt until we update it
 
     openai_messages = [
-        {"role": m["role"], "content": m["content"]}
+        _message_for_openai(m)
         for m in (session.messages or [])
-        if m.get("role") in ("user", "assistant") and m.get("content")
+        if m.get("role") in ("user", "assistant") and _message_content_for_openai(m)
     ]
 
     turn_count = sum(1 for m in openai_messages if m["role"] == "assistant")
@@ -295,14 +479,40 @@ async def get_presigned_url(
     if file_size > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
 
-    # TODO: AWS S3 Presigned URL 발급 예정
-    return {
-        "code": 200,
-        "result": {
-            "presigned_url": "https://s3.amazonaws.com/temp",
-            "cloudfront_url": "https://cloudfront-url/temp",
-        },
-    }
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import create_presigned_put
+
+    try:
+        result = create_presigned_put(file_name, content_type, prefix="chat")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
+
+
+@router.post("/upload/file")
+async def upload_chat_file(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+):
+    allowed_types = ["image/jpeg", "image/png", "video/mp4"]
+    content_type = file.content_type or "application/octet-stream"
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.")
+
+    body = await file.read()
+    if len(body) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
+
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import upload_object
+
+    try:
+        result = upload_object(file.filename or "attachment", content_type, body, prefix="chat")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
 
 
 # 상담 기록 목록 조회

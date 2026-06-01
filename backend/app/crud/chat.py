@@ -45,13 +45,22 @@ async def get_chat_sessions_by_petid(db: AsyncSession, userid: int, petid: int):
     return result.scalars().all()
 
 # 메시지 추가
-async def add_message(db: AsyncSession, session: ChatHistory, role: str, content: str, image_url: str = None):
+async def add_message(
+    db: AsyncSession,
+    session: ChatHistory,
+    role: str,
+    content: str,
+    image_url: str = None,
+    photo_analysis: dict | None = None,
+):
     messages = list(session.messages or [])
     message = {
         "role": role,
         "content": content,
         "image_url": image_url,
     }
+    if photo_analysis:
+        message["photo_analysis"] = photo_analysis
     messages.append(message)
 
     session.messages = messages
