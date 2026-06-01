@@ -395,6 +395,56 @@ Follow-up Agent는 추가 관찰이 필요한 환자에 대해 경과 내용을 
 
 ## **10. 실행 방법**
 
+> 📘 더 자세한 트러블슈팅은 [`DEV_DOCKER.md`](./DEV_DOCKER.md) 참고.
+
+### **🟢 빠른 시작 (권장)**
+
+**공통 준비물**: Docker Desktop 켜기 🐳 (안 켜면 모든 docker 명령이 에러)
+
+```bash
+# 맥 / 리눅스        # 윈도우(PowerShell)
+./dev.sh             .\dev.ps1
+```
+
+이 한 줄이면 **.env 자동 생성 → 포트 정리 → 빌드·실행 → 약 데이터 seed → 테스트 계정 생성**까지 끝.
+
+| 앱 | 주소 | 테스트 계정 |
+| :--- | :--- | :--- |
+| 보호자 | http://localhost:5173 | `guardian_test` / `Test1234!` |
+| 수의사 | http://localhost:5174 | `admin` / `Test1234!` |
+| API 문서 | http://localhost:8000/docs | — |
+
+끄기: `./dev.sh down` (윈도우 `.\dev.ps1 down`) · 초기화: `./dev.sh reset`
+
+> 💡 `OPENAI_API_KEY` 가 비어 있어도 서버는 뜹니다(AI 기능만 비활성). `backend/.env`에 팀 공용 키를 넣으면 활성화.
+
+### **⚠️ 개발 방식 2가지 — 하나만 켜세요 (포트 충돌 주의)**
+
+5173/5174/8000 포트를 두 방식이 똑같이 쓰므로, **동시에 켜면 충돌**합니다.
+
+| 방식 | 실행 | 비고 |
+| :--- | :--- | :--- |
+| **A. 풀 도커** | `./dev.sh` / `.\dev.ps1` | 세팅 간편. 이때 `npm run dev` 따로 켜지 말 것 |
+| **B. 하이브리드** | DB만 도커 + 백엔드/프론트는 로컬 | 빌드 없이 빠른 개발 |
+
+**B(하이브리드) 실행:**
+```bash
+docker compose -f ai/docker/docker-compose.yml up -d db   # DB만 도커
+cd backend && uvicorn app.main:app --reload --port 8000   # 백엔드 로컬
+cd frontend/guardian-web && npm run dev                    # 5173
+cd frontend/vet-web && npm run dev                         # 5174
+```
+
+**`Port already in use` 가 뜨면** (대개 도커 프론트가 떠 있어서):
+```bash
+docker compose -f ai/docker/docker-compose.yml stop guardian vet backend   # db는 유지
+# 그래도 잡혀있으면 포트 점유 프로세스 종료
+#   맥:      lsof -nP -iTCP:5174 -sTCP:LISTEN  →  kill -9 <PID>
+#   윈도우:  netstat -ano | findstr :5174      →  taskkill /PID <PID> /F
+```
+
+### **수동 실행 (방식 B 상세)**
+
 ### **Backend**
 
 ```bash
@@ -407,26 +457,26 @@ pip install -r requirements.txt
 `.env.example`을 참고해 `.env` 파일을 설정합니다.
 
 ```env
-DATABASE_URL=
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=120
-REFRESH_TOKEN_EXPIRE_DAYS=14
+# 로컬 백엔드 → 도커 DB(5432) 연결
+DATABASE_URL=postgresql://medipaw:medipaw_secret@localhost:5432/medipaw
+SECRET_KEY=dev-secret-change-me-in-production
 
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
+# OpenAI (AI 기능 쓰려면. 비우면 서버는 뜨고 AI만 비활성)
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+
+# AWS S3 (이미지 업로드 쓸 사람만. 비워도 됨)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 AWS_REGION=ap-northeast-2
-S3_BUCKET_NAME=medipaw-bucket
-CLOUDFRONT_URL=https://your-cloudfront-url
+S3_BUCKET_NAME=medipaw-images
+CLOUDFRONT_URL=
 
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4o
-
-RABBITMQ_URL=amqp://guest:guest@localhost:5672/
-
-DEBUG=True
-ALLOWED_ORIGINS=http://localhost:3000
+DEBUG=true
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
+
+> 비워둔 값들은 기본값으로 동작하므로, 로컬에선 보통 `OPENAI_API_KEY`만 채우면 됩니다.
 
 마이그레이션 실행:
 
