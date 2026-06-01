@@ -82,6 +82,22 @@ services:
       - medipaw_net
     restart: "no"
 
+  # ── Drug DB 시딩 (1회성) ────────────────────────────────────────
+  seed:
+    build:
+      context: ../..
+      dockerfile: ai/docker/Dockerfile.backend
+    command: >
+      bash -c "cd /app/backend && python scripts/seed_drugs.py"
+    environment:
+      DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - medipaw_net
+    restart: "no"
+
   # ── Guardian Frontend (보호자 앱) ─────────────────────────────────
   guardian:
     build:

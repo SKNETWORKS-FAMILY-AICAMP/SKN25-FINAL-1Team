@@ -5,6 +5,7 @@ import { Panel } from "./EmrShared";
 export function AutoPrescriptionPanel({
   patient,
   prescriptions,
+  isLoading = false,
   onClose,
   onLoad,
   onOpenPreview,
@@ -12,6 +13,7 @@ export function AutoPrescriptionPanel({
 }: {
   patient?: PetInfo;
   prescriptions: Prescription[];
+  isLoading?: boolean;
   onClose: () => void;
   onLoad: () => void;
   onOpenPreview: () => void;
@@ -48,21 +50,26 @@ export function AutoPrescriptionPanel({
           </p>
         )}
 
-        {prescriptions.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-lg border border-[#e8edf4] px-4 py-8 text-center text-sm text-[#a8b0bf]">
+            <div className="mb-2 text-base">⏳</div>
+            AI가 처방전을 생성하고 있습니다...
+          </div>
+        ) : prescriptions.length === 0 ? (
           <div className="rounded-lg border border-[#e8edf4] px-4 py-8 text-center text-sm text-[#a8b0bf]">
             AI 처방 초안이 아직 생성되지 않았습니다.
             <br />
-            <span className="text-xs">'불러오기'를 눌러 초안을 가져오세요.</span>
+            <span className="text-xs">'처방전 자동 생성'을 눌러 초안을 가져오세요.</span>
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-[#e8edf4]">
             <table className="w-full text-left">
               <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
                 <tr>
-                  <th className="px-3 py-3">약제명</th>
-                  <th className="px-2 py-3">형태</th>
-                  <th className="px-2 py-3">투여 방법</th>
-                  <th className="px-2 py-3">기간</th>
+                  <th className="w-[38%] px-3 py-3">약제명</th>
+                  <th className="w-[20%] px-2 py-3">형태</th>
+                  <th className="w-[26%] px-2 py-3">용량</th>
+                  <th className="w-[16%] px-2 py-3">기간</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf1f6]">
@@ -74,10 +81,8 @@ export function AutoPrescriptionPanel({
                     <td className="px-3 py-3 font-extrabold text-[#20283a]">
                       {prescription.drug_name}
                     </td>
+                    <td className="px-2 py-3">{prescription.form}</td>
                     <td className="px-2 py-3">{prescription.dosage}</td>
-                    <td className="px-2 py-3">
-                      {prescription.form} {prescription.frequency}
-                    </td>
                     <td className="px-2 py-3">
                       {prescription.duration_days}일
                     </td>

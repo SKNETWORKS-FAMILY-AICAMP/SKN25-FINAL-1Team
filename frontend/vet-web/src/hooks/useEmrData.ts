@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup } from "../api/emrApi";
+import type { DrugSearchResult } from "../api/prescriptionApi";
+import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup, generateAutoPrescription } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
 import { useAuthStore } from "../stores/auth-store";
@@ -231,6 +232,64 @@ export function useEmrData() {
     );
   }, []);
 
+  const handleUpdatePrescription = useCallback(
+    (drug_name: string, field: keyof Prescription, value: string | number) => {
+      setPrescriptions((items: Prescription[]) =>
+        items.map((item: Prescription) =>
+          item.drug_name === drug_name ? { ...item, [field]: value } : item
+        )
+      );
+    },
+    []
+  );
+
+  const handleSavePrescription = useCallback(() => {
+    setAutoPrescriptions(prescriptions);
+  }, [prescriptions]);
+
+  const handleClearAutoPrescription = useCallback(() => {
+    setAutoPrescriptions([]);
+  }, []);
+
+  const handleGeneratePrescription = useCallback(async () => {
+    if (selectedScheduleId === undefined) return;
+    setAutoPrescriptions([]);
+    setIsLoadingAutoPresc(true);
+    try {
+      const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId });
+      setAutoPrescriptions(
+        meds.map((m) => ({
+          drug_name: m.drug_name,
+          form: m.form,
+          dosage: m.dosage,
+          frequency: m.frequency,
+          duration_days: m.duration_days,
+        }))
+      );
+    } catch (err) {
+      console.error("[GeneratePrescription] failed:", err);
+      setAutoPrescriptions([]);
+    } finally {
+      setIsLoadingAutoPresc(false);
+    }
+  }, [selectedScheduleId, accessToken]);
+
+  const handleAddPrescription = useCallback((drug: DrugSearchResult) => {
+    setPrescriptions((items: Prescription[]) => {
+      if (items.some((p) => p.drug_name === drug.name)) return items;
+      return [
+        ...items,
+        {
+          drug_name: drug.name,
+          form: "",
+          dosage: drug.dosage ?? "",
+          frequency: "",
+          duration_days: drug.duration_days ?? 0,
+        },
+      ];
+    });
+  }, []);
+
   const openPreviewImage = useCallback((url: string, label: string) => {
     setPreviewImage({ url, label });
   }, []);
@@ -273,6 +332,11 @@ export function useEmrData() {
     handleAddMockFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
+    handleUpdatePrescription,
+    handleSavePrescription,
+    handleClearAutoPrescription,
+    handleGeneratePrescription,
+    handleAddPrescription,
     openPreviewImage,
   };
 }
