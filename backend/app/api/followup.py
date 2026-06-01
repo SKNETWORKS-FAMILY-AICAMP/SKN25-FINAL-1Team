@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
 from app.db.session import get_db
-from app.core.dependencies import get_current_user, get_current_doctor
+from app.core.dependencies import get_current_user
 from app.models.followup import Followup
 from app.models.guardian import Guardian
 
@@ -140,6 +140,28 @@ async def create_followup(
     if not guardian:
         raise HTTPException(status_code=404, detail="문진 정보를 찾을 수 없습니다.")
 
+    # 소유권 검증: 본인 반려동물의 문진에만 경과 등록 가능
+    from app.crud.schedule import get_emrid_owner_userid
+    owner_id = await get_emrid_owner_userid(db, request.emrid)
+    if owner_id != current_user.userid:
+        raise HTTPException(status_code=403, detail="경과 등록 권한이 없습니다.")
+
+    # 예약 정보 조회 — 시간 가드 + 수의사 알람에 사용
+    from datetime import datetime, timezone
+    from app.models.schedule import Schedule
+    sched_row = await db.execute(
+        select(Schedule).where(Schedule.emrid == request.emrid, Schedule.deleted_at.is_(None))
+    )
+    schedule = sched_row.scalar_one_or_none()
+
+    # 의도: follow-up 채팅은 예약(진료) 시간이 지나면 비활성화한다.
+    if schedule and schedule.confirmed_time:
+        confirmed = schedule.confirmed_time
+        if confirmed.tzinfo is None:
+            confirmed = confirmed.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > confirmed:
+            raise HTTPException(status_code=403, detail="진료 시간이 지나 경과 보고가 마감되었습니다.")
+
     followup = Followup(
         emrid=request.emrid,
         userid=current_user.userid,
@@ -149,6 +171,20 @@ async def create_followup(
     db.add(followup)
     await db.commit()
     await db.refresh(followup)
+
+    # 의도: 경과 보고(사진/메시지)가 오면 수의사에게 바로 알림 → 대시보드에서 즉시 확인
+    if schedule:
+        try:
+            from app.crud.alarm import create_alarm
+            await create_alarm(
+                db=db,
+                doctor_id=schedule.doctorid,
+                schedule_id=schedule.scheduleid,
+                alarm_type="followup_received",
+                contents="보호자가 경과 보고를 등록했습니다.",
+            )
+        except Exception as e:
+            logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
 
     ai_response = None
     if request.message:
@@ -184,6 +220,12 @@ async def get_followups(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    # 소유권 검증: 본인 반려동물의 경과 기록만 조회 가능
+    from app.crud.schedule import get_emrid_owner_userid
+    owner_id = await get_emrid_owner_userid(db, emrid)
+    if owner_id != current_user.userid:
+        raise HTTPException(status_code=404, detail="경과 기록을 찾을 수 없습니다.")
+
     result = await db.execute(
         select(Followup).where(Followup.emrid == emrid).order_by(Followup.created_at.asc())
     )
@@ -218,11 +260,12 @@ async def get_presigned_url(
     if file_size > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
 
-    # TODO: S3 Presigned URL 발급
-    return {
-        "code": 200,
-        "result": {
-            "presigned_url": "https://s3.amazonaws.com/temp",
-            "cloudfront_url": "https://cloudfront-url/temp"
-        }
-    }
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import create_presigned_put
+
+    try:
+        result = create_presigned_put(file_name, content_type, prefix="followup")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}

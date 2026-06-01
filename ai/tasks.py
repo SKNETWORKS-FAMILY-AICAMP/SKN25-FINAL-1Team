@@ -412,25 +412,12 @@ async def save_result(
 
     # triage → triage_resultDB
     elif agent_type == "triage" and emrid:
-        from app.models.triage_result import TriageResult
+        from app.crud.triage import build_triage_result
 
         info = result.get("collected_info") or result
         async with AsyncSessionLocal() as db:
             try:
-                db.add(TriageResult(
-                    emrid=emrid,
-                    urgency_level=info.get("urgency_level", ""),
-                    urgency_level_num=int(info.get("urgency_level_num", 3)),
-                    vtl_basis=info.get("vtl_basis"),
-                    red_flags=info.get("red_flags"),
-                    chief_complaint=info.get("chief_complaint"),
-                    symptom_onset=info.get("symptom_onset"),
-                    symptom_keywords=info.get("symptom_keywords"),
-                    suspected_diseases=info.get("suspected_diseases"),
-                    symptom_summary=info.get("symptom_summary"),
-                    recommended_action=info.get("recommended_action"),
-                    need_photo=info.get("need_photo", False),
-                ))
+                db.add(build_triage_result(emrid, info))
                 await db.commit()
                 logger.info("[SaveResult] triage → triage_resultDB emrid=%s", emrid)
             except Exception as e:

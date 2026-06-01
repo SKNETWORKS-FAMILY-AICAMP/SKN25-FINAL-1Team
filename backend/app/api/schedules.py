@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime, date as date_type, timezone, timedelta
@@ -11,25 +10,28 @@ from app.schemas.schedule import CheckupScheduleRequest, ConfirmScheduleRequest,
 from app.crud.schedule import (
     create_checkup_schedule, get_schedules_by_userid,
     get_schedule_by_id, cancel_schedule,
-    update_schedule_time, get_available_slots, confirm_schedule
+    update_schedule_time, get_available_slots, confirm_schedule,
+    get_emrid_owner_userid,
 )
 from app.core.dependencies import get_current_user
 from app.models.pet import Pet
 from app.models.doctor import Doctor
 from app.models.guardian import Guardian
 from app.models.triage_result import TriageResult
-from ai.tasks import RUNNERS, _task_store, save_result, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
+from ai.tasks import RUNNERS, _task_store, save_result, cleanup_task_after_ttl, safe_create_task, PipelineState
 from app.crud.alarm import create_alarm
 
 logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("medipaw.audit")
-from app.models.guardian import Guardian
-from app.models.master import CategoryMaster
 from app.models.schedule import Schedule
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 KST = timezone(timedelta(hours=9))
+
+# Judge(LLM-as-a-Judge) QA 샘플링 비율: emrid % N == 0 일 때만 실행해 비용을 제어한다.
+# 매 예약마다 돌리려면 1로 설정.
+JUDGE_SAMPLE_RATE = 5
 
 
 
@@ -119,31 +121,11 @@ async def get_schedules(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    schedules, has_next = await get_schedules_by_userid(db, current_user.userid, page, size, filter)
+    rows, has_next = await get_schedules_by_userid(db, current_user.userid, page, size, filter)
 
+    from datetime import date
     result = []
-    for schedule in schedules:
-        guardian_result = await db.execute(
-            select(Guardian).where(Guardian.emrid == schedule.emrid)
-        )
-        guardian = guardian_result.scalar_one_or_none()
-
-        pet_result = await db.execute(
-            select(Pet).where(Pet.petid == guardian.petid)
-        )
-        pet = pet_result.scalar_one_or_none()
-
-        doctor_result = await db.execute(
-            select(Doctor).where(Doctor.doctorid == schedule.doctorid)
-        )
-        doctor = doctor_result.scalar_one_or_none()
-
-        category_result = await db.execute(
-            select(CategoryMaster).where(CategoryMaster.id == guardian.category_id)
-        )
-        category = category_result.scalar_one_or_none()
-
-        from datetime import date
+    for schedule, pet, doctor, category in rows:
         age = None
         if pet.birth_date:
             today = date.today()
@@ -225,6 +207,10 @@ async def get_schedule(
     )
     pet = pet_result.scalar_one_or_none()
 
+    # 소유권 검증: 본인 반려동물의 예약만 조회 가능
+    if not pet or pet.userid != current_user.userid:
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
+
     doctor_result = await db.execute(
         select(Doctor).where(Doctor.doctorid == schedule.doctorid)
     )
@@ -269,6 +255,11 @@ async def delete_schedule(
     if not schedule:
         raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
 
+    # 소유권 검증: 본인 예약만 취소 가능
+    owner_id = await get_emrid_owner_userid(db, schedule.emrid)
+    if owner_id != current_user.userid:
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
+
     if schedule.status == "COMPLETED":
         raise HTTPException(status_code=400, detail="이미 완료된 예약은 취소할 수 없습니다.")
 
@@ -292,6 +283,11 @@ async def update_schedule(
 ):
     schedule = await get_schedule_by_id(db, schedule_id)
     if not schedule:
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
+
+    # 소유권 검증: 본인 예약만 변경 가능
+    owner_id = await get_emrid_owner_userid(db, schedule.emrid)
+    if owner_id != current_user.userid:
         raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
 
     if schedule.status in ["COMPLETED", "CANCELLED"]:
@@ -351,6 +347,11 @@ async def _run_post_booking_agents(
     async with AsyncSessionLocal() as db:
         patient_context_data = await build_patient_context(db, pet.petid)
 
+    # 초진/재진 판정: 과거 완료된 EMR 이력이 있으면 재진, 없으면 초진.
+    # (하드코딩 대신 실제 emr_history 유무로 계산 → chart/validation 정확도 확보)
+    emr_history = patient_context_data.get("patient_context", {}).get("emr_history") or []
+    is_initial_visit = len(emr_history) == 0
+
     triage_info = {
         "urgency_level": triage.urgency_level,
         "urgency_level_num": triage.urgency_level_num,
@@ -362,7 +363,7 @@ async def _run_post_booking_agents(
         "suspected_diseases": triage.suspected_diseases or [],
         "symptom_summary": triage.symptom_summary,
         "recommended_action": triage.recommended_action,
-        "is_initial_visit": True,
+        "is_initial_visit": is_initial_visit,
     }
 
     # VTL urgency → slot_window 매핑 (Schedule Agent와 동일한 기준)
@@ -375,7 +376,7 @@ async def _run_post_booking_agents(
     )
     schedule_slot = {
         "estimated_duration_min": duration_min,
-        "is_initial_visit": True,
+        "is_initial_visit": is_initial_visit,
         "slot_window": actual_slot_window,
     }
 
@@ -397,7 +398,7 @@ async def _run_post_booking_agents(
     }
     # Judge QA: fetch actual chat history for this emrid
     judge_chat_history: list = []
-    if emrid is not None and emrid % 5 == 0:
+    if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0:
         try:
             from app.models.chat_history import ChatHistory
             async with AsyncSessionLocal() as db_j:
@@ -418,59 +419,51 @@ async def _run_post_booking_agents(
             _task_store[tid]["step"] = step
         return update_step
 
-    # Chart + Validation 독립 병렬 실행 — 한 쪽 실패가 다른 쪽에 영향 주지 않도록 return_exceptions=True
+    # 순차 실행: Chart → Validation(차트 전달) → Judge.
+    # Validation B(문진-차트 일관성)가 차트 초안을 비교하려면 차트가 먼저 완성돼야 한다.
+    # 각 단계는 try/except로 격리해 한 단계 실패가 다음 단계를 막지 않게 한다.
+    # (모두 예약 확정 응답 이후 백그라운드 실행이므로 보호자 대기시간엔 영향 없음.)
+
+    # 1) Chart
     _task_store[chart_task_id] = {"status": "running", "step": "차트 초안 생성 중..."}
-    _task_store[validation_task_id] = {"status": "running", "step": "정합성 검증 중..."}
-    chart_result, validation_result = await asyncio.gather(
-        RUNNERS["chart"](chart_payload, make_updater(chart_task_id), emrid, scheduleid),
-        RUNNERS["validation"](validation_payload, make_updater(validation_task_id), emrid, scheduleid),
-        return_exceptions=True,
-    )
+    chart_result = None
+    try:
+        chart_result = await RUNNERS["chart"](chart_payload, make_updater(chart_task_id), emrid, scheduleid)
+        _task_store[chart_task_id] = {"status": "done", "result": chart_result}
+        await save_result("chart", chart_result, emrid, scheduleid, user_id)
+        logger.info(f"[PostBooking] chart done emrid={emrid}")
+    except Exception as e:
+        logger.error(f"[PostBooking] chart failed emrid={emrid}: {e}", exc_info=True)
+        _task_store[chart_task_id] = {"status": "error", "detail": str(e)}
+        chart_result = None
 
-    # Chart Post-processing Isolation
-    if isinstance(chart_result, Exception):
-        logger.error(f"[PostBooking] chart failed emrid={emrid}: {chart_result}", exc_info=chart_result)
-        _task_store[chart_task_id] = {"status": "error", "detail": str(chart_result)}
-    else:
-        try:
-            _task_store[chart_task_id] = {"status": "done", "result": chart_result}
-            await save_result("chart", chart_result, emrid, scheduleid, user_id)
-            logger.info(f"[PostBooking] chart done emrid={emrid}")
-        except Exception as e:
-            logger.error(f"[PostBooking] save_result chart failed emrid={emrid}: {e}", exc_info=True)
-            _task_store[chart_task_id] = {"status": "error", "detail": f"차트 저장 실패: {e}"}
+    # 2) Validation — 차트 초안을 함께 전달(B. 워크플로우 일관성 점검용)
+    _task_store[validation_task_id] = {"status": "running", "step": "품질·안전성 검증 중..."}
+    validation_payload["chart_result"] = chart_result
+    try:
+        validation_result = await RUNNERS["validation"](validation_payload, make_updater(validation_task_id), emrid, scheduleid)
+        _task_store[validation_task_id] = {"status": "done", "result": validation_result}
+        await save_result("validation", validation_result, emrid, scheduleid, user_id)
+        logger.info(f"[PostBooking] validation done emrid={emrid} overall={validation_result.get('overall')}")
+    except Exception as e:
+        logger.error(f"[PostBooking] validation failed emrid={emrid}: {e}", exc_info=True)
+        _task_store[validation_task_id] = {"status": "error", "detail": str(e)}
 
-    # Validation Post-processing Isolation
-    if isinstance(validation_result, Exception):
-        logger.error(f"[PostBooking] validation failed emrid={emrid}: {validation_result}", exc_info=validation_result)
-        _task_store[validation_task_id] = {"status": "error", "detail": str(validation_result)}
-    else:
-        try:
-            _task_store[validation_task_id] = {"status": "done", "result": validation_result}
-            await save_result("validation", validation_result, emrid, scheduleid, user_id)
-            logger.info(f"[PostBooking] validation done emrid={emrid}")
-        except Exception as e:
-            logger.error(f"[PostBooking] save_result validation failed emrid={emrid}: {e}", exc_info=True)
-            _task_store[validation_task_id] = {"status": "error", "detail": f"정합성 검증 저장 실패: {e}"}
-
+    # 3) Judge — 운영 품질 모니터링(환자 안전 검증 아님). 샘플링 + audit log만(DB 저장 없음).
     judge_payload = {
         "triage_result": triage_info,
         "triage_info": triage_info,
         "chat_history": judge_chat_history,
-        "chart_result": chart_result if not isinstance(chart_result, Exception) else None,
-        "validation_result": validation_result if not isinstance(validation_result, Exception) else None,
     }
-
-    # Judge QA 추적: gpt-4o-mini + 1/5 샘플링, DB 저장 없이 audit logger만 기록
-    if emrid is not None and emrid % 5 == 0:
+    if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0:
         try:
             judge_result = await RUNNERS["judge"](judge_payload, lambda _: None, emrid, scheduleid)
             audit_logger.info(
-                "[JudgeAudit] emrid=%s verdict=%s scores=%s critical=%s",
+                "[JudgeAudit] emrid=%s verdict=%s scores=%s turns=%s",
                 emrid,
-                judge_result.get("judge_verdict"),
-                judge_result.get("judge_scores"),
-                judge_result.get("critical_issues"),
+                judge_result.get("monitoring_verdict"),
+                judge_result.get("quality_scores"),
+                judge_result.get("turn_count"),
             )
         except Exception as exc:
             logger.warning(f"[PostBooking] judge audit failed emrid={emrid}: {exc}")
@@ -492,6 +485,13 @@ async def confirm_schedule_api(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    # 소유권 검증: 본인 반려동물의 문진(emrid)에 대해서만 예약 확정 가능
+    owner_id = await get_emrid_owner_userid(db, request.emrid)
+    if owner_id is None:
+        raise HTTPException(status_code=404, detail="문진 정보를 찾을 수 없습니다.")
+    if owner_id != current_user.userid:
+        raise HTTPException(status_code=403, detail="예약 확정 권한이 없습니다.")
+
     schedule = await confirm_schedule(
         db=db,
         emrid=request.emrid,

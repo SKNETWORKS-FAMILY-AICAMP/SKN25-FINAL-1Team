@@ -22,13 +22,17 @@ def _to_async_url(url: str) -> str:
     return url
 
 
+_async_url = _to_async_url(settings.DATABASE_URL)
+
+# statement_cache_size는 asyncpg 전용 인자다. SQLite(aiosqlite) 등 다른 드라이버에
+# 그대로 넘기면 'unexpected keyword argument' 로 연결이 깨지므로 dialect별로 분기한다.
+# (asyncpg: prepared statement 캐시 비활성화 → 마이그레이션 후 'cached plan' 오류 방지)
+_connect_args = {"statement_cache_size": 0} if "+asyncpg" in _async_url else {}
+
 engine = create_async_engine(
-    _to_async_url(settings.DATABASE_URL),
+    _async_url,
     pool_pre_ping=True,
-    # asyncpg prepared statement 캐시를 비활성화.
-    # 마이그레이션 후 컬럼이 추가/삭제되어도 'cached plan must not change result type' 오류를 방지.
-    # 성능 영향: 소규모(하루 100건↓) 트래픽에서는 무시 가능.
-    connect_args={"statement_cache_size": 0},
+    connect_args=_connect_args,
 )
 
 # expire_on_commit=False: 커밋 후에도 ORM 속성 접근 시 재조회(await 필요)가

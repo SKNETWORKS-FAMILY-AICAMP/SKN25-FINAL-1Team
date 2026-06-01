@@ -1,5 +1,3 @@
-import axios from "axios";
-
 import { apiClient } from "./api-client";
 
 export interface CreateChatSessionPayload {
@@ -71,6 +69,14 @@ export interface ChatUploadPresignedUrlResponse {
   };
 }
 
+export interface ChatUploadFileResponse {
+  code: number;
+  message?: string;
+  result?: {
+    cloudfront_url: string;
+  };
+}
+
 export type ChatStreamEvent =
   | {
       type: "message";
@@ -83,11 +89,12 @@ export type ChatStreamEvent =
   | {
       type: "triage_complete";
       emrid?: number;
+      schedule_task_id?: string;
       data: {
         is_triage_complete: boolean;
         symptom_keywords: string[];
-        urgency_level?: string;
         urgency_level_num?: number;
+        need_followup?: boolean;
         [key: string]: unknown;
       };
     }
@@ -158,6 +165,7 @@ export const deleteChatSession = async (
 export const getChatUploadPresignedUrl = async (
   fileName: string,
   contentType: string,
+  fileSize: number,
 ): Promise<ChatUploadPresignedUrlResponse> => {
   const response = await apiClient.get<ChatUploadPresignedUrlResponse>(
     "/chat/upload/presigned-url",
@@ -165,6 +173,7 @@ export const getChatUploadPresignedUrl = async (
       params: {
         file_name: fileName,
         content_type: contentType,
+        file_size: fileSize,
       },
     },
   );
@@ -172,14 +181,21 @@ export const getChatUploadPresignedUrl = async (
 };
 
 export const uploadChatAttachment = async (
-  presignedUrl: string,
   file: File,
-) => {
-  await axios.put(presignedUrl, file, {
-    headers: {
-      "Content-Type": file.type,
+): Promise<ChatUploadFileResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post<ChatUploadFileResponse>(
+    "/chat/upload/file",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
+  return response.data;
 };
 
 const readStreamingResponseText = (event?: ProgressEvent) => {

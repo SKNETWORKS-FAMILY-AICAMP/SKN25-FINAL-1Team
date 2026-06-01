@@ -11,9 +11,8 @@ RUN npm ci --prefer-offline
 # shared assets는 ../../../../shared 경로로 참조되므로 구조 보존
 COPY frontend/shared/ ../shared/
 COPY frontend/guardian-web/ ./
-# AI 훅/프롬프트 파일을 훅 디렉토리에 추가
-COPY ai/frontend/useAgentPipeline.ts ./src/hooks/
-COPY ai/frontend/agentPrompts.ts ./src/hooks/
+# (AI 훅은 frontend/guardian-web/src/hooks/use-agent-pipeline.ts 로 네이티브 이전됨.
+#  과거 ai/frontend/*.ts shim COPY는 파일 삭제로 obsolete → 제거)
 
 RUN npm run build
 

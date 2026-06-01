@@ -1,9 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 
-import {
-  getChatUploadPresignedUrl,
-  uploadChatAttachment,
-} from "../api/chat-api";
+import { uploadChatAttachment } from "../api/chat-api";
 
 export interface PendingAttachment {
   fileName: string;
@@ -54,19 +51,16 @@ export const useChatUpload = ({
       setIsUploadingAttachment(true);
       setErrorMessage("");
 
-      const response = await getChatUploadPresignedUrl(file.name, file.type);
+      const response = await uploadChatAttachment(file);
       if (
         response.code !== 200 ||
-        !response.result?.presigned_url ||
-        !response.result.cloudfront_url
+        !response.result?.cloudfront_url
       ) {
         setErrorMessage(
-          response.message || "첨부파일 업로드 URL을 발급하지 못했습니다.",
+          response.message || "첨부파일을 업로드하지 못했습니다.",
         );
         return;
       }
-
-      await uploadChatAttachment(response.result.presigned_url, file);
 
       if (pendingAttachment?.previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(pendingAttachment.previewUrl);

@@ -20,10 +20,11 @@ class Settings(BaseSettings):
 
     # OpenAI
     OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MODEL: str = "gpt-5.4-mini"
+    OPENAI_VISION_MODEL: str = "gpt-5.4-mini"
 
-    # 서버 설정
-    DEBUG: bool = True
+    # 서버 설정 — 운영 안전 기본값. 로컬 개발 시 .env에서 DEBUG=true 로 오버라이드.
+    DEBUG: bool = False
     # 콤마 구분 origins 문자열. docker-compose.yml 또는 .env에서 오버라이드 가능.
     ALLOWED_ORIGINS: str = (
         "http://localhost:5173,http://localhost:5174,"

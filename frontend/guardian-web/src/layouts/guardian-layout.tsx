@@ -8,10 +8,10 @@ interface GuardianLayoutProps {
 
 const GuardianLayout = ({ children }: GuardianLayoutProps) => {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-950">
       <GuardianNavbar />
 
-      <main className="mx-auto w-full max-w-[1280px] px-8 pb-12 pt-7">
+      <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-6 pb-12 pt-10">
         {children}
       </main>
     </div>

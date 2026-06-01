@@ -1,4 +1,4 @@
-from sqlalchemy import select, or_, and_, case
+from sqlalchemy import select, or_, and_, case, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import datetime, timedelta, timezone, date as _date_type
@@ -34,6 +34,36 @@ def _is_clinic_closed(d: _date_type) -> bool:
     return d.isoformat() in _HOLIDAYS
 
 
+async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None:
+    """동일 (의사, 시각) 슬롯에 대한 동시 예약을 직렬화한다.
+
+    select-then-insert race(빈 슬롯이라 row lock 불가)를 막기 위해
+    PostgreSQL advisory transaction lock을 사용한다. 트랜잭션 커밋/롤백 시 자동 해제된다.
+    두 요청이 같은 슬롯을 노리면 한쪽이 커밋(예약 생성)할 때까지 다른 쪽이 대기 →
+    뒤 요청의 충돌 검사가 앞 예약을 보게 되어 이중 예약이 방지된다.
+
+    키: (doctorid:int4, 분 단위 epoch:int4) — pg_advisory_xact_lock(int4, int4)
+
+    advisory lock은 PostgreSQL 전용이다. SQLite 등 다른 dialect에서는 no-op로 건너뛴다.
+    (SQLite는 쓰기를 자체 직렬화하므로 로컬/데모에선 기능적으로 안전하다.)
+    """
+    try:
+        dialect = db.bind.dialect.name
+    except Exception:
+        try:
+            dialect = db.get_bind().dialect.name
+        except Exception:
+            dialect = ""
+    if dialect != "postgresql":
+        return
+
+    slot_key = int(slot_dt.timestamp()) // 60  # 분 단위 (int4 범위 내)
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(:d, :s)"),
+        {"d": int(doctorid), "s": slot_key},
+    )
+
+
 # 정기검진 예약 생성
 async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int):
 
@@ -48,6 +78,9 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
 
     # 예약 시간 설정 — 입력은 KST 기준, KST-aware datetime으로 만들어야 PostgreSQL이 UTC로 변환 저장
     kst_dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
+
+    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 슬롯을 잠근다
+    await _lock_slot(db, doctorid, kst_dt)
 
     # 슬롯 충돌 체크 — Guardian 생성 전에 먼저 확인 (race condition 방지)
     conflict_result = await db.execute(
@@ -96,6 +129,17 @@ async def get_schedule_by_id(db: AsyncSession, schedule_id: int):
     return result.scalar_one_or_none()
 
 
+# emrid 소유자(보호자 userid) 조회 — 소유권 검증용
+# 경로: guardianDB.emrid → guardianDB.petid → petDB.userid
+async def get_emrid_owner_userid(db: AsyncSession, emrid: int) -> int | None:
+    result = await db.execute(
+        select(Pet.userid)
+        .join(Guardian, Guardian.petid == Pet.petid)
+        .where(Guardian.emrid == emrid)
+    )
+    return result.scalar_one_or_none()
+
+
 # 예약 목록 조회 (페이지네이션)
 async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size: int, filter: str = "all"):
     offset = (page - 1) * size
@@ -130,22 +174,25 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
         else_=0
     )
 
+    # N+1 방지: 목록에 필요한 Pet / Doctor / Category 를 한 번의 쿼리로 함께 로드한다.
     stmt = (
-        select(Schedule)
+        select(Schedule, Pet, Doctor, CategoryMaster)
         .join(Guardian, Schedule.emrid == Guardian.emrid)
         .join(Pet, Guardian.petid == Pet.petid)
+        .outerjoin(Doctor, Schedule.doctorid == Doctor.doctorid)
+        .outerjoin(CategoryMaster, Guardian.category_id == CategoryMaster.id)
         .where(*conditions)
         .order_by(cancelled_last.asc(), Schedule.confirmed_time.asc())
         .offset(offset).limit(size + 1)
     )
     result = await db.execute(stmt)
-    schedules = list(result.scalars().all())
+    rows = list(result.all())
 
-    has_next = len(schedules) > size
+    has_next = len(rows) > size
     if has_next:
-        schedules = schedules[:size]
+        rows = rows[:size]
 
-    return schedules, has_next
+    return rows, has_next
 
 
 # 예약 취소 (soft cancel)
@@ -178,6 +225,9 @@ async def update_schedule_time(db: AsyncSession, schedule: Schedule, confirmed_t
     new_kst = to_kst(new_time) if new_time.tzinfo else new_time.replace(tzinfo=KST)
     new_date = new_kst.date()
     new_hhmm = new_kst.strftime("%H:%M")
+
+    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 변경 대상 슬롯을 잠근다
+    await _lock_slot(db, schedule.doctorid, new_time)
 
     # Schedule 테이블 기반 충돌 검증 (본인 예약 제외)
     conflict_result = await db.execute(
@@ -292,6 +342,9 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
 async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
     new_end_time = new_time + timedelta(minutes=duration_min)
+
+    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 슬롯을 잠근다
+    await _lock_slot(db, doctorid, new_time)
 
     # 슬롯 충돌 체크 — INSERT 전 검증 (챗봇 추천 후 confirm 직전 선점 방지)
     conflict_result = await db.execute(

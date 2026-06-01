@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.core.dependencies import get_current_doctor
+from app.models.doctor import Doctor
 from app.utils.age import calculate_age
 from app.utils.timezone import to_kst
 
@@ -96,7 +98,8 @@ def _serialize_reservation(row) -> dict:
 
 @router.get("")
 async def reservation_list(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
 ):
     rows = await get_reservations(db)
 
@@ -109,7 +112,8 @@ async def reservation_list(
 @router.post("", status_code=201)
 async def add_reservation(
     request: ReservationCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
 ):
     try:
         schedule = await create_reservation(
@@ -148,7 +152,8 @@ async def add_reservation(
 async def edit_reservation(
     schedule_id: int,
     request: ReservationUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
 ):
     try:
         updated = await update_reservation(
@@ -181,7 +186,8 @@ async def edit_reservation(
 @router.delete("/{schedule_id}")
 async def remove_reservation(
     schedule_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
 ):
     logger.info(f"[DELETE reservation] schedule_id={schedule_id}")
 
@@ -230,7 +236,8 @@ async def remove_reservation(
 async def change_reservation_status(
     schedule_id: int,
     request: ReservationStatusUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
 ):
     updated = await update_reservation_status(
         db,

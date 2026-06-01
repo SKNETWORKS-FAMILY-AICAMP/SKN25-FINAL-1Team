@@ -32,6 +32,7 @@ interface UseChatConversationParams {
     keywords: string[],
     collectedInfo: Record<string, unknown>,
     emrid?: number,
+    scheduleTaskId?: string,
   ) => void;
 }
 
@@ -85,7 +86,13 @@ export const useChatConversation = ({
     if (event.type === "triage_complete") {
       const keywords = event.data?.symptom_keywords ?? [];
       if (session && onTriageComplete) {
-        onTriageComplete(session.session_id, keywords, event.data, event.emrid);
+        onTriageComplete(
+          session.session_id,
+          keywords,
+          event.data,
+          event.emrid,
+          event.schedule_task_id,
+        );
       }
       return;
     }

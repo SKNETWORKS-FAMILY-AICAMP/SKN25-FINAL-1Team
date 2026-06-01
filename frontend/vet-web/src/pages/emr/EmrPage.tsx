@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { AuthSession } from "../../api/authApi";
 import { AutoPrescriptionPanel } from "../../components/emr/AutoPrescriptionPanel";
 import {
@@ -65,7 +64,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleAddPrescription,
     openPreviewImage,
   } = useEmrData();
-  const [isChecksExpanded, setIsChecksExpanded] = useState(false);
   const isReadOnly = queueTab === "completed";
 
   return (
@@ -103,6 +101,29 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 isReadOnly={isReadOnly}
               />
             )}
+
+            {/* AI 사전문진 검증 — '예외'만 표시(정상 항목은 숨김). 응급도/증상은 위에서 이미 봤으므로
+                여기엔 문진만 봐선 모를 것(누락·문진↔차트 불일치·응급도 불일치)만 가볍게 띄운다. */}
+            {currentEmr &&
+              validationResult &&
+              validationResult.overall !== "OK" &&
+              Array.isArray(validationResult.checks) && (
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-xs text-yellow-800">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span aria-hidden>⚠️</span>
+                    <span>검토 권고</span>
+                  </div>
+                  <ul className="mt-1.5 space-y-1 leading-snug text-yellow-900/90">
+                    {(validationResult.checks as Array<{ item: string; status: string; detail: string }>)
+                      .filter((c) => c.status !== "PASS" && c.status !== "SKIPPED")
+                      .map((c) => (
+                        <li key={c.item}>
+                          <span className="font-bold">{c.item}</span> — {c.detail}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </aside>
 
           <main className="space-y-4">
@@ -114,48 +135,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                   isReadOnly={isReadOnly}
                 />
                 <HistoryPanel histories={currentEmr.emr_history} />
-                {validationResult && validationResult.overall !== "OK" && (
-                  <div
-                    className={`rounded-lg border text-sm font-bold ${
-                      validationResult.overall === "REVIEW_NEEDED"
-                        ? "border-red-200 bg-red-50 text-red-700"
-                        : "border-yellow-200 bg-yellow-50 text-yellow-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <span>
-                        <span className="mr-2">
-                          {validationResult.overall === "REVIEW_NEEDED" ? "⚠️ 검토 필요" : "⚠️ 검증 경고"}
-                        </span>
-                        {validationResult.summary ?? "AI 검증 결과를 확인하세요."}
-                      </span>
-                      {validationResult.checks && (
-                        <button
-                          type="button"
-                          onClick={() => setIsChecksExpanded((v) => !v)}
-                          className="ml-3 shrink-0 text-xs underline opacity-70 hover:opacity-100"
-                        >
-                          {isChecksExpanded ? "접기" : "상세보기"}
-                        </button>
-                      )}
-                    </div>
-                    {isChecksExpanded && Array.isArray(validationResult.checks) && (
-                      <ul className="border-t border-current/20 px-4 pb-3 pt-2 space-y-1">
-                        {(validationResult.checks as Array<{ item: string; status: string; detail: string }>).map(
-                          (c) => (
-                            <li key={c.item} className="flex gap-2 text-xs font-medium">
-                              <span>{c.status === "PASS" ? "✅" : "⚠️"}</span>
-                              <span>
-                                <span className="font-extrabold">{c.item}</span>
-                                {c.detail ? ` — ${c.detail}` : ""}
-                              </span>
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                )}
                 {followupItems.length > 0 && (
                   <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-sm">
                     <h3 className="mb-3 text-sm font-extrabold text-[#151b28]">경과 보고</h3>
