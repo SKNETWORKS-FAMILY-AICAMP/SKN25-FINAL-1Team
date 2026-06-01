@@ -160,30 +160,36 @@ async def build_patient_context(db: AsyncSession, petid: int) -> dict:
     prescriptions = []
     chronic_conditions = set()
 
+    # N+1 방지: 모든 EMR의 처방을 한 번의 쿼리로 조회 후 emrid별로 매핑한다.
+    emr_ids = [emr_obj.doctor_emrid for emr_obj, _, _ in history_rows]
+    prescription_map: dict[int, list] = {}
+    if emr_ids:
+        presc_rows = await db.execute(
+            select(Prescription, Drug)
+            .join(Drug, Prescription.drug_id == Drug.drugid)
+            .where(Prescription.doctor_emrid.in_(emr_ids))
+        )
+        for prescription, drug in presc_rows.all():
+            prescription_map.setdefault(prescription.doctor_emrid, []).append((prescription, drug))
+
     for emr_obj, doctor_obj, schedule_obj in history_rows:
-        prescription_rows = await get_prescriptions_by_emr(db, emr_obj.doctor_emrid)
         visit_dt = to_kst(schedule_obj.confirmed_time or emr_obj.created_at)
-        
-        diagnosis = ""
-        soap = {
-            "subjective": "",
-            "objective": "",
-            "assessment": "",
-            "plan": ""
-        }
-            
+
+        # 수의사가 진료완료 시 작성한 실제 메모(자유 서술). 별도 진단/SOAP 필드는 없으므로
+        # 이 메모를 임상 소견(diagnosis)으로 그대로 전달한다.
+        vet_memo_text = emr_obj.vet_memo or ""
+
         emr_entry = {
             "doctor_emrid": emr_obj.doctor_emrid,
             "visit_date": visit_dt.date().isoformat() if visit_dt else "",
             "doctor_name": doctor_obj.doctor_name,
-            "diagnosis": diagnosis,
-            "soap": soap,
-            "vet_memo": "",
+            "diagnosis": vet_memo_text,
+            "vet_memo": vet_memo_text,
         }
         emr_history.append(emr_entry)
-        
-        # Chronic conditions detection
-        diag_lower = diagnosis.lower()
+
+        # Chronic conditions detection — 실제 수의사 메모 기반으로 동작
+        diag_lower = vet_memo_text.lower()
         if "피부염" in diag_lower or "dermatitis" in diag_lower:
             chronic_conditions.add("Atopic/Allergic Dermatitis")
         if "외이염" in diag_lower or "otitis" in diag_lower:
@@ -192,8 +198,8 @@ async def build_patient_context(db: AsyncSession, petid: int) -> dict:
             chronic_conditions.add("Diabetes Mellitus")
         if "신부전" in diag_lower or "renal" in diag_lower or "kidney" in diag_lower:
             chronic_conditions.add("Chronic Kidney Disease")
-        
-        for prescription, drug in prescription_rows:
+
+        for prescription, drug in prescription_map.get(emr_obj.doctor_emrid, []):
             prescriptions.append({
                 "drug_name": drug.name,
                 "dosage": prescription.dosage or "",

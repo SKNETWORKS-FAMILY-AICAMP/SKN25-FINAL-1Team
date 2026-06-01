@@ -83,11 +83,12 @@ export type ChatStreamEvent =
   | {
       type: "triage_complete";
       emrid?: number;
+      schedule_task_id?: string;
       data: {
         is_triage_complete: boolean;
         symptom_keywords: string[];
-        urgency_level?: string;
         urgency_level_num?: number;
+        need_followup?: boolean;
         [key: string]: unknown;
       };
     }

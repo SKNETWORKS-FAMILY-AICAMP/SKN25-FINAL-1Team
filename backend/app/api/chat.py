@@ -18,12 +18,26 @@ from app.crud.chat import (
 from app.core.dependencies import get_current_user
 from app.core.config import settings
 from app.models.pet import Pet
-from app.models.triage_result import TriageResult
+from app.crud.triage import build_triage_result
 from app.prompts.triage_prompt import _build_triage_system_prompt
 from ai.tasks import RUNNERS, _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
+
+
+# Shadow Triage / Zero-Liability:
+# 보호자 프론트엔드로는 진단성 정보(응급도 라벨·red_flags·추측질환·VTL 근거 등)를
+# 절대 내려보내지 않는다. 전체 triage 결과는 triage_resultDB에 저장되어 수의사만 열람한다.
+# 클라이언트에는 예약 흐름 제어에 필요한 최소 필드만 전달한다.
+_GUARDIAN_SAFE_FIELDS = ("is_triage_complete", "urgency_level_num", "need_followup", "symptom_keywords")
+
+
+def _guardian_safe_triage(info: dict | None) -> dict | None:
+    """보호자 클라이언트로 전달할 triage 정보에서 진단성 필드를 제거한다."""
+    if not isinstance(info, dict):
+        return info
+    return {k: info.get(k) for k in _GUARDIAN_SAFE_FIELDS if k in info}
 
 
 async def _run_schedule_background(
@@ -120,7 +134,7 @@ async def send_message(
     ]
 
     turn_count = sum(1 for m in openai_messages if m["role"] == "assistant")
-    force_complete = turn_count >= 5
+    force_complete = turn_count >= 4
 
     system_prompt = _build_triage_system_prompt(pet, patient_context=patient_context_data, force_complete=force_complete)
 
@@ -139,14 +153,27 @@ async def send_message(
         try:
             client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-            # JSON 모드로 전체 응답 수신
-            response = await client.chat.completions.create(
-                model=settings.OPENAI_MODEL or "gpt-4o",
-                messages=[{"role": "system", "content": system_prompt}] + openai_messages,
-                response_format={"type": "json_object"},
-                max_tokens=800,
-                temperature=0.3,
-            )
+            # JSON 모드로 전체 응답 수신 — timeout(30s) + 1회 재시도로 일시 오류에 대응.
+            # 두 번 다 실패하면 아래 except가 error 이벤트로 graceful 종료.
+            response = None
+            for attempt in range(1, 3):
+                try:
+                    response = await client.chat.completions.create(
+                        model=settings.OPENAI_MODEL or "gpt-4o",
+                        messages=[{"role": "system", "content": system_prompt}] + openai_messages,
+                        response_format={"type": "json_object"},
+                        # GPT-5 계열은 max_tokens 미지원(max_completion_tokens 사용) + 추론 토큰을
+                        # 출력 예산에서 함께 소모하므로 넉넉히 둔다. gpt-4o 계열도 동일 파라미터 허용.
+                        max_completion_tokens=2000,
+                        temperature=0.3,
+                        timeout=45.0,
+                    )
+                    break
+                except Exception as oa_exc:
+                    logger.warning(f"[Triage] OpenAI 호출 실패 (attempt {attempt}/2): {oa_exc}")
+                    if attempt >= 2:
+                        raise
+                    await asyncio.sleep(0.5)
 
             raw = response.choices[0].message.content or ""
 
@@ -163,6 +190,19 @@ async def send_message(
             message_text = parsed.get("message", "")
             suggestions = parsed.get("suggestions") or []
             collected_info = parsed.get("collected_info")
+
+            # suggestions 정제 — 보호자의 '답변' 후보만 노출한다.
+            # 모델이 가끔 질문형("최근에 구토를 했나요?")을 선택지로 내놓는데,
+            # 물음표로 끝나면 질문이므로 제거한다. (결정론적 — 모델 품질과 무관하게 보장)
+            suggestions = [
+                s.strip() for s in suggestions
+                if isinstance(s, str) and s.strip() and not s.strip().endswith("?")
+            ][:3]
+            # 문진이 끝나지 않은 대화 진행 중에는 답변형 pill이 항상 떠야 한다.
+            # 모델이 전부 질문형을 내놓아 비게 되면 기본 답변 선택지로 대체.
+            is_complete = bool(collected_info and collected_info.get("is_triage_complete"))
+            if not is_complete and not suggestions:
+                suggestions = ["네, 그래요", "아니요, 괜찮아요", "잘 모르겠어요"]
 
             # AI 응답 DB 저장
             await add_message(db, session, "assistant", message_text)
@@ -190,22 +230,9 @@ async def send_message(
                 # ② ChatHistory.emrid 업데이트 (NULL → emrid, 1회만)
                 await update_session_emrid(db, session, emrid)
 
-                # ③ TriageResult INSERT
+                # ③ TriageResult INSERT (공용 빌더로 매핑 단일화 — crud/triage.py)
                 try:
-                    db.add(TriageResult(
-                        emrid=emrid,
-                        urgency_level=collected_info.get("urgency_level", ""),
-                        urgency_level_num=int(collected_info.get("urgency_level_num", 3)),
-                        vtl_basis=collected_info.get("vtl_basis"),
-                        red_flags=collected_info.get("red_flags"),
-                        chief_complaint=collected_info.get("chief_complaint"),
-                        symptom_onset=collected_info.get("symptom_onset"),
-                        symptom_keywords=collected_info.get("symptom_keywords"),
-                        suspected_diseases=collected_info.get("suspected_diseases"),
-                        symptom_summary=collected_info.get("symptom_summary"),
-                        recommended_action=collected_info.get("recommended_action"),
-                        need_photo=collected_info.get("need_photo", False),
-                    ))
+                    db.add(build_triage_result(emrid, collected_info))
                     await db.commit()
                     logger.info(f"[TriageResult] saved emrid={emrid}")
                     # ③-a Guardian category_id를 실제 증상 기반으로 업데이트
@@ -233,15 +260,18 @@ async def send_message(
                     name="schedule_bg",
                 )
 
-                yield f"data: {json.dumps({'type': 'triage_complete', 'data': collected_info, 'emrid': emrid, 'schedule_task_id': schedule_task_id}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'triage_complete', 'data': _guardian_safe_triage(collected_info), 'emrid': emrid, 'schedule_task_id': schedule_task_id}, ensure_ascii=False)}\n\n"
             else:
                 if collected_info:
-                    yield f"data: {json.dumps({'type': 'triage_complete', 'data': collected_info}, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps({'type': 'triage_complete', 'data': _guardian_safe_triage(collected_info)}, ensure_ascii=False)}\n\n"
 
             yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+            # 내부 예외 메시지를 그대로 노출하지 않고 사용자 친화적 안내로 대체한다.
+            logger.error(f"[Chat] event_stream 실패 session_id={session_id}: {e}", exc_info=True)
+            friendly = "일시적인 오류로 답변을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+            yield f"data: {json.dumps({'type': 'error', 'message': friendly}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
         event_stream(),

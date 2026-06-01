@@ -143,6 +143,7 @@ const ChatbotPage = () => {
         keywords: string[],
         collectedInfo: Record<string, unknown>,
         emrid?: number,
+        scheduleTaskId?: string,
       ) => void)
     | undefined
   >(undefined);
@@ -167,8 +168,8 @@ const ChatbotPage = () => {
     isUploadingAttachment,
     setErrorMessage,
     getErrorMessage,
-    onTriageComplete: (sessionId, keywords, collectedInfo, emrid) =>
-      onTriageCompleteRef.current?.(sessionId, keywords, collectedInfo, emrid),
+    onTriageComplete: (sessionId, keywords, collectedInfo, emrid, scheduleTaskId) =>
+      onTriageCompleteRef.current?.(sessionId, keywords, collectedInfo, emrid, scheduleTaskId),
   });
 
   const pipeline = useAgentPipeline({
@@ -205,10 +206,10 @@ const ChatbotPage = () => {
   });
 
   // pipeline이 정의된 후 ref를 최신 값으로 동기화
-  onTriageCompleteRef.current = (_sessionId, _keywords, collectedInfo, emrid) => {
+  onTriageCompleteRef.current = (_sessionId, _keywords, collectedInfo, emrid, scheduleTaskId) => {
     if (selectedPet) {
       refreshChatHistories(selectedPet.pet_id);
-      void pipeline.startSchedulePhase(selectedPet, collectedInfo, emrid);
+      void pipeline.startSchedulePhase(selectedPet, collectedInfo, emrid, scheduleTaskId);
     }
   };
 
@@ -409,30 +410,7 @@ const ChatbotPage = () => {
                       <h2 className="truncate text-base font-extrabold text-slate-950">
                         {todayChatTitle} 새 상담
                       </h2>
-                      {chatPhase === "FOLLOWUP_ACTIVE" ? (
-                        <p className="text-xs font-semibold text-blue-500">경과 모니터링 중</p>
-                      ) : chatPhase === "BOOKING_CONFIRMED" ? (
-                        <p className="text-xs font-semibold text-green-600">예약 완료</p>
-                      ) : chatPhase === "TRIAGE_RUNNING" ? (
-                        <p className="text-xs font-semibold text-amber-500">증상 분석 중...</p>
-                      ) : chatPhase === "SLOT_RECOMMENDING" ? (
-                        <p className="text-xs font-semibold text-blue-600">예약 슬롯 선택</p>
-                      ) : null}
                     </div>
-                    {/* 상태 배지 */}
-                    {chatPhase !== "IDLE" && chatPhase !== "SYMPTOM_COLLECTING" && (
-                      <span className={[
-                        "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase",
-                        chatPhase === "BOOKING_CONFIRMED" ? "bg-green-100 text-green-700" :
-                        chatPhase === "FOLLOWUP_ACTIVE" ? "bg-blue-100 text-blue-700" :
-                        "bg-amber-100 text-amber-700",
-                      ].join(" ")}>
-                        {chatPhase === "TRIAGE_RUNNING" ? "분석중" :
-                         chatPhase === "SLOT_RECOMMENDING" ? "슬롯선택" :
-                         chatPhase === "BOOKING_CONFIRMED" ? "예약완료" :
-                         chatPhase === "FOLLOWUP_ACTIVE" ? "모니터링" : ""}
-                      </span>
-                    )}
                   </div>
 
                   <ChatMessageList
