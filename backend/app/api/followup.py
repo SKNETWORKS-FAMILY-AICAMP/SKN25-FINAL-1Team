@@ -260,11 +260,12 @@ async def get_presigned_url(
     if file_size > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
 
-    # TODO: S3 Presigned URL 발급
-    return {
-        "code": 200,
-        "result": {
-            "presigned_url": "https://s3.amazonaws.com/temp",
-            "cloudfront_url": "https://cloudfront-url/temp"
-        }
-    }
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import create_presigned_put
+
+    try:
+        result = create_presigned_put(file_name, content_type, prefix="followup")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
