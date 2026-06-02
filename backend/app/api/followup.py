@@ -195,10 +195,35 @@ async def create_followup(
             request.message
         )
 
+    # 경과보고 메시지를 chat_historyDB에도 저장 (재진입 시 기록 유지)
+    try:
+        from app.models.chat_history import ChatHistory
+        from sqlalchemy.orm.attributes import flag_modified
+        chat_row = await db.execute(
+            select(ChatHistory).where(
+                ChatHistory.emrid == request.emrid,
+                ChatHistory.is_deleted == False,
+            )
+        )
+        chat_session = chat_row.scalar_one_or_none()
+        if chat_session:
+            msgs = list(chat_session.messages or [])
+            user_content = request.message or ""
+            if request.images:
+                user_content = (user_content + " " if user_content else "") + f"[사진 {len(request.images)}장 첨부]"
+            msgs.append({"role": "user", "content": user_content.strip()})
+            if ai_response and ai_response.get("guardian_message"):
+                msgs.append({"role": "assistant", "content": ai_response["guardian_message"]})
+            chat_session.messages = msgs
+            flag_modified(chat_session, "messages")
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"[Followup] chat_history 업데이트 실패 emrid={request.emrid}: {e}")
+
     response_payload = {
         "followup_id": followup.followupid,
     }
-    
+
     if ai_response:
         response_payload.update({
             "followup_recommended": ai_response.get("followup_recommended", False),

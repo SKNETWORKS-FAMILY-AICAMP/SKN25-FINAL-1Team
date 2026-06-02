@@ -25,6 +25,7 @@ interface UseChatSessionsParams {
   setErrorMessage: (message: string) => void;
   getErrorMessage: (error: unknown, fallbackMessage: string) => string;
   getProfileImage: (pet: Pet) => string;
+  onFollowupRestore?: (emrid: number) => void;
 }
 
 export const useChatSessions = ({
@@ -35,6 +36,7 @@ export const useChatSessions = ({
   setErrorMessage,
   getErrorMessage,
   getProfileImage,
+  onFollowupRestore,
 }: UseChatSessionsParams) => {
   const [chatHistories, setChatHistories] = useState<ChatSessionHistory[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(
@@ -175,6 +177,10 @@ export const useChatSessions = ({
           attachmentUrl: message.image_url || undefined,
         })),
       );
+
+      if (response.result.can_followup && response.result.emrid) {
+        onFollowupRestore?.(response.result.emrid);
+      }
     } catch (error) {
       setErrorMessage(
         getErrorMessage(error, "상담 기록을 불러오지 못했습니다."),
