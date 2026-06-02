@@ -61,31 +61,31 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
     d && selectedDate && toDateStr(d) === toDateStr(selectedDate);
 
   return (
-    <div className="border-t border-blue-100 bg-blue-50/60 px-4 py-4">
+    <div className="w-80 rounded-2xl border border-blue-100 bg-white px-4 py-3 shadow-xl">
       {/* 달력 헤더 */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-1.5 flex items-center justify-between">
         <span className="text-sm font-extrabold text-slate-800">
           {viewYear}년 {viewMonth + 1}월
         </span>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <button
             type="button"
             onClick={prevMonth}
-            className="rounded-lg px-2 py-1 text-xs font-extrabold text-slate-500 hover:bg-white"
+            className="rounded px-2 py-0.5 text-xs font-extrabold text-slate-500 hover:bg-blue-50"
           >
             ◀
           </button>
           <button
             type="button"
             onClick={nextMonth}
-            className="rounded-lg px-2 py-1 text-xs font-extrabold text-slate-500 hover:bg-white"
+            className="rounded px-2 py-0.5 text-xs font-extrabold text-slate-500 hover:bg-blue-50"
           >
             ▶
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="ml-2 rounded-lg px-2 py-1 text-xs font-extrabold text-slate-400 hover:bg-white hover:text-rose-500"
+            className="ml-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold text-slate-400 hover:bg-white hover:text-rose-500"
           >
             닫기
           </button>
@@ -93,11 +93,11 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
       </div>
 
       {/* 요일 헤더 */}
-      <div className="mb-1 grid grid-cols-7 text-center">
+      <div className="mb-0.5 grid grid-cols-7 text-center">
         {DAYS.map((d, i) => (
           <span
             key={d}
-            className={`text-[10px] font-extrabold ${i === 0 ? "text-rose-400" : i === 6 ? "text-blue-500" : "text-slate-400"}`}
+            className={`text-[11px] font-extrabold ${i === 0 ? "text-rose-400" : i === 6 ? "text-blue-500" : "text-slate-400"}`}
           >
             {d}
           </span>
@@ -105,7 +105,7 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
       </div>
 
       {/* 날짜 셀 */}
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 gap-px">
         {cells.map((d, idx) => {
           const selectable = isSelectable(d);
           const selected = isSelected(d);
@@ -117,7 +117,7 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
               disabled={!selectable}
               onClick={() => d && selectable && setSelectedDate(d)}
               className={[
-                "aspect-square rounded-lg text-xs font-bold transition",
+                "h-8 w-full rounded-lg text-xs font-bold transition",
                 !d ? "invisible" : "",
                 selected ? "bg-blue-600 text-white shadow-sm" : "",
                 !selected && selectable ? "hover:bg-white text-slate-700" : "",
@@ -133,16 +133,16 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
 
       {/* 선택된 날짜의 슬롯 */}
       {selectedDate && (
-        <div className="mt-3">
-          <p className="mb-2 text-xs font-extrabold text-slate-600">
+        <div className="mt-2">
+          <p className="mb-1.5 text-[10px] font-extrabold text-slate-600">
             {viewMonth + 1}월 {selectedDate.getDate()}일 예약 가능 시간
           </p>
           {loadingSlots ? (
-            <p className="text-xs text-slate-400">슬롯 조회 중...</p>
+            <p className="text-[10px] text-slate-400">슬롯 조회 중...</p>
           ) : slots.length === 0 ? (
-            <p className="text-xs text-slate-400">예약 가능한 시간이 없습니다.</p>
+            <p className="text-[10px] text-slate-400">예약 가능한 시간이 없습니다.</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {slots.map(s => {
                 const time = s.start_time.slice(0, 5);
                 const [, m, dd] = toDateStr(selectedDate).split("-");
@@ -154,7 +154,7 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
                     onClick={() =>
                       onSelectSlot(toDateStr(selectedDate), time, s.doctorid ?? 1, label)
                     }
-                    className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-blue-700"
+                    className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-blue-700"
                   >
                     {time}
                   </button>
