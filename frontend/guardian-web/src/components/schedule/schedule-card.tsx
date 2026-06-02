@@ -3,7 +3,7 @@ import ListItemCard from "../common/list-item-card";
 import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
 import {
   canManageSchedule,
-  formatScheduleTimeRange,
+  formatScheduleDateTime,
   getProfileImage,
   scheduleStatusLabel,
 } from "./schedule-utils";
@@ -30,23 +30,24 @@ const ScheduleCard = ({
   const isInactive =
     selectedFilter === "all" &&
     (schedule.status === "COMPLETED" || schedule.status === "CANCELLED" || isPastConfirmed);
+  const statusLabel = scheduleStatusLabel[schedule.status];
 
   const badgeClassName =
     schedule.status === "CONFIRMED"
       ? "bg-blue-100 text-blue-600 ring-blue-200"
       : schedule.status === "CANCELLED"
-        ? "bg-rose-100 text-rose-500 ring-rose-100"
+        ? "bg-rose-100 text-rose-500 ring-rose-200"
         : "bg-slate-100 text-slate-500 ring-slate-200";
 
   return (
     <ListItemCard
       className={[
         "grid gap-4 transition hover:border-blue-100 hover:shadow-lg hover:shadow-blue-100/50",
-        "lg:grid-cols-[72px_1fr_auto] lg:items-center lg:gap-6",
+        "lg:grid-cols-[88px_1fr_auto] lg:items-center lg:gap-6",
         isInactive ? "opacity-45 grayscale" : "",
       ].join(" ")}
     >
-      <div className="h-16 w-16 overflow-hidden rounded-2xl bg-slate-100">
+      <div className="h-20 w-20 overflow-hidden rounded-lg bg-slate-100">
         <img
           src={getProfileImage(schedule)}
           alt={`${schedule.pet_name} 프로필`}
@@ -60,11 +61,13 @@ const ScheduleCard = ({
             {schedule.pet_name}
           </h2>
 
-          <span
-            className={`inline-flex h-5 items-center rounded-full px-2 text-[11px] font-bold ring-1 ${badgeClassName}`}
-          >
-            {scheduleStatusLabel[schedule.status]}
-          </span>
+          {statusLabel ? (
+            <span
+              className={`inline-flex h-5 items-center rounded-full px-2 text-[11px] font-bold ring-1 ${badgeClassName}`}
+            >
+              {statusLabel}
+            </span>
+          ) : null}
         </div>
 
         <p className="mt-2 text-base font-extrabold text-slate-900">
@@ -72,10 +75,7 @@ const ScheduleCard = ({
         </p>
 
         <p className="mt-1.5 text-sm font-bold text-blue-600">
-          {formatScheduleTimeRange(
-            schedule.confirmed_time,
-            schedule.confirmed_end_time,
-          )}
+          {formatScheduleDateTime(schedule.confirmed_time)}
         </p>
       </div>
 

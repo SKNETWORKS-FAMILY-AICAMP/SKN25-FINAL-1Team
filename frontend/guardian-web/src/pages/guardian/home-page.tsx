@@ -253,9 +253,9 @@ const HomePage = () => {
               {pets.map((pet) => (
                 <article
                   key={pet.pet_id}
-                  className="rounded-xl border border-slate-100 bg-white p-3 transition hover:border-slate-200 hover:shadow-sm sm:flex sm:items-center sm:gap-5"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-slate-100/70 hover:shadow-sm sm:flex sm:items-center sm:gap-5"
                 >
-                  <div className="mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-50 sm:mx-0">
+                  <div className="mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:mx-0">
                     <img
                       src={getProfileImage(pet)}
                       alt={`${pet.petname} 프로필`}
@@ -271,7 +271,7 @@ const HomePage = () => {
                       {getPetMeta(pet) || pet.species || "반려동물"}
                     </p>
 
-                    <div className="mt-3 border-t border-slate-100 pt-3">
+                    <div className="mt-3 border-t border-slate-200 pt-3">
                       <div className="grid gap-2 sm:max-w-[620px] sm:grid-cols-3">
                         <Link
                           to={`/pets/${pet.pet_id}`}

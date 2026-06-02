@@ -44,9 +44,9 @@ const ChatSessionList = ({
         </h2>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col">
         {!selectedPet ? (
-          <div className="flex flex-1 flex-col items-center px-2 pt-[150px] text-center">
+          <div className="flex flex-1 flex-col items-center px-6 pt-[150px] text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <HistoryIcon />
             </div>
@@ -61,63 +61,67 @@ const ChatSessionList = ({
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={onCreateSession}
-              disabled={creatingPetId !== null}
-              className="mt-3 flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-blue-300"
-            >
-              {creatingPetId ? "세션 생성 중" : "새 상담 시작"}
-            </button>
+            <div className="shrink-0 px-4 pt-6">
+              <button
+                type="button"
+                onClick={onCreateSession}
+                disabled={creatingPetId !== null}
+                className="flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-blue-300"
+              >
+                {creatingPetId ? "세션 생성 중" : "새 상담 시작"}
+              </button>
+            </div>
 
-            {isLoadingHistories ? (
-              <div className="mt-8 flex justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-              </div>
-            ) : chatHistories.length === 0 ? (
-              <p className="mt-6 text-center text-xs font-semibold leading-5 text-slate-500">
-                아직 상담 기록이 없습니다.
-              </p>
-            ) : (
-              <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
-                {chatHistories.map((history) => {
-                  const isSelected = history.session_id === selectedHistoryId;
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+              {isLoadingHistories ? (
+                <div className="mt-8 flex justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                </div>
+              ) : chatHistories.length === 0 ? (
+                <p className="mt-6 text-center text-xs font-semibold leading-5 text-slate-500">
+                  아직 상담 기록이 없습니다.
+                </p>
+              ) : (
+                <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+                  {chatHistories.map((history) => {
+                    const isSelected = history.session_id === selectedHistoryId;
 
-                  return (
-                    <div
-                      key={history.session_id}
-                      className={[
-                        "relative border-l-2 transition",
-                        isSelected
-                          ? "border-blue-300 bg-blue-50"
-                          : "border-transparent bg-white hover:bg-blue-50/60",
-                      ].join(" ")}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onSelectHistory(history.session_id)}
-                        className="block w-full px-1 py-3 pr-9 text-left"
+                    return (
+                      <div
+                        key={history.session_id}
+                        className={[
+                          "relative border-l-2 transition",
+                          isSelected
+                            ? "border-blue-300 bg-blue-50"
+                            : "border-transparent bg-white hover:bg-blue-50/60",
+                        ].join(" ")}
                       >
-                        <span className="block truncate text-sm font-extrabold text-slate-900">
-                          {getHistoryTitle(history)}
-                        </span>
-                        <span className="mt-2 block text-[10px] font-bold text-slate-400">
-                          {history.created_at}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteHistory(history)}
-                        className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-extrabold text-slate-400 transition hover:bg-white hover:text-rose-500"
-                        aria-label="상담 기록 삭제"
-                      >
-                        x
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        <button
+                          type="button"
+                          onClick={() => onSelectHistory(history.session_id)}
+                          className="block w-full px-1 py-3 pr-9 text-left"
+                        >
+                          <span className="block truncate text-sm font-extrabold text-slate-900">
+                            {getHistoryTitle(history)}
+                          </span>
+                          <span className="mt-2 block text-[10px] font-bold text-slate-400">
+                            {history.created_at}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteHistory(history)}
+                          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-extrabold text-slate-400 transition hover:bg-white hover:text-rose-500"
+                          aria-label="상담 기록 삭제"
+                        >
+                          x
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
