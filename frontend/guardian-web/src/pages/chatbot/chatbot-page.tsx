@@ -203,6 +203,7 @@ const ChatbotPage = () => {
     setErrorMessage,
     getErrorMessage,
     getProfileImage,
+    onFollowupRestore: pipeline.restoreFollowupPhase,
   });
 
   // pipeline이 정의된 후 ref를 최신 값으로 동기화
@@ -508,8 +509,22 @@ const ChatbotPage = () => {
                     <ChatMessageList
                       messages={messages}
                       quickReplies={[]}
-                      isStreaming={false}
+                      isStreaming={isStreaming}
                       onSendMessage={() => {}}
+                    />
+                  )}
+
+                  {pipeline.phase === "followup" && (
+                    <ChatInputBox
+                      fileInputRef={fileInputRef}
+                      pendingAttachment={pendingAttachment}
+                      messageInput={messageInput}
+                      isStreaming={isStreaming}
+                      isUploadingAttachment={isUploadingAttachment}
+                      onClearPendingAttachment={clearPendingAttachment}
+                      onSelectAttachment={handleSelectAttachment}
+                      onSubmitMessage={handleSubmitCombined}
+                      onChangeMessageInput={setMessageInput}
                     />
                   )}
                 </>
