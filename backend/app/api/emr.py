@@ -392,3 +392,79 @@ async def upload_emr_file(
     except NoCredentialsError:
         raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
     return {"code": 200, "result": result}
+
+
+# ──────────────────────────────────────────────
+# 수의사 - 환자(펫) 정보 수정
+# ──────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+from typing import Optional as _Optional
+
+class PetUpdateByDoctor(_BaseModel):
+    weight_kg: _Optional[float] = None
+    notes: _Optional[str] = None
+
+
+@router.patch("/pet/{pet_id}", status_code=200)
+async def update_pet_by_doctor(
+    pet_id: int,
+    body: PetUpdateByDoctor,
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
+):
+    """수의사가 진료 중 체중·특이사항을 업데이트한다."""
+    from app.models.pet import Pet
+    result = await db.execute(select(Pet).where(Pet.petid == pet_id))
+    pet = result.scalar_one_or_none()
+    if not pet:
+        raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
+
+    if body.weight_kg is not None:
+        pet.weight_kg = body.weight_kg
+    if body.notes is not None:
+        pet.notes = body.notes
+
+    await db.commit()
+    return {"code": 200, "message": "반려동물 정보가 수정되었습니다."}
+
+
+# ──────────────────────────────────────────────
+# 진료 완료 → 진료 대기 리셋 (EMR + 처방전 초기화)
+# ──────────────────────────────────────────────
+
+@router.post("/{schedule_id}/reset", status_code=200)
+async def reset_visit(
+    schedule_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_doctor: Doctor = Depends(get_current_doctor),
+):
+    """진료 완료된 스케줄을 진료 대기로 되돌리고 EMR·처방전을 초기화한다."""
+    from app.models.schedule import Schedule
+    from app.models.emr import EMR
+    from app.models.prescription import Prescription
+
+    schedule_row = await db.execute(
+        select(Schedule).where(Schedule.scheduleid == schedule_id)
+    )
+    schedule = schedule_row.scalar_one_or_none()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="예약을 찾을 수 없습니다.")
+
+    schedule.status = "CONFIRMED"
+
+    emr_row = await db.execute(
+        select(EMR).where(EMR.scheduleid == schedule_id)
+    )
+    emr = emr_row.scalar_one_or_none()
+    if emr:
+        presc_rows = (await db.execute(
+            select(Prescription).where(Prescription.doctor_emrid == emr.doctor_emrid)
+        )).scalars().all()
+        for p in presc_rows:
+            await db.delete(p)
+        await db.flush()
+        await db.delete(emr)
+
+    await db.commit()
+    return {"code": 200, "message": "진료 대기로 초기화되었습니다."}

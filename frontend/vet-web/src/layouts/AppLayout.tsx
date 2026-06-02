@@ -226,6 +226,7 @@ export default function AppLayout({
               <div className="absolute right-0 top-12 w-48 rounded-lg border border-[#dfe5ef] bg-white py-2 shadow-lg">
                 <button
                   type="button"
+                  onClick={() => { onNavigate?.("settings"); setIsHospitalMenuOpen(false); }}
                   className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f4f7fb]"
                 >
                   병원 설정

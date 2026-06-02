@@ -1,5 +1,6 @@
 import { Edit3 } from "lucide-react";
-import type { EmrResult, PetInfo, Prescription } from "../../types/emr";
+import { useState } from "react";
+import type { EmrResult, PetInfo } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
 // 프로필 이미지가 없거나 깨졌을 때 보여줄 기본 플레이스홀더(연한 회색 배경 + 발바닥).
@@ -51,14 +52,8 @@ export function PatientInfoPanel({
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <InfoTag label={patient.is_neutered ? "중성화 O" : "중성화 X"} />
-              <InfoTag label={patient.notes} />
+              {patient.notes && <InfoTag label={patient.notes} />}
             </div>
-            <a
-              href="#patient-profile"
-              className="mt-3 inline-block text-sm font-extrabold text-[#2563eb]"
-            >
-              상세 프로필 보기
-            </a>
           </div>
         </div>
         <button
@@ -113,57 +108,63 @@ export function HistoryPanel({ histories }: { histories: EmrResult["emr_history"
           </div>
         )}
         {histories.map((history) => (
-          <article
-            key={history.emr_id}
-            className="grid grid-cols-[120px_1fr_280px] gap-4 rounded-lg border border-[#e8edf4] p-4"
-          >
-            <div>
-              <p className="text-sm font-extrabold tabular-nums text-[#4d5874]">
-                {history.date}
-              </p>
-              <p className="mt-2 text-xs font-bold text-[#8a94a6]">
-                {history.doctor_name}
-              </p>
-            </div>
-            <p className="text-sm font-bold leading-6 text-[#4d5874]">
-              {history.vet_memo}
-            </p>
-            <div className="rounded-lg bg-[#f8fafc] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-extrabold text-[#2563eb]">처방전</p>
-                {history.prescriptions.length > 2 && (
-                  <button
-                    type="button"
-                    className="text-xs font-extrabold text-[#59657a]"
-                  >
-                    펼치기
-                  </button>
-                )}
-              </div>
-              <div className="space-y-2">
-                {history.prescriptions.slice(0, 2).map((prescription) => (
-                  <PrescriptionLine
-                    key={`${history.emr_id}-${prescription.drug_name}`}
-                    prescription={prescription}
-                  />
-                ))}
-              </div>
-            </div>
-          </article>
+          <HistoryItem key={history.emr_id} history={history} />
         ))}
       </div>
     </Panel>
   );
 }
 
-function PrescriptionLine({ prescription }: { prescription: Prescription }) {
+function HistoryItem({ history }: { history: EmrResult["emr_history"][number] }) {
+  const [expanded, setExpanded] = useState(false);
+  const displayMemo = history.vet_memo
+    .split("\n\n")
+    .filter((part) => !part.trimStart().startsWith("[처방전]"))
+    .join("\n\n") || "(진료 내용 없음)";
+  const visible = expanded ? history.prescriptions : history.prescriptions.slice(0, 2);
+
   return (
-    <div className="grid grid-cols-[1fr_46px_46px_46px_42px] gap-2 text-xs font-bold text-[#4d5874]">
-      <span className="truncate font-extrabold">{prescription.drug_name}</span>
-      <span>{prescription.dosage}</span>
-      <span>{prescription.form}</span>
-      <span>{prescription.frequency}</span>
-      <span>{prescription.duration_days}일</span>
-    </div>
+    <article className="grid grid-cols-[120px_1fr_340px] gap-4 rounded-lg border border-[#e8edf4] p-4">
+      <div>
+        <p className="text-sm font-extrabold tabular-nums text-[#4d5874]">{history.date}</p>
+        <p className="mt-2 text-xs font-bold text-[#8a94a6]">{history.doctor_name}</p>
+      </div>
+      <p className="whitespace-pre-line text-sm font-bold leading-6 text-[#4d5874]">
+        {displayMemo}
+      </p>
+      <div className="rounded-lg bg-[#f8fafc] p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-extrabold text-[#2563eb]">처방전</p>
+          {history.prescriptions.length > 2 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs font-extrabold text-[#59657a] hover:text-[#2563eb]"
+            >
+              {expanded ? "접기" : "펼치기"}
+            </button>
+          )}
+        </div>
+        <div className="overflow-hidden rounded-md border border-[#e8edf4]">
+          <div className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#e8edf4] bg-[#f1f4f9] px-2 py-1.5 text-[10px] font-extrabold text-[#8a94a6]">
+            <span>약제명</span>
+            <span>용량</span>
+            <span>형태</span>
+            <span className="text-right">기간</span>
+          </div>
+          {visible.map((prescription) => (
+            <div
+              key={`${history.emr_id}-${prescription.drug_name}`}
+              className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#f0f3f8] px-2 py-1.5 text-xs font-bold text-[#4d5874] last:border-b-0"
+            >
+              <span className="truncate font-extrabold">{prescription.drug_name}</span>
+              <span className="break-all">{prescription.dosage?.replace(/체중\s*[\d.]+kg\s*기준\s*/g, "")}</span>
+              <span>{prescription.form}</span>
+              <span className="text-right">{prescription.duration_days}일</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
   );
 }

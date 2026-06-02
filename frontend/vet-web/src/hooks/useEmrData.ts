@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DrugSearchResult } from "../api/prescriptionApi";
+import { apiClient } from "../api/client";
 import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchDoctorFollowup, generateAutoPrescription, uploadEmrFile } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
@@ -133,6 +134,12 @@ export function useEmrData() {
   const handleRefreshQueue = useCallback(() => {
     loadQueue();
   }, [loadQueue]);
+
+  const handleChangeTab = useCallback((tab: QueueTab) => {
+    setQueueTab(tab);
+    const queue = tab === "waiting" ? waitingQueue : completedQueue;
+    setSelectedScheduleId(queue[0]?.schedule_id);
+  }, [waitingQueue, completedQueue]);
 
   const handleCompleteVisit = useCallback(async () => {
     if (selectedScheduleId === undefined) return;
@@ -271,8 +278,43 @@ export function useEmrData() {
     setAutoPrescriptions([]);
   }, []);
 
+  const handleResetToWaiting = useCallback(async () => {
+    if (selectedScheduleId === undefined) return;
+    const targetPatient = completedQueue.find(
+      (p: QueuePatient) => p.schedule_id === selectedScheduleId
+    );
+    if (!targetPatient) return;
+    try {
+      await apiClient.post(
+        `/doctor/emr/${selectedScheduleId}/reset`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setCompletedQueue((prev: QueuePatient[]) =>
+        prev.filter((p: QueuePatient) => p.schedule_id !== selectedScheduleId)
+      );
+      setWaitingQueue((prev: QueuePatient[]) => [...prev, targetPatient]);
+      setQueueTab("waiting");
+      setEditorValue("");
+      setPrescriptions([]);
+      setAutoPrescriptions([]);
+      // 기존 대기열 첫 번째 환자를 선택, 없으면 되돌린 환자 선택
+      const nextId = waitingQueue[0]?.schedule_id ?? targetPatient.schedule_id;
+      if (nextId === selectedScheduleId) {
+        // 같은 id면 useEffect가 재실행되지 않으므로 undefined 거쳐서 강제 트리거
+        setSelectedScheduleId(undefined);
+        setTimeout(() => setSelectedScheduleId(nextId), 0);
+      } else {
+        setSelectedScheduleId(nextId);
+      }
+    } catch (err) {
+      console.error("[ResetToWaiting] failed:", err);
+    }
+  }, [selectedScheduleId, completedQueue, waitingQueue, accessToken]);
+
   const handleApplyAutoPrescription = useCallback(() => {
     if (autoPrescriptions.length === 0) return;
+    setPrescriptions(autoPrescriptions);
     const text = [
       "[처방전]",
       ...autoPrescriptions.map(
@@ -325,6 +367,13 @@ export function useEmrData() {
     setPreviewImage({ url, label });
   }, []);
 
+  const handlePetInfoSaved = useCallback((updated: Partial<EmrResult["pet_info"]>) => {
+    setCurrentEmr((prev: EmrResult | undefined) => {
+      if (!prev) return prev;
+      return { ...prev, pet_info: { ...prev.pet_info, ...updated } };
+    });
+  }, []);
+
   return {
     queueTab,
     waitingQueue,
@@ -359,6 +408,7 @@ export function useEmrData() {
     setIsProfileEditOpen,
     setPreviewImage,
     handleRefreshQueue,
+    handleChangeTab,
     handleCompleteVisit,
     handleApplyIntake,
     handleRemoveFile,
@@ -371,6 +421,8 @@ export function useEmrData() {
     handleGeneratePrescription,
     handleAddPrescription,
     handleApplyAutoPrescription,
+    handleResetToWaiting,
     openPreviewImage,
+    handlePetInfoSaved,
   };
 }

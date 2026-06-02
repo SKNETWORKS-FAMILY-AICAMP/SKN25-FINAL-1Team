@@ -228,8 +228,9 @@ async def create_reservation(
             Schedule.status == "CONFIRMED",
             Schedule.deleted_at.is_(None)
         )
+        .limit(1)
     )
-    if dup_result.scalar_one_or_none():
+    if dup_result.scalars().first():
         raise DuplicatePetReservation()
 
     confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
