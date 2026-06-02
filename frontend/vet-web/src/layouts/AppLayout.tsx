@@ -57,9 +57,9 @@ const alarmTypeMeta: Record<
   reservation_confirmed: {
     label: "예약 확정",
     Icon: CalendarCheck,
-    bgCls: "bg-[#edfff4]",
-    iconCls: "text-[#22c55e]",
-    labelCls: "text-[#16a34a]",
+    bgCls: "bg-[#eff6ff]",
+    iconCls: "text-[#3b82f6]",
+    labelCls: "text-[#1d4ed8]",
   },
   reservation_cancelled: {
     label: "예약 취소",
@@ -85,9 +85,9 @@ const alarmTypeMeta: Record<
   followup_received: {
     label: "경과 보고",
     Icon: ClipboardList,
-    bgCls: "bg-[#f0fdf4]",
-    iconCls: "text-[#16a34a]",
-    labelCls: "text-[#15803d]",
+    bgCls: "bg-[#f8fafc]",
+    iconCls: "text-[#64748b]",
+    labelCls: "text-[#475569]",
   },
 };
 
@@ -321,7 +321,7 @@ export default function AppLayout({
           </section>
         </aside>
 
-        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f6f8fb] px-6 pb-12 pt-10">
+        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f6f8fb] px-4 pb-8 pt-6">
           {children}
         </main>
       </div>

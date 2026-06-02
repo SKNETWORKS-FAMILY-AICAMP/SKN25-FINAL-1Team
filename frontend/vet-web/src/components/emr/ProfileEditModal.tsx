@@ -95,7 +95,7 @@ export function ProfileEditModal({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="h-10 rounded-lg bg-[#4a89ff] px-4 text-sm font-extrabold text-white disabled:bg-[#c7d1df]"
+            className="h-10 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#4d5874] hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             {isSaving ? "저장 중..." : "저장"}
           </button>

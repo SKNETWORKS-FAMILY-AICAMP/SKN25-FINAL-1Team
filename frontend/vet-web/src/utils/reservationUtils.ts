@@ -31,40 +31,20 @@ export const reservationStatusMeta: Record<
 > = {
   emergency: {
     label: "응급",
-    badgeClass: "bg-[#fdecee] text-[#c95f69]",
-    softClass: "bg-[#fdecee] text-[#c95f69]",
+    badgeClass: "border border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
+    softClass: "border border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
   },
   semiEmergency: {
     label: "준응급",
-    badgeClass: "bg-[#fff0df] text-[#c87832]",
-    softClass: "bg-[#fff0df] text-[#c87832]",
+    badgeClass: "border border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
+    softClass: "border border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
   },
   normal: {
     label: "일반",
-    badgeClass: "bg-[#edf4ff] text-[#4b76c8]",
-    softClass: "bg-[#edf4ff] text-[#4b76c8]",
+    badgeClass: "border border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
+    softClass: "border border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
   },
 };
-
-// 30분 단위 예약 슬롯. 12:00 한 줄로 점심(12:00-13:00)을 표시하므로 12:30은 제외.
-export const reservationTimes = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-  "17:00",
-];
 
 export const DEFAULT_PET_IMAGE =
   "https://images.unsplash.com/photo-1583511655826-05700d52f4d9?auto=format&fit=crop&w=240&q=80";
@@ -79,15 +59,9 @@ export const statusOrder: ReservationStatus[] = [
 ];
 
 export const weeklyCardClass: Record<ReservationStatus, string> = {
-  emergency: "border-[#f4cfd5] bg-[#fffafb] text-[#20283a] before:bg-[#e7a6af]",
-  semiEmergency: "border-[#f3d8bc] bg-[#fffaf4] text-[#20283a] before:bg-[#e8b77f]",
-  normal: "border-[#cedcf5] bg-[#fbfdff] text-[#20283a] before:bg-[#9eb8ea]",
-};
-
-export const weeklyBadgeClass: Record<ReservationStatus, string> = {
-  emergency: "bg-[#fdecee] text-[#c95f69]",
-  semiEmergency: "bg-[#fff0df] text-[#c87832]",
-  normal: "bg-[#edf4ff] text-[#4b76c8]",
+  emergency: "border-[#fecdd3] bg-[#fff7f8] text-[#20283a] before:bg-[#ef4444]",
+  semiEmergency: "border-[#fed7aa] bg-[#fffaf0] text-[#20283a] before:bg-[#f97316]",
+  normal: "border-[#cfe3d7] bg-[#f8fcfa] text-[#20283a] before:bg-[#6fa989]",
 };
 
 const koreanHolidayProvider = new Holidays("KR", {
@@ -222,10 +196,6 @@ export function mapPatientDetailToReservationPatient(
     isNeutered: info.is_neutered,
     imageUrl: info.profile_image || fallback.imageUrl || DEFAULT_PET_IMAGE,
   };
-}
-
-export function getReservationAt(reservations: ReservationItem[], start: string) {
-  return reservations.find((reservation) => reservation.start === start);
 }
 
 export function startOfDay(date: Date) {

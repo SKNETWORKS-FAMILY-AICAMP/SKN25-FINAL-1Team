@@ -13,11 +13,9 @@ import { DashboardSchedulePanel } from "../../components/dashboard/DashboardSche
 import { DashboardSummaryCards } from "../../components/dashboard/DashboardSummaryCards";
 import AppLayout, { type AppMenuId } from "../../layouts/AppLayout";
 import {
-  addDays,
   createSummaryCards,
   formatApiDate,
   formatSelectedDate,
-  groupSchedulesByHour,
 } from "../../utils/dashboardUtils";
 import { getHolidayName } from "../../utils/reservationUtils";
 
@@ -32,7 +30,7 @@ export default function DashboardPage({
   onLogout,
   onNavigate,
 }: DashboardPageProps) {
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDate] = useState(() => new Date());
   const [summaries, setSummaries] = useState<DashboardSummaries>({
     total: 0,
     waiting: 0,
@@ -51,10 +49,6 @@ export default function DashboardPage({
   );
   const holidayName = useMemo(() => getHolidayName(selectedDate), [selectedDate]);
   const apiDate = useMemo(() => formatApiDate(selectedDate), [selectedDate]);
-  const schedulesByHour = useMemo(
-    () => groupSchedulesByHour(scheduleItems),
-    [scheduleItems]
-  );
   const summaryCards = useMemo(
     () => createSummaryCards(summaries),
     [summaries]
@@ -109,34 +103,31 @@ export default function DashboardPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="max-w-[1040px]">
-        <section className="mb-4 flex items-center gap-5">
-          <div className="min-w-[180px]">
-            <h1 className="text-2xl font-extrabold tracking-normal text-[#151b28]">
+      <div className="flex max-w-[1040px] items-start gap-4">
+        <div className="flex w-40 shrink-0 flex-col gap-3">
+          <div>
+            <h1 className="text-xl font-extrabold tracking-normal text-[#151b28]">
               오늘의 진료 현황
             </h1>
-            <p className="mt-2 text-sm font-bold tabular-nums text-[#6b7486]">
+            <p className="mt-1.5 text-sm font-bold tabular-nums text-[#6b7486]">
               {formattedDate}
               {holidayName && (
-                <span className="ml-2 rounded-md bg-[#fff1f2] px-2 py-0.5 text-xs font-extrabold text-[#ef4444]">
+                <span className="ml-1 rounded-md bg-[#fff1f2] px-1.5 py-0.5 text-xs font-extrabold text-[#ef4444]">
                   {holidayName}
                 </span>
               )}
             </p>
           </div>
-
           <DashboardSummaryCards summaries={summaryCards} />
-        </section>
-
-        <DashboardSchedulePanel
-          schedulesByHour={schedulesByHour}
-          isLoading={isLoading}
-          errorMessage={errorMessage}
-          holidayName={holidayName}
-          onToday={() => setSelectedDate(new Date())}
-          onPrevDate={() => setSelectedDate((date) => addDays(date, -1))}
-          onNextDate={() => setSelectedDate((date) => addDays(date, 1))}
-        />
+        </div>
+        <div className="flex-1">
+          <DashboardSchedulePanel
+            schedules={scheduleItems}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            holidayName={holidayName}
+          />
+        </div>
       </div>
     </AppLayout>
   );

@@ -170,7 +170,7 @@ export default function SettingsPage({
               </div>
 
               {isOperationSaved && (
-                <p className="text-xs font-extrabold text-[#16a34a]">
+                <p className="text-xs font-extrabold text-[#475569]">
                   운영 시간 설정이 화면에 임시 저장되었습니다.
                 </p>
               )}

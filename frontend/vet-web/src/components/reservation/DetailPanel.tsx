@@ -3,9 +3,9 @@ import type {
   ReservationItem,
   ReservationPatient,
 } from "../../types/reservation";
+import { TriageBadge } from "../common/TriageBadge";
 import {
   formatDateWithWeekday,
-  reservationStatusMeta,
 } from "../../utils/reservationUtils";
 
 interface DetailPanelProps {
@@ -48,11 +48,7 @@ export function DetailPanel({
             <h3 className="truncate text-base font-extrabold text-[#1d2a57]">
               {patient.petName} ({patient.guardianName})
             </h3>
-            <span
-              className={`rounded-md px-2.5 py-1 text-xs font-extrabold ${reservationStatusMeta[reservation.status].badgeClass}`}
-            >
-              {reservationStatusMeta[reservation.status].label}
-            </span>
+            <TriageBadge level={reservation.status} />
             <span className="text-xl font-extrabold text-[#2563eb]">
               {patient.gender === "남자" ? "♂" : patient.gender === "여자" ? "♀" : "-"}
             </span>

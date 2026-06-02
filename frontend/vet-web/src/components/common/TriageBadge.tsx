@@ -11,7 +11,7 @@ const styles: Record<VisitType, { label: string; className: string }> = {
   },
   normal: {
     label: "일반",
-    className: "bg-[#eff6ff] text-[#2563eb] border-[#bfdbfe]",
+    className: "bg-[#f6fbf8] text-[#3f7f5f] border-[#cfe3d7]",
   },
   checkup: {
     label: "검진",

@@ -1,83 +1,64 @@
+import { useMemo } from "react";
 import type { DashboardScheduleItem } from "../../api/dashboardApi";
-import { Button } from "../common/Button";
 import { Panel } from "../common/Panel";
 import { TriageBadge } from "../common/TriageBadge";
+import { ClinicRoomIcon } from "./DashboardIcons";
+import { visitTypeStyle } from "../../utils/dashboardUtils";
 import {
-  CalendarMiniIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ClinicRoomIcon,
-  FilterIcon,
-} from "./DashboardIcons";
-import { timelineHours, visitTypeStyle } from "../../utils/dashboardUtils";
+  TIMELINE_MIN_CARD_HEIGHT,
+  type PositionedTimelineItem,
+  buildPositionedTimelineItems,
+  getHourTicks,
+  getLunchBlockMetrics,
+  getTimelineHeight,
+  getTimelineRange,
+} from "../../utils/scheduleTimelineUtils";
 
 interface DashboardSchedulePanelProps {
-  schedulesByHour: Record<string, DashboardScheduleItem[]>;
+  schedules: DashboardScheduleItem[];
   isLoading: boolean;
   errorMessage: string;
   holidayName?: string;
-  onToday: () => void;
-  onPrevDate: () => void;
-  onNextDate: () => void;
 }
 
 export function DashboardSchedulePanel({
-  schedulesByHour,
+  schedules,
   isLoading,
   errorMessage,
   holidayName,
-  onToday,
-  onPrevDate,
-  onNextDate,
 }: DashboardSchedulePanelProps) {
+  const timelineRange = useMemo(() => getTimelineRange(schedules), [schedules]);
+  const hourTicks = useMemo(() => getHourTicks(timelineRange), [timelineRange]);
+  const timelineHeight = useMemo(
+    () => getTimelineHeight(timelineRange),
+    [timelineRange]
+  );
+  const lunchBlock = useMemo(
+    () => getLunchBlockMetrics(timelineRange),
+    [timelineRange]
+  );
+  const positionedSchedules = useMemo(
+    () => buildPositionedTimelineItems(schedules, timelineRange),
+    [schedules, timelineRange]
+  );
+
   return (
     <Panel>
-      <div className="flex items-center justify-between gap-4 border-b border-[#edf1f6] px-5 py-3">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-extrabold tracking-normal text-[#151b28]">
-            오늘의 일정
-          </h2>
-          {holidayName && (
-            <span className="rounded-md bg-[#fff1f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
-              {holidayName}
-            </span>
-          )}
-          <div className="hidden items-center gap-2 text-sm font-extrabold text-[#4d5874] lg:flex">
-            <ClinicRoomIcon />
-            <span>진료실 1</span>
-            <span className="text-xs font-bold text-[#758197]">
-              수의사: 김보호
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={onToday}>
-            오늘
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={onPrevDate}
-            aria-label="이전 날짜"
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <Button variant="secondary" size="icon" aria-label="날짜 선택">
-            <CalendarMiniIcon />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={onNextDate}
-            aria-label="다음 날짜"
-          >
-            <ChevronRightIcon />
-          </Button>
-          <Button variant="secondary" size="sm">
-            <FilterIcon />
-            필터
-          </Button>
+      <div className="flex items-center gap-4 border-b border-[#edf1f6] px-5 py-3">
+        <h2 className="text-lg font-extrabold tracking-normal text-[#151b28]">
+          오늘의 일정
+        </h2>
+        {holidayName && (
+          <span className="rounded-md bg-[#fff1f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
+            {holidayName}
+          </span>
+        )}
+        <div className="hidden items-center gap-2 text-sm font-extrabold text-[#4d5874] lg:flex">
+          <ClinicRoomIcon />
+          <span>진료실 1</span>
+          <span className="text-xs font-bold text-[#758197]">
+            수의사: 김보호
+          </span>
         </div>
       </div>
 
@@ -94,34 +75,47 @@ export function DashboardSchedulePanel({
           </div>
         ) : null}
 
-        {timelineHours.map((hour) => {
-          const items = schedulesByHour[hour] ?? [];
-          const isLunchTime = hour === "12:00";
+        <div className="grid grid-cols-[56px_1fr] gap-2">
+          <div className="relative" style={{ height: timelineHeight }}>
+            {hourTicks.map((tick) => (
+              <div
+                key={tick.minutes}
+                className="absolute left-0 text-xs font-extrabold tabular-nums text-[#556179]"
+                style={{ top: tick.top }}
+              >
+                {tick.label}
+              </div>
+            ))}
+          </div>
 
-          return (
-            <div key={hour} className="grid grid-cols-[58px_1fr] gap-3">
-              <div className="pt-2.5 text-xs font-extrabold tabular-nums text-[#556179]">
-                {hour}
-              </div>
-              <div className="pb-1.5">
-                {isLunchTime ? (
-                  <div className="flex h-10 items-center rounded-lg bg-[#f0f2f5] px-4 text-xs font-extrabold text-[#3f4757]">
-                    12:00 - 13:00
-                    <span className="ml-5">점심시간</span>
-                  </div>
-                ) : items.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {items.map((item) => (
-                      <ScheduleRow key={item.id} item={item} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-10 rounded-lg border border-[#edf1f6] bg-white" />
-                )}
-              </div>
+          <div
+            className="relative overflow-hidden rounded-lg border border-[#edf1f6] bg-white"
+            style={{ height: timelineHeight }}
+          >
+            {hourTicks.map((tick) => (
+              <div
+                key={tick.minutes}
+                className="absolute left-0 right-0 border-t border-[#edf1f6]"
+                style={{ top: tick.top }}
+              />
+            ))}
+
+            <div
+              className="absolute left-1.5 right-1.5 flex items-center rounded-md bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
+              style={{
+                top: lunchBlock.top,
+                height: lunchBlock.height,
+              }}
+            >
+              {lunchBlock.timeLabel}
+              <span className="ml-5">점심시간</span>
             </div>
-          );
-        })}
+
+            {positionedSchedules.map((positioned) => (
+              <ScheduleRow key={positioned.item.id} positioned={positioned} />
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-[#edf1f6] px-5 py-3">
@@ -139,21 +133,46 @@ export function DashboardSchedulePanel({
   );
 }
 
-function ScheduleRow({ item }: { item: DashboardScheduleItem }) {
+function ScheduleRow({
+  positioned,
+}: {
+  positioned: PositionedTimelineItem<DashboardScheduleItem>;
+}) {
+  const { item, top, height, timeLabel, columnIndex, columnCount } = positioned;
+  const compact = height < 54;
+  const typeStyle = visitTypeStyle[item.type];
+
   return (
-    <article className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-[#e8edf4] bg-white px-4 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
-      <div className="grid min-w-0 flex-1 grid-cols-[96px_minmax(150px,220px)_1fr] items-center gap-4">
+    <article
+      className={`absolute z-10 flex items-center justify-between gap-3 overflow-hidden rounded-lg border py-2 pl-5 pr-3.5 text-left shadow-[0_4px_12px_rgba(15,23,42,0.08)] before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${typeStyle.card}`}
+      style={{
+        top,
+        height: Math.max(height, TIMELINE_MIN_CARD_HEIGHT),
+        left: `${(columnIndex / columnCount) * 100}%`,
+        width: `calc(${100 / columnCount}% - ${columnCount > 1 ? 4 : 0}px)`,
+      }}
+    >
+      <div
+        className={[
+          "grid min-w-0 flex-1 items-center gap-4",
+          compact
+            ? "grid-cols-[92px_minmax(100px,1fr)]"
+            : "grid-cols-[92px_minmax(130px,200px)_1fr]",
+        ].join(" ")}
+      >
         <p className="text-xs font-extrabold tabular-nums text-[#556179]">
-          {item.start} - {item.end}
+          {timeLabel}
         </p>
         <div className="min-w-0">
           <p className="truncate text-sm font-extrabold text-[#222b3c]">
             {item.patientName} ({item.species})
           </p>
         </div>
-        <p className="truncate text-xs font-bold text-[#657188]">
-          {item.breed} · {item.age} · {item.weight} · {item.reason}
-        </p>
+        {!compact && (
+          <p className="truncate text-xs font-bold text-[#657188]">
+            {item.breed} · {item.age} · {item.weight} · {item.reason}
+          </p>
+        )}
       </div>
       <TriageBadge level={item.type} />
     </article>

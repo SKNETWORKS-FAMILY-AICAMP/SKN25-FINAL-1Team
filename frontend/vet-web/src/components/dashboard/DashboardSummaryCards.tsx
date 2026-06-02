@@ -7,7 +7,7 @@ interface DashboardSummaryCardsProps {
 
 export function DashboardSummaryCards({ summaries }: DashboardSummaryCardsProps) {
   return (
-    <div className="grid max-w-[780px] flex-1 grid-cols-4 gap-3">
+    <div className="flex w-40 flex-col gap-3">
       {summaries.map((summary) => (
         <SummaryCard key={summary.id} summary={summary} />
       ))}

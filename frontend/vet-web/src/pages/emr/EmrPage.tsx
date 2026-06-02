@@ -1,3 +1,4 @@
+import { PhoneCall, TriangleAlert } from "lucide-react";
 import { AuthSession } from "../../api/authApi";
 import { AutoPrescriptionPanel } from "../../components/emr/AutoPrescriptionPanel";
 import {
@@ -117,7 +118,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
               Array.isArray(validationResult.checks) && (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-xs text-yellow-800">
                   <div className="flex items-center gap-1.5 font-bold">
-                    <span aria-hidden>⚠️</span>
+                    <TriangleAlert className="h-3.5 w-3.5" strokeWidth={2.2} />
                     <span>검토 권고</span>
                   </div>
                   <ul className="mt-1.5 space-y-1 leading-snug text-yellow-900/90">
@@ -147,7 +148,12 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                     <h3 className="mb-3 text-sm font-extrabold text-[#151b28]">경과 보고</h3>
                     <div className="space-y-3">
                       {followupItems.map((item) => (
-                        <div key={item.followup_id} className={`border-l-2 pl-3 ${item.emergency_alert ? 'border-red-500 bg-red-50/50 pr-2 py-1' : 'border-[#4a89ff]'}`}>
+                        <div
+                          key={item.followup_id}
+                          className={`border-l-2 py-1 pl-3 ${
+                            item.emergency_alert ? "border-[#ef4444]" : "border-[#cbd5e1]"
+                          }`}
+                        >
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-[#a8b0bf]">
                               {item.created_at
@@ -160,12 +166,16 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                                 : ""}
                             </p>
                             {item.emergency_alert && (
-                              <span className="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
-                                🚨 응급 신호 감지
+                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#ef4444]">
+                                <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
+                                응급 신호 감지
                               </span>
                             )}
                           </div>
-                          <p className="mt-0.5 text-sm text-[#151b28]">
+                          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[#151b28]">
+                            {item.message?.includes("전화") && (
+                              <PhoneCall className="h-3.5 w-3.5 text-[#64748b]" strokeWidth={2.1} />
+                            )}
                             {item.message ?? "(내용 없음)"}
                           </p>
                           {item.ai_summary && (

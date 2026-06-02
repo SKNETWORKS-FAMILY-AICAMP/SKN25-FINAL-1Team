@@ -195,7 +195,7 @@ export default function ReservationPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="flex h-[calc(100vh-160px)] flex-col overflow-hidden">
+      <div className="flex h-[calc(100vh-128px)] flex-col overflow-hidden">
         <TopControls
           controlLabel={controlLabel}
           viewMode={viewMode}
@@ -209,8 +209,8 @@ export default function ReservationPage({
         />
 
         {viewMode === "day" && (
-          <div className="grid min-h-0 flex-1 grid-cols-[270px_minmax(430px,1fr)_330px] gap-3">
-            <aside className="space-y-4">
+          <div className="grid min-h-0 flex-1 grid-cols-[264px_minmax(460px,1fr)_320px] gap-2">
+            <aside className="space-y-3">
               <MiniCalendar
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
@@ -241,7 +241,7 @@ export default function ReservationPage({
         )}
 
         {viewMode === "week" && (
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <WeeklySchedule
               selectedDate={selectedDate}
               reservations={filteredReservations}
