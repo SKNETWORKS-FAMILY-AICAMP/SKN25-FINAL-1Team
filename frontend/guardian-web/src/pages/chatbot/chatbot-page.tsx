@@ -526,7 +526,7 @@ const ChatbotPage = () => {
                       <h2 className="mt-5 text-2xl font-bold text-slate-800">
                         상담을 선택해주세요
                       </h2>
-                      <p className="mt-3 text-sm font-semibold leading-7 text-slate-500">
+                      <p className="mt-3 text-sm font-semibold leading-5 text-slate-500">
                         반려동물을 선택한 뒤 상담 기록을 열거나
                         <br className="hidden sm:block" />새 상담을 시작할 수
                         있어요.

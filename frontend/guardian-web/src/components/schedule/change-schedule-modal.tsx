@@ -170,7 +170,7 @@ const ChangeScheduleModal = ({
             <img
               src={getProfileImage(schedule)}
               alt={`${schedule.pet_name} 프로필`}
-              className="h-14 w-14 rounded-full object-cover"
+              className="h-14 w-14 rounded-lg object-cover"
             />
             <div>
               <p className="text-base font-extrabold text-slate-950">
