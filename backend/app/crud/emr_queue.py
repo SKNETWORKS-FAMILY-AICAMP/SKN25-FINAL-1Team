@@ -12,6 +12,7 @@ from app.models.doctor import Doctor
 from app.models.emr import EMR
 from app.models.triage_result import TriageResult
 from app.models.chat_history import ChatHistory
+from app.models.followup import Followup
 from app.models.prescription import Prescription
 from app.models.drug import Drug
 from app.models.report import Report
@@ -134,6 +135,18 @@ async def get_emr_detail(db: AsyncSession, schedule_id: int):
             url = msg.get("image_url") if isinstance(msg, dict) else None
             if url:
                 attachments.append(url)
+
+    # Step 3-1: followup 이미지도 같은 첨부파일 목록에 합친다(경과보고 때 올린 사진/영상).
+    followup_rows = (await db.execute(
+        select(Followup)
+        .where(Followup.emrid == emrid)
+        .order_by(Followup.created_at.asc())
+    )).scalars().all()
+    for f in followup_rows:
+        if isinstance(f.images, list):
+            for url in f.images:
+                if url and url not in attachments:
+                    attachments.append(url)
 
     # Step 4: triage_summary.summary 구성
     summary: list[str] = []

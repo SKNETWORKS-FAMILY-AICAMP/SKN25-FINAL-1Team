@@ -318,7 +318,7 @@ export const useAgentPipeline = ({
     return true;
   };
 
-  const handleFollowupMessage = async (content: string) => {
+  const handleFollowupMessage = async (content: string, images: string[] = []) => {
     const emrid = emridRef.current;
     if (!emrid || phase !== "followup") return;
 
@@ -332,7 +332,7 @@ export const useAgentPipeline = ({
     setIsStreaming(true);
 
     try {
-      const resp = await createFollowup({ emrid, message: content, images: [] });
+      const resp = await createFollowup({ emrid, message: content, images });
       
       if (requestId !== lastRequestRef.current) {
         return; // Stale request, ignore

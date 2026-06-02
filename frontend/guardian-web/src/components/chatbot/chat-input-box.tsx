@@ -54,11 +54,29 @@ const ChatInputBox = ({
     <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
       {pendingAttachment ? (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold text-slate-800">
-              {pendingAttachment.fileName}
-            </p>
-            <p className="mt-1 text-xs font-bold text-blue-600">첨부 완료</p>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-blue-100">
+              {pendingAttachment.contentType.startsWith("video/") ? (
+                <video
+                  src={pendingAttachment.previewUrl}
+                  className="h-full w-full object-cover"
+                  muted
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={pendingAttachment.previewUrl}
+                  alt="첨부 미리보기"
+                  className="h-full w-full object-cover"
+                />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-extrabold text-slate-800">
+                {pendingAttachment.fileName}
+              </p>
+              <p className="mt-1 text-xs font-bold text-blue-600">첨부 완료</p>
+            </div>
           </div>
           <button
             type="button"
