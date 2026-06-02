@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import type { EmrResult } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -22,13 +21,10 @@ export function IntakePanel({
 
   return (
     <Panel className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between px-4 py-2.5">
+      <div className="flex shrink-0 items-center px-4 py-2.5">
         <h2 className="text-sm font-extrabold text-[#151b28]">
           사전 문진 / 메모
         </h2>
-        <button type="button" aria-label="닫기">
-          <X className="h-4 w-4 text-[#697386]" />
-        </button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-4 pb-3">

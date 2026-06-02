@@ -45,7 +45,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     visibleGuardianFiles,
     hiddenGuardianFileCount,
     queueTitle,
-    setQueueTab,
+    handleChangeTab,
     setSelectedScheduleId,
     setEditorValue,
     setIsPrescriptionPreviewOpen,
@@ -60,7 +60,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleApplyIntake,
     handleRemoveFile,
     handleUploadFile,
-    handleLoadAutoPrescription,
     handleRemovePrescription,
     handleUpdatePrescription,
     handleSavePrescription,
@@ -68,7 +67,9 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleGeneratePrescription,
     handleAddPrescription,
     handleApplyAutoPrescription,
+    handleResetToWaiting,
     openPreviewImage,
+    handlePetInfoSaved,
   } = useEmrData();
   const isReadOnly = queueTab === "completed";
 
@@ -92,7 +93,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
               lastRefreshText={lastRefreshText}
               waitingCount={waitingQueue.length}
               completedCount={completedQueue.length}
-              onChangeTab={setQueueTab}
+              onChangeTab={handleChangeTab}
               onSelectPatient={setSelectedScheduleId}
               onRefresh={handleRefreshQueue}
             />
@@ -181,6 +182,17 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             ) : (
               <EmptyPatientPanel />
             )}
+            {isReadOnly && currentEmr && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleResetToWaiting}
+                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#4a89ff] hover:text-[#2563eb]"
+                >
+                  진료 대기로 되돌리기
+                </button>
+              </div>
+            )}
             <EditorPanel
               value={editorValue}
               count={editorValue.length}
@@ -214,7 +226,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             prescriptions={autoPrescriptions}
             isLoading={isLoadingAutoPresc}
             onClose={handleClearAutoPrescription}
-            onLoad={handleLoadAutoPrescription}
             onApply={handleApplyAutoPrescription}
             onOpenPreview={() => setIsPrescriptionPreviewOpen(true)}
             isReadOnly={isReadOnly}
@@ -225,6 +236,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           <ProfileEditModal
             patient={currentEmr.pet_info}
             onClose={() => setIsProfileEditOpen(false)}
+            onSaved={handlePetInfoSaved}
           />
         )}
 

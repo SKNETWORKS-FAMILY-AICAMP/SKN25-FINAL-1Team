@@ -198,7 +198,7 @@ export function EditorPanel({
           onChange={(event) => onChange(event.target.value)}
           placeholder="진료 내용을 입력하세요..."
           readOnly={isReadOnly}
-          className="h-32 w-full resize-none rounded-lg border border-[#dfe6f1] px-4 py-3 text-sm font-bold leading-6 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#4a89ff] focus:ring-4 focus:ring-[#edf5ff] read-only:bg-[#f8fafc] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
+          className="h-36 w-full resize-none rounded-lg border border-[#dfe6f1] px-4 py-3 text-sm font-bold leading-6 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#4a89ff] focus:ring-4 focus:ring-[#edf5ff] read-only:bg-[#f8fafc] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
         />
         <p className="mt-2 text-right text-xs font-extrabold text-[#8a94a6]">
           글자 수: {count}

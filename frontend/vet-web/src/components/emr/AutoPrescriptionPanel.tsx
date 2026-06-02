@@ -1,4 +1,4 @@
-import { Maximize2, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { PetInfo, Prescription } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -7,7 +7,6 @@ export function AutoPrescriptionPanel({
   prescriptions,
   isLoading = false,
   onClose,
-  onLoad,
   onApply,
   onOpenPreview,
   isReadOnly = false,
@@ -16,7 +15,6 @@ export function AutoPrescriptionPanel({
   prescriptions: Prescription[];
   isLoading?: boolean;
   onClose: () => void;
-  onLoad: () => void;
   onApply: () => void;
   onOpenPreview: () => void;
   isReadOnly?: boolean;
@@ -25,24 +23,13 @@ export function AutoPrescriptionPanel({
     <Panel className="sticky top-[88px] h-[calc(100vh-104px)] self-start overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4">
         <h2 className="text-lg font-extrabold text-[#151b28]">자동 처방전</h2>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onOpenPreview}
-            disabled={isReadOnly}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
-            aria-label="처방전 미리보기"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874]"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874]"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
       <div className="space-y-4 px-5">
         {patient && (
@@ -84,7 +71,7 @@ export function AutoPrescriptionPanel({
                       {prescription.drug_name}
                     </td>
                     <td className="px-2 py-3">{prescription.form}</td>
-                    <td className="px-2 py-3">{prescription.dosage}</td>
+                    <td className="px-2 py-3">{prescription.dosage?.replace(/체중\s*[\d.]+kg\s*기준\s*/g, "")}</td>
                     <td className="px-2 py-3">
                       {prescription.duration_days}일
                     </td>
@@ -98,11 +85,11 @@ export function AutoPrescriptionPanel({
       <div className="absolute inset-x-0 bottom-0 flex gap-2 border-t border-[#edf1f6] bg-white p-4">
         <button
           type="button"
-          onClick={onLoad}
-          disabled={isReadOnly}
+          onClick={onOpenPreview}
+          disabled={isReadOnly || prescriptions.length === 0}
           className="h-10 flex-1 rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
         >
-          불러오기
+          미리보기
         </button>
         <button
           type="button"
