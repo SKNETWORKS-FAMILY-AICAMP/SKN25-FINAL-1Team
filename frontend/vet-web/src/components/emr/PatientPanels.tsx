@@ -2,6 +2,13 @@ import { Edit3 } from "lucide-react";
 import type { EmrResult, PetInfo, Prescription } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
+// 프로필 이미지가 없거나 깨졌을 때 보여줄 기본 플레이스홀더(연한 회색 배경 + 발바닥).
+const PROFILE_IMAGE_FALLBACK =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="8" fill="#eef2f8"/><g fill="#b9c4d6"><ellipse cx="36" cy="40" rx="6" ry="8"/><ellipse cx="60" cy="40" rx="6" ry="8"/><ellipse cx="26" cy="54" rx="5" ry="7"/><ellipse cx="70" cy="54" rx="5" ry="7"/><path d="M48 52c-9 0-16 7-16 14 0 5 4 8 9 8 3 0 5-1 7-1s4 1 7 1c5 0 9-3 9-8 0-7-7-14-16-14z"/></g></svg>`
+  );
+
 export function PatientInfoPanel({
   patient,
   onEdit,
@@ -16,9 +23,15 @@ export function PatientInfoPanel({
       <div className="flex items-start justify-between px-5 py-4">
         <div className="flex gap-4">
           <img
-            src={patient.profile_image}
+            src={patient.profile_image || PROFILE_IMAGE_FALLBACK}
             alt={`${patient.pet_name} 사진`}
             className="h-24 w-24 rounded-lg object-cover"
+            onError={(event) => {
+              const img = event.currentTarget;
+              if (img.src !== PROFILE_IMAGE_FALLBACK) {
+                img.src = PROFILE_IMAGE_FALLBACK;
+              }
+            }}
           />
           <div>
             <div className="flex items-center gap-3">

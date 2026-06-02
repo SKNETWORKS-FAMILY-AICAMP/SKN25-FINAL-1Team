@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 
 import pawOnlyLogo from "../../../../shared/assets/logo/medipaw-pawonly.png";
+import { uploadChatAttachment } from "../../api/chat-api";
 import {
   createPet,
   getPet,
@@ -54,6 +55,7 @@ const PetRegisterPage = () => {
   );
   const [isLoading, setIsLoading] = useState(Boolean(isDetailMode || isEditMode));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (isPetDataRoute && !isValidPetId) {
@@ -124,8 +126,10 @@ const PetRegisterPage = () => {
     navigate("/home");
   };
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // 같은 파일을 다시 선택해도 onChange가 발생하도록 input 값을 비운다.
+    event.target.value = "";
 
     if (!file) {
       return;
@@ -136,7 +140,6 @@ const PetRegisterPage = () => {
         ...current,
         profileImage: "JPG, PNG 파일만 업로드할 수 있습니다.",
       }));
-      event.target.value = "";
       return;
     }
 
@@ -145,22 +148,35 @@ const PetRegisterPage = () => {
         ...current,
         profileImage: "대표 사진은 최대 5MB까지 업로드할 수 있습니다.",
       }));
-      event.target.value = "";
       return;
     }
 
     setErrors((current) => ({ ...current, profileImage: undefined }));
 
-    // TODO: This base64 preview/payload is temporary for MVP. Production should
-    // request a FastAPI presigned URL, upload directly to S3, then save the
-    // resulting CloudFront URL as profile_image.
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setPreviewUrl(reader.result);
+    // S3에 직접 업로드하고, 반환된 CloudFront URL을 profile_image로 저장한다.
+    // (base64 미리보기는 백엔드 validator가 거부하므로 사용하지 않는다.)
+    setIsUploadingImage(true);
+    try {
+      const { result } = await uploadChatAttachment(file);
+      if (result?.cloudfront_url) {
+        setPreviewUrl(result.cloudfront_url);
+      } else {
+        setErrors((current) => ({
+          ...current,
+          profileImage: "사진 업로드에 실패했습니다. 다시 시도해주세요.",
+        }));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      const message = isAxiosError<{ detail?: string }>(error)
+        ? error.response?.data?.detail
+        : undefined;
+      setErrors((current) => ({
+        ...current,
+        profileImage: message || "사진 업로드에 실패했습니다. 다시 시도해주세요.",
+      }));
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -355,17 +371,19 @@ const PetRegisterPage = () => {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploadingImage}
                 className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-sm font-extrabold text-white shadow-sm transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:from-violet-300 disabled:to-indigo-300"
               >
                 <PawIcon className="h-4 w-4" />
-                {isSubmitting
-                  ? isEditMode
-                    ? "수정 중..."
-                    : "등록 중..."
-                  : isEditMode
-                    ? "수정하기"
-                    : "등록하기"}
+                {isUploadingImage
+                  ? "사진 업로드 중..."
+                  : isSubmitting
+                    ? isEditMode
+                      ? "수정 중..."
+                      : "등록 중..."
+                    : isEditMode
+                      ? "수정하기"
+                      : "등록하기"}
               </button>
             </footer>
           </form>

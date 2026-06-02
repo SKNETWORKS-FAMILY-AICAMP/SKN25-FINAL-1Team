@@ -171,6 +171,29 @@ export async function generateAutoPrescription(params: {
   return data.result;
 }
 
+// ──────────────────────────────────────────────
+// 진료 사진 업로드 (x-ray 등) → S3 업로드 후 읽기용 CloudFront URL 반환
+// ──────────────────────────────────────────────
+
+export async function uploadEmrFile(params: {
+  accessToken: string;
+  file: File;
+}): Promise<{ cloudfront_url: string }> {
+  const formData = new FormData();
+  formData.append("file", params.file);
+  const { data } = await apiClient.post<{ code: number; result: { cloudfront_url: string } }>(
+    "/doctor/emr/upload/file",
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+  return data.result;
+}
+
 export async function fetchDoctorFollowup(params: {
   accessToken: string;
   emrid: number;

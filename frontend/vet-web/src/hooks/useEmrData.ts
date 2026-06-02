@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DrugSearchResult } from "../api/prescriptionApi";
-import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup, generateAutoPrescription } from "../api/emrApi";
+import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup, generateAutoPrescription, uploadEmrFile } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
 import { useAuthStore } from "../stores/auth-store";
@@ -30,6 +30,8 @@ export function useEmrData() {
 
   const [editorValue, setEditorValue] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [autoPrescriptions, setAutoPrescriptions] = useState<Prescription[]>([]);
   const [isLoadingAutoPresc, setIsLoadingAutoPresc] = useState(false);
@@ -191,16 +193,29 @@ export function useEmrData() {
     );
   }, []);
 
-  const handleAddMockFile = useCallback(() => {
-    setUploadedFiles((files: UploadedFile[]) => [
-      ...files,
-      {
-        id: Date.now(),
-        label: "추가 이미지",
-        url: "https://images.unsplash.com/photo-1525253013412-55c1a69a5738?auto=format&fit=crop&w=200&q=80",
-      },
-    ]);
-  }, []);
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      setUploadError(null);
+      setIsUploadingFile(true);
+      try {
+        const { cloudfront_url } = await uploadEmrFile({ accessToken, file });
+        setUploadedFiles((files: UploadedFile[]) => [
+          ...files,
+          {
+            id: Date.now(),
+            label: file.name,
+            url: cloudfront_url,
+          },
+        ]);
+      } catch (err) {
+        console.error("[UploadEmrFile] failed:", err);
+        setUploadError("사진 업로드에 실패했습니다. 다시 시도해주세요.");
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    [accessToken]
+  );
 
   const handleLoadAutoPrescription = useCallback(async () => {
     if (selectedScheduleId === undefined) return;
@@ -318,6 +333,8 @@ export function useEmrData() {
     selectedScheduleId,
     editorValue,
     uploadedFiles,
+    isUploadingFile,
+    uploadError,
     prescriptions,
     autoPrescriptions,
     isLoadingAutoPresc,
@@ -346,7 +363,7 @@ export function useEmrData() {
     handleCompleteVisit,
     handleApplyIntake,
     handleRemoveFile,
-    handleAddMockFile,
+    handleUploadFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
     handleUpdatePrescription,

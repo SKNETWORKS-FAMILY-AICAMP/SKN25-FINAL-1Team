@@ -33,6 +33,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     selectedScheduleId,
     editorValue,
     uploadedFiles,
+    isUploadingFile,
+    uploadError,
     prescriptions,
     isPrescriptionPreviewOpen,
     isProfileEditOpen,
@@ -57,7 +59,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleCompleteVisit,
     handleApplyIntake,
     handleRemoveFile,
-    handleAddMockFile,
+    handleUploadFile,
     handleLoadAutoPrescription,
     handleRemovePrescription,
     handleUpdatePrescription,
@@ -188,9 +190,11 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             />
             <PhotoUploadPanel
               files={uploadedFiles}
-              onAddFile={handleAddMockFile}
+              onUploadFile={handleUploadFile}
               onRemoveFile={handleRemoveFile}
               onPreviewImage={openPreviewImage}
+              isUploading={isUploadingFile}
+              uploadError={uploadError}
               isReadOnly={isReadOnly}
             />
             <PrescriptionInputPanel
