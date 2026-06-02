@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DrugSearchResult } from "../api/prescriptionApi";
-import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchEmrValidation, fetchDoctorFollowup, generateAutoPrescription, uploadEmrFile } from "../api/emrApi";
+import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchDoctorFollowup, generateAutoPrescription, uploadEmrFile } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
 import { useAuthStore } from "../stores/auth-store";
@@ -86,17 +86,16 @@ export function useEmrData() {
 
     let cancelled = false;
     setIsLoadingEmr(true);
+    // validation/judge는 내부 관리용이라 수의사 UI에는 노출하지 않는다(프론트에서 조회하지 않음).
     Promise.all([
       fetchEmrDetail({ accessToken, scheduleId: selectedScheduleId }),
-      fetchEmrValidation({ accessToken, scheduleId: selectedScheduleId }).catch(() => null),
       selectedEmrid !== undefined
         ? fetchDoctorFollowup({ accessToken, emrid: selectedEmrid }).catch(() => [])
         : Promise.resolve([]),
     ])
-      .then(([emr, validation, followups]) => {
+      .then(([emr, followups]) => {
         if (!cancelled) {
           setCurrentEmr(emr);
-          setValidationResult(validation);
           setFollowupItems(followups);
         }
       })

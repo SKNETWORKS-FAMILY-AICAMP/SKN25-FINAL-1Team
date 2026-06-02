@@ -290,7 +290,8 @@ const ChatbotPage = () => {
   // 통합 메시지 전송 핸들러 — phase에 따라 분기
   const handleSendCombined = async (content: string) => {
     const trimmed = content.trim();
-    if (!trimmed || isStreaming || isUploadingAttachment) return;
+    // 텍스트가 없어도 첨부파일만 있으면 전송 허용(특히 경과보고에 사진만 올리는 경우).
+    if ((!trimmed && !pendingAttachment) || isStreaming || isUploadingAttachment) return;
 
     if (pipeline.phase === "slot-selection") {
       // 슬롯 버튼 클릭 또는 텍스트 입력
@@ -318,14 +319,23 @@ const ChatbotPage = () => {
     }
 
     if (pipeline.phase === "followup") {
-      // 경과 모니터링 메시지
+      // 경과 모니터링 메시지 — 첨부 이미지가 있으면 함께 전송하고 대화에도 노출한다.
+      const att = pendingAttachment;
+      const images = att?.cloudfrontUrl ? [att.cloudfrontUrl] : [];
       setMessages((prev) => [
         ...prev,
-        { id: Date.now(), role: "user" as const, content: trimmed },
+        {
+          id: Date.now(),
+          role: "user" as const,
+          content: trimmed,
+          attachmentUrl: att?.cloudfrontUrl,
+          attachmentType: att?.contentType,
+        },
       ]);
       setQuickReplies([]);
       setMessageInput("");
-      await pipeline.handleFollowupMessage(trimmed);
+      clearPendingAttachment();
+      await pipeline.handleFollowupMessage(trimmed, images);
       return;
     }
 
