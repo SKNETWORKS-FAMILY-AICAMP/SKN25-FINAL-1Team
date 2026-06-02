@@ -210,24 +210,52 @@ export function EditorPanel({
 
 export function PhotoUploadPanel({
   files,
-  onAddFile,
+  onUploadFile,
   onRemoveFile,
   onPreviewImage,
+  isUploading = false,
+  uploadError = null,
   isReadOnly = false,
 }: {
   files: UploadedFile[];
-  onAddFile: () => void;
+  onUploadFile: (file: File) => void;
   onRemoveFile: (fileId: number) => void;
   onPreviewImage: (url: string, label: string) => void;
+  isUploading?: boolean;
+  uploadError?: string | null;
   isReadOnly?: boolean;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const disabled = isReadOnly || isUploading;
+
+  const openFilePicker = () => {
+    if (!disabled) fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = (fileList: FileList | null) => {
+    if (!fileList) return;
+    Array.from(fileList).forEach((file) => onUploadFile(file));
+  };
+
   return (
     <Panel>
       <div className="border-b border-[#edf1f6] px-5 py-3">
         <h2 className="text-base font-extrabold text-[#151b28]">사진 등록</h2>
       </div>
       <div className="space-y-3 px-5 py-4">
-        <div className="flex gap-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,application/pdf,video/mp4"
+          multiple
+          className="hidden"
+          onChange={(event) => {
+            handleFilesSelected(event.target.files);
+            // 같은 파일을 다시 선택해도 onChange가 발생하도록 비운다.
+            event.target.value = "";
+          }}
+        />
+        <div className="flex flex-wrap gap-3">
           {files.map((file) => (
             <button
               type="button"
@@ -256,8 +284,8 @@ export function PhotoUploadPanel({
           ))}
           <button
             type="button"
-            onClick={onAddFile}
-            disabled={isReadOnly}
+            onClick={openFilePicker}
+            disabled={disabled}
             className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             <Plus className="h-6 w-6" />
@@ -266,16 +294,27 @@ export function PhotoUploadPanel({
         </div>
         <button
           type="button"
-          onClick={onAddFile}
-          disabled={isReadOnly}
+          onClick={openFilePicker}
+          disabled={disabled}
+          onDragOver={(event) => {
+            if (!disabled) event.preventDefault();
+          }}
+          onDrop={(event) => {
+            if (disabled) return;
+            event.preventDefault();
+            handleFilesSelected(event.dataTransfer.files);
+          }}
           className="flex h-16 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
         >
           <FileUp className="h-5 w-5" />
-          파일을 드래그하거나 클릭하여 업로드
+          {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
           <span className="text-xs font-bold text-[#8a94a6]">
-            JPG, PNG, DICOM, PDF, MP4 · 최대 50MB
+            JPG, PNG, PDF, MP4 · 최대 50MB
           </span>
         </button>
+        {uploadError && (
+          <p className="text-xs font-bold text-red-500">{uploadError}</p>
+        )}
       </div>
     </Panel>
   );

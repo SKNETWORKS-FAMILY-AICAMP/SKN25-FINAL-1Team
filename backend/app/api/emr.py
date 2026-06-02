@@ -12,7 +12,7 @@ import json
 import re
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -360,3 +360,35 @@ async def doctor_followup(
             for f in followups
         ],
     }
+
+
+# ──────────────────────────────────────────────
+# 진료 사진 업로드 (의사 인증) — x-ray 등 진료 중 촬영 이미지를 S3에 올리고 읽기용 URL 반환
+# ──────────────────────────────────────────────
+
+@router.post("/upload/file", status_code=200)
+async def upload_emr_file(
+    file: UploadFile = File(...),
+    current_doctor: Doctor = Depends(get_current_doctor),
+):
+    allowed_types = ["image/jpeg", "image/png", "application/pdf", "video/mp4"]
+    content_type = file.content_type or "application/octet-stream"
+    if content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="이미지(JPG, PNG), PDF 또는 영상(MP4) 파일만 업로드 가능합니다.",
+        )
+
+    body = await file.read()
+    if len(body) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="파일 크기는 50MB 이하만 업로드 가능합니다.")
+
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import upload_object
+
+    try:
+        result = upload_object(file.filename or "emr-attachment", content_type, body, prefix="emr")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
