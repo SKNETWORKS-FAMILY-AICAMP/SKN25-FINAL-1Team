@@ -109,36 +109,34 @@ export default function DashboardPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="min-h-[calc(100vh-72px)] bg-[#f6f8fb] px-5 py-4">
-        <div className="max-w-[1040px]">
-          <section className="mb-4 flex items-center gap-5">
-            <div className="min-w-[180px]">
-              <h1 className="text-2xl font-extrabold tracking-normal text-[#151b28]">
-                오늘의 진료 현황
-              </h1>
-              <p className="mt-2 text-sm font-bold tabular-nums text-[#6b7486]">
-                {formattedDate}
-                {holidayName && (
-                  <span className="ml-2 rounded-md bg-[#fff1f2] px-2 py-0.5 text-xs font-extrabold text-[#ef4444]">
-                    {holidayName}
-                  </span>
-                )}
-              </p>
-            </div>
+      <div className="max-w-[1040px]">
+        <section className="mb-4 flex items-center gap-5">
+          <div className="min-w-[180px]">
+            <h1 className="text-2xl font-extrabold tracking-normal text-[#151b28]">
+              오늘의 진료 현황
+            </h1>
+            <p className="mt-2 text-sm font-bold tabular-nums text-[#6b7486]">
+              {formattedDate}
+              {holidayName && (
+                <span className="ml-2 rounded-md bg-[#fff1f2] px-2 py-0.5 text-xs font-extrabold text-[#ef4444]">
+                  {holidayName}
+                </span>
+              )}
+            </p>
+          </div>
 
-            <DashboardSummaryCards summaries={summaryCards} />
-          </section>
+          <DashboardSummaryCards summaries={summaryCards} />
+        </section>
 
-          <DashboardSchedulePanel
-            schedulesByHour={schedulesByHour}
-            isLoading={isLoading}
-            errorMessage={errorMessage}
-            holidayName={holidayName}
-            onToday={() => setSelectedDate(new Date())}
-            onPrevDate={() => setSelectedDate((date) => addDays(date, -1))}
-            onNextDate={() => setSelectedDate((date) => addDays(date, 1))}
-          />
-        </div>
+        <DashboardSchedulePanel
+          schedulesByHour={schedulesByHour}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+          holidayName={holidayName}
+          onToday={() => setSelectedDate(new Date())}
+          onPrevDate={() => setSelectedDate((date) => addDays(date, -1))}
+          onNextDate={() => setSelectedDate((date) => addDays(date, 1))}
+        />
       </div>
     </AppLayout>
   );

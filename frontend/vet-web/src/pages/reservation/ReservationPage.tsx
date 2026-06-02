@@ -195,7 +195,7 @@ export default function ReservationPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="h-[calc(100vh-72px)] overflow-hidden bg-[#f7f9fc]">
+      <div className="flex h-[calc(100vh-160px)] flex-col overflow-hidden">
         <TopControls
           controlLabel={controlLabel}
           viewMode={viewMode}
@@ -209,7 +209,7 @@ export default function ReservationPage({
         />
 
         {viewMode === "day" && (
-          <div className="grid h-[calc(100vh-140px)] grid-cols-[270px_minmax(430px,1fr)_330px] gap-3 px-4 pb-4">
+          <div className="grid min-h-0 flex-1 grid-cols-[270px_minmax(430px,1fr)_330px] gap-3">
             <aside className="space-y-4">
               <MiniCalendar
                 selectedDate={selectedDate}
@@ -241,7 +241,7 @@ export default function ReservationPage({
         )}
 
         {viewMode === "week" && (
-          <div className="h-[calc(100vh-140px)] overflow-y-auto px-4 pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <WeeklySchedule
               selectedDate={selectedDate}
               reservations={filteredReservations}
@@ -256,14 +256,16 @@ export default function ReservationPage({
         )}
 
         {viewMode === "month" && (
-          <MonthlyCalendar
-            selectedDate={selectedDate}
-            reservations={filteredReservations}
-            onSelectDate={(date) => {
-              setSelectedDate(date);
-              setViewMode("day");
-            }}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <MonthlyCalendar
+              selectedDate={selectedDate}
+              reservations={filteredReservations}
+              onSelectDate={(date) => {
+                setSelectedDate(date);
+                setViewMode("day");
+              }}
+            />
+          </div>
         )}
       </div>
 

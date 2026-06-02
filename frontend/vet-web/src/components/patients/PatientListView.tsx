@@ -31,7 +31,7 @@ export function PatientListView({
   onOpenDetail,
 }: PatientListViewProps) {
   return (
-    <div className="flex h-[calc(100vh-72px)] flex-col overflow-hidden bg-[#f7f9fc] px-6 py-4">
+    <div className="flex h-[calc(100vh-160px)] flex-col overflow-hidden">
       <div className="mb-3 flex items-start justify-between gap-6">
         <div>
           <h1 className="text-2xl font-extrabold text-[#151b28]">환자 관리</h1>

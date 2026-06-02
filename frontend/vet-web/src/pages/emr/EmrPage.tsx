@@ -81,9 +81,9 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="min-h-[calc(100vh-72px)] bg-[#f6f8fb] p-4">
+      <div className="min-h-[calc(100vh-160px)]">
         <div className="grid grid-cols-[300px_minmax(620px,1fr)_320px] gap-4">
-          <aside className="sticky top-[88px] grid h-[calc(100vh-104px)] grid-rows-[320px_minmax(0,1fr)] gap-3 overflow-hidden">
+          <aside className="sticky top-[112px] grid h-[calc(100vh-160px)] grid-rows-[320px_minmax(0,1fr)] gap-3 overflow-hidden">
             <QueuePanel
               title={queueTitle}
               activeTab={queueTab}
