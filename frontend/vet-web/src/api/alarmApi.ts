@@ -4,7 +4,8 @@ export type AlarmType =
   | "reservation_confirmed"
   | "reservation_cancelled"
   | "reservation_updated"
-  | "chart_ready";
+  | "chart_ready"
+  | "followup_received";
 
 export interface AlarmItem {
   alarmid: number;

@@ -87,7 +87,7 @@ export function PatientDetailView({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-160px)] flex-col">
+    <div className="flex min-h-[calc(100vh-160px)] min-w-0 flex-col">
       {isEditing && (
         <EditPatientModal
           draft={draft}
@@ -98,7 +98,7 @@ export function PatientDetailView({
         />
       )}
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -121,11 +121,11 @@ export function PatientDetailView({
         {localPatient.petName} <span className="text-[#40506d]">({localPatient.breed})</span>
       </h1>
 
-      <section className="grid grid-cols-[180px_1fr_1fr] gap-6 rounded-lg border border-[#e5eaf2] bg-white p-6 shadow-sm">
+      <section className="grid min-w-0 grid-cols-1 gap-5 rounded-lg border border-[#e5eaf2] bg-white p-5 shadow-sm xl:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)] xl:p-6 2xl:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)]">
         <img
           src={localPatient.imageUrl}
           alt={`${localPatient.petName} 프로필`}
-          className="h-40 w-40 rounded-lg object-cover"
+          className="h-36 w-36 rounded-lg object-cover xl:h-40 xl:w-40"
         />
 
         <InfoGrid
@@ -148,7 +148,7 @@ export function PatientDetailView({
         />
       </section>
 
-      <section className="mt-4 flex-1 rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
+      <section className="mt-4 min-w-0 flex-1 rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
         <div className="border-b border-[#e5eaf2] px-6 py-4">
           <h2 className="text-lg font-extrabold text-[#151b28]">EMR 진료 기록</h2>
         </div>
@@ -171,11 +171,11 @@ export function PatientDetailView({
 
 function InfoGrid({ rows }: { rows: Array<[string, string]> }) {
   return (
-    <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
+    <dl className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm xl:grid-cols-[112px_minmax(0,1fr)] 2xl:grid-cols-[120px_minmax(0,1fr)]">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="font-extrabold text-[#52607a]">{label}</dt>
-          <dd className="font-bold leading-6 text-[#1d2a57]">{value}</dd>
+          <dd className="min-w-0 break-words font-bold leading-6 text-[#1d2a57]">{value}</dd>
         </div>
       ))}
     </dl>
@@ -202,8 +202,8 @@ function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
     !record.soap.plan;
 
   return (
-    <article className="grid grid-cols-[150px_minmax(360px,1fr)_minmax(300px,0.9fr)] gap-6 px-6 py-5">
-      <div>
+    <article className="grid min-w-0 grid-cols-1 gap-5 px-4 py-5 xl:grid-cols-[140px_minmax(0,1fr)] xl:px-5 2xl:grid-cols-[150px_minmax(0,1fr)_minmax(0,0.9fr)] 2xl:gap-6 2xl:px-6">
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-extrabold tabular-nums text-[#1d2a57]">
             {record.date}
@@ -219,23 +219,23 @@ function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
         <p className="text-xs font-extrabold text-[#7a8599]">의사 소견</p>
         <h3 className="mt-1 text-lg font-extrabold text-[#151b28]">{record.title}</h3>
         {onlyMemo ? (
-          <p className="mt-3 whitespace-pre-line text-sm font-bold leading-6 text-[#344055]">
+          <p className="mt-3 whitespace-pre-line break-words text-sm font-bold leading-6 text-[#344055]">
             {record.soap.subjective}
           </p>
         ) : (
           <dl className="mt-3 space-y-2 text-sm">
             {soapRows.map(([key, label, value]) => (
-              <div key={key} className="grid grid-cols-[26px_58px_1fr] gap-2">
+              <div key={key} className="grid min-w-0 grid-cols-[22px_54px_minmax(0,1fr)] gap-2 xl:grid-cols-[26px_58px_minmax(0,1fr)]">
                 <dt className="font-extrabold text-[#1d2a57]">{key}</dt>
                 <dd className="font-extrabold text-[#52607a]">({label})</dd>
-                <dd className="whitespace-pre-line font-bold leading-6 text-[#344055]">{value}</dd>
+                <dd className="min-w-0 whitespace-pre-line break-words font-bold leading-6 text-[#344055]">{value}</dd>
               </div>
             ))}
           </dl>
         )}
       </div>
 
-      <div className="border-l border-[#edf1f6] pl-6">
+      <div className="min-w-0 border-t border-[#edf1f6] pt-5 xl:col-start-2 xl:border-l-0 xl:border-t xl:pl-0 2xl:col-start-auto 2xl:border-l 2xl:border-t-0 2xl:pl-6 2xl:pt-0">
         <p className="text-xs font-extrabold text-[#7a8599]">
           {record.type === "prevention" ? "처방/처치" : "처방 내역"}
         </p>
@@ -246,12 +246,12 @@ function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
             {record.prescriptions.map((line, index) => (
               <li
                 key={`${record.id}-${line.name}`}
-                className="grid grid-cols-[24px_1fr_72px_60px] gap-3 text-sm font-bold text-[#344055]"
+                className="grid min-w-0 grid-cols-[24px_minmax(0,1fr)_minmax(58px,72px)_minmax(48px,60px)] gap-2 text-sm font-bold text-[#344055] xl:gap-3"
               >
                 <span>{index + 1}.</span>
-                <span>{line.name}</span>
-                <span className="text-[#1d2a57]">{line.method}</span>
-                <span>{line.duration}</span>
+                <span className="min-w-0 break-words">{line.name}</span>
+                <span className="min-w-0 break-words text-[#1d2a57]">{line.method}</span>
+                <span className="min-w-0 break-words">{line.duration}</span>
               </li>
             ))}
           </ol>
