@@ -6,9 +6,9 @@ const ScheduleSkeleton = () => {
       {Array.from({ length: 3 }).map((_, index) => (
         <ListItemCard
           key={index}
-          className="grid animate-pulse grid-cols-[76px_1fr_200px_150px] items-center gap-6"
+          className="grid animate-pulse grid-cols-[88px_1fr_200px_150px] items-center gap-6"
         >
-          <div className="h-16 w-16 rounded-full bg-slate-100" />
+          <div className="h-20 w-20 rounded-lg bg-slate-100" />
           <div className="space-y-3">
             <div className="h-4 w-40 rounded bg-slate-100" />
             <div className="h-5 w-24 rounded bg-slate-100" />

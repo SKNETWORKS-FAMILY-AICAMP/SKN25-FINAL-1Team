@@ -18,20 +18,42 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     steps:
-      - name: EC2에 SSH 접속해서 최신 백엔드로 갱신
+      # ── 1차 시도 ─────────────────────────────────────────────────────
+      - name: EC2에 SSH 접속해서 최신 이미지로 갱신
+        id: deploy
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 15m
           script: |
             set -e
             cd ~/medipaw
-            # 최신 backend 이미지 받기
-            sudo docker compose -f docker-compose.prod.yml pull backend
-            # 마이그레이션 + 백엔드 재시작 (프론트 :ec2 이미지는 건드리지 않음)
+            # 최신 이미지 받기 (backend + guardian + vet 전체)
+            sudo docker compose -f docker-compose.prod.yml pull
+            # 마이그레이션 + 전체 재시작
             sudo docker compose -f docker-compose.prod.yml up -d
             # 안 쓰는 옛 이미지 정리(디스크 절약)
             sudo docker image prune -f
             echo "=== 배포 후 상태 ==="
+            sudo docker compose -f docker-compose.prod.yml ps
+
+      # ── SSH 타임아웃 등 일시적 실패 시 1회 자동 재시도 ──────────────────
+      - name: 배포 재시도 (1차 실패 시)
+        if: steps.deploy.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            set -e
+            cd ~/medipaw
+            sudo docker compose -f docker-compose.prod.yml pull
+            sudo docker compose -f docker-compose.prod.yml up -d
+            sudo docker image prune -f
+            echo "=== 배포 후 상태 (재시도) ==="
             sudo docker compose -f docker-compose.prod.yml ps
