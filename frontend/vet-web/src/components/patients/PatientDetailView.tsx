@@ -87,7 +87,7 @@ export function PatientDetailView({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-72px)] flex-col bg-[#f7f9fc] px-6 py-4">
+    <div className="flex min-h-[calc(100vh-160px)] flex-col">
       {isEditing && (
         <EditPatientModal
           draft={draft}

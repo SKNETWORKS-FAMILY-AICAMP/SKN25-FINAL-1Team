@@ -85,7 +85,7 @@ export default function SettingsPage({
         />
       )}
 
-      <div className="min-h-[calc(100vh-72px)] bg-[#f7f9fc] px-8 py-6">
+      <div className="min-h-[calc(100vh-160px)]">
         <div className="mb-6">
           <h1 className="text-2xl font-extrabold text-[#151b28]">설정</h1>
           <p className="mt-1.5 text-sm font-bold text-[#65718a]">

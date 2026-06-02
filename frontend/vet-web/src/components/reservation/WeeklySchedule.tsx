@@ -30,7 +30,7 @@ export function WeeklySchedule({
   const weekDays = getWeekDays(selectedDate);
 
   return (
-    <div className="px-4 pb-4">
+    <div>
       <section className="overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
         <div className="grid grid-cols-[70px_repeat(7,minmax(120px,1fr))] border-b border-[#e5eaf2]">
           <div className="border-r border-[#e5eaf2] bg-white" />

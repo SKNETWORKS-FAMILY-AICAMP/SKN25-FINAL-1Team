@@ -305,7 +305,7 @@ export default function AppLayout({
           </section>
         </aside>
 
-        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1">
+        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f6f8fb] px-6 pb-12 pt-10">
           {children}
         </main>
       </div>

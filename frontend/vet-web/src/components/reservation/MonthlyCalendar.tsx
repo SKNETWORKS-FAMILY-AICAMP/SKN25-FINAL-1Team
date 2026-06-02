@@ -30,7 +30,7 @@ export function MonthlyCalendar({
   }, [reservations]);
 
   return (
-    <div className="px-4 pb-4">
+    <div>
       <section className="overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
         <div className="grid grid-cols-7 border-b border-[#e5eaf2]">
           {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
