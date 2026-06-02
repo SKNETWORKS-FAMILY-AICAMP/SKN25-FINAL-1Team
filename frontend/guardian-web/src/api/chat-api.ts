@@ -38,9 +38,11 @@ export interface ChatSessionMessage {
 export interface ChatSessionDetailResult {
   session_id: number;
   pet_id: number;
+  emrid?: number | null;
   messages: ChatSessionMessage[];
   keywords: string[];
   is_complete: boolean;
+  can_followup: boolean;
   created_at: string;
 }
 

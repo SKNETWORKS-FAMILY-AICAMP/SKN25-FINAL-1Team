@@ -414,6 +414,12 @@ export const useAgentPipeline = ({
     emridRef.current = null;
   };
 
+  const restoreFollowupPhase = (emrid: number) => {
+    emridRef.current = emrid;
+    setPhase("followup");
+    appendBot("이전 경과 보고를 이어서 진행할 수 있어요. 증상 변화나 사진을 보내주세요. 📸");
+  };
+
   return {
     phase,
     showDatePicker,
@@ -428,5 +434,6 @@ export const useAgentPipeline = ({
     handleManualSlotSelect,
     handleFollowupMessage,
     resetPipeline,
+    restoreFollowupPhase,
   };
 };

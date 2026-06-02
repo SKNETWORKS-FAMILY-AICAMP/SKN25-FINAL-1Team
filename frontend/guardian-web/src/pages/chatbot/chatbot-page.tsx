@@ -203,6 +203,7 @@ const ChatbotPage = () => {
     setErrorMessage,
     getErrorMessage,
     getProfileImage,
+    onFollowupRestore: pipeline.restoreFollowupPhase,
   });
 
   // pipeline이 정의된 후 ref를 최신 값으로 동기화
@@ -412,7 +413,7 @@ const ChatbotPage = () => {
               getHistoryTitle={getHistoryTitle}
             />
 
-            <section className="flex min-h-[480px] flex-col overflow-hidden bg-white lg:min-h-0">
+            <section className="relative flex min-h-[480px] flex-col overflow-hidden bg-white lg:min-h-0">
               {session ? (
                 <>
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
@@ -432,14 +433,16 @@ const ChatbotPage = () => {
                     }}
                   />
 
-                  {/* 직접 날짜 선택 피커 */}
+                  {/* 직접 날짜 선택 피커 — 팝업으로 띄움 */}
                   {pipeline.showDatePicker && (
-                    <ChatDatePicker
-                      onSelectSlot={(date, time, doctorid, label) => {
-                        void pipeline.handleManualSlotSelect(date, time, doctorid, label);
-                      }}
-                      onCancel={() => pipeline.setShowDatePicker(false)}
-                    />
+                    <div className="absolute bottom-16 right-4 z-10">
+                      <ChatDatePicker
+                        onSelectSlot={(date, time, doctorid, label) => {
+                          void pipeline.handleManualSlotSelect(date, time, doctorid, label);
+                        }}
+                        onCancel={() => pipeline.setShowDatePicker(false)}
+                      />
+                    </div>
                   )}
 
                   {/* 상태별 입력 영역 */}
@@ -506,8 +509,22 @@ const ChatbotPage = () => {
                     <ChatMessageList
                       messages={messages}
                       quickReplies={[]}
-                      isStreaming={false}
+                      isStreaming={isStreaming}
                       onSendMessage={() => {}}
+                    />
+                  )}
+
+                  {pipeline.phase === "followup" && (
+                    <ChatInputBox
+                      fileInputRef={fileInputRef}
+                      pendingAttachment={pendingAttachment}
+                      messageInput={messageInput}
+                      isStreaming={isStreaming}
+                      isUploadingAttachment={isUploadingAttachment}
+                      onClearPendingAttachment={clearPendingAttachment}
+                      onSelectAttachment={handleSelectAttachment}
+                      onSubmitMessage={handleSubmitCombined}
+                      onChangeMessageInput={setMessageInput}
                     />
                   )}
                 </>

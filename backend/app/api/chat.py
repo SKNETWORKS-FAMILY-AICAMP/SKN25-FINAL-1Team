@@ -19,6 +19,8 @@ from app.crud.chat import (
 from app.core.dependencies import get_current_user
 from app.core.config import settings
 from app.models.pet import Pet
+from app.models.triage_result import TriageResult
+from app.models.schedule import Schedule
 from app.crud.triage import build_triage_result
 from app.prompts.triage_prompt import _build_triage_system_prompt
 from ai.tasks import RUNNERS, _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
@@ -548,14 +550,35 @@ async def get_chat_session_detail(
     if not session:
         raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
 
+    can_followup = False
+    emrid = session.emrid
+    if emrid is not None:
+        from datetime import datetime, timezone
+        triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
+        triage = triage_row.scalar_one_or_none()
+        schedule_row = await db.execute(
+            select(Schedule).where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
+        )
+        schedule = schedule_row.scalar_one_or_none()
+        need_followup = bool(triage and triage.urgency_level_num is not None and triage.urgency_level_num <= 2)
+        appointment_not_passed = True
+        if schedule and schedule.confirmed_time:
+            confirmed = schedule.confirmed_time
+            if confirmed.tzinfo is None:
+                confirmed = confirmed.replace(tzinfo=timezone.utc)
+            appointment_not_passed = datetime.now(timezone.utc) <= confirmed
+        can_followup = bool(need_followup and schedule and schedule.status != "COMPLETED" and appointment_not_passed)
+
     return {
         "code": 200,
         "result": {
             "session_id": session.id,
             "pet_id": session.petid,
+            "emrid": emrid,
             "messages": session.messages or [],
             "keywords": session.keywords or [],
             "is_complete": session.is_complete,
+            "can_followup": can_followup,
             "created_at": str(session.created_at),
         },
     }
