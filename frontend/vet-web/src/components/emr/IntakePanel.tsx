@@ -32,7 +32,7 @@ export function IntakePanel({
           type="button"
           onClick={() => onApplyIntake("all")}
           disabled={isReadOnly}
-          className="h-8 w-full rounded-lg bg-[#edf5ff] text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
+          className="h-8 w-full rounded-lg border border-[#dfe6f1] bg-white text-xs font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
         >
           사전문진 + 메모 전체 옮기기
         </button>
@@ -46,7 +46,7 @@ export function IntakePanel({
               type="button"
               onClick={() => onApplyIntake("summary")}
               disabled={summary.length === 0 || isReadOnly}
-              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
+              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f3f6fb] hover:text-[#2563eb] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>
@@ -55,7 +55,7 @@ export function IntakePanel({
             <ul className="space-y-1.5 text-xs font-bold leading-5 text-[#59657a]">
               {summary.map((bullet) => (
                 <li key={bullet} className="flex gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#4a89ff]" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#94a3b8]" />
                   <span>{bullet}</span>
                 </li>
               ))}
@@ -74,7 +74,7 @@ export function IntakePanel({
               type="button"
               onClick={() => onApplyIntake("memo")}
               disabled={!memo || isReadOnly}
-              className="rounded-md bg-[#edf5ff] px-2 py-1 text-xs font-extrabold text-[#2563eb] transition hover:bg-[#dcecff] disabled:text-[#a8b0bf]"
+              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f3f6fb] hover:text-[#2563eb] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>

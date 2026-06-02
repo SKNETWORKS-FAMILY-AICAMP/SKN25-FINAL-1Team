@@ -163,7 +163,7 @@ export function EditorPanel({
           type="button"
           onClick={onCompleteVisit}
           disabled={isReadOnly}
-          className="h-9 rounded-lg bg-[#16a34a] px-4 text-sm font-extrabold text-white transition hover:bg-[#13863f] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+          className="h-9 rounded-lg bg-[#2563eb] px-4 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
         >
           진료 완료
         </button>
@@ -501,10 +501,10 @@ export function PrescriptionInputPanel({
             저장
           </button>
           <button
-            type="button"
-            onClick={onGenerate}
-            disabled={isReadOnly}
-            className="h-10 rounded-lg bg-[#4a89ff] px-5 text-sm font-extrabold text-white transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+          type="button"
+          onClick={onGenerate}
+          disabled={isReadOnly}
+          className="h-10 rounded-lg border border-[#dfe6f1] bg-white px-5 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             처방전 자동 생성
           </button>

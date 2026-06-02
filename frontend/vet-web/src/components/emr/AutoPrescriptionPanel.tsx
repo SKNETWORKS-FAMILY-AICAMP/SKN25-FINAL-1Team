@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import type { PetInfo, Prescription } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -41,7 +41,7 @@ export function AutoPrescriptionPanel({
 
         {isLoading ? (
           <div className="rounded-lg border border-[#e8edf4] px-4 py-8 text-center text-sm text-[#a8b0bf]">
-            <div className="mb-2 text-base">⏳</div>
+            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-[#64748b]" strokeWidth={2.1} />
             AI가 처방전을 생성하고 있습니다...
           </div>
         ) : prescriptions.length === 0 ? (
@@ -95,7 +95,7 @@ export function AutoPrescriptionPanel({
           type="button"
           onClick={onApply}
           disabled={isReadOnly || prescriptions.length === 0}
-          className="h-10 flex-1 rounded-lg bg-[#4a89ff] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+          className="h-10 flex-1 rounded-lg border border-[#dfe6f1] bg-white text-sm font-extrabold text-[#4d5874] hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
         >
           적용
         </button>
