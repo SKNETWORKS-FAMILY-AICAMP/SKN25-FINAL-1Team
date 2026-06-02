@@ -82,6 +82,21 @@ const alarmTypeMeta: Record<
     iconCls: "text-[#3b82f6]",
     labelCls: "text-[#1d4ed8]",
   },
+  followup_received: {
+    label: "경과 보고",
+    Icon: ClipboardList,
+    bgCls: "bg-[#f0fdf4]",
+    iconCls: "text-[#16a34a]",
+    labelCls: "text-[#15803d]",
+  },
+};
+
+const fallbackAlarmTypeMeta = {
+  label: "알림",
+  Icon: Bell,
+  bgCls: "bg-[#f7f9fc]",
+  iconCls: "text-[#6b7895]",
+  labelCls: "text-[#59657a]",
 };
 
 const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
@@ -361,7 +376,7 @@ function NotificationPanel({
 }
 
 function AlarmRow({ alarm }: { alarm: AlarmItem }) {
-  const meta = alarmTypeMeta[alarm.type];
+  const meta = alarmTypeMeta[alarm.type] ?? fallbackAlarmTypeMeta;
   const Icon = meta.Icon;
 
   return (

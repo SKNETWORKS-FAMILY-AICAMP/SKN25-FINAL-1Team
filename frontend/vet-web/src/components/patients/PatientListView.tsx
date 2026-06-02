@@ -31,16 +31,16 @@ export function PatientListView({
   onOpenDetail,
 }: PatientListViewProps) {
   return (
-    <div className="flex h-[calc(100vh-160px)] flex-col overflow-hidden">
-      <div className="mb-3 flex items-start justify-between gap-6">
-        <div>
+    <div className="flex h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden">
+      <div className="mb-3 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-extrabold text-[#151b28]">환자 관리</h1>
           <p className="mt-2 text-sm font-bold text-[#65718a]">
             병원 전체 환자 리스트를 확인하고 관리할 수 있습니다.
           </p>
         </div>
 
-        <label className="relative w-[420px] max-w-full">
+        <label className="relative w-full max-w-[420px]">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#64748b]" />
           <input
             value={searchValue}
@@ -51,8 +51,8 @@ export function PatientListView({
         </label>
       </div>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-        <div className="flex h-[64px] shrink-0 items-center justify-between border-b border-[#e5eaf2] px-6">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
+        <div className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-[#e5eaf2] px-4 xl:px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-[#151b28]">전체 환자</h2>
             <span className="rounded-full bg-[#edf5ff] px-2.5 py-1 text-sm font-extrabold text-[#2563eb]">
@@ -63,7 +63,7 @@ export function PatientListView({
           <select
             value={selectedSpecies}
             onChange={(event) => onChangeSpecies(event.target.value)}
-            className="h-11 min-w-[150px] rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#4d5874] outline-none"
+            className="h-11 min-w-[128px] rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#4d5874] outline-none xl:min-w-[150px] xl:px-4"
           >
             <option value="all">전체</option>
             {speciesOptions.map((species) => (
@@ -80,18 +80,18 @@ export function PatientListView({
           />
         ) : (
           <>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
               <table className="w-full table-fixed border-collapse text-left">
                 <thead className="bg-[#f8fafd]">
                   <tr className="border-b border-[#e5eaf2] text-xs font-extrabold uppercase tracking-wide text-[#8595ae]">
-                    <th className="w-[11%] px-6 py-3.5">이름</th>
-                    <th className="w-[11%] px-4 py-3.5">나이</th>
-                    <th className="w-[12%] px-4 py-3.5">보호자</th>
-                    <th className="w-[15%] px-4 py-3.5">전화번호</th>
-                    <th className="w-[14%] px-4 py-3.5">품종</th>
-                    <th className="w-[13%] px-4 py-3.5">최근 내원일</th>
-                    <th className="px-4 py-3.5">메모</th>
-                    <th className="w-[112px] px-6 py-3.5 text-right" aria-label="상세보기" />
+                    <th className="w-[18%] px-4 py-3.5 xl:w-[12%] xl:px-5">이름</th>
+                    <th className="hidden w-[9%] px-3 py-3.5 xl:table-cell">나이</th>
+                    <th className="w-[20%] px-3 py-3.5 xl:w-[13%]">보호자</th>
+                    <th className="w-[22%] px-3 py-3.5 xl:w-[16%]">전화번호</th>
+                    <th className="w-[22%] px-3 py-3.5 xl:w-[14%]">품종</th>
+                    <th className="hidden w-[13%] px-3 py-3.5 xl:table-cell">최근 내원일</th>
+                    <th className="hidden px-3 py-3.5 2xl:table-cell">메모</th>
+                    <th className="w-[104px] px-4 py-3.5 xl:w-[120px]" aria-label="상세보기" />
                   </tr>
                 </thead>
                 <tbody>
@@ -101,20 +101,22 @@ export function PatientListView({
                       onClick={() => !isLoading && onOpenDetail(patient)}
                       className="group h-[56px] cursor-pointer border-b border-[#edf1f6] text-sm text-[#33415f] last:border-b-0 transition-colors hover:bg-[#eef5ff]"
                     >
-                      <td className="px-6 py-3 font-extrabold text-[#1d2a57]">
+                      <td className="truncate px-4 py-3 font-extrabold text-[#1d2a57] xl:px-5">
                         {patient.petName}
                       </td>
-                      <td className="px-4 py-3 text-[#52607a]">{patient.age}</td>
-                      <td className="px-4 py-3 font-semibold">{patient.guardianName}</td>
-                      <td className="px-4 py-3 tabular-nums text-[#52607a]">{patient.phone}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-block rounded-md bg-[#f0f4fa] px-2 py-0.5 text-xs font-extrabold text-[#4d5874]">
-                          {patient.breed}
+                      <td className="hidden px-3 py-3 text-[#52607a] xl:table-cell">{patient.age}</td>
+                      <td className="truncate px-3 py-3 font-semibold">{patient.guardianName}</td>
+                      <td className="truncate px-3 py-3 tabular-nums text-[#52607a]">{patient.phone}</td>
+                      <td className="px-3 py-3">
+                        <span className="inline-flex max-w-full rounded-md bg-[#f0f4fa] px-2 py-0.5 text-xs font-extrabold text-[#4d5874]">
+                          <span className="truncate">
+                            {patient.breed}
+                          </span>
                         </span>
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-[#52607a]">{patient.lastVisitDate}</td>
-                      <td className="truncate px-4 py-3 text-[#8595ae]">{patient.memo}</td>
-                      <td className="px-6 py-3 text-right">
+                      <td className="hidden px-3 py-3 tabular-nums text-[#52607a] xl:table-cell">{patient.lastVisitDate}</td>
+                      <td className="hidden truncate px-3 py-3 text-[#8595ae] 2xl:table-cell">{patient.memo}</td>
+                      <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -122,7 +124,7 @@ export function PatientListView({
                             onOpenDetail(patient);
                           }}
                           disabled={isLoading}
-                          className="h-9 whitespace-nowrap rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] disabled:cursor-wait disabled:opacity-60"
+                          className="h-9 w-[70px] whitespace-nowrap rounded-lg border border-[#a8cbff] bg-white text-xs font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] disabled:cursor-wait disabled:opacity-60 xl:w-[78px] xl:text-sm"
                         >
                           상세보기
                         </button>
