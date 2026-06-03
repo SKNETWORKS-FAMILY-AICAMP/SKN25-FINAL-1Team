@@ -1,6 +1,10 @@
 # AI 전용 추가 의존성 — backend/requirements.txt 에 병합하거나 별도 설치
 # pip install -r ai/requirements-ai.txt
 
+# LangFuse 관측성 (latency · 토큰 · 트레이싱)
+# LangChain CallbackHandler 방식(langfuse.langchain) 사용 — v3+ 필요.
+langfuse>=3.0.0
+
 # CNN 비전 모델 (EfficientNet-B0)
 torch>=2.1.0
 torchvision>=0.16.0
