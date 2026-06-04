@@ -437,6 +437,7 @@ export function useEmrData() {
           frequency: drug.usage_method ?? "",
           duration_days: drug.duration_days ?? 0,
           client_id: makePrescriptionClientId(),
+          pil_seon: "선" as const,
         },
       ];
     });

@@ -1,4 +1,5 @@
-import { Printer, X } from "lucide-react";
+import html2pdf from "html2pdf.js";
+import { Download, Printer, X } from "lucide-react";
 import type { PrescriptionDocumentResponse } from "../../types/emr";
 
 export function PrescriptionPreviewModal({
@@ -9,6 +10,34 @@ export function PrescriptionPreviewModal({
   onClose: () => void;
 }) {
   const data = document.result;
+
+  const handleDownloadPdf = () => {
+    const el = window.document.querySelector(".prescription-print-page") as HTMLElement;
+    if (!el) return;
+
+    // 스크롤 컨테이너 안에 있으면 캡처가 잘리므로 body에 복제 후 캡처
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.style.position = "fixed";
+    clone.style.top = "-9999px";
+    clone.style.left = "0";
+    clone.style.zIndex = "-1";
+    window.document.body.appendChild(clone);
+
+    html2pdf()
+      .set({
+        margin: 0,
+        filename: `처방전_${data.pet.name}_${data.issued_at}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(clone)
+      .save()
+      .then(() => {
+        window.document.body.removeChild(clone);
+      });
+  };
+
   const issuedDateParts = data.issued_at.match(/(\d{4})년\s*(\d{2})월\s*(\d{2})일/);
   const issuedYear = issuedDateParts?.[1] ?? "";
   const issuedMonth = issuedDateParts?.[2] ?? "";
@@ -28,6 +57,14 @@ export function PrescriptionPreviewModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+            >
+              <Download className="h-4 w-4" />
+              PDF 저장
+            </button>
             <button
               type="button"
               onClick={() => window.print()}
@@ -158,8 +195,7 @@ export function PrescriptionPreviewModal({
                   <th colSpan={2} className="shade">
                     처방 수의사
                   </th>
-                  <td>성명&nbsp;&nbsp; {data.doctor.name}</td>
-                  <td>(서명 또는 날인)</td>
+                  <td colSpan={2}>성명&nbsp;&nbsp; {data.doctor.name}&nbsp;&nbsp;&nbsp;&nbsp;(서명 또는 날인)</td>
                   <th>수의사 면허번호</th>
                   <td>제 {data.doctor.license_number} 호</td>
                 </tr>
@@ -179,9 +215,7 @@ export function PrescriptionPreviewModal({
               </colgroup>
               <tbody>
                 <tr>
-                  <th rowSpan={medicineRows + data.prescriptions.length + 1} className="side-head">
-                    필/선
-                  </th>
+                  <th className="side-head">필/선</th>
                   <th>성분명</th>
                   <th>권장 제품명</th>
                   <th>용량<br />(1회 투약량)</th>
@@ -192,6 +226,9 @@ export function PrescriptionPreviewModal({
                 </tr>
                 {data.prescriptions.map((prescription) => (
                   <tr key={prescription.ingredient}>
+                    <td className="side-head text-center text-[11px] font-extrabold">
+                      {prescription.pil_seon || "선"}
+                    </td>
                     <td className="ingredient-cell">
                       {prescription.ingredient}
                     </td>
@@ -205,7 +242,7 @@ export function PrescriptionPreviewModal({
                 ))}
                 {Array.from({ length: medicineRows }).map((_, index) => (
                   <tr key={`empty-${index}`}>
-                    {Array.from({ length: 7 }).map((__, cellIndex) => (
+                    {Array.from({ length: 8 }).map((__, cellIndex) => (
                       <td key={cellIndex} className="blank-medicine-cell" />
                     ))}
                   </tr>
@@ -262,7 +299,7 @@ export function PrescriptionPreviewModal({
               </colgroup>
               <tbody>
                 <tr>
-                  <th rowSpan={5} className="side-head">필/선</th>
+                  <th className="side-head">필/선</th>
                   <th>판매 제품명(제조사)</th>
                   <th>규격(포장 단위)</th>
                   <th>판매량</th>
@@ -272,7 +309,7 @@ export function PrescriptionPreviewModal({
                 </tr>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <tr key={index}>
-                    {Array.from({ length: 6 }).map((__, cellIndex) => (
+                    {Array.from({ length: 7 }).map((__, cellIndex) => (
                       <td key={cellIndex} className="blank-sale-cell" />
                     ))}
                   </tr>
