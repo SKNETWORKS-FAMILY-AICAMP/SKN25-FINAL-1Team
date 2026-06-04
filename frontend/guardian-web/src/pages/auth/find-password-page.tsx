@@ -262,8 +262,8 @@ const FindPasswordPage = () => {
       </main>
 
       <footer className="mx-auto flex w-full max-w-5xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>고객센터 02-123-4567 · support@medipaw.kr · 평일 09:00 - 18:00</p>
-        <p>© 2024 MediPaw. All rights reserved.</p>
+        <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
+        <p>© 2026 MediPaw. All rights reserved.</p>
       </footer>
     </div>
   );
