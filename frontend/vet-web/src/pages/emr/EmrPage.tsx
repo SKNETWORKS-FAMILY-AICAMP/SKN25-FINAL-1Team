@@ -198,7 +198,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     >
       <div className="min-h-[calc(100vh-160px)]">
         <div className={`grid ${contentGridClass} items-start gap-4`}>
-          <aside className="sticky top-[96px] grid h-[calc(100vh-160px)] grid-rows-[370px_minmax(0,1fr)] gap-3 overflow-hidden self-start">
+          <aside className="sticky top-[96px] grid h-[calc(100vh-112px)] grid-rows-[380px_minmax(0,1fr)] gap-3 overflow-hidden self-start">
             <QueuePanel
               title={queueTitle}
               activeTab={queueTab}
