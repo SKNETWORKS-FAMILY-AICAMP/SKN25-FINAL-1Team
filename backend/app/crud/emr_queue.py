@@ -62,6 +62,7 @@ async def get_emr_queue(
         .where(Schedule.confirmed_time >= kst_start)
         .where(Schedule.confirmed_time < kst_end)
         .where(Schedule.deleted_at.is_(None))
+        .where(Schedule.status != "CANCELLED")
         .where(Guardian.deleted_at.is_(None))
         .order_by(Schedule.confirmed_time.asc())
     )

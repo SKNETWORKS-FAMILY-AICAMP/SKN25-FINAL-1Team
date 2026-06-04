@@ -41,6 +41,7 @@ export interface TriageSummary {
 }
 
 export interface Prescription {
+  client_id?: string;
   drug_name: string;
   dosage: string;
   form: string;

@@ -16,10 +16,50 @@ import type {
   UploadedFile,
 } from "../types/emr";
 
+const DATE_MS = 24 * 60 * 60 * 1000;
+let prescriptionClientIdSeq = 0;
+
+function makePrescriptionClientId() {
+  prescriptionClientIdSeq += 1;
+  return `prescription-${Date.now()}-${prescriptionClientIdSeq}`;
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateValue: string, days: number) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return toDateInputValue(date);
+}
+
+function formatQueueDateLabel(dateValue: string) {
+  const today = toDateInputValue(new Date());
+  const diff =
+    (new Date(`${dateValue}T00:00:00`).getTime() -
+      new Date(`${today}T00:00:00`).getTime()) /
+    DATE_MS;
+
+  if (diff === 0) return "오늘";
+  if (diff === -1) return "어제";
+  if (diff === 1) return "내일";
+
+  return new Date(`${dateValue}T00:00:00`).toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export function useEmrData() {
   const session = useAuthStore((s: AuthState) => s.session);
   const accessToken = session?.accessToken ?? "";
 
+  const todayValue = toDateInputValue(new Date());
+  const [selectedDate, setSelectedDateState] = useState(todayValue);
   const [queueTab, setQueueTab] = useState<QueueTab>("waiting");
   const [waitingQueue, setWaitingQueue] = useState<QueuePatient[]>([]);
   const [completedQueue, setCompletedQueue] = useState<QueuePatient[]>([]);
@@ -33,9 +73,10 @@ export function useEmrData() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [completeVisitError, setCompleteVisitError] = useState<string | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [autoPrescriptions, setAutoPrescriptions] = useState<Prescription[]>([]);
   const [isLoadingAutoPresc, setIsLoadingAutoPresc] = useState(false);
+  const [autoPrescriptionError, setAutoPrescriptionError] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResultResponse["result"]>(null);
   const [followupItems, setFollowupItems] = useState<FollowupItem[]>([]);
   const [isAutoPanelOpen, setIsAutoPanelOpen] = useState(true);
@@ -43,20 +84,34 @@ export function useEmrData() {
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const [lastRefreshText, setLastRefreshText] = useState("방금 전");
+  const isTodayView = selectedDate === todayValue;
+
+  const clearEditableState = useCallback(() => {
+    setEditorValue("");
+    setUploadedFiles([]);
+    setUploadError(null);
+    setCompleteVisitError(null);
+    setPrescriptions([]);
+    setAutoPrescriptionError(null);
+    setIsPrescriptionPreviewOpen(false);
+    setIsProfileEditOpen(false);
+  }, []);
 
   // ── EMR Queue 로드 ──────────────────────────────
   const loadQueue = useCallback(async () => {
     if (!accessToken) return;
     setIsLoadingQueue(true);
     try {
-      const result = await fetchEmrQueue({ accessToken });
+      const result = await fetchEmrQueue({ accessToken, date: selectedDate });
       setWaitingQueue(result.waiting);
       setCompletedQueue(result.completed);
 
-      // 첫 로드 시 대기 첫 번째 환자 자동 선택
       setSelectedScheduleId((prev: number | undefined) => {
-        if (prev !== undefined) return prev;
-        return result.waiting[0]?.schedule_id;
+        const combined = [...result.waiting, ...result.completed];
+        if (prev !== undefined && combined.some((p) => p.schedule_id === prev)) {
+          return prev;
+        }
+        return result.waiting[0]?.schedule_id ?? result.completed[0]?.schedule_id;
       });
     } catch (err) {
       console.error("[EMR Queue] fetch failed:", err);
@@ -66,7 +121,7 @@ export function useEmrData() {
         new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
       );
     }
-  }, [accessToken]);
+  }, [accessToken, selectedDate]);
 
   useEffect(() => {
     loadQueue();
@@ -77,7 +132,9 @@ export function useEmrData() {
     if (selectedScheduleId === undefined || !accessToken) {
       setCurrentEmr(undefined);
       setValidationResult(null);
-      setAutoPrescriptions([]);
+      setPrescriptions([]);
+      setAutoPrescriptionError(null);
+      setCompleteVisitError(null);
       setFollowupItems([]);
       return;
     }
@@ -121,19 +178,37 @@ export function useEmrData() {
   const visibleGuardianFiles = currentAttachments.slice(0, 4);
   const hiddenGuardianFileCount = Math.max(currentAttachments.length - 4, 0);
   const completedCount = completedQueue.length;
+  const queueDateLabel = formatQueueDateLabel(selectedDate);
 
   const queueTitle = useMemo(
     () =>
       queueTab === "waiting"
-        ? `오늘 ${waitingQueue.length}건 대기 중`
-        : `오늘 ${completedCount}건 진료 완료`,
-    [completedCount, queueTab, waitingQueue.length]
+        ? `${queueDateLabel} ${waitingQueue.length}건 대기 중`
+        : `${queueDateLabel} ${completedCount}건 진료 완료`,
+    [completedCount, queueDateLabel, queueTab, waitingQueue.length]
   );
 
   // ── 핸들러 ────────────────────────────────────────
   const handleRefreshQueue = useCallback(() => {
     loadQueue();
   }, [loadQueue]);
+
+  const handleChangeDate = useCallback((dateValue: string) => {
+    if (!dateValue) return;
+    setSelectedDateState(dateValue);
+    setSelectedScheduleId(undefined);
+    setValidationResult(null);
+    setFollowupItems([]);
+    clearEditableState();
+  }, [clearEditableState]);
+
+  const handleMoveDate = useCallback((days: number) => {
+    handleChangeDate(addDays(selectedDate, days));
+  }, [handleChangeDate, selectedDate]);
+
+  const handleGoToday = useCallback(() => {
+    handleChangeDate(toDateInputValue(new Date()));
+  }, [handleChangeDate]);
 
   const handleChangeTab = useCallback((tab: QueueTab) => {
     setQueueTab(tab);
@@ -142,12 +217,14 @@ export function useEmrData() {
   }, [waitingQueue, completedQueue]);
 
   const handleCompleteVisit = useCallback(async () => {
-    if (selectedScheduleId === undefined) return;
+    if (!isTodayView || selectedScheduleId === undefined) return;
 
     const targetPatient = waitingQueue.find(
       (p: QueuePatient) => p.schedule_id === selectedScheduleId
     );
     if (!targetPatient) return;
+
+    setCompleteVisitError(null);
 
     // API: 상태 업데이트 (처방전 포함)
     try {
@@ -163,6 +240,8 @@ export function useEmrData() {
       });
     } catch (err) {
       console.error("[CompleteVisit] status update failed:", err);
+      setCompleteVisitError("진료 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      return;
     }
 
     // 로컬 큐 업데이트
@@ -173,11 +252,15 @@ export function useEmrData() {
     setCompletedQueue((prev: QueuePatient[]) => [targetPatient, ...prev]);
     setSelectedScheduleId(nextWaiting[0]?.schedule_id);
     setEditorValue("");
+    setCompleteVisitError(null);
     setPrescriptions([]);
+    setAutoPrescriptionError(null);
     setUploadedFiles([]);
-  }, [editorValue, selectedScheduleId, uploadedFiles, waitingQueue]);
+  }, [editorValue, isTodayView, prescriptions, selectedScheduleId, uploadedFiles, waitingQueue]);
 
   const handleApplyIntake = useCallback((target: IntakeApplyTarget) => {
+    if (!isTodayView) return;
+
     const summary = currentEmr?.triage_summary.summary ?? [];
     const memo = currentEmr?.triage_summary.memo;
 
@@ -191,7 +274,7 @@ export function useEmrData() {
     setEditorValue((prev: string) =>
       [prev, ...selectedTexts].filter(Boolean).join("\n\n")
     );
-  }, [currentEmr]);
+  }, [currentEmr, isTodayView]);
 
   const handleRemoveFile = useCallback((fileId: number) => {
     setUploadedFiles((files: UploadedFile[]) =>
@@ -201,6 +284,8 @@ export function useEmrData() {
 
   const handleUploadFile = useCallback(
     async (file: File) => {
+      if (!isTodayView) return;
+
       setUploadError(null);
       setIsUploadingFile(true);
       try {
@@ -220,16 +305,17 @@ export function useEmrData() {
         setIsUploadingFile(false);
       }
     },
-    [accessToken]
+    [accessToken, isTodayView]
   );
 
   const handleLoadAutoPrescription = useCallback(async () => {
-    if (selectedScheduleId === undefined) return;
+    if (!isTodayView || selectedScheduleId === undefined) return;
+    setAutoPrescriptionError(null);
     setIsLoadingAutoPresc(true);
     try {
       const report = await fetchEmrReport({ accessToken, scheduleId: selectedScheduleId });
       if (!report?.ai_draft_json) {
-        setAutoPrescriptions([]);
+        setPrescriptions([]);
         return;
       }
       const draft = report.ai_draft_json as {
@@ -237,49 +323,50 @@ export function useEmrData() {
       };
       const meds = draft.prescription_draft?.medications ?? [];
       const mapped: Prescription[] = meds.map((m) => ({
+        client_id: makePrescriptionClientId(),
         drug_name: m.name ?? "",
         dosage: m.dosage ?? "",
         form: m.route ?? "",
         frequency: m.frequency ?? "",
         duration_days: parseInt(m.duration ?? "0", 10) || 0,
       }));
-      setAutoPrescriptions(mapped);
-      if (mapped.length > 0) setPrescriptions(mapped);
+      setPrescriptions(mapped);
     } catch (err) {
       console.error("[AutoPrescription] fetch failed:", err);
-      setAutoPrescriptions([]);
+      setPrescriptions([]);
+      setAutoPrescriptionError("처방전 자동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsLoadingAutoPresc(false);
     }
-  }, [selectedScheduleId, accessToken]);
+  }, [selectedScheduleId, accessToken, isTodayView]);
 
-  const handleRemovePrescription = useCallback((name: string) => {
+  const handleRemovePrescription = useCallback((clientId: string) => {
+    if (!isTodayView) return;
     setPrescriptions((items: Prescription[]) =>
-      items.filter((item: Prescription) => item.drug_name !== name)
+      items.filter((item: Prescription, index) => (item.client_id ?? `${item.drug_name}-${index}`) !== clientId)
     );
-  }, []);
+  }, [isTodayView]);
 
   const handleUpdatePrescription = useCallback(
-    (drug_name: string, field: keyof Prescription, value: string | number) => {
+    (clientId: string, field: keyof Prescription, value: string | number) => {
+      if (!isTodayView) return;
       setPrescriptions((items: Prescription[]) =>
-        items.map((item: Prescription) =>
-          item.drug_name === drug_name ? { ...item, [field]: value } : item
+        items.map((item: Prescription, index) =>
+          (item.client_id ?? `${item.drug_name}-${index}`) === clientId
+            ? { ...item, [field]: value }
+            : item
         )
       );
     },
-    []
+    [isTodayView]
   );
 
-  const handleSavePrescription = useCallback(() => {
-    setAutoPrescriptions(prescriptions);
-  }, [prescriptions]);
-
   const handleClearAutoPrescription = useCallback(() => {
-    setAutoPrescriptions([]);
+    setPrescriptions([]);
   }, []);
 
   const handleResetToWaiting = useCallback(async () => {
-    if (selectedScheduleId === undefined) return;
+    if (!isTodayView || selectedScheduleId === undefined) return;
     const targetPatient = completedQueue.find(
       (p: QueuePatient) => p.schedule_id === selectedScheduleId
     );
@@ -297,7 +384,7 @@ export function useEmrData() {
       setQueueTab("waiting");
       setEditorValue("");
       setPrescriptions([]);
-      setAutoPrescriptions([]);
+      setAutoPrescriptionError(null);
       // 기존 대기열 첫 번째 환자를 선택, 없으면 되돌린 환자 선택
       const nextId = waitingQueue[0]?.schedule_id ?? targetPatient.schedule_id;
       if (nextId === selectedScheduleId) {
@@ -310,28 +397,28 @@ export function useEmrData() {
     } catch (err) {
       console.error("[ResetToWaiting] failed:", err);
     }
-  }, [selectedScheduleId, completedQueue, waitingQueue, accessToken]);
+  }, [selectedScheduleId, completedQueue, waitingQueue, accessToken, isTodayView]);
 
-  const handleApplyAutoPrescription = useCallback(() => {
-    if (autoPrescriptions.length === 0) return;
-    setPrescriptions(autoPrescriptions);
+  const handleAppendPrescriptionToMemo = useCallback(() => {
+    if (!isTodayView || prescriptions.length === 0) return;
     const text = [
       "[처방전]",
-      ...autoPrescriptions.map(
-        (p) => `- ${p.drug_name} / ${p.form} / ${p.dosage} / ${p.duration_days}일`
+      ...prescriptions.map(
+        (p) => `- ${p.drug_name} / ${p.form} / ${p.dosage} / ${p.frequency} / ${p.duration_days}일`
       ),
     ].join("\n");
     setEditorValue((prev: string) => [prev, text].filter(Boolean).join("\n\n"));
-  }, [autoPrescriptions]);
+  }, [isTodayView, prescriptions]);
 
   const handleGeneratePrescription = useCallback(async () => {
-    if (selectedScheduleId === undefined) return;
-    setAutoPrescriptions([]);
+    if (!isTodayView || selectedScheduleId === undefined) return;
+    setAutoPrescriptionError(null);
     setIsLoadingAutoPresc(true);
     try {
       const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId });
-      setAutoPrescriptions(
+      setPrescriptions(
         meds.map((m) => ({
+          client_id: makePrescriptionClientId(),
           drug_name: m.drug_name,
           form: m.form,
           dosage: m.dosage,
@@ -341,13 +428,15 @@ export function useEmrData() {
       );
     } catch (err) {
       console.error("[GeneratePrescription] failed:", err);
-      setAutoPrescriptions([]);
+      setPrescriptions([]);
+      setAutoPrescriptionError("처방전 자동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsLoadingAutoPresc(false);
     }
-  }, [selectedScheduleId, accessToken]);
+  }, [selectedScheduleId, accessToken, isTodayView]);
 
   const handleAddPrescription = useCallback((drug: DrugSearchResult) => {
+    if (!isTodayView) return;
     setPrescriptions((items: Prescription[]) => {
       if (items.some((p) => p.drug_name === drug.name)) return items;
       return [
@@ -356,12 +445,13 @@ export function useEmrData() {
           drug_name: drug.name,
           form: "",
           dosage: drug.dosage ?? "",
-          frequency: "",
+          frequency: drug.usage_method ?? "",
           duration_days: drug.duration_days ?? 0,
+          client_id: makePrescriptionClientId(),
         },
       ];
     });
-  }, []);
+  }, [isTodayView]);
 
   const openPreviewImage = useCallback((url: string, label: string) => {
     setPreviewImage({ url, label });
@@ -375,6 +465,8 @@ export function useEmrData() {
   }, []);
 
   return {
+    selectedDate,
+    isTodayView,
     queueTab,
     waitingQueue,
     completedQueue,
@@ -383,9 +475,10 @@ export function useEmrData() {
     uploadedFiles,
     isUploadingFile,
     uploadError,
+    completeVisitError,
     prescriptions,
-    autoPrescriptions,
     isLoadingAutoPresc,
+    autoPrescriptionError,
     validationResult,
     followupItems,
     isAutoPanelOpen,
@@ -407,6 +500,9 @@ export function useEmrData() {
     setIsPrescriptionPreviewOpen,
     setIsProfileEditOpen,
     setPreviewImage,
+    handleChangeDate,
+    handleMoveDate,
+    handleGoToday,
     handleRefreshQueue,
     handleChangeTab,
     handleCompleteVisit,
@@ -416,11 +512,10 @@ export function useEmrData() {
     handleLoadAutoPrescription,
     handleRemovePrescription,
     handleUpdatePrescription,
-    handleSavePrescription,
     handleClearAutoPrescription,
     handleGeneratePrescription,
     handleAddPrescription,
-    handleApplyAutoPrescription,
+    handleAppendPrescriptionToMemo,
     handleResetToWaiting,
     openPreviewImage,
     handlePetInfoSaved,

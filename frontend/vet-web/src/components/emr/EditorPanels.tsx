@@ -1,4 +1,4 @@
-import { AlignLeft, Bold, FileUp, Italic, List, Plus, Search, Trash2, Underline, X } from "lucide-react";
+import { FileUp, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { DrugSearchResult } from "../../api/prescriptionApi";
 import { searchDrugs } from "../../api/prescriptionApi";
@@ -11,6 +11,7 @@ const DOSAGE_OPTIONS = [
   "0.5ml", "1ml", "2ml", "5ml",
   "1정", "1/2정", "2정",
 ];
+const FREQUENCY_OPTIONS = ["SID(하루 1회)", "BID(하루 2회)", "TID(하루 3회)", "QID(하루 4회)", "필요 시"];
 const DURATION_OPTIONS = [3, 5, 7, 10, 14, 30];
 
 function EditableSelect({
@@ -145,12 +146,14 @@ export function EditorPanel({
   count,
   onChange,
   onCompleteVisit,
+  errorMessage = null,
   isReadOnly = false,
 }: {
   value: string;
   count: number;
   onChange: (value: string) => void;
   onCompleteVisit: () => void;
+  errorMessage?: string | null;
   isReadOnly?: boolean;
 }) {
   return (
@@ -168,30 +171,6 @@ export function EditorPanel({
           진료 완료
         </button>
       </div>
-      <div className="flex items-center gap-2 border-b border-[#edf1f6] px-5 py-2 text-[#4d5874]">
-        <select
-          disabled={isReadOnly}
-          className="h-8 rounded-md border border-[#dfe6f1] px-2 text-xs font-bold outline-none disabled:bg-[#f5f7fa] disabled:text-[#a8b0bf]"
-        >
-          <option>Pretendard</option>
-        </select>
-        <select
-          disabled={isReadOnly}
-          className="h-8 rounded-md border border-[#dfe6f1] px-2 text-xs font-bold outline-none disabled:bg-[#f5f7fa] disabled:text-[#a8b0bf]"
-        >
-          <option>14</option>
-        </select>
-        {[Bold, Italic, Underline, AlignLeft, List].map((Icon) => (
-          <button
-            key={Icon.displayName}
-            type="button"
-            disabled={isReadOnly}
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#edf5ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:text-[#a8b0bf]"
-          >
-            <Icon className="h-4 w-4" />
-          </button>
-        ))}
-      </div>
       <div className="px-5 py-4">
         <textarea
           value={value}
@@ -203,6 +182,9 @@ export function EditorPanel({
         <p className="mt-2 text-right text-xs font-extrabold text-[#8a94a6]">
           글자 수: {count}
         </p>
+        {errorMessage && (
+          <p className="mt-2 text-xs font-bold text-red-500">{errorMessage}</p>
+        )}
       </div>
     </Panel>
   );
@@ -326,17 +308,17 @@ export function PrescriptionInputPanel({
   onGenerate,
   onAdd,
   onUpdate,
-  onSave,
   accessToken,
+  errorMessage = null,
   isReadOnly = false,
 }: {
   prescriptions: Prescription[];
-  onRemove: (name: string) => void;
+  onRemove: (clientId: string) => void;
   onGenerate: () => void;
   onAdd?: (drug: DrugSearchResult) => void;
-  onUpdate?: (drug_name: string, field: keyof Prescription, value: string | number) => void;
-  onSave?: () => void;
+  onUpdate?: (clientId: string, field: keyof Prescription, value: string | number) => void;
   accessToken?: string;
+  errorMessage?: string | null;
   isReadOnly?: boolean;
 }) {
   const [keyword, setKeyword] = useState("");
@@ -424,26 +406,29 @@ export function PrescriptionInputPanel({
             <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
               <tr>
                 <th className="w-[28%] px-4 py-3">약제명</th>
-                <th className="w-[20%] px-3 py-3">형태</th>
-                <th className="w-[20%] px-3 py-3">용량</th>
-                <th className="w-[20%] px-3 py-3">기간</th>
-                <th className="w-[12%] px-3 py-3">삭제</th>
+                <th className="w-[16%] px-3 py-3">형태</th>
+                <th className="w-[18%] px-3 py-3">용량</th>
+                <th className="w-[20%] px-3 py-3">용법</th>
+                <th className="w-[10%] px-3 py-3">기간</th>
+                <th className="w-[8%] px-3 py-3">삭제</th>
               </tr>
             </thead>
             <tbody>
               {prescriptions.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-9 text-center text-sm font-bold text-[#8a94a6]"
                   >
                     검색을 통해 약을 추가해주세요.
                   </td>
                 </tr>
               ) : (
-                prescriptions.map((prescription) => (
+                prescriptions.map((prescription, index) => {
+                  const clientId = prescription.client_id ?? `${prescription.drug_name}-${index}`;
+                  return (
                   <tr
-                    key={prescription.drug_name}
+                    key={clientId}
                     className="border-t border-[#edf1f6] text-sm font-bold text-[#4d5874]"
                   >
                     <td className="px-4 py-2 font-extrabold text-[#20283a]">
@@ -453,7 +438,7 @@ export function PrescriptionInputPanel({
                       <EditableSelect
                         value={prescription.form}
                         options={FORM_OPTIONS}
-                        onChange={(v) => onUpdate?.(prescription.drug_name, "form", v)}
+                        onChange={(v) => onUpdate?.(clientId, "form", v)}
                         placeholder="형태"
                         isReadOnly={isReadOnly}
                       />
@@ -462,22 +447,31 @@ export function PrescriptionInputPanel({
                       <EditableSelect
                         value={prescription.dosage}
                         options={DOSAGE_OPTIONS}
-                        onChange={(v) => onUpdate?.(prescription.drug_name, "dosage", v)}
+                        onChange={(v) => onUpdate?.(clientId, "dosage", v)}
                         placeholder="용량"
+                        isReadOnly={isReadOnly}
+                      />
+                    </td>
+                    <td className="px-2 py-2">
+                      <EditableSelect
+                        value={prescription.frequency}
+                        options={FREQUENCY_OPTIONS}
+                        onChange={(v) => onUpdate?.(clientId, "frequency", v)}
+                        placeholder="용법"
                         isReadOnly={isReadOnly}
                       />
                     </td>
                     <td className="px-2 py-2">
                       <DurationSelect
                         value={prescription.duration_days}
-                        onChange={(v) => onUpdate?.(prescription.drug_name, "duration_days", v)}
+                        onChange={(v) => onUpdate?.(clientId, "duration_days", v)}
                         isReadOnly={isReadOnly}
                       />
                     </td>
                     <td className="px-3 py-2">
                       <button
                         type="button"
-                        onClick={() => onRemove(prescription.drug_name)}
+                        onClick={() => onRemove(clientId)}
                         disabled={isReadOnly}
                         className="text-[#ef4444] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
                       >
@@ -485,7 +479,8 @@ export function PrescriptionInputPanel({
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -494,21 +489,17 @@ export function PrescriptionInputPanel({
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            onClick={onSave}
+            onClick={onGenerate}
             disabled={isReadOnly}
-            className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-5 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
-            저장
-          </button>
-          <button
-          type="button"
-          onClick={onGenerate}
-          disabled={isReadOnly}
-          className="h-10 rounded-lg border border-[#dfe6f1] bg-white px-5 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
-          >
+            <Sparkles className="h-4 w-4 text-[#4a89ff]" strokeWidth={2.2} />
             처방전 자동 생성
           </button>
         </div>
+        {errorMessage && (
+          <p className="text-xs font-bold text-red-500">{errorMessage}</p>
+        )}
       </div>
     </Panel>
   );
