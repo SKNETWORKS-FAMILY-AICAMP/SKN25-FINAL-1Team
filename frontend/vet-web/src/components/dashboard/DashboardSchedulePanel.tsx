@@ -10,9 +10,11 @@ import {
   buildPositionedTimelineItems,
   getHourTicks,
   getLunchBlockMetrics,
-  getTimelineHeight,
+  getScaledTimelineHeight,
   getTimelineRange,
 } from "../../utils/scheduleTimelineUtils";
+
+const DASHBOARD_TIMELINE_HOUR_HEIGHT = 68;
 
 interface DashboardSchedulePanelProps {
   schedules: DashboardScheduleItem[];
@@ -28,18 +30,25 @@ export function DashboardSchedulePanel({
   holidayName,
 }: DashboardSchedulePanelProps) {
   const timelineRange = useMemo(() => getTimelineRange(schedules), [schedules]);
-  const hourTicks = useMemo(() => getHourTicks(timelineRange), [timelineRange]);
+  const timelineScale = useMemo(
+    () => ({ hourHeight: DASHBOARD_TIMELINE_HOUR_HEIGHT }),
+    []
+  );
+  const hourTicks = useMemo(
+    () => getHourTicks(timelineRange, timelineScale),
+    [timelineRange, timelineScale]
+  );
   const timelineHeight = useMemo(
-    () => getTimelineHeight(timelineRange),
-    [timelineRange]
+    () => getScaledTimelineHeight(timelineRange, timelineScale),
+    [timelineRange, timelineScale]
   );
   const lunchBlock = useMemo(
-    () => getLunchBlockMetrics(timelineRange),
-    [timelineRange]
+    () => getLunchBlockMetrics(timelineRange, timelineScale),
+    [timelineRange, timelineScale]
   );
   const positionedSchedules = useMemo(
-    () => buildPositionedTimelineItems(schedules, timelineRange),
-    [schedules, timelineRange]
+    () => buildPositionedTimelineItems(schedules, timelineRange, timelineScale),
+    [schedules, timelineRange, timelineScale]
   );
 
   return (
@@ -117,18 +126,6 @@ export function DashboardSchedulePanel({
           </div>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-[#edf1f6] px-5 py-3">
-        {Object.entries(visitTypeStyle).map(([key, value]) => (
-          <div
-            key={key}
-            className="flex items-center gap-2 text-xs font-bold text-[#59657a]"
-          >
-            <span className={`h-3 w-3 rounded-full ${value.dot}`} />
-            {value.label}
-          </div>
-        ))}
-      </div>
     </Panel>
   );
 }
@@ -139,7 +136,6 @@ function ScheduleRow({
   positioned: PositionedTimelineItem<DashboardScheduleItem>;
 }) {
   const { item, top, height, timeLabel, columnIndex, columnCount } = positioned;
-  const compact = height < 54;
   const typeStyle = visitTypeStyle[item.type];
 
   return (
@@ -155,9 +151,7 @@ function ScheduleRow({
       <div
         className={[
           "grid min-w-0 flex-1 items-center gap-4",
-          compact
-            ? "grid-cols-[92px_minmax(100px,1fr)]"
-            : "grid-cols-[92px_minmax(130px,200px)_1fr]",
+          "grid-cols-[92px_minmax(100px,1fr)]",
         ].join(" ")}
       >
         <p className="text-xs font-extrabold tabular-nums text-[#556179]">
@@ -168,11 +162,6 @@ function ScheduleRow({
             {item.patientName} ({item.species})
           </p>
         </div>
-        {!compact && (
-          <p className="truncate text-xs font-bold text-[#657188]">
-            {item.breed} · {item.age} · {item.weight} · {item.reason}
-          </p>
-        )}
       </div>
       <TriageBadge level={item.type} />
     </article>

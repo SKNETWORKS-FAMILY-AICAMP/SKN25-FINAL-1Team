@@ -39,7 +39,7 @@ export function TopControls({
         </IconButton>
         <button
           type="button"
-          className="flex h-10 min-w-0 max-w-[360px] items-center gap-2 truncate rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#20283a]"
+          className="flex h-10 min-w-[200px] items-center justify-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#20283a]"
         >
           <CalendarDays className="h-4 w-4 text-[#53617c]" />
           {controlLabel}

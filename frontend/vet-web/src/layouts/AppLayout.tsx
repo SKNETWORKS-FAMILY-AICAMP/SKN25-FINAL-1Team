@@ -29,7 +29,7 @@ interface AppLayoutProps {
   /** @deprecated 알림은 내부에서 관리됩니다. */
   notificationCount?: number;
   onLogout: () => void;
-  onNavigate?: (menuId: AppMenuId) => void;
+  onNavigate?: (menuId: AppMenuId, state?: Record<string, unknown>) => void;
 }
 
 const navigationItems: Array<{
@@ -157,7 +157,7 @@ export default function AppLayout({
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const { alarms, hasUnread, isMarkingRead, markAllRead } = useAlarms();
+  const { alarms, hasUnread, isMarkingRead, markAllRead, visitedAlarmIds, markAsVisited } = useAlarms();
 
   useEffect(() => {
     const timerId = window.setInterval(() => setNow(new Date()), 1000);
@@ -205,7 +205,11 @@ export default function AppLayout({
           <div className="relative" ref={notifRef}>
             <button
               type="button"
-              onClick={() => setIsNotifOpen((v) => !v)}
+              onClick={() => {
+                const willOpen = !isNotifOpen;
+                setIsNotifOpen(willOpen);
+                if (willOpen && hasUnread) markAllRead();
+              }}
               aria-label="알림"
               className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#4b5877] transition hover:bg-[#f3f7ff] hover:text-[#4a89ff]"
             >
@@ -221,6 +225,10 @@ export default function AppLayout({
                   alarms={alarms}
                   isMarkingRead={isMarkingRead}
                   onMarkAllRead={markAllRead}
+                  visitedAlarmIds={visitedAlarmIds}
+                  onVisitAlarm={markAsVisited}
+                  onNavigate={onNavigate}
+                  onClose={() => setIsNotifOpen(false)}
                 />
               </div>
             )}
@@ -333,10 +341,18 @@ function NotificationPanel({
   alarms,
   isMarkingRead,
   onMarkAllRead,
+  visitedAlarmIds,
+  onVisitAlarm,
+  onNavigate,
+  onClose,
 }: {
   alarms: AlarmItem[];
   isMarkingRead: boolean;
   onMarkAllRead: () => void;
+  visitedAlarmIds: Set<number>;
+  onVisitAlarm: (id: number) => void;
+  onNavigate?: (menuId: AppMenuId, state?: Record<string, unknown>) => void;
+  onClose: () => void;
 }) {
   const hasUnread = alarms.some((a) => !a.is_read);
 
@@ -367,7 +383,14 @@ function NotificationPanel({
           </li>
         ) : (
           alarms.map((alarm) => (
-            <AlarmRow key={alarm.alarmid} alarm={alarm} />
+            <AlarmRow
+              key={alarm.alarmid}
+              alarm={alarm}
+              isVisited={visitedAlarmIds.has(alarm.alarmid)}
+              onNavigate={onNavigate}
+              onClose={onClose}
+              onVisitAlarm={onVisitAlarm}
+            />
           ))
         )}
       </ul>
@@ -375,14 +398,38 @@ function NotificationPanel({
   );
 }
 
-function AlarmRow({ alarm }: { alarm: AlarmItem }) {
+const emrAlarmTypes: AlarmType[] = ["chart_ready", "followup_received"];
+
+function AlarmRow({
+  alarm,
+  isVisited,
+  onNavigate,
+  onClose,
+  onVisitAlarm,
+}: {
+  alarm: AlarmItem;
+  isVisited: boolean;
+  onNavigate?: (menuId: AppMenuId, state?: Record<string, unknown>) => void;
+  onClose: () => void;
+  onVisitAlarm: (id: number) => void;
+}) {
   const meta = alarmTypeMeta[alarm.type] ?? fallbackAlarmTypeMeta;
   const Icon = meta.Icon;
 
+  const handleClick = () => {
+    if (!onNavigate) return;
+    onVisitAlarm(alarm.alarmid);
+    const menuId: AppMenuId = emrAlarmTypes.includes(alarm.type) ? "emr" : "reservation";
+    const state = menuId === "emr" ? { scheduleId: alarm.scheduleid } : undefined;
+    onNavigate(menuId, state);
+    onClose();
+  };
+
   return (
     <li
-      className={`flex items-start gap-3 px-4 py-3.5 transition hover:bg-[#f8fafd] ${
-        alarm.is_read ? "opacity-60" : ""
+      onClick={handleClick}
+      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition hover:bg-[#f8fafd] ${
+        isVisited ? "opacity-60" : ""
       }`}
     >
       <div
