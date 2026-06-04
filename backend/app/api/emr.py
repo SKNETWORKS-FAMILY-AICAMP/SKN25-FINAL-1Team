@@ -13,7 +13,8 @@ import re
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from openai import AsyncOpenAI
+from langchain_openai import ChatOpenAI
+from ai.observability import get_langfuse_handler
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -292,21 +293,24 @@ async def generate_auto_prescription(
   ]
 }}"""
 
-    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    response = await client.chat.completions.create(
+    llm = ChatOpenAI(
         model=settings.OPENAI_MODEL or "gpt-4o",
-        messages=[
+        api_key=settings.OPENAI_API_KEY,
+        temperature=0.3,
+        model_kwargs={"response_format": {"type": "json_object"}},
+    )
+    response = await llm.ainvoke(
+        [
             {
                 "role": "system",
                 "content": "당신은 전문 수의사 AI 보조입니다. 반드시 JSON 형식으로만 응답하고, duration 필드는 반드시 숫자(정수)만 사용하세요.",
             },
             {"role": "user", "content": prompt},
         ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
+        config={"callbacks": [get_langfuse_handler()]},
     )
 
-    data = json.loads(response.choices[0].message.content)
+    data = json.loads(response.content if isinstance(response.content, str) else "{}")
     meds = data.get("medications", [])
 
     def _to_int(val) -> int:
