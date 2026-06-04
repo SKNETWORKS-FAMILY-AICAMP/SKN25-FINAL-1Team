@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 
 import { findGuardianPassword } from "../../api/auth-api";
+import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface FindPasswordFormState {
   loginid: string;
@@ -109,32 +110,16 @@ const FindPasswordPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-            M
-          </span>
-          <div>
-            <p className="text-base font-bold text-blue-700 sm:text-lg">MediPaw</p>
-            <p className="hidden text-xs font-semibold text-slate-500 sm:block">
-              보호자 반려동물 상담 및 예약 보조 서비스
-            </p>
-          </div>
-        </Link>
-
-        <Link
-          to="/login"
-          className="rounded-xl border border-blue-500 px-4 py-2 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
-        >
-          로그인
+          <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
         <section className="space-y-5">
           <div>
-            <p className="text-sm font-bold text-blue-600">MediPaw account support</p>
-            <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-950">
+            <h1 className="text-3xl font-bold leading-tight text-slate-950">
               비밀번호 찾기
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-600">
@@ -143,7 +128,7 @@ const FindPasswordPage = () => {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-white/80 p-5 shadow-sm shadow-blue-100/60">
+          <div className="rounded-2xl border border-blue-100 bg-white/80 p-5">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
                 i
@@ -160,12 +145,9 @@ const FindPasswordPage = () => {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-xl shadow-blue-100/70 sm:p-6">
+        <section className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6">
           <div className="mb-4 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-600">
-              PW
-            </div>
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">비밀번호 찾기</h2>
+            <h2 className="text-2xl font-bold text-slate-950">비밀번호 찾기</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
               등록된 보호자 정보를 입력해주세요.
             </p>
@@ -238,7 +220,7 @@ const FindPasswordPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
             >
               {isSubmitting ? "발급 중..." : "임시 비밀번호 발급"}
             </button>
@@ -261,7 +243,7 @@ const FindPasswordPage = () => {
         </section>
       </main>
 
-      <footer className="mx-auto flex w-full max-w-5xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <footer className="mx-auto flex w-full max-w-6xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
         <p>© 2026 MediPaw. All rights reserved.</p>
       </footer>
