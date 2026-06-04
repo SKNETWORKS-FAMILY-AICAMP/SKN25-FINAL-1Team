@@ -104,8 +104,8 @@ function VetRoutes() {
     navigate("/login", { replace: true });
   };
 
-  const handleNavigate = (menuId: AppMenuId) => {
-    navigate(menuPathMap[menuId]);
+  const handleNavigate = (menuId: AppMenuId, state?: Record<string, unknown>) => {
+    navigate(menuPathMap[menuId], { state });
   };
 
   const protectedPageProps = {

@@ -6,7 +6,6 @@ export function AutoPrescriptionPanel({
   patient,
   prescriptions,
   isLoading = false,
-  onAppendToMemo,
   onOpenPreview,
   previewErrorMessage = null,
   isReadOnly = false,
@@ -14,7 +13,6 @@ export function AutoPrescriptionPanel({
   patient?: PetInfo;
   prescriptions: Prescription[];
   isLoading?: boolean;
-  onAppendToMemo: () => void;
   onOpenPreview: () => void;
   previewErrorMessage?: string | null;
   isReadOnly?: boolean;
@@ -38,10 +36,19 @@ export function AutoPrescriptionPanel({
             AI가 처방전을 생성하고 있습니다...
           </div>
         ) : prescriptions.length === 0 ? (
-          <div className="rounded-lg border border-[#e8edf4] px-4 py-8 text-center text-sm text-[#a8b0bf]">
-            처방전 항목이 아직 없습니다.
-            <br />
-            <span className="text-xs">자동 생성하거나 약제를 검색해 추가하세요.</span>
+          <div
+            className={`rounded-lg border px-4 py-8 text-center text-sm ${
+              previewErrorMessage
+                ? "border-red-200 bg-red-50 text-red-600"
+                : "border-[#e8edf4] text-[#a8b0bf]"
+            }`}
+          >
+            <p className="font-extrabold">
+              {previewErrorMessage || "처방전 항목이 아직 없습니다."}
+            </p>
+            <p className={`mt-1 text-xs font-bold ${previewErrorMessage ? "text-red-500" : ""}`}>
+              자동 생성하거나 약제를 검색해 추가하세요.
+            </p>
           </div>
         ) : (
           <div className="max-h-[calc(100vh-330px)] space-y-2 overflow-y-auto pr-1">
@@ -70,25 +77,14 @@ export function AutoPrescriptionPanel({
         )}
       </div>
       <div className="absolute inset-x-0 bottom-0 border-t border-[#edf1f6] bg-white p-4">
-        {previewErrorMessage && (
-          <p className="mb-2 text-xs font-bold text-red-500">{previewErrorMessage}</p>
-        )}
-        <div className="flex gap-2">
+        <div className="flex">
           <button
             type="button"
             onClick={onOpenPreview}
             disabled={isReadOnly}
-            className="h-10 flex-1 rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="h-10 w-full rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             미리보기
-          </button>
-          <button
-            type="button"
-            onClick={onAppendToMemo}
-            disabled={isReadOnly || prescriptions.length === 0}
-            className="h-10 flex-1 rounded-lg border border-[#dfe6f1] bg-white text-sm font-extrabold text-[#4d5874] hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
-          >
-            진료 메모에 추가
           </button>
         </div>
       </div>

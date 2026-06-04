@@ -241,7 +241,7 @@ export default function ReservationPage({
         )}
 
         {viewMode === "week" && (
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 overflow-hidden pr-1">
             <WeeklySchedule
               selectedDate={selectedDate}
               reservations={filteredReservations}

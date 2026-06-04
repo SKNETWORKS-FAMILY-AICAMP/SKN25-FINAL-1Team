@@ -1,5 +1,6 @@
-import { PhoneCall, TriangleAlert, X } from "lucide-react";
+import { PhoneCall, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { AuthSession } from "../../api/authApi";
 import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
@@ -74,16 +75,25 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleUpdatePrescription,
     handleGeneratePrescription,
     handleAddPrescription,
-    handleAppendPrescriptionToMemo,
     handleResetToWaiting,
     openPreviewImage,
     handlePetInfoSaved,
   } = useEmrData();
+
+  const location = useLocation();
+  const targetScheduleId = (location.state as { scheduleId?: number } | null)?.scheduleId;
+  useEffect(() => {
+    if (!targetScheduleId) return;
+    const combined = [...waitingQueue, ...completedQueue];
+    if (combined.some((p) => p.schedule_id === targetScheduleId)) {
+      setSelectedScheduleId(targetScheduleId);
+    }
+  }, [targetScheduleId, waitingQueue, completedQueue, setSelectedScheduleId]);
   const [prescriptionPreviewError, setPrescriptionPreviewError] = useState<string | null>(null);
   const [prescriptionPreviewDocument, setPrescriptionPreviewDocument] =
     useState<ReturnType<typeof createMockPrescriptionDocument> | null>(null);
   const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = useState(false);
-  const [dismissedAlertMessage, setDismissedAlertMessage] = useState<string | null>(null);
+  const [alertBannerMessage, setAlertBannerMessage] = useState<string | null>(null);
   const isReadOnly = !isTodayView || queueTab === "completed";
   const showEditablePanels = isTodayView;
   const contentGridClass = showEditablePanels
@@ -94,9 +104,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     : queueTab === "completed"
       ? "진료 완료 기록입니다. 수정하려면 진료 대기로 되돌려야 합니다."
       : null;
-  const alertMessage = completeVisitError ?? autoPrescriptionError ?? prescriptionPreviewError;
-  const visibleAlertMessage =
-    alertMessage && alertMessage !== dismissedAlertMessage ? alertMessage : null;
+  const alertMessage = completeVisitError ?? autoPrescriptionError;
 
   useEffect(() => {
     if (prescriptions.length > 0) {
@@ -108,26 +116,48 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     setPrescriptionPreviewError(null);
     setPrescriptionPreviewDocument(null);
     setIsCompleteConfirmOpen(false);
-    setDismissedAlertMessage(null);
+    setAlertBannerMessage(null);
   }, [selectedScheduleId]);
 
   useEffect(() => {
     if (alertMessage) {
-      setDismissedAlertMessage(null);
+      setAlertBannerMessage(alertMessage);
     }
   }, [alertMessage]);
 
+  useEffect(() => {
+    if (!alertBannerMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setAlertBannerMessage(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [alertBannerMessage]);
+
+  useEffect(() => {
+    if (!prescriptionPreviewError) return;
+
+    const timer = window.setTimeout(() => {
+      setPrescriptionPreviewError(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [prescriptionPreviewError]);
+
   const handleOpenPrescriptionPreview = () => {
-    setDismissedAlertMessage(null);
+    setAlertBannerMessage(null);
     setPrescriptionPreviewError(null);
 
     if (!currentEmr) {
-      setPrescriptionPreviewError("환자 정보를 불러온 뒤 다시 시도해주세요.");
+      const message = "환자 정보를 불러온 뒤 다시 시도해주세요.";
+      setPrescriptionPreviewError(message);
       return;
     }
 
     if (prescriptions.length === 0) {
-      setPrescriptionPreviewError("미리보기할 처방전 초안이 없습니다.");
+      const message = "미리보기할 처방전 초안이 없습니다.";
+      setPrescriptionPreviewError(message);
       return;
     }
 
@@ -141,18 +171,19 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       setIsPrescriptionPreviewOpen(true);
     } catch (err) {
       console.error("[PrescriptionPreview] open failed:", err);
-      setPrescriptionPreviewError("미리보기할 처방전 초안이 없습니다.");
+      const message = "미리보기할 처방전 초안이 없습니다.";
+      setPrescriptionPreviewError(message);
     }
   };
 
   const handleConfirmCompleteVisit = async () => {
     setIsCompleteConfirmOpen(false);
-    setDismissedAlertMessage(null);
+    setAlertBannerMessage(null);
     await handleCompleteVisit();
   };
 
   const handleGeneratePrescriptionClick = () => {
-    setDismissedAlertMessage(null);
+    setAlertBannerMessage(null);
     handleGeneratePrescription();
   };
 
@@ -222,11 +253,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           </aside>
 
           <main className="space-y-4">
-            {visibleAlertMessage && (
-              <EmrAlertBanner
-                message={visibleAlertMessage}
-                onClose={() => setDismissedAlertMessage(visibleAlertMessage)}
-              />
+            {alertBannerMessage && (
+              <EmrAlertBanner message={alertBannerMessage} />
             )}
             {currentEmr ? (
               <>
@@ -337,7 +365,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
               patient={currentEmr?.pet_info}
               prescriptions={prescriptions}
               isLoading={isLoadingAutoPresc}
-              onAppendToMemo={handleAppendPrescriptionToMemo}
               onOpenPreview={handleOpenPrescriptionPreview}
               previewErrorMessage={prescriptionPreviewError}
               isReadOnly={isReadOnly}
@@ -429,27 +456,13 @@ function ReadOnlyBadge({ message }: { message: string }) {
   );
 }
 
-function EmrAlertBanner({
-  message,
-  onClose,
-}: {
-  message: string;
-  onClose: () => void;
-}) {
+function EmrAlertBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-sm">
+    <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-sm">
       <div className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
         <span>{message}</span>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className="shrink-0 rounded-md p-1 text-red-500 hover:bg-red-100"
-        aria-label="알림 닫기"
-      >
-        <X className="h-4 w-4" />
-      </button>
     </div>
   );
 }

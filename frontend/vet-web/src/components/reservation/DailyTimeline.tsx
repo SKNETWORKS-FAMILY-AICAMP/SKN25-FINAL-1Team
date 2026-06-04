@@ -136,7 +136,7 @@ function ReservationCard({
       className={[
         `absolute z-10 flex items-center gap-3 overflow-hidden rounded-lg border py-2 pl-5 pr-3.5 text-left transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${weeklyCardClass[item.status]}`,
         isSelected
-          ? "shadow-[0_0_0_2px_rgba(15,98,254,0.12)]"
+          ? "z-20 border-[#2563eb] bg-[#eff6ff] shadow-[inset_0_0_0_2px_#2563eb]"
           : "shadow-sm hover:border-[#9fc0fb]",
       ].join(" ")}
       style={{
