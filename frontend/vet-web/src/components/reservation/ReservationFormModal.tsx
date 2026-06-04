@@ -169,52 +169,54 @@ export function ReservationFormModal({
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          <div className="relative">
-            <label className="mb-1.5 block text-xs font-extrabold text-[#1d2a57]">
-              환자 검색
-            </label>
-            <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2563eb]">
-              <input
-                value={searchText}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 120)}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="강아지이름 / 전화번호 뒷자리 검색"
-                className="min-w-0 flex-1 bg-transparent text-xs font-bold text-[#1d2a57] outline-none placeholder:text-[#a4adbd]"
-              />
-              <ChevronDown className="h-4 w-4 text-[#53617c]" />
-            </div>
-            {shouldShowSearchResults && (
-              <div className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-[#edf1f6] bg-white shadow-lg">
-                {filteredPatients.length > 0 ? (
-                  filteredPatients.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => void handleSelectPatient(item)}
-                      className="flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0 hover:bg-[#f7f9fc]"
-                    >
-                      <span>
-                        <span className="block text-sm font-extrabold text-[#1d2a57]">
-                          {item.petName} ({item.guardianName})
-                        </span>
-                        <span className="mt-1 block text-xs font-bold text-[#8a94a6]">
-                          {item.phone}
-                        </span>
-                      </span>
-                      <span className="text-xs font-extrabold text-[#8a94a6]">
-                        {item.species}
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-3 text-sm font-bold text-[#8a94a6]">
-                    검색 결과가 없습니다.
-                  </div>
-                )}
+          {mode === "add" && (
+            <div className="relative">
+              <label className="mb-1.5 block text-xs font-extrabold text-[#1d2a57]">
+                환자 검색
+              </label>
+              <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2563eb]">
+                <input
+                  value={searchText}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 120)}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder="강아지이름 / 전화번호 뒷자리 검색"
+                  className="min-w-0 flex-1 bg-transparent text-xs font-bold text-[#1d2a57] outline-none placeholder:text-[#a4adbd]"
+                />
+                <ChevronDown className="h-4 w-4 text-[#53617c]" />
               </div>
-            )}
-          </div>
+              {shouldShowSearchResults && (
+                <div className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-[#edf1f6] bg-white shadow-lg">
+                  {filteredPatients.length > 0 ? (
+                    filteredPatients.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => void handleSelectPatient(item)}
+                        className="flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0 hover:bg-[#f7f9fc]"
+                      >
+                        <span>
+                          <span className="block text-sm font-extrabold text-[#1d2a57]">
+                            {item.petName} ({item.guardianName})
+                          </span>
+                          <span className="mt-1 block text-xs font-bold text-[#8a94a6]">
+                            {item.phone}
+                          </span>
+                        </span>
+                        <span className="text-xs font-extrabold text-[#8a94a6]">
+                          {item.species}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm font-bold text-[#8a94a6]">
+                      검색 결과가 없습니다.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <section>
             <h3 className="mb-2 text-sm font-extrabold text-[#1d2a57]">

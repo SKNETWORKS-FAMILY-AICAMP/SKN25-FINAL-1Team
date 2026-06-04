@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 import type {
   ReservationItem,
   ReservationPatient,
@@ -25,8 +25,10 @@ export function DetailPanel({
 }: DetailPanelProps) {
   if (!reservation || !patient) {
     return (
-      <section className="rounded-lg border border-[#e5eaf2] bg-white p-6 shadow-sm">
+      <section className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-[#e5eaf2] bg-white p-6 shadow-sm">
+        <CalendarDays className="h-10 w-10 text-[#c5cedf]" />
         <p className="text-sm font-bold text-[#778196]">예약을 선택해주세요.</p>
+        <p className="text-xs text-[#a0adc0]">왼쪽 타임라인에서 예약 항목을 클릭하세요.</p>
       </section>
     );
   }

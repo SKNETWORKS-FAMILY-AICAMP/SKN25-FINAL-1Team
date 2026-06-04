@@ -16,6 +16,11 @@ export interface TimelineRange {
   endMinutes: number;
 }
 
+export interface TimelineScaleOptions {
+  hourHeight?: number;
+  bottomPadding?: number;
+}
+
 export interface PositionedTimelineItem<T extends TimelineTimeRange> {
   item: T;
   top: number;
@@ -56,14 +61,27 @@ export function getTimelineRange(items: TimelineTimeRange[] = []): TimelineRange
 }
 
 export function getTimelineHeight(range: TimelineRange) {
+  return getScaledTimelineHeight(range);
+}
+
+export function getScaledTimelineHeight(
+  range: TimelineRange,
+  options: TimelineScaleOptions = {}
+) {
+  const hourHeight = options.hourHeight ?? TIMELINE_HOUR_HEIGHT;
+  const bottomPadding = options.bottomPadding ?? TIMELINE_BOTTOM_PADDING;
+
   return (
-    ((range.endMinutes - range.startMinutes) / 60) * TIMELINE_HOUR_HEIGHT +
-    TIMELINE_BOTTOM_PADDING
+    ((range.endMinutes - range.startMinutes) / 60) * hourHeight + bottomPadding
   );
 }
 
-export function getHourTicks(range: TimelineRange) {
+export function getHourTicks(
+  range: TimelineRange,
+  options: TimelineScaleOptions = {}
+) {
   const ticks: Array<{ minutes: number; label: string; top: number }> = [];
+  const hourHeight = options.hourHeight ?? TIMELINE_HOUR_HEIGHT;
 
   for (
     let minutes = range.startMinutes;
@@ -73,7 +91,7 @@ export function getHourTicks(range: TimelineRange) {
     ticks.push({
       minutes,
       label: formatMinutesAsTime(minutes),
-      top: ((minutes - range.startMinutes) / 60) * TIMELINE_HOUR_HEIGHT,
+      top: ((minutes - range.startMinutes) / 60) * hourHeight,
     });
   }
 
@@ -83,27 +101,33 @@ export function getHourTicks(range: TimelineRange) {
 export function getTimelineBlockMetrics(
   start: string,
   end: string,
-  range: TimelineRange
+  range: TimelineRange,
+  options: TimelineScaleOptions = {}
 ) {
   const startMinutes = parseTimeToMinutes(start);
   const endMinutes = Math.max(parseTimeToMinutes(end), startMinutes + 5);
   const durationMinutes = endMinutes - startMinutes;
+  const hourHeight = options.hourHeight ?? TIMELINE_HOUR_HEIGHT;
 
   return {
-    top: ((startMinutes - range.startMinutes) / 60) * TIMELINE_HOUR_HEIGHT,
-    height: (durationMinutes / 60) * TIMELINE_HOUR_HEIGHT,
+    top: ((startMinutes - range.startMinutes) / 60) * hourHeight,
+    height: (durationMinutes / 60) * hourHeight,
     durationMinutes,
     timeLabel: `${formatMinutesAsTime(startMinutes)} ~ ${formatMinutesAsTime(endMinutes)}`,
   };
 }
 
-export function getLunchBlockMetrics(range: TimelineRange) {
-  return getTimelineBlockMetrics(LUNCH_START, LUNCH_END, range);
+export function getLunchBlockMetrics(
+  range: TimelineRange,
+  options: TimelineScaleOptions = {}
+) {
+  return getTimelineBlockMetrics(LUNCH_START, LUNCH_END, range, options);
 }
 
 export function buildPositionedTimelineItems<T extends TimelineTimeRange>(
   items: T[],
-  range: TimelineRange
+  range: TimelineRange,
+  options: TimelineScaleOptions = {}
 ): PositionedTimelineItem<T>[] {
   const sortedItems = [...items].sort((left, right) => {
     const startDiff =
@@ -164,7 +188,7 @@ export function buildPositionedTimelineItems<T extends TimelineTimeRange>(
 
     return group.map((item) => ({
       item,
-      ...getTimelineBlockMetrics(item.start, item.end, range),
+      ...getTimelineBlockMetrics(item.start, item.end, range, options),
       columnIndex: columnByItem.get(item) ?? 0,
       columnCount,
     }));
