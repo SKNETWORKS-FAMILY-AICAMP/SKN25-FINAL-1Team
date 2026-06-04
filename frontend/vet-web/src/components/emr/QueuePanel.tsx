@@ -107,13 +107,6 @@ export function QueuePanel({
       {/* 환자 목록 - 패널 내부 스크롤 */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <table className="w-full table-fixed text-left">
-          <thead className="sticky top-0 z-10 bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
-            <tr>
-              <th className="w-[86px] px-6 py-3">시간</th>
-              <th className="px-4 py-3">환자</th>
-              <th className="w-[88px] px-4 py-3">상태</th>
-            </tr>
-          </thead>
           <tbody className="divide-y divide-[#edf1f6]">
             {queue.map((patient) => (
               <tr
@@ -125,7 +118,7 @@ export function QueuePanel({
                     : "hover:bg-[#fafcff]"
                 }`}
               >
-                <td className="px-6 py-2 font-extrabold tabular-nums">
+                <td className="w-[86px] px-6 py-2 font-extrabold tabular-nums">
                   {patient.time}
                 </td>
                 <td className="px-4 py-2">
@@ -136,7 +129,7 @@ export function QueuePanel({
                     {patient.guardian_name} · {patient.species}
                   </p>
                 </td>
-                <td className="px-4 py-2">
+                <td className="w-[88px] px-4 py-2">
                   <StatusBadge status={patient.triage_status} />
                 </td>
               </tr>
