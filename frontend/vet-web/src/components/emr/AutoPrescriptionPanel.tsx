@@ -1,4 +1,4 @@
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { PetInfo, Prescription } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -6,30 +6,23 @@ export function AutoPrescriptionPanel({
   patient,
   prescriptions,
   isLoading = false,
-  onClose,
-  onApply,
+  onAppendToMemo,
   onOpenPreview,
+  previewErrorMessage = null,
   isReadOnly = false,
 }: {
   patient?: PetInfo;
   prescriptions: Prescription[];
   isLoading?: boolean;
-  onClose: () => void;
-  onApply: () => void;
+  onAppendToMemo: () => void;
   onOpenPreview: () => void;
+  previewErrorMessage?: string | null;
   isReadOnly?: boolean;
 }) {
   return (
-    <Panel className="sticky top-[88px] h-[calc(100vh-104px)] self-start overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4">
-        <h2 className="text-lg font-extrabold text-[#151b28]">자동 처방전</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874]"
-        >
-          <X className="h-5 w-5" />
-        </button>
+    <Panel className="fixed right-4 top-[96px] h-[calc(100vh-112px)] w-[320px] overflow-hidden">
+      <div className="px-5 py-4">
+        <h2 className="text-lg font-extrabold text-[#151b28]">처방전 요약</h2>
       </div>
       <div className="space-y-4 px-5">
         {patient && (
@@ -46,59 +39,58 @@ export function AutoPrescriptionPanel({
           </div>
         ) : prescriptions.length === 0 ? (
           <div className="rounded-lg border border-[#e8edf4] px-4 py-8 text-center text-sm text-[#a8b0bf]">
-            AI 처방 초안이 아직 생성되지 않았습니다.
+            처방전 항목이 아직 없습니다.
             <br />
-            <span className="text-xs">'처방전 자동 생성'을 눌러 초안을 가져오세요.</span>
+            <span className="text-xs">자동 생성하거나 약제를 검색해 추가하세요.</span>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-[#e8edf4]">
-            <table className="w-full text-left">
-              <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
-                <tr>
-                  <th className="w-[38%] px-3 py-3">약제명</th>
-                  <th className="w-[20%] px-2 py-3">형태</th>
-                  <th className="w-[26%] px-2 py-3">용량</th>
-                  <th className="w-[16%] px-2 py-3">기간</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#edf1f6]">
-                {prescriptions.map((prescription) => (
-                  <tr
-                    key={prescription.drug_name}
-                    className="text-xs font-bold text-[#4d5874]"
-                  >
-                    <td className="px-3 py-3 font-extrabold text-[#20283a]">
-                      {prescription.drug_name}
-                    </td>
-                    <td className="px-2 py-3">{prescription.form}</td>
-                    <td className="px-2 py-3">{prescription.dosage?.replace(/체중\s*[\d.]+kg\s*기준\s*/g, "")}</td>
-                    <td className="px-2 py-3">
-                      {prescription.duration_days}일
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="max-h-[calc(100vh-330px)] space-y-2 overflow-y-auto pr-1">
+            {prescriptions.map((prescription, index) => (
+              <div
+                key={prescription.client_id ?? `${prescription.drug_name}-${index}`}
+                className="rounded-lg border border-[#e8edf4] bg-white px-3 py-3"
+              >
+                <p className="break-words text-sm font-extrabold leading-5 text-[#20283a]">
+                  {prescription.drug_name}
+                </p>
+                <div className="mt-2 grid grid-cols-[52px_1fr] gap-x-2 gap-y-1 text-xs font-bold leading-5 text-[#4d5874]">
+                  <span className="text-[#8a94a6]">형태</span>
+                  <span className="break-words">{prescription.form || "-"}</span>
+                  <span className="text-[#8a94a6]">용량</span>
+                  <span className="break-words">
+                    {prescription.dosage?.replace(/체중\s*[\d.]+kg\s*기준\s*/g, "") || "-"}
+                    {prescription.duration_days ? ` / ${prescription.duration_days}일` : ""}
+                  </span>
+                  <span className="text-[#8a94a6]">용법</span>
+                  <span className="break-words">{prescription.frequency || "-"}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
-      <div className="absolute inset-x-0 bottom-0 flex gap-2 border-t border-[#edf1f6] bg-white p-4">
-        <button
-          type="button"
-          onClick={onOpenPreview}
-          disabled={isReadOnly || prescriptions.length === 0}
-          className="h-10 flex-1 rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
-        >
-          미리보기
-        </button>
-        <button
-          type="button"
-          onClick={onApply}
-          disabled={isReadOnly || prescriptions.length === 0}
-          className="h-10 flex-1 rounded-lg border border-[#dfe6f1] bg-white text-sm font-extrabold text-[#4d5874] hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
-        >
-          적용
-        </button>
+      <div className="absolute inset-x-0 bottom-0 border-t border-[#edf1f6] bg-white p-4">
+        {previewErrorMessage && (
+          <p className="mb-2 text-xs font-bold text-red-500">{previewErrorMessage}</p>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onOpenPreview}
+            disabled={isReadOnly}
+            className="h-10 flex-1 rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+          >
+            미리보기
+          </button>
+          <button
+            type="button"
+            onClick={onAppendToMemo}
+            disabled={isReadOnly || prescriptions.length === 0}
+            className="h-10 flex-1 rounded-lg border border-[#dfe6f1] bg-white text-sm font-extrabold text-[#4d5874] hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+          >
+            진료 메모에 추가
+          </button>
+        </div>
       </div>
     </Panel>
   );

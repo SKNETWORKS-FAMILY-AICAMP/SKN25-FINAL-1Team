@@ -1,5 +1,8 @@
-import { PhoneCall, TriangleAlert } from "lucide-react";
+import { PhoneCall, TriangleAlert, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { AuthSession } from "../../api/authApi";
+import { Button } from "../../components/common/Button";
+import { Modal } from "../../components/common/Modal";
 import { AutoPrescriptionPanel } from "../../components/emr/AutoPrescriptionPanel";
 import {
   EditorPanel,
@@ -28,6 +31,8 @@ interface EmrPageProps {
 
 export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps) {
   const {
+    selectedDate,
+    isTodayView,
     queueTab,
     waitingQueue,
     completedQueue,
@@ -36,6 +41,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     uploadedFiles,
     isUploadingFile,
     uploadError,
+    completeVisitError,
     prescriptions,
     isPrescriptionPreviewOpen,
     isProfileEditOpen,
@@ -52,8 +58,11 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     setIsPrescriptionPreviewOpen,
     setIsProfileEditOpen,
     setPreviewImage,
-    autoPrescriptions,
+    handleChangeDate,
+    handleMoveDate,
+    handleGoToday,
     isLoadingAutoPresc,
+    autoPrescriptionError,
     validationResult,
     followupItems,
     handleRefreshQueue,
@@ -63,16 +72,89 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleUploadFile,
     handleRemovePrescription,
     handleUpdatePrescription,
-    handleSavePrescription,
-    handleClearAutoPrescription,
     handleGeneratePrescription,
     handleAddPrescription,
-    handleApplyAutoPrescription,
+    handleAppendPrescriptionToMemo,
     handleResetToWaiting,
     openPreviewImage,
     handlePetInfoSaved,
   } = useEmrData();
-  const isReadOnly = queueTab === "completed";
+  const [prescriptionPreviewError, setPrescriptionPreviewError] = useState<string | null>(null);
+  const [prescriptionPreviewDocument, setPrescriptionPreviewDocument] =
+    useState<ReturnType<typeof createMockPrescriptionDocument> | null>(null);
+  const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = useState(false);
+  const [dismissedAlertMessage, setDismissedAlertMessage] = useState<string | null>(null);
+  const isReadOnly = !isTodayView || queueTab === "completed";
+  const showEditablePanels = isTodayView;
+  const contentGridClass = showEditablePanels
+    ? "grid-cols-[300px_minmax(620px,1fr)_320px]"
+    : "grid-cols-[300px_minmax(620px,1fr)]";
+  const readOnlyMessage = !isTodayView
+    ? "조회 전용 날짜입니다. 기록 수정은 오늘 진료에서만 가능합니다."
+    : queueTab === "completed"
+      ? "진료 완료 기록입니다. 수정하려면 진료 대기로 되돌려야 합니다."
+      : null;
+  const alertMessage = completeVisitError ?? autoPrescriptionError ?? prescriptionPreviewError;
+  const visibleAlertMessage =
+    alertMessage && alertMessage !== dismissedAlertMessage ? alertMessage : null;
+
+  useEffect(() => {
+    if (prescriptions.length > 0) {
+      setPrescriptionPreviewError(null);
+    }
+  }, [prescriptions.length]);
+
+  useEffect(() => {
+    setPrescriptionPreviewError(null);
+    setPrescriptionPreviewDocument(null);
+    setIsCompleteConfirmOpen(false);
+    setDismissedAlertMessage(null);
+  }, [selectedScheduleId]);
+
+  useEffect(() => {
+    if (alertMessage) {
+      setDismissedAlertMessage(null);
+    }
+  }, [alertMessage]);
+
+  const handleOpenPrescriptionPreview = () => {
+    setDismissedAlertMessage(null);
+    setPrescriptionPreviewError(null);
+
+    if (!currentEmr) {
+      setPrescriptionPreviewError("환자 정보를 불러온 뒤 다시 시도해주세요.");
+      return;
+    }
+
+    if (prescriptions.length === 0) {
+      setPrescriptionPreviewError("미리보기할 처방전 초안이 없습니다.");
+      return;
+    }
+
+    try {
+      setPrescriptionPreviewDocument(
+        createMockPrescriptionDocument({
+          pet: currentEmr.pet_info,
+          prescriptions,
+        })
+      );
+      setIsPrescriptionPreviewOpen(true);
+    } catch (err) {
+      console.error("[PrescriptionPreview] open failed:", err);
+      setPrescriptionPreviewError("미리보기할 처방전 초안이 없습니다.");
+    }
+  };
+
+  const handleConfirmCompleteVisit = async () => {
+    setIsCompleteConfirmOpen(false);
+    setDismissedAlertMessage(null);
+    await handleCompleteVisit();
+  };
+
+  const handleGeneratePrescriptionClick = () => {
+    setDismissedAlertMessage(null);
+    handleGeneratePrescription();
+  };
 
   return (
     <AppLayout
@@ -84,8 +166,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       onNavigate={onNavigate}
     >
       <div className="min-h-[calc(100vh-160px)]">
-        <div className="grid grid-cols-[300px_minmax(620px,1fr)_320px] gap-4">
-          <aside className="sticky top-[112px] grid h-[calc(100vh-160px)] grid-rows-[320px_minmax(0,1fr)] gap-3 overflow-hidden">
+        <div className={`grid ${contentGridClass} items-start gap-4`}>
+          <aside className="sticky top-[96px] grid h-[calc(100vh-160px)] grid-rows-[370px_minmax(0,1fr)] gap-3 overflow-hidden self-start">
             <QueuePanel
               title={queueTitle}
               activeTab={queueTab}
@@ -94,9 +176,14 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
               lastRefreshText={lastRefreshText}
               waitingCount={waitingQueue.length}
               completedCount={completedQueue.length}
+              selectedDate={selectedDate}
+              isTodayView={isTodayView}
               onChangeTab={handleChangeTab}
               onSelectPatient={setSelectedScheduleId}
               onRefresh={handleRefreshQueue}
+              onChangeDate={handleChangeDate}
+              onMoveDate={handleMoveDate}
+              onGoToday={handleGoToday}
             />
 
             {currentEmr && (
@@ -135,13 +222,22 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           </aside>
 
           <main className="space-y-4">
+            {visibleAlertMessage && (
+              <EmrAlertBanner
+                message={visibleAlertMessage}
+                onClose={() => setDismissedAlertMessage(visibleAlertMessage)}
+              />
+            )}
             {currentEmr ? (
               <>
                 <PatientInfoPanel
                   patient={currentEmr.pet_info}
-                  onEdit={() => setIsProfileEditOpen(true)}
+                  onEdit={() => {
+                    if (isTodayView) setIsProfileEditOpen(true);
+                  }}
                   isReadOnly={isReadOnly}
                 />
+                {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
                 <HistoryPanel histories={currentEmr.emr_history} />
                 {followupItems.length > 0 && (
                   <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-sm">
@@ -192,7 +288,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             ) : (
               <EmptyPatientPanel />
             )}
-            {isReadOnly && currentEmr && (
+            {isTodayView && queueTab === "completed" && currentEmr && (
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -203,51 +299,104 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 </button>
               </div>
             )}
-            <EditorPanel
-              value={editorValue}
-              count={editorValue.length}
-              onChange={setEditorValue}
-              onCompleteVisit={handleCompleteVisit}
-              isReadOnly={isReadOnly}
-            />
-            <PhotoUploadPanel
-              files={uploadedFiles}
-              onUploadFile={handleUploadFile}
-              onRemoveFile={handleRemoveFile}
-              onPreviewImage={openPreviewImage}
-              isUploading={isUploadingFile}
-              uploadError={uploadError}
-              isReadOnly={isReadOnly}
-            />
-            <PrescriptionInputPanel
-              prescriptions={prescriptions}
-              onRemove={handleRemovePrescription}
-              onUpdate={handleUpdatePrescription}
-              onSave={handleSavePrescription}
-              onAdd={handleAddPrescription}
-              onGenerate={handleGeneratePrescription}
-              accessToken={session.accessToken}
-              isReadOnly={isReadOnly}
-            />
+            {showEditablePanels && (
+              <>
+                <EditorPanel
+                  value={editorValue}
+                  count={editorValue.length}
+                  onChange={setEditorValue}
+                  onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
+                  errorMessage={completeVisitError}
+                  isReadOnly={isReadOnly}
+                />
+                <PhotoUploadPanel
+                  files={uploadedFiles}
+                  onUploadFile={handleUploadFile}
+                  onRemoveFile={handleRemoveFile}
+                  onPreviewImage={openPreviewImage}
+                  isUploading={isUploadingFile}
+                  uploadError={uploadError}
+                  isReadOnly={isReadOnly}
+                />
+                <PrescriptionInputPanel
+                  prescriptions={prescriptions}
+                  onRemove={handleRemovePrescription}
+                  onUpdate={handleUpdatePrescription}
+                  onAdd={handleAddPrescription}
+                  onGenerate={handleGeneratePrescriptionClick}
+                  accessToken={session.accessToken}
+                  errorMessage={autoPrescriptionError}
+                  isReadOnly={isReadOnly}
+                />
+              </>
+            )}
           </main>
 
-          <AutoPrescriptionPanel
-            patient={currentEmr?.pet_info}
-            prescriptions={autoPrescriptions}
-            isLoading={isLoadingAutoPresc}
-            onClose={handleClearAutoPrescription}
-            onApply={handleApplyAutoPrescription}
-            onOpenPreview={() => setIsPrescriptionPreviewOpen(true)}
-            isReadOnly={isReadOnly}
-          />
+          {showEditablePanels && (
+            <AutoPrescriptionPanel
+              patient={currentEmr?.pet_info}
+              prescriptions={prescriptions}
+              isLoading={isLoadingAutoPresc}
+              onAppendToMemo={handleAppendPrescriptionToMemo}
+              onOpenPreview={handleOpenPrescriptionPreview}
+              previewErrorMessage={prescriptionPreviewError}
+              isReadOnly={isReadOnly}
+            />
+          )}
         </div>
 
-        {currentEmr && isProfileEditOpen && (
+        {currentEmr && isProfileEditOpen && isTodayView && (
           <ProfileEditModal
             patient={currentEmr.pet_info}
             onClose={() => setIsProfileEditOpen(false)}
             onSaved={handlePetInfoSaved}
           />
+        )}
+
+        {currentEmr && isCompleteConfirmOpen && (
+          <Modal
+            title="진료를 완료하시겠습니까?"
+            onClose={() => setIsCompleteConfirmOpen(false)}
+            maxWidthClassName="max-w-[520px]"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setIsCompleteConfirmOpen(false)}>
+                  취소
+                </Button>
+                <Button variant="primary" onClick={handleConfirmCompleteVisit}>
+                  진료 완료
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+                <p className="text-sm font-extrabold text-[#151b28]">
+                  {currentEmr.pet_info.pet_name}의 오늘 진료를 완료 처리합니다.
+                </p>
+                <p className="mt-1 text-xs font-bold text-[#697386]">
+                  완료 후 환자는 진료 완료 탭으로 이동합니다.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg border border-[#e8edf4] px-4 py-3">
+                  <p className="text-xs font-bold text-[#8a94a6]">처방 항목</p>
+                  <p className="mt-1 text-lg font-extrabold text-[#151b28]">
+                    {prescriptions.length}개
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[#e8edf4] px-4 py-3">
+                  <p className="text-xs font-bold text-[#8a94a6]">첨부 파일</p>
+                  <p className="mt-1 text-lg font-extrabold text-[#151b28]">
+                    {uploadedFiles.length}개
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs font-bold leading-5 text-[#8a94a6]">
+                처방전과 첨부 파일은 현재 입력된 내용 기준으로 함께 저장됩니다.
+              </p>
+            </div>
+          </Modal>
         )}
 
         {previewImage && (
@@ -257,16 +406,50 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           />
         )}
 
-        {currentEmr && isPrescriptionPreviewOpen && (
+        {prescriptionPreviewDocument && isPrescriptionPreviewOpen && (
           <PrescriptionPreviewModal
-            document={createMockPrescriptionDocument({
-              pet: currentEmr.pet_info,
-              prescriptions: autoPrescriptions,
-            })}
-            onClose={() => setIsPrescriptionPreviewOpen(false)}
+            document={prescriptionPreviewDocument}
+            onClose={() => {
+              setIsPrescriptionPreviewOpen(false);
+              setPrescriptionPreviewDocument(null);
+            }}
           />
         )}
       </div>
     </AppLayout>
+  );
+}
+
+function ReadOnlyBadge({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-[#dfe6f1] bg-[#f8fafc] px-4 py-3 text-sm font-extrabold text-[#59657a]">
+      <TriangleAlert className="h-4 w-4 text-[#64748b]" strokeWidth={2.2} />
+      {message}
+    </div>
+  );
+}
+
+function EmrAlertBanner({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-sm">
+      <div className="flex items-start gap-2">
+        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+        <span>{message}</span>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="shrink-0 rounded-md p-1 text-red-500 hover:bg-red-100"
+        aria-label="알림 닫기"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
