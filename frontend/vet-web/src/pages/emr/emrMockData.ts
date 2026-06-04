@@ -25,12 +25,21 @@ const prescriptionProductInfo: Record<
 export function createMockPrescriptionDocument(params: {
   pet: PetInfo;
   prescriptions: Prescription[];
+  doctorName: string;
+  hospitalName: string;
+  ownerName: string;
+  queuePosition: number;
 }): PrescriptionDocumentResponse {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+
   return {
     code: 200,
     result: {
-      issued_at: "2024년 05월 20일",
-      issue_number: "2024-0520-001",
+      issued_at: `${yyyy}년 ${mm}월 ${dd}일`,
+      issue_number: `${yyyy}${mm}${dd}-${String(params.queuePosition).padStart(3, "0")}`,
       valid_days: 7,
       pet: {
         name: params.pet.pet_name,
@@ -41,18 +50,18 @@ export function createMockPrescriptionDocument(params: {
             ? "개"
             : params.pet.species,
         gender: `${params.pet.gender === "Female" ? "암" : "수"} / ${params.pet.age}살 / ${params.pet.weight_kg}kg / 임신 여부 해당없음`,
-        owner_name: "김수이",
+        owner_name: params.ownerName,
         birth_date: params.pet.birth_date.replace(/\./g, "-"),
       },
       hospital: {
-        name: "medipaw 동물병원",
-        phone: "02-1234-5678",
-        business_number: "123-45-67890",
-        address: "마릿수: 총 1마리",
+        name: params.hospitalName,
+        phone: "-",
+        business_number: "-",
+        address: "",
       },
       doctor: {
-        name: "김수의",
-        license_number: "12345",
+        name: params.doctorName,
+        license_number: "-",
       },
       prescriptions: params.prescriptions.map((prescription) => {
         const productInfo = prescriptionProductInfo[prescription.drug_name] ?? {
@@ -67,6 +76,7 @@ export function createMockPrescriptionDocument(params: {
           duration_days: prescription.duration_days,
           quantity: productInfo.quantity,
           product_name: productInfo.product_name,
+          pil_seon: prescription.pil_seon ?? "",
         };
       }),
     },

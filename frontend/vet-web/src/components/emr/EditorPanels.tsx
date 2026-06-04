@@ -405,11 +405,12 @@ export function PrescriptionInputPanel({
           <table className="w-full table-fixed text-left">
             <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
               <tr>
-                <th className="w-[28%] px-4 py-3">약제명</th>
-                <th className="w-[16%] px-3 py-3">형태</th>
-                <th className="w-[18%] px-3 py-3">용량</th>
-                <th className="w-[20%] px-3 py-3">용법</th>
+                <th className="w-[24%] px-4 py-3">약제명</th>
+                <th className="w-[14%] px-3 py-3">형태</th>
+                <th className="w-[16%] px-3 py-3">용량</th>
+                <th className="w-[18%] px-3 py-3">용법</th>
                 <th className="w-[10%] px-3 py-3">기간</th>
+                <th className="w-[10%] px-3 py-3 text-center">필수</th>
                 <th className="w-[8%] px-3 py-3">삭제</th>
               </tr>
             </thead>
@@ -417,7 +418,7 @@ export function PrescriptionInputPanel({
               {prescriptions.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-9 text-center text-sm font-bold text-[#8a94a6]"
                   >
                     검색을 통해 약을 추가해주세요.
@@ -426,6 +427,7 @@ export function PrescriptionInputPanel({
               ) : (
                 prescriptions.map((prescription, index) => {
                   const clientId = prescription.client_id ?? `${prescription.drug_name}-${index}`;
+                  const pilSeon = prescription.pil_seon ?? "";
                   return (
                   <tr
                     key={clientId}
@@ -467,6 +469,22 @@ export function PrescriptionInputPanel({
                         onChange={(v) => onUpdate?.(clientId, "duration_days", v)}
                         isReadOnly={isReadOnly}
                       />
+                    </td>
+                    <td className="px-2 py-2">
+                      {isReadOnly ? (
+                        <span className="block text-center text-sm text-[#4d5874]">{pilSeon || "선"}</span>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={pilSeon === "필"}
+                            onChange={() =>
+                              onUpdate?.(clientId, "pil_seon", pilSeon === "필" ? "선" : "필")
+                            }
+                            className="h-3.5 w-3.5 cursor-pointer accent-[#2563eb]"
+                          />
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <button

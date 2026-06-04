@@ -162,10 +162,23 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     }
 
     try {
+      const allQueue = [...waitingQueue, ...completedQueue].sort((a, b) =>
+        a.time.localeCompare(b.time)
+      );
+      const selectedPatient = allQueue.find(
+        (q) => q.schedule_id === selectedScheduleId
+      );
+      const queuePosition =
+        allQueue.findIndex((q) => q.schedule_id === selectedScheduleId) + 1 || 1;
+
       setPrescriptionPreviewDocument(
         createMockPrescriptionDocument({
           pet: currentEmr.pet_info,
           prescriptions,
+          doctorName: session.user.name,
+          hospitalName: session.user.hospitalName,
+          ownerName: selectedPatient?.guardian_name ?? "",
+          queuePosition,
         })
       );
       setIsPrescriptionPreviewOpen(true);

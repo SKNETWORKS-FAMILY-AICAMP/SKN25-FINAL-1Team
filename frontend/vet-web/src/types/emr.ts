@@ -47,6 +47,7 @@ export interface Prescription {
   form: string;
   frequency: string;
   duration_days: number;
+  pil_seon?: "필" | "선" | "";
 }
 
 export interface PrescriptionDocumentResponse {
@@ -79,6 +80,7 @@ export interface PrescriptionDocumentResponse {
       duration_days: number;
       quantity: string;
       product_name: string;
+      pil_seon?: "필" | "선" | "";
     }>;
   };
 }
