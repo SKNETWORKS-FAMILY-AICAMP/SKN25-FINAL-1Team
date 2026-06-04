@@ -110,6 +110,7 @@ async def run_chart(
         system,
         model="gpt-4o",
         max_tokens=1800,
+        agent="chart",
     )
 
     update_step("최종 차트 생성 중...")

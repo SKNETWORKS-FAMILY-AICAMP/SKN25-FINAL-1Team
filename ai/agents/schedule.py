@@ -129,7 +129,7 @@ async def run_schedule(
     update_step("진료 시간 계산 중...")
     try:
         system = build_schedule_prompt(pet, triage_result, patient_context)
-        result = await call_openai_once("최적 진료 일정을 결정해주세요.", system, max_tokens=800)
+        result = await call_openai_once("최적 진료 일정을 결정해주세요.", system, max_tokens=800, agent="schedule")
         if result.get("slot_window") and result.get("estimated_duration_min"):
             schedule_res = result
         else:

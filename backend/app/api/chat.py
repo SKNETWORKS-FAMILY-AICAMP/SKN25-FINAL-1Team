@@ -1,29 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import asyncio
-<<<<<<< Updated upstream
-=======
 import logging
 import uuid
 import base64
 from datetime import date
 from langchain_openai import ChatOpenAI
 from ai.observability import get_langfuse_handler
->>>>>>> Stashed changes
 from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatMessageRequest
-from app.crud.chat import create_chat_session, get_chat_session, get_chat_sessions_by_petid, add_message, delete_chat_session
+from app.crud.chat import (
+    create_chat_session, get_chat_session, get_chat_sessions_by_petid,
+    add_message, delete_chat_session, update_session_complete,
+    create_triage_guardian, update_session_emrid, update_guardian_category,
+)
 from app.core.dependencies import get_current_user
+from app.core.config import settings
 from app.models.pet import Pet
-from app.models.followup import Followup
+from app.models.triage_result import TriageResult
 from app.models.schedule import Schedule
+from app.crud.triage import build_triage_result
+from app.prompts.triage_prompt import _build_triage_system_prompt
+from ai.tasks import RUNNERS, _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-<<<<<<< Updated upstream
-=======
 logger = logging.getLogger(__name__)
 
 
@@ -201,10 +204,10 @@ async def _describe_chat_photo(image_url: str, user_text: str) -> dict | None:
                     ],
                 },
             ],
-            config={"callbacks": [get_langfuse_handler()]},
+            config={"run_name": "vision_chat", "callbacks": [get_langfuse_handler()]},
         )
         raw = response.content if isinstance(response.content, str) else "{}"
-        parsed = json.loads(raw)
+        parsed = json.loads(raw or "{}")
         logger.info("[Vision/Chat] visual observation=%s", parsed)
         return parsed
     except Exception as exc:
@@ -253,37 +256,31 @@ async def _run_schedule_background(
             name=f"cleanup:{task_id}",
         )
 
->>>>>>> Stashed changes
 
 # 챗봇 세션 시작
 @router.post("/sessions", status_code=201)
 async def start_chat_session(
     request: ChatSessionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
-    # 반려동물 확인
     result = await db.execute(
-        select(Pet).where(
-            Pet.petid == request.pet_id,
-            Pet.userid == current_user.userid
-        )
+        select(Pet).where(Pet.petid == request.pet_id, Pet.userid == current_user.userid)
     )
     pet = result.scalar_one_or_none()
-
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
     session = await create_chat_session(db, current_user.userid, request.pet_id)
-
     return {
         "code": 201,
         "result": {
             "session_id": session.id,
             "pet_name": pet.petname,
-            "profile_image": pet.profile_image
-        }
+            "profile_image": pet.profile_image,
+        },
     }
+
 
 # 챗봇 메시지 전송 (SSE 스트리밍)
 @router.post("/sessions/{session_id}/messages")
@@ -291,36 +288,59 @@ async def send_message(
     session_id: int,
     request: ChatMessageRequest,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
-    if not request.content:
+    if not request.content and not request.image_url:
         raise HTTPException(status_code=400, detail="메시지를 입력해주세요.")
 
     session = await get_chat_session(db, session_id, current_user.userid)
     if not session:
         raise HTTPException(status_code=404, detail="상담 세션을 찾을 수 없습니다.")
 
-    # 보호자 메시지 저장
-    await add_message(db, session, "user", request.content, request.image_url)
+    pet_result = await db.execute(select(Pet).where(Pet.petid == session.petid))
+    pet = pet_result.scalar_one_or_none()
+    if not pet:
+        raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
-    # AI 응답 미리 생성
-    test_response = "안녕하세요! 반려동물의 증상에 대해 말씀해 주세요."
+    photo_analysis = None
+    if request.image_url:
+        photo_analysis = await _analyze_chat_photo(request.image_url, request.content)
+        visual_observation = await _describe_chat_photo(request.image_url, request.content)
+        if visual_observation:
+            photo_analysis = photo_analysis or {}
+            photo_analysis["visual_observation"] = visual_observation
 
-    # AI 응답 먼저 DB에 저장
-    await add_message(db, session, "assistant", test_response)
+    await add_message(db, session, "user", request.content, request.image_url, photo_analysis=photo_analysis)
+
+    from app.crud.patient import build_patient_context
+    
+    patient_context_data = await build_patient_context(db, session.petid)
+    emr_history = patient_context_data["patient_context"]["emr_history"] # For backward compatibility with Triage prompt until we update it
+
+    openai_messages = [
+        _message_for_openai(m)
+        for m in (session.messages or [])
+        if m.get("role") in ("user", "assistant") and _message_content_for_openai(m)
+    ]
+
+    turn_count = sum(1 for m in openai_messages if m["role"] == "assistant")
+    force_complete = turn_count >= 4
+
+    system_prompt = _build_triage_system_prompt(pet, patient_context=patient_context_data, force_complete=force_complete)
+
+    # event_stream 클로저에서 사용할 반려동물 정보 딕셔너리
+    pet_age = (date.today().year - pet.birth_date.year) if pet.birth_date else None
+    pet_payload = {
+        "name": pet.petname,
+        "species": pet.species or "dog",
+        "breed": pet.breed or "알 수 없음",
+        "age": pet_age,
+        "gender": pet.gender,
+        "weight": float(pet.weight_kg) if pet.weight_kg else None,
+    }
 
     async def event_stream():
         try:
-<<<<<<< Updated upstream
-            # 텍스트 스트리밍
-            for char in test_response:
-                yield f"data: {json.dumps({'type': 'message', 'content': char}, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(0.05)
-
-            # 빠른 선택 버튼
-            quick_replies = ["구토가 있어요", "식욕이 없어요", "기침을 해요", "피부가 가려워요"]
-            yield f"data: {json.dumps({'type': 'quick_replies', 'options': quick_replies}, ensure_ascii=False)}\n\n"
-=======
             # GPT-5 계열은 max_tokens 미지원(max_completion_tokens 사용) + 추론 토큰을
             # 출력 예산에서 함께 소모하므로 넉넉히 둔다. gpt-4o 계열도 동일 파라미터 허용.
             # LangChain 구버전의 자동 max_tokens 매핑을 우회하려 model_kwargs 로 직접 전달.
@@ -340,7 +360,7 @@ async def send_message(
                 try:
                     response = await llm.ainvoke(
                         [{"role": "system", "content": system_prompt}] + openai_messages,
-                        config={"callbacks": [get_langfuse_handler()]},
+                        config={"run_name": "triage", "callbacks": [get_langfuse_handler()]},
                     )
                     break
                 except Exception as oa_exc:
@@ -438,22 +458,21 @@ async def send_message(
             else:
                 if collected_info:
                     yield f"data: {json.dumps({'type': 'triage_complete', 'data': _guardian_safe_triage(collected_info)}, ensure_ascii=False)}\n\n"
->>>>>>> Stashed changes
 
-            # 완료
             yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+            # 내부 예외 메시지를 그대로 노출하지 않고 사용자 친화적 안내로 대체한다.
+            logger.error(f"[Chat] event_stream 실패 session_id={session_id}: {e}", exc_info=True)
+            friendly = "일시적인 오류로 답변을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+            yield f"data: {json.dumps({'type': 'error', 'message': friendly}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no"
-        }
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
 
 # 이미지 업로드 URL 발급
 @router.get("/upload/presigned-url")
@@ -461,41 +480,59 @@ async def get_presigned_url(
     file_name: str = Query(...),
     content_type: str = Query(...),
     file_size: int = Query(...),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
-    # 파일 형식 확인
     allowed_types = ["image/jpeg", "image/png", "video/mp4"]
     if content_type not in allowed_types:
-        raise HTTPException(
-            status_code=400,
-            detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다."
-        )
+        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.")
 
-    # 파일 크기 확인 (5MB)
     if file_size > 5 * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail="파일 크기는 5MB 이하만 업로드 가능합니다."
-        )
+        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
 
-    # TODO: AWS S3 Presigned URL 발급 예정
-    return {
-        "code": 200,
-        "result": {
-            "presigned_url": "https://s3.amazonaws.com/temp",
-            "cloudfront_url": "https://cloudfront-url/temp"
-        }
-    }
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import create_presigned_put
+
+    try:
+        result = create_presigned_put(file_name, content_type, prefix="chat")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
+
+
+@router.post("/upload/file")
+async def upload_chat_file(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+):
+    allowed_types = ["image/jpeg", "image/png", "video/mp4"]
+    content_type = file.content_type or "application/octet-stream"
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.")
+
+    body = await file.read()
+    if len(body) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
+
+    from botocore.exceptions import NoCredentialsError
+
+    from app.utils.s3 import upload_object
+
+    try:
+        result = upload_object(file.filename or "attachment", content_type, body, prefix="chat")
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    return {"code": 200, "result": result}
+
 
 # 상담 기록 목록 조회
 @router.get("/sessions")
 async def get_chat_sessions(
     pet_id: int = Query(...),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     sessions = await get_chat_sessions_by_petid(db, current_user.userid, pet_id)
-
     return {
         "code": 200,
         "result": [
@@ -503,45 +540,66 @@ async def get_chat_sessions(
                 "session_id": session.id,
                 "keywords": session.keywords or [],
                 "created_at": str(session.created_at.date()),
-                "status": "진료완료" if session.is_complete else "상담중"
+                "status": "진료완료" if session.is_complete else "상담중",
             }
             for session in sessions
-        ]
+        ],
     }
+
 
 # 특정 세션 상세 조회
 @router.get("/sessions/{session_id}")
 async def get_chat_session_detail(
     session_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     session = await get_chat_session(db, session_id, current_user.userid)
-
     if not session:
         raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
+
+    can_followup = False
+    emrid = session.emrid
+    if emrid is not None:
+        from datetime import datetime, timezone
+        triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
+        triage = triage_row.scalar_one_or_none()
+        schedule_row = await db.execute(
+            select(Schedule).where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
+        )
+        schedule = schedule_row.scalar_one_or_none()
+        need_followup = bool(triage and triage.urgency_level_num is not None and triage.urgency_level_num <= 2)
+        appointment_not_passed = True
+        if schedule and schedule.confirmed_time:
+            confirmed = schedule.confirmed_time
+            if confirmed.tzinfo is None:
+                confirmed = confirmed.replace(tzinfo=timezone.utc)
+            appointment_not_passed = datetime.now(timezone.utc) <= confirmed
+        can_followup = bool(need_followup and schedule and schedule.status != "COMPLETED" and appointment_not_passed)
 
     return {
         "code": 200,
         "result": {
             "session_id": session.id,
             "pet_id": session.petid,
+            "emrid": emrid,
             "messages": session.messages or [],
             "keywords": session.keywords or [],
             "is_complete": session.is_complete,
-            "created_at": str(session.created_at)
-        }
+            "can_followup": can_followup,
+            "created_at": str(session.created_at),
+        },
     }
+
 
 # 상담 기록 삭제
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     session = await get_chat_session(db, session_id, current_user.userid)
-
     if not session:
         raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
 
@@ -549,5 +607,4 @@ async def delete_session(
         raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
 
     await delete_chat_session(db, session)
-
     return {"code": 200, "message": "상담 기록이 삭제되었습니다."}

@@ -65,6 +65,7 @@ async def call_openai(
     max_tokens: int = 1200,
     json_mode: bool = True,
     temperature: float = 0.3,
+    agent: str = "unknown",
 ) -> dict | str:
     """LangChain ChatOpenAI 비동기 호출.
 
@@ -72,6 +73,7 @@ async def call_openai(
     - json_mode=True면 파싱된 dict를 반환한다.
     - 모든 시도가 실패하면 마지막 예외를 raise → 호출부(에이전트 러너)가
       격리/로깅하도록 둔다. (상위에서 fallback 처리)
+    - agent: Langfuse 트레이스 이름(run_name)으로 쓰여 에이전트별 구분이 된다.
     """
     client = _get_client(model, temperature, max_tokens, json_mode)
     lc_messages = [{"role": "system", "content": system}, *messages]
@@ -80,7 +82,8 @@ async def call_openai(
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             response = await client.ainvoke(
-                lc_messages, config={"callbacks": [get_langfuse_handler()]}
+                lc_messages,
+                config={"run_name": agent, "callbacks": [get_langfuse_handler()]},
             )
             text = response.content if isinstance(response.content, str) else str(response.content)
             return _parse_json(text) if json_mode else text
@@ -102,6 +105,7 @@ async def call_openai_once(
     model: str = "gpt-4o-mini",
     max_tokens: int = 1200,
     json_mode: bool = True,
+    agent: str = "unknown",
 ) -> dict | str:
     return await call_openai(
         [{"role": "user", "content": user_prompt}],
@@ -109,4 +113,5 @@ async def call_openai_once(
         model=model,
         max_tokens=max_tokens,
         json_mode=json_mode,
+        agent=agent,
     )

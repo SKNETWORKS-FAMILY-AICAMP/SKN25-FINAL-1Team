@@ -101,7 +101,7 @@ async def run_followup(
     MAX_TURNS = 6
     trimmed = messages[-MAX_TURNS:] if len(messages) > MAX_TURNS else messages
 
-    result = await call_openai(trimmed, system, model="gpt-4o-mini", max_tokens=800)
+    result = await call_openai(trimmed, system, model="gpt-4o-mini", max_tokens=800, agent="followup")
 
     if not result.get("medical_summary") and result.get("followup_summary"):
         result["medical_summary"] = result["followup_summary"]

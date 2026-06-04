@@ -96,7 +96,7 @@ async def run_triage(
     system = build_triage_prompt(pet, rules, emr_history)
 
     update_step("응급도 분류 중...")
-    result = await call_openai(messages, system, model="gpt-4o-mini", max_tokens=2000)
+    result = await call_openai(messages, system, model="gpt-4o-mini", max_tokens=2000, agent="triage")
 
     # LLM 출력 방어: 완료된 문진의 응급도 필드를 안전 범위로 보정
     if isinstance(result, dict) and result.get("collected_info"):
