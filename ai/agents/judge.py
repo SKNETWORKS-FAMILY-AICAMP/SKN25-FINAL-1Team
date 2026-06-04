@@ -96,6 +96,7 @@ async def run_judge(
             build_judge_prompt(triage_result, chat_history),
             model="gpt-4o-mini",
             max_tokens=800,
+            agent="judge",
         )
         if not isinstance(result, dict):
             result = {}

@@ -307,7 +307,7 @@ async def generate_auto_prescription(
             },
             {"role": "user", "content": prompt},
         ],
-        config={"callbacks": [get_langfuse_handler()]},
+        config={"run_name": "emr_medication", "callbacks": [get_langfuse_handler()]},
     )
 
     data = json.loads(response.content if isinstance(response.content, str) else "{}")
