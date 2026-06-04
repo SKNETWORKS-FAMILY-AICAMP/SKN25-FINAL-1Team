@@ -5,6 +5,7 @@ import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse } from "luc
 
 import { loginGuardian } from "../../api/auth-api";
 import { useAuthStore } from "../../stores/auth-store";
+import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface LoginFormState {
   loginid: string;
@@ -131,15 +132,10 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-            M
-          </span>
-          <div>
-            <p className="text-base font-bold text-blue-700 sm:text-lg">MediPaw</p>
-            <p className="hidden text-xs font-semibold text-slate-500 sm:block">
-              보호자 반려동물 상담 및 예약 보조 서비스
-            </p>
-          </div>
+          <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
+          <p className="hidden text-xs font-semibold text-slate-500 sm:block">
+            보호자 반려동물 상담 및 예약 보조 서비스
+          </p>
         </Link>
 
         <Link
@@ -150,7 +146,7 @@ const LoginPage = () => {
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
         <section className="space-y-5">
           <div>
             <p className="text-sm font-bold text-blue-600">MediPaw guardian service</p>
@@ -160,8 +156,7 @@ const LoginPage = () => {
               우리 아이의 건강을 지켜주세요
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              AI 챗봇 상담으로 문제를 정리하고, 보호자의 더 쉬운 반려생활을
-              도와드립니다.
+              AI 챗봇 상담으로 증상에 맞는 진료 예약을 도와드립니다.
             </p>
           </div>
 
@@ -169,7 +164,7 @@ const LoginPage = () => {
             {serviceItems.map((item) => (
               <article
                 key={item.title}
-                className="flex gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm shadow-blue-100/60"
+                className="flex gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
                   <item.icon className="h-5 w-5" />
@@ -185,12 +180,9 @@ const LoginPage = () => {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-xl shadow-blue-100/70 sm:p-6">
+        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6">
           <div className="mb-4 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-600">
-              M
-            </div>
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">로그인</h2>
+            <h2 className="text-2xl font-bold text-slate-950">로그인</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
               MediPaw 계정으로 로그인해주세요.
             </p>
@@ -272,7 +264,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
             >
               {isSubmitting ? "로그인 중..." : "로그인"}
             </button>
@@ -294,8 +286,8 @@ const LoginPage = () => {
       </main>
 
       <footer className="mx-auto flex w-full max-w-5xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>고객센터 02-123-4567 · support@medipaw.kr · 평일 09:00 - 18:00</p>
-        <p>© 2024 MediPaw. All rights reserved.</p>
+        <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
+        <p>© 2026 MediPaw. All rights reserved.</p>
       </footer>
     </div>
   );
