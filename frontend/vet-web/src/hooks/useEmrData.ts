@@ -399,17 +399,6 @@ export function useEmrData() {
     }
   }, [selectedScheduleId, completedQueue, waitingQueue, accessToken, isTodayView]);
 
-  const handleAppendPrescriptionToMemo = useCallback(() => {
-    if (!isTodayView || prescriptions.length === 0) return;
-    const text = [
-      "[처방전]",
-      ...prescriptions.map(
-        (p) => `- ${p.drug_name} / ${p.form} / ${p.dosage} / ${p.frequency} / ${p.duration_days}일`
-      ),
-    ].join("\n");
-    setEditorValue((prev: string) => [prev, text].filter(Boolean).join("\n\n"));
-  }, [isTodayView, prescriptions]);
-
   const handleGeneratePrescription = useCallback(async () => {
     if (!isTodayView || selectedScheduleId === undefined) return;
     setAutoPrescriptionError(null);
@@ -515,7 +504,6 @@ export function useEmrData() {
     handleClearAutoPrescription,
     handleGeneratePrescription,
     handleAddPrescription,
-    handleAppendPrescriptionToMemo,
     handleResetToWaiting,
     openPreviewImage,
     handlePetInfoSaved,
