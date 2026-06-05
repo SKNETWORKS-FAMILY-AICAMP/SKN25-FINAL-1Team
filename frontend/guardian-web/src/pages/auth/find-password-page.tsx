@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
+import { Info } from "lucide-react";
 
 import { findGuardianPassword } from "../../api/auth-api";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
@@ -30,6 +31,20 @@ const inputClassName = (hasError: boolean) =>
       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100",
   ].join(" ");
 
+const formatPhoneNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.length < 4) {
+    return digits;
+  }
+
+  if (digits.length < 8) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+};
+
 const FindPasswordPage = () => {
   const [form, setForm] = useState<FindPasswordFormState>(initialFormState);
   const [temporaryPassword, setTemporaryPassword] = useState("");
@@ -40,9 +55,14 @@ const FindPasswordPage = () => {
   const handleChange =
     (field: keyof FindPasswordFormState) =>
     (event: ChangeEvent<HTMLInputElement>) => {
+      const value =
+        field === "phone"
+          ? formatPhoneNumber(event.target.value)
+          : event.target.value;
+
       setForm((current) => ({
         ...current,
-        [field]: event.target.value,
+        [field]: value,
       }));
       setTemporaryPassword("");
       setSuccessMessage("");
@@ -116,27 +136,27 @@ const FindPasswordPage = () => {
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
         <section className="space-y-5">
           <div>
-            <h1 className="text-3xl font-bold leading-tight text-slate-950">
+            <h1 className="text-4xl font-bold leading-tight text-slate-950">
               비밀번호 찾기
             </h1>
-            <p className="mt-4 text-sm leading-6 text-slate-600">
-              가입 시 등록한 ID, 이름, 전화번호를 입력하면 임시 비밀번호를
-              발급받을 수 있습니다. 발급 후 로그인하여 비밀번호를 변경해주세요.
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              ID와 이름, 전화번호로
+              <br />
+              임시 비밀번호를 발급받을 수 있습니다.
             </p>
           </div>
 
           <div className="rounded-2xl border border-blue-100 bg-white/80 p-5">
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
-                i
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <Info className="h-5 w-5" aria-hidden />
               </span>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">안내사항</h2>
-                <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-600">
-                  <li>가입 시 등록한 ID, 이름, 전화번호를 입력해주세요.</li>
+                <h2 className="text-lg font-bold text-slate-900">안내사항</h2>
+                <ul className="mt-2 space-y-2 text-base leading-7 text-slate-600">
                   <li>정보가 일치하면 임시 비밀번호가 발급됩니다.</li>
                   <li>임시 비밀번호로 로그인한 뒤 새 비밀번호로 변경해주세요.</li>
                 </ul>
@@ -145,7 +165,7 @@ const FindPasswordPage = () => {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6">
+        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
           <div className="mb-4 text-center">
             <h2 className="text-2xl font-bold text-slate-950">비밀번호 찾기</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">

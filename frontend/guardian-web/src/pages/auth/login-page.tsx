@@ -197,7 +197,7 @@ const LoginPage = () => {
               <label className="text-sm font-bold text-slate-800" htmlFor="password">
                 비밀번호
               </label>
-              <div className="relative">
+              <div className="relative mt-2">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -208,7 +208,7 @@ const LoginPage = () => {
                   aria-invalid={Boolean(errorMessage && !form.password)}
                   className={`${inputClassName(
                     Boolean(errorMessage && !form.password),
-                  )} pr-11`}
+                  ).replace("mt-2 ", "")} pr-11`}
                 />
                 <button
                   type="button"
