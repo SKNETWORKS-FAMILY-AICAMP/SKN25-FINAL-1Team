@@ -212,6 +212,7 @@ async def get_emr_detail(db: AsyncSession, schedule_id: int):
             "notes": pet.notes or "",
             "profile_image": pet.profile_image or "",
             "last_visit": last_visit,
+            "checkup_date": pet.checkup_date.isoformat() if pet.checkup_date else "",
         },
         "triage_summary": {
             "summary": summary,

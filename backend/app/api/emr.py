@@ -408,6 +408,9 @@ from typing import Optional as _Optional
 class PetUpdateByDoctor(_BaseModel):
     weight_kg: _Optional[float] = None
     notes: _Optional[str] = None
+    gender: _Optional[str] = None
+    birth_date: _Optional[date] = None
+    checkup_date: _Optional[date] = None
 
 
 @router.patch("/pet/{pet_id}", status_code=200)
@@ -428,6 +431,12 @@ async def update_pet_by_doctor(
         pet.weight_kg = body.weight_kg
     if body.notes is not None:
         pet.notes = body.notes
+    if body.gender is not None:
+        pet.gender = body.gender
+    if body.birth_date is not None:
+        pet.birth_date = body.birth_date
+    if body.checkup_date is not None:
+        pet.checkup_date = body.checkup_date
 
     await db.commit()
     return {"code": 200, "message": "반려동물 정보가 수정되었습니다."}
