@@ -553,6 +553,10 @@ async def confirm_schedule_api(
         f"chart={chart_task_id[:8]} validation={validation_task_id[:8]} judge={judge_task_id[:8]}"
     )
 
+    # 확정 카드(챗봇)용 병원 정보 — confirm 응답에 병원명/주소/담당의 포함
+    doctor_row = await db.execute(select(Doctor).where(Doctor.doctorid == schedule.doctorid))
+    doctor = doctor_row.scalar_one_or_none()
+
     return {
         "code": 201,
         "message": "예약이 확정되었습니다.",
@@ -561,6 +565,10 @@ async def confirm_schedule_api(
             "confirmed_time": schedule.confirmed_time.astimezone(KST).isoformat() if schedule.confirmed_time else None,
             "confirmed_end_time": schedule.confirmed_end_time.astimezone(KST).isoformat() if schedule.confirmed_end_time else None,
             "status": schedule.status,
+            "hospital_name": doctor.hospital_name if doctor else None,
+            "hospital_address": doctor.hospital_address if doctor else None,
+            "doctor_name": doctor.doctor_name if doctor else None,
+            "duration_min": request.duration_min,
             "chart_task_id": chart_task_id,
             "validation_task_id": validation_task_id,
             "judge_task_id": judge_task_id,

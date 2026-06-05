@@ -8,6 +8,9 @@ export interface ChatSessionResult {
   session_id: number;
   pet_name: string;
   profile_image?: string;
+  initial_message?: string;
+  initial_pills?: string[];
+  initial_multi?: boolean;
 }
 
 export interface CreateChatSessionResponse {
@@ -87,6 +90,7 @@ export type ChatStreamEvent =
   | {
       type: "quick_replies";
       options: string[];
+      multi?: boolean;
     }
   | {
       type: "triage_complete";

@@ -7,7 +7,7 @@ import {
   confirmSchedule,
 } from "../api/schedule-api";
 import type { Pet } from "../api/pets-api";
-import type { ChatMessage } from "./use-chat-conversation";
+import type { ChatCard, ChatMessage, SlotOption } from "./use-chat-conversation";
 
 export type PipelinePhase =
   | "chatting"
@@ -102,6 +102,26 @@ const getExtendedBusinessDates = (startOffset: number, scanDays = 21): string[] 
 
 const nextId = () => Date.now() + Math.random();
 
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const weekdayOf = (dateStr: string) => WEEKDAYS[new Date(dateStr).getDay()];
+
+/** "16:00" → "오후 4:00" */
+const formatTime = (hhmm: string): string => {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h < 12 ? "오전" : "오후";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${period} ${h12}:${String(m).padStart(2, "0")}`;
+};
+
+/** 90 → "1시간 30분", 60 → "1시간", 30 → "30분" */
+const formatDuration = (min: number): string => {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h && m) return `${h}시간 ${m}분`;
+  if (h) return `${h}시간`;
+  return `${m}분`;
+};
+
 export const useAgentPipeline = ({
   setMessages,
   setQuickReplies,
@@ -126,6 +146,28 @@ export const useAgentPipeline = ({
       ...prev,
       { id: nextId(), role: "assistant" as const, content },
     ]);
+  };
+
+  const appendCard = (card: ChatCard) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId(), role: "assistant" as const, content: "", card },
+    ]);
+  };
+
+  /** 현재 slotMapRef로부터 슬롯 카드 옵션을 재구성(예약 실패 시 카드 재노출용) */
+  const buildSlotOptions = (): SlotOption[] => {
+    const durationMin = (scheduleResultRef.current?.estimated_duration_min as number) || 30;
+    return Object.entries(slotMapRef.current).map(([label, s]) => {
+      const [, m, d] = s.date.split("-");
+      return {
+        label,
+        monthDay: `${Number(m)}월 ${Number(d)}일`,
+        weekday: weekdayOf(s.date),
+        timeText: formatTime(s.time),
+        durationText: formatDuration(durationMin),
+      };
+    });
   };
 
   /** 주어진 날짜들에서 빈 슬롯을 limit 개까지 모은다. 추천/빠른조회 양쪽에서 재사용. */
@@ -212,35 +254,35 @@ export const useAgentPipeline = ({
       }
 
       const newSlotMap: Record<string, { date: string; time: string; doctorid: number }> = {};
-      const labels: string[] = [];
+      const slotOptions: SlotOption[] = [];
+      const durationMin = schedRes.estimated_duration_min || 30;
 
       for (const s of collected) {
         const time = s.start_time.slice(0, 5);
         const [, m, d] = s.date.split("-");
         const label = `${m}월 ${d}일 ${time}`;
         newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1 };
-        labels.push(label);
+        slotOptions.push({
+          label,
+          monthDay: `${Number(m)}월 ${Number(d)}일`,
+          weekday: weekdayOf(s.date),
+          timeText: formatTime(time),
+          durationText: formatDuration(durationMin),
+        });
       }
 
       slotMapRef.current = newSlotMap;
 
-      let msg = "";
-      if (schedRes.pre_visit_instructions?.length) {
-        msg +=
-          "내원 전 준비사항:\n" +
-          schedRes.pre_visit_instructions.map((i) => `• ${i}`).join("\n") +
-          "\n\n";
-      }
-
-      if (labels.length > 0) {
-        msg += "아래 시간 중 편한 때를 선택해주세요:";
-        appendBot(msg);
-        setQuickReplies(labels);
+      // 내원 전 준비사항(pre_visit_instructions)은 여기서 보여주지 않고
+      // 예약 확정 후 확정 카드 아래에 정리해서 노출한다(scheduleResultRef에 보관됨).
+      if (slotOptions.length > 0) {
+        appendBot("예약 가능한 시간을 찾았어요. 편한 시간을 선택해주세요. 🗓️");
+        appendCard({ kind: "slots", slots: slotOptions });
         setPhase("slot-selection");
       } else {
-        // 슬롯을 찾지 못했어도 DatePicker는 항상 제공
-        msg += "현재 바로 예약 가능한 슬롯이 없어요.\n달력에서 원하는 날짜와 시간을 직접 선택해주세요. 📅";
-        appendBot(msg);
+        // 슬롯을 찾지 못했어도 '날짜 보기'는 카드에서 항상 제공
+        appendBot("지금 바로 추천드릴 시간이 없어요. 아래에서 직접 날짜를 선택해주세요. 📅");
+        appendCard({ kind: "slots", slots: [] });
         setPhase("slot-selection");
         setShowDatePicker(true);
       }
@@ -284,10 +326,24 @@ export const useAgentPipeline = ({
       });
 
       if (resp.code === 200 || resp.code === 201) {
-        const [, m, d] = slot.date.split("-");
-        appendBot(
-          `예약이 완료되었어요! 📅 ${m}월 ${d}일 ${slot.time}에 내원해주세요.`,
-        );
+        const [y, m, d] = slot.date.split("-");
+        const dateText = `${y}년 ${Number(m)}월 ${Number(d)}일 (${weekdayOf(slot.date)}) ${formatTime(slot.time)}`;
+
+        // ① 예약 확정 카드
+        appendCard({
+          kind: "confirmation",
+          petName: currentPetRef.current?.petname ?? "반려동물",
+          dateText,
+          durationText: formatDuration(duration),
+          hospitalName: resp.result?.hospital_name ?? undefined,
+        });
+
+        // ② 내원 전 준비사항 — 확정 카드 아래 별도 카드로 정리
+        const instructions =
+          (scheduleResultRef.current?.pre_visit_instructions as string[] | undefined) ?? [];
+        if (instructions.length) {
+          appendCard({ kind: "instructions", items: instructions });
+        }
 
         const urgencyNum = triage?.urgency_level_num as number | undefined;
         const needFollowup =
@@ -303,15 +359,15 @@ export const useAgentPipeline = ({
         }
       } else {
         appendBot(
-          "예약 중 오류가 발생했어요. 예약 페이지에서 직접 예약해주세요.",
+          "예약 중 오류가 발생했어요. 아래 시간에서 다시 선택해주세요.",
         );
+        appendCard({ kind: "slots", slots: buildSlotOptions() });
         setPhase("slot-selection");
-        setQuickReplies(Object.keys(slotMapRef.current));
       }
     } catch {
-      appendBot("예약 중 오류가 발생했어요. 예약 페이지에서 직접 예약해주세요.");
+      appendBot("예약 중 오류가 발생했어요. 아래 시간에서 다시 선택해주세요.");
+      appendCard({ kind: "slots", slots: buildSlotOptions() });
       setPhase("slot-selection");
-      setQuickReplies(Object.keys(slotMapRef.current));
     } finally {
       setIsStreaming(false);
     }
