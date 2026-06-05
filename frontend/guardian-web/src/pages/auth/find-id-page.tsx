@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
+import { Info } from "lucide-react";
 
 import { findGuardianId } from "../../api/auth-api";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
@@ -28,6 +29,20 @@ const inputClassName = (hasError: boolean) =>
       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100",
   ].join(" ");
 
+const formatPhoneNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.length < 4) {
+    return digits;
+  }
+
+  if (digits.length < 8) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+};
+
 const FindIdPage = () => {
   const [form, setForm] = useState<FindIdFormState>(initialFormState);
   const [foundLoginId, setFoundLoginId] = useState("");
@@ -37,9 +52,14 @@ const FindIdPage = () => {
   const handleChange =
     (field: keyof FindIdFormState) =>
     (event: ChangeEvent<HTMLInputElement>) => {
+      const value =
+        field === "phone"
+          ? formatPhoneNumber(event.target.value)
+          : event.target.value;
+
       setForm((current) => ({
         ...current,
-        [field]: event.target.value,
+        [field]: value,
       }));
       setFoundLoginId("");
       setErrorMessage("");
@@ -111,29 +131,29 @@ const FindIdPage = () => {
               아이디 찾기
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              가입 시 등록한 이름과 전화번호를 입력하면 로그인 ID를 확인할 수
-              있습니다. 입력 정보가 일치하지 않으면 아이디를 찾을 수 없습니다.
+              이름과 전화번호로
+              <br />
+              가입 시 등록한 로그인 ID를 확인할 수 있습니다.
             </p>
           </div>
 
           <div className="rounded-2xl border border-blue-100 bg-white/80 p-5">
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
-                i
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <Info className="h-5 w-5" aria-hidden />
               </span>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">안내사항</h2>
-                <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-600">
-                  <li>가입 시 등록한 이름과 전화번호를 입력해주세요.</li>
-                  <li>전화번호는 숫자 또는 하이픈을 포함해 입력할 수 있습니다.</li>
+                <h2 className="text-lg font-bold text-slate-900">안내사항</h2>
+                <ul className="mt-2 space-y-2 text-base leading-7 text-slate-600">
                   <li>정보가 일치하면 마스킹된 로그인 ID를 표시합니다.</li>
+                  <li>정보가 일치하지 않으면 아이디를 찾을 수 없습니다.</li>
                 </ul>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6">
+        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
           <div className="mb-4 text-center">
             <h2 className="text-2xl font-bold text-slate-950">아이디 찾기</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
@@ -195,12 +215,20 @@ const FindIdPage = () => {
               {isSubmitting ? "확인 중..." : "아이디 찾기"}
             </button>
 
-            <Link
-              to="/login"
-              className="flex h-11 w-full items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
-            >
-              로그인 화면으로 돌아가기
-            </Link>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link
+                to="/login"
+                className="flex h-11 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700"
+              >
+                로그인 하기
+              </Link>
+              <Link
+                to="/find-password"
+                className="flex h-11 items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
+              >
+                비밀번호 찾기
+              </Link>
+            </div>
           </form>
         </section>
       </main>
