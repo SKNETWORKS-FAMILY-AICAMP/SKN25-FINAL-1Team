@@ -8,18 +8,25 @@ import type { PetInfo } from "../../types/emr";
 const GENDER_OPTIONS = [
   { label: "수컷", value: "male" },
   { label: "암컷", value: "female" },
+  { label: "미상", value: "unknown" },
 ] as const;
 
-function toApiGender(display: string): "male" | "female" {
-  return display === "암컷" ? "female" : "male";
+function toApiGender(display: string): string {
+  if (display === "암컷") return "female";
+  if (display === "수컷") return "male";
+  return "unknown";
 }
 
-function toPetInfoGender(api: string): "Female" | "Male" {
-  return api === "female" ? "Female" : "Male";
+function toPetInfoGender(api: string): "Female" | "Male" | "unknown" {
+  if (api === "female") return "Female";
+  if (api === "male") return "Male";
+  return "unknown";
 }
 
 function toDisplayGender(petInfoGender: string): string {
-  return petInfoGender === "Female" ? "암컷" : "수컷";
+  if (petInfoGender === "Female") return "암컷";
+  if (petInfoGender === "Male") return "수컷";
+  return "미상";
 }
 
 export function ProfileEditModal({
