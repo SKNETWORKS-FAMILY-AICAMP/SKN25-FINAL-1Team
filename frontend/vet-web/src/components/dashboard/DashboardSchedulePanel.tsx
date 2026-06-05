@@ -58,7 +58,7 @@ export function DashboardSchedulePanel({
           오늘의 일정
         </h2>
         {holidayName && (
-          <span className="rounded-md bg-[#fff1f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
+          <span className="rounded-md bg-[#fef2f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
             {holidayName}
           </span>
         )}
@@ -73,13 +73,13 @@ export function DashboardSchedulePanel({
 
       <div className="px-5 py-3">
         {errorMessage ? (
-          <div className="mb-3 rounded-lg border border-[#ffd5dc] bg-[#fff7f8] px-4 py-3 text-sm font-bold text-[#c9283e]">
+          <div className="mb-3 rounded-lg border border-[#f5dfdf] bg-[#fef2f2] px-4 py-3 text-sm font-bold text-[#dc2626]">
             {errorMessage}
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="mb-3 rounded-lg border border-[#edf1f6] bg-[#f8fafc] px-4 py-3 text-sm font-bold text-[#657188]">
+          <div className="mb-3 rounded-lg border border-[#edf1f6] bg-[#f9fafb] px-4 py-3 text-sm font-bold text-[#657188]">
             일정을 불러오는 중입니다.
           </div>
         ) : null}

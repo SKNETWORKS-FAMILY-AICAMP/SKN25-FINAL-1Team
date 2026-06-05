@@ -254,7 +254,7 @@ const PetRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] text-slate-900">
+    <div className="min-h-screen bg-cream text-slate-900">
       <GuardianNavbar />
 
       <main className="mx-auto w-full max-w-[1280px] px-6 py-8">

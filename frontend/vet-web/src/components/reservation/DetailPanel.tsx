@@ -52,7 +52,7 @@ export function DetailPanel({
               {patient.petName} ({patient.guardianName})
             </h3>
             <TriageBadge level={reservation.status} />
-            <span className="text-xl font-extrabold text-[#2563eb]">
+            <span className="text-xl font-extrabold text-[#2f6f67]">
               <GenderBadge gender={patient.gender} className="text-xl" />
             </span>
           </div>
@@ -78,7 +78,7 @@ export function DetailPanel({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#2563eb] text-sm font-extrabold text-[#2563eb]"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#2f6f67] text-sm font-extrabold text-[#2f6f67]"
         >
           <Pencil className="h-4 w-4" />
           수정

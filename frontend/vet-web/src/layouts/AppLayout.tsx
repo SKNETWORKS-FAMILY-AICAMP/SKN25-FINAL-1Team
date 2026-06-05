@@ -57,35 +57,35 @@ const alarmTypeMeta: Record<
   reservation_confirmed: {
     label: "예약 확정",
     Icon: CalendarCheck,
-    bgCls: "bg-[#eff6ff]",
-    iconCls: "text-[#3b82f6]",
-    labelCls: "text-[#1d4ed8]",
+    bgCls: "bg-[#eef5f4]",
+    iconCls: "text-[#2f6f67]",
+    labelCls: "text-[#255e57]",
   },
   reservation_cancelled: {
     label: "예약 취소",
     Icon: CalendarX,
-    bgCls: "bg-[#fff1f1]",
+    bgCls: "bg-[#fef2f2]",
     iconCls: "text-[#ef4444]",
     labelCls: "text-[#dc2626]",
   },
   reservation_updated: {
     label: "예약 수정",
     Icon: CalendarClock,
-    bgCls: "bg-[#fff8ec]",
+    bgCls: "bg-[#fffbeb]",
     iconCls: "text-[#f59e0b]",
-    labelCls: "text-[#d97706]",
+    labelCls: "text-[#b45309]",
   },
   chart_ready: {
     label: "차트 준비",
     Icon: ClipboardList,
-    bgCls: "bg-[#eff6ff]",
-    iconCls: "text-[#3b82f6]",
-    labelCls: "text-[#1d4ed8]",
+    bgCls: "bg-[#eef5f4]",
+    iconCls: "text-[#2f6f67]",
+    labelCls: "text-[#255e57]",
   },
   followup_received: {
     label: "경과 보고",
     Icon: ClipboardList,
-    bgCls: "bg-[#f8fafc]",
+    bgCls: "bg-[#f9fafb]",
     iconCls: "text-[#64748b]",
     labelCls: "text-[#475569]",
   },
@@ -94,7 +94,7 @@ const alarmTypeMeta: Record<
 const fallbackAlarmTypeMeta = {
   label: "알림",
   Icon: Bell,
-  bgCls: "bg-[#f7f9fc]",
+  bgCls: "bg-[#f8fafb]",
   iconCls: "text-[#6b7895]",
   labelCls: "text-[#59657a]",
 };
@@ -186,7 +186,7 @@ export default function AppLayout({
   );
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-[#1f2937]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#1f2937]">
       <header className="fixed inset-x-0 top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e5eaf2] bg-white px-6">
         <button
           type="button"
@@ -199,7 +199,7 @@ export default function AppLayout({
 
         <div className="ml-auto flex items-center gap-4">
           <div className="hidden items-center gap-2 text-sm font-bold tabular-nums text-[#3f4960] md:flex">
-            <Clock3 className="h-5 w-5 text-[#6b7895]" strokeWidth={2.1} />
+            <Clock3 className="h-5 w-5 text-[#2f6f67]" strokeWidth={2.1} />
             <span>{clockText}</span>
           </div>
 
@@ -213,7 +213,7 @@ export default function AppLayout({
                 if (willOpen && hasUnread) markAllRead();
               }}
               aria-label="알림"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#4b5877] transition hover:bg-[#f3f7ff] hover:text-[#4a89ff]"
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2f6f67] transition hover:bg-[#f8f9fa] hover:text-[#2f6f67]"
             >
               <Bell className="h-5 w-5" strokeWidth={2.1} />
               {hasUnread && (
@@ -240,7 +240,7 @@ export default function AppLayout({
             <button
               type="button"
               onClick={() => setIsHospitalMenuOpen((isOpen) => !isOpen)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold text-[#20283a] transition hover:bg-[#f3f7ff]"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold text-[#20283a] transition hover:bg-[#f8f9fa]"
               aria-expanded={isHospitalMenuOpen}
             >
               <span>{hospitalName}</span>
@@ -252,14 +252,14 @@ export default function AppLayout({
                 <button
                   type="button"
                   onClick={() => { onNavigate?.("settings"); setIsHospitalMenuOpen(false); }}
-                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f4f7fb]"
+                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f6f8f9]"
                 >
                   병원 설정
                 </button>
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f4f7fb]"
+                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f6f8f9]"
                 >
                   로그아웃
                 </button>
@@ -283,11 +283,11 @@ export default function AppLayout({
                   className={[
                     "flex h-11 w-full items-center gap-3 rounded-lg px-4 text-left text-sm font-extrabold transition",
                     isActive
-                      ? "bg-[#edf5ff] text-[#2563eb]"
-                      : "text-[#20283a] hover:bg-[#f7f9fc] hover:text-[#2563eb]",
+                      ? "bg-[#eef5f4] text-[#2f6f67]"
+                      : "text-[#20283a] hover:bg-[#f8fafb] hover:text-[#2f6f67]",
                   ].join(" ")}
                 >
-                  <Icon className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+                  <Icon className="h-5 w-5 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
                   <span>{label}</span>
                 </button>
               );
@@ -296,7 +296,7 @@ export default function AppLayout({
 
           <section className="rounded-lg border border-[#e5eaf2] bg-white p-4 shadow-sm">
             <div className="flex items-start gap-2.5">
-              <Hospital className="mt-0.5 h-5 w-5 shrink-0 text-[#4a89ff]" strokeWidth={2.1} />
+              <Hospital className="mt-0.5 h-5 w-5 shrink-0 text-[#357b70]" strokeWidth={2.1} />
               <div>
                 <p className="text-sm font-extrabold text-[#20283a]">
                   {hospitalName}
@@ -324,14 +324,14 @@ export default function AppLayout({
             <button
               type="button"
               onClick={onLogout}
-              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
             >
               로그아웃
             </button>
           </section>
         </aside>
 
-        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f6f8fb] px-4 pb-8 pt-6">
+        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f8fafc] px-4 pb-8 pt-6">
           {children}
         </main>
       </div>
@@ -368,7 +368,7 @@ function NotificationPanel({
             type="button"
             onClick={onMarkAllRead}
             disabled={isMarkingRead}
-            className="flex items-center gap-1 text-xs font-bold text-[#2563eb] transition hover:text-[#1a6de8] disabled:opacity-50"
+            className="flex items-center gap-1 text-xs font-bold text-[#2f6f67] transition hover:text-[#255e57] disabled:opacity-50"
           >
             <CheckCheck className="h-3.5 w-3.5" />
             모두 읽음
@@ -430,7 +430,7 @@ function AlarmRow({
   return (
     <li
       onClick={handleClick}
-      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition hover:bg-[#f8fafd] ${
+      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition hover:bg-[#f9fbfc] ${
         isVisited ? "opacity-60" : ""
       }`}
     >
@@ -455,7 +455,7 @@ function AlarmRow({
       </div>
 
       {!alarm.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2563eb]" />
+        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2f6f67]" />
       )}
     </li>
   );

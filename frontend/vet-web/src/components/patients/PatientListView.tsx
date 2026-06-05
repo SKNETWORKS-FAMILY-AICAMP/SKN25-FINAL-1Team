@@ -46,7 +46,7 @@ export function PatientListView({
             value={searchValue}
             onChange={(event) => onSearch(event.target.value)}
             placeholder="강아지 이름 또는 보호자 이름 검색"
-            className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-12 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]"
+            className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-12 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef5f4]"
           />
         </label>
       </div>
@@ -55,7 +55,7 @@ export function PatientListView({
         <div className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-[#e5eaf2] px-4 xl:px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-[#151b28]">전체 환자</h2>
-            <span className="rounded-full bg-[#edf5ff] px-2.5 py-1 text-sm font-extrabold text-[#2563eb]">
+            <span className="rounded-full bg-[#eef5f4] px-2.5 py-1 text-sm font-extrabold text-[#2f6f67]">
               {totalCount}
             </span>
           </div>
@@ -82,7 +82,7 @@ export function PatientListView({
           <>
             <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
               <table className="w-full table-fixed border-collapse text-left">
-                <thead className="bg-[#f8fafd]">
+                <thead className="bg-[#f9fbfc]">
                   <tr className="border-b border-[#e5eaf2] text-xs font-extrabold uppercase tracking-wide text-[#8595ae]">
                     <th className="w-[18%] px-4 py-3.5 xl:w-[12%] xl:px-5">이름</th>
                     <th className="hidden w-[9%] px-3 py-3.5 xl:table-cell">나이</th>
@@ -99,7 +99,7 @@ export function PatientListView({
                     <tr
                       key={patient.id}
                       onClick={() => !isLoading && onOpenDetail(patient)}
-                      className="group h-[56px] cursor-pointer border-b border-[#edf1f6] text-sm text-[#33415f] last:border-b-0 transition-colors hover:bg-[#eef5ff]"
+                      className="group h-[56px] cursor-pointer border-b border-[#edf1f6] text-sm text-[#33415f] last:border-b-0 transition-colors hover:bg-[#f5f7f8]"
                     >
                       <td className="truncate px-4 py-3 font-extrabold text-[#1d2a57] xl:px-5">
                         {patient.petName}
@@ -108,7 +108,7 @@ export function PatientListView({
                       <td className="truncate px-3 py-3 font-semibold">{patient.guardianName}</td>
                       <td className="truncate px-3 py-3 tabular-nums text-[#52607a]">{patient.phone}</td>
                       <td className="px-3 py-3">
-                        <span className="inline-flex max-w-full rounded-md bg-[#f0f4fa] px-2 py-0.5 text-xs font-extrabold text-[#4d5874]">
+                        <span className="inline-flex max-w-full rounded-md bg-[#f3f5f7] px-2 py-0.5 text-xs font-extrabold text-[#4d5874]">
                           <span className="truncate">
                             {patient.breed}
                           </span>
@@ -124,7 +124,7 @@ export function PatientListView({
                             onOpenDetail(patient);
                           }}
                           disabled={isLoading}
-                          className="h-9 w-[70px] whitespace-nowrap rounded-lg border border-[#a8cbff] bg-white text-xs font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] disabled:cursor-wait disabled:opacity-60 xl:w-[78px] xl:text-sm"
+                          className="h-9 w-[70px] whitespace-nowrap rounded-lg border border-[#bdd6d6] bg-white text-xs font-extrabold text-[#2f6f67] transition hover:bg-[#eef5f4] disabled:cursor-wait disabled:opacity-60 xl:w-[78px] xl:text-sm"
                         >
                           상세보기
                         </button>
@@ -188,8 +188,8 @@ function Pagination({
             className={[
               "h-9 w-9 rounded-lg text-sm font-extrabold",
               page === currentPage
-                ? "bg-[#edf5ff] text-[#2563eb]"
-                : "text-[#53617c] hover:bg-[#f3f6fb]",
+                ? "bg-[#eef5f4] text-[#2f6f67]"
+                : "text-[#53617c] hover:bg-[#f5f7f9]",
             ].join(" ")}
           >
             {page}

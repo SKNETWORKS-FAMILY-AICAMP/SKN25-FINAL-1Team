@@ -32,18 +32,18 @@ export const reservationStatusMeta: Record<
 > = {
   emergency: {
     label: "응급",
-    badgeClass: "border border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
-    softClass: "border border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
+    badgeClass: "border border-[#fee2e2] bg-[#fef2f2] text-[#ef4444]",
+    softClass: "border border-[#fee2e2] bg-[#fef2f2] text-[#ef4444]",
   },
   semiEmergency: {
     label: "준응급",
-    badgeClass: "border border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
-    softClass: "border border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
+    badgeClass: "border border-[#fef3c7] bg-[#fffbeb] text-[#d97706]",
+    softClass: "border border-[#fef3c7] bg-[#fffbeb] text-[#d97706]",
   },
   normal: {
     label: "일반",
-    badgeClass: "border border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
-    softClass: "border border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
+    badgeClass: "border border-[#dcfce7] bg-[#f0fdf4] text-[#15803d]",
+    softClass: "border border-[#dcfce7] bg-[#f0fdf4] text-[#15803d]",
   },
 };
 
@@ -60,9 +60,9 @@ export const statusOrder: ReservationStatus[] = [
 ];
 
 export const weeklyCardClass: Record<ReservationStatus, string> = {
-  emergency: "border-[#fecdd3] bg-[#fff7f8] text-[#20283a] before:bg-[#ef4444]",
-  semiEmergency: "border-[#fed7aa] bg-[#fffaf0] text-[#20283a] before:bg-[#f97316]",
-  normal: "border-[#cfe3d7] bg-[#f8fcfa] text-[#20283a] before:bg-[#6fa989]",
+  emergency: "border-[#fee2e2] bg-[#fef2f2] text-[#20283a] before:bg-[#ef4444]",
+  semiEmergency: "border-[#fef3c7] bg-[#fffbeb] text-[#20283a] before:bg-[#d97706]",
+  normal: "border-[#dcfce7] bg-[#f0fdf4] text-[#20283a] before:bg-[#22c55e]",
 };
 
 const koreanHolidayProvider = new Holidays("KR", {

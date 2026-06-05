@@ -23,7 +23,7 @@ export function CancelReservationModal({
           >
             <X className="h-7 w-7" />
           </button>
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#f4b252] text-[#f4a62a]">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#e4c060] text-[#f59e0b]">
             <AlertTriangle className="h-10 w-10" />
           </div>
           <h2 className="mt-8 text-3xl font-extrabold text-[#20283a]">

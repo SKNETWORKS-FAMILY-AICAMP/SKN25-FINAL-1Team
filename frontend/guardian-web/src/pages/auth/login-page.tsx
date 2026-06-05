@@ -129,7 +129,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-[#f8fafc] text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
@@ -155,7 +155,7 @@ const LoginPage = () => {
                 key={item.title}
                 className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2a8587] text-white">
                   <item.icon className="h-6 w-6" />
                 </span>
                 <div>

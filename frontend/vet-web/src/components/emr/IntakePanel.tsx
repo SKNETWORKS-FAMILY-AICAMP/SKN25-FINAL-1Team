@@ -32,7 +32,7 @@ export function IntakePanel({
           type="button"
           onClick={() => onApplyIntake("all")}
           disabled={isReadOnly}
-          className="h-8 w-full rounded-lg border border-[#dfe6f1] bg-white text-xs font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
+          className="h-8 w-full rounded-lg border border-[#dfe6f1] bg-white text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
         >
           사전문진 + 메모 전체 옮기기
         </button>
@@ -46,7 +46,7 @@ export function IntakePanel({
               type="button"
               onClick={() => onApplyIntake("summary")}
               disabled={summary.length === 0 || isReadOnly}
-              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f3f6fb] hover:text-[#2563eb] disabled:text-[#a8b0bf]"
+              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>
@@ -67,14 +67,14 @@ export function IntakePanel({
           )}
         </div>
 
-        <div className="rounded-lg border border-[#edf1f6] bg-[#fbfcfe] p-2.5">
+        <div className="rounded-lg border border-[#edf1f6] bg-[#fcfdfd] p-2.5">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-extrabold text-[#20283a]">메모</p>
             <button
               type="button"
               onClick={() => onApplyIntake("memo")}
               disabled={!memo || isReadOnly}
-              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f3f6fb] hover:text-[#2563eb] disabled:text-[#a8b0bf]"
+              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67] disabled:text-[#a8b0bf]"
             >
               옮기기
             </button>
@@ -92,7 +92,7 @@ export function IntakePanel({
           </div>
           <div className="grid grid-cols-4 gap-2">
             {visibleFiles.length === 0 && (
-              <div className="col-span-4 rounded-lg bg-[#f8fafc] px-3 py-3 text-center text-xs font-bold text-[#8a94a6]">
+              <div className="col-span-4 rounded-lg bg-[#f9fafb] px-3 py-3 text-center text-xs font-bold text-[#8a94a6]">
                 보호자 첨부 파일 없음
               </div>
             )}

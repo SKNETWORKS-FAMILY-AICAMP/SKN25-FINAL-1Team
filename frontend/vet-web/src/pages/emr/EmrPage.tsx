@@ -334,7 +334,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 <button
                   type="button"
                   onClick={handleResetToWaiting}
-                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#4a89ff] hover:text-[#2563eb]"
+                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#357b70] hover:text-[#2f6f67]"
                 >
                   진료 대기로 되돌리기
                 </button>

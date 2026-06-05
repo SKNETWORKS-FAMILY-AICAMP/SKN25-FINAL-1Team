@@ -17,19 +17,19 @@ export const summaryToneStyle: Record<
   { wrapper: string; value: string }
 > = {
   blue: {
-    wrapper: "bg-[#eef4ff]",
-    value: "text-[#4a6cff]",
+    wrapper: "bg-[#f5f7f8]",
+    value: "text-[#357b70]",
   },
   orange: {
-    wrapper: "bg-[#fff8e8]",
-    value: "text-[#e97700]",
+    wrapper: "bg-[#faf6ed]",
+    value: "text-[#b45309]",
   },
   red: {
-    wrapper: "bg-[#ffe8eb]",
-    value: "text-[#ef3333]",
+    wrapper: "bg-[#faeded]",
+    value: "text-[#ef4444]",
   },
   green: {
-    wrapper: "bg-[#f1f5f9]",
+    wrapper: "bg-[#f3f5f7]",
     value: "text-[#475569]",
   },
 };
@@ -40,27 +40,27 @@ export const visitTypeStyle: Record<
 > = {
   emergency: {
     label: "응급",
-    badge: "border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
+    badge: "border-[#fee2e2] bg-[#fef2f2] text-[#ef4444]",
     dot: "bg-[#ef4444]",
-    card: "border-[#fecdd3] bg-[#fff7f8] text-[#20283a] before:bg-[#ef4444]",
+    card: "border-[#fee2e2] bg-[#fef2f2] text-[#20283a] before:bg-[#ef4444]",
   },
   semiEmergency: {
     label: "준응급",
-    badge: "border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
-    dot: "bg-[#f97316]",
-    card: "border-[#fed7aa] bg-[#fffaf0] text-[#20283a] before:bg-[#f97316]",
+    badge: "border-[#fef3c7] bg-[#fffbeb] text-[#d97706]",
+    dot: "bg-[#d97706]",
+    card: "border-[#fef3c7] bg-[#fffbeb] text-[#20283a] before:bg-[#d97706]",
   },
   normal: {
     label: "일반",
-    badge: "border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
-    dot: "bg-[#6fa989]",
-    card: "border-[#cfe3d7] bg-[#f8fcfa] text-[#20283a] before:bg-[#6fa989]",
+    badge: "border-[#dcfce7] bg-[#f0fdf4] text-[#15803d]",
+    dot: "bg-[#22c55e]",
+    card: "border-[#dcfce7] bg-[#f0fdf4] text-[#20283a] before:bg-[#22c55e]",
   },
   checkup: {
     label: "검진/일반예약",
-    badge: "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]",
+    badge: "border-[#e2e8f0] bg-[#f9fafb] text-[#64748b]",
     dot: "bg-[#94a3b8]",
-    card: "border-[#e2e8f0] bg-[#f8fafc] text-[#20283a] before:bg-[#94a3b8]",
+    card: "border-[#e2e8f0] bg-[#f9fafb] text-[#20283a] before:bg-[#94a3b8]",
   },
 };
 

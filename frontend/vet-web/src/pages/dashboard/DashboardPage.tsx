@@ -112,7 +112,7 @@ export default function DashboardPage({
             <p className="mt-2 text-sm font-bold tabular-nums text-[#65718a]">
               {formattedDate}
               {holidayName && (
-                <span className="ml-1 rounded-md bg-[#fff1f2] px-1.5 py-0.5 text-xs font-extrabold text-[#ef4444]">
+                <span className="ml-1 rounded-md bg-[#fef2f2] px-1.5 py-0.5 text-xs font-extrabold text-[#ef4444]">
                   {holidayName}
                 </span>
               )}
