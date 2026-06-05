@@ -110,6 +110,10 @@ export interface ConfirmScheduleResponse {
     confirmed_time: string | null;
     confirmed_end_time: string | null;
     status: string;
+    hospital_name?: string | null;
+    hospital_address?: string | null;
+    doctor_name?: string | null;
+    duration_min?: number;
     chart_task_id: string;
     validation_task_id: string;
     judge_task_id: string;

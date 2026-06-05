@@ -1,6 +1,8 @@
 import { Edit3 } from "lucide-react";
 import { useState } from "react";
 import type { EmrResult, PetInfo } from "../../types/emr";
+import { GenderBadge } from "../common/GenderBadge";
+import { toGenderLabel } from "../../utils/genderUtils";
 import { Panel } from "./EmrShared";
 
 // 프로필 이미지가 없거나 깨졌을 때 보여줄 기본 플레이스홀더(연한 회색 배경 + 발바닥).
@@ -40,15 +42,18 @@ export function PatientInfoPanel({
                 {patient.pet_name}
               </h1>
               <span className="text-2xl font-extrabold text-[#f43f7c]">
-                {patient.gender === "Female" ? "♀" : "♂"}
+                <GenderBadge gender={patient.gender} className="text-2xl" />
               </span>
             </div>
             <p className="mt-2 text-sm font-extrabold text-[#4d5874]">
-              {patient.species} | {patient.gender} | {patient.weight_kg}kg |{" "}
-              {patient.age}살({patient.birth_date})
+              {patient.species} | {toGenderLabel(patient.gender)} | {patient.weight_kg}kg |{" "}
+              {patient.birth_date ? `${patient.age}살(${patient.birth_date})` : "생일 미상"}
             </p>
             <p className="mt-3 text-sm font-extrabold text-[#4d5874]">
               최근 내원일: {patient.last_visit}
+            </p>
+            <p className="mt-1 text-sm font-extrabold text-[#4d5874]">
+              마지막 정기검진일: {patient.checkup_date ?? "검진 이력 없음"}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <InfoTag label={patient.is_neutered ? "중성화 O" : "중성화 X"} />

@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { PetInfo, Prescription } from "../../types/emr";
+import { GenderBadge } from "../common/GenderBadge";
 import { Panel } from "./EmrShared";
 
 export function AutoPrescriptionPanel({
@@ -25,7 +26,7 @@ export function AutoPrescriptionPanel({
       <div className="space-y-4 px-5">
         {patient && (
           <p className="text-sm font-extrabold text-[#4d5874]">
-            {patient.pet_name} {patient.gender === "Female" ? "♀" : "♂"} (
+            {patient.pet_name} <GenderBadge gender={patient.gender} /> (
             {patient.species}, {patient.weight_kg}kg, {patient.age}살)
           </p>
         )}

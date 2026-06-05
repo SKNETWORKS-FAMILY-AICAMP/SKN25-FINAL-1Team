@@ -51,9 +51,13 @@ export function AlarmProvider({
   };
 
   useEffect(() => {
-    fetchAlarmList({ accessToken: session.accessToken })
-      .then(setAlarms)
-      .catch((err) => { console.error("[Alarm] fetch failed:", err); setAlarms([]); });
+    const load = () =>
+      fetchAlarmList({ accessToken: session.accessToken })
+        .then(setAlarms)
+        .catch((err) => { console.error("[Alarm] fetch failed:", err); setAlarms([]); });
+    load();
+    const id = window.setInterval(load, 30_000);
+    return () => window.clearInterval(id);
   }, [session.accessToken]);
 
   // 더 이상 존재하지 않는 알림 ID를 visited에서 정리

@@ -222,10 +222,17 @@ const ChatbotPage = () => {
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 새 세션 시작 시 초기 증상 질문 + symptom pills 자동 출력
+  // (decision tree Q_INIT_SYMPTOM을 백엔드가 단일 출처로 내려준다)
   useEffect(() => {
     if (session && messages.length === 0) {
-      setMessages([{ id: Date.now(), role: "assistant", content: INITIAL_BOT_MESSAGE }]);
-      setQuickReplies([...SYMPTOM_PILLS]);
+      setMessages([
+        {
+          id: Date.now(),
+          role: "assistant",
+          content: session.initial_message || INITIAL_BOT_MESSAGE,
+        },
+      ]);
+      setQuickReplies(session.initial_pills?.length ? session.initial_pills : [...SYMPTOM_PILLS]);
     }
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -431,6 +438,7 @@ const ChatbotPage = () => {
                     onSendMessage={(content) => {
                       void handleSendCombined(content);
                     }}
+                    onOpenDatePicker={() => pipeline.setShowDatePicker(true)}
                   />
 
                   {/* 직접 날짜 선택 피커 — 팝업으로 띄움 */}
@@ -451,17 +459,10 @@ const ChatbotPage = () => {
                       상담이 완료되었습니다. 새 상담을 시작하려면 왼쪽에서 선택해주세요.
                     </div>
                   ) : chatPhase === "SLOT_RECOMMENDING" ? (
-                    <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+                    <div className="border-t border-slate-100 px-4 py-3 text-center">
                       <span className="text-xs font-semibold text-slate-400">
-                        위 시간 카드를 선택하거나
+                        위 카드에서 시간을 선택하거나 '예약 가능한 날짜 보기'로 직접 고르세요
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => pipeline.setShowDatePicker((v) => !v)}
-                        className="shrink-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50"
-                      >
-                        직접 날짜 선택하기 📅
-                      </button>
                     </div>
                   ) : (
                     <ChatInputBox
@@ -511,6 +512,7 @@ const ChatbotPage = () => {
                       quickReplies={[]}
                       isStreaming={isStreaming}
                       onSendMessage={() => {}}
+                      onOpenDatePicker={() => {}}
                     />
                   )}
 
