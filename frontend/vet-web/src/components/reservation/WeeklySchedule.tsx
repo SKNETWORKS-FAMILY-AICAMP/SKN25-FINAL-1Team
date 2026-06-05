@@ -25,6 +25,7 @@ import {
 
 const WEEKLY_BOTTOM_PADDING = 8;
 const WEEKLY_FULL_CARD_HEIGHT = 58;
+const WEEKLY_CARD_INSET = 4;
 
 interface WeeklyScheduleProps {
   selectedDate: Date;
@@ -47,7 +48,11 @@ export function WeeklySchedule({
     [weekDays]
   );
   const weekReservations = useMemo(
-    () => reservations.filter((reservation) => weekDayKeys.has(reservation.date)),
+    () =>
+      reservations.filter(
+        (reservation) =>
+          weekDayKeys.has(reservation.date) && reservation.start !== "12:00"
+      ),
     [reservations, weekDayKeys]
   );
   const timelineRange = useMemo(
@@ -160,22 +165,12 @@ export function WeeklySchedule({
               ))}
             </div>
 
-            <div
-              className="pointer-events-none absolute right-0 z-0 flex items-center justify-center rounded-md bg-[#f1f3f7] text-xs font-extrabold text-[#53617c]"
-              style={{
-                left: 62,
-                top: lunchBlock.top,
-                height: lunchBlock.height,
-              }}
-            >
-              점심시간
-            </div>
-
             {weekDays.map((day) => {
               const isToday = isSameDate(day, TODAY);
               const dayKey = getDateKey(day);
               const dayReservations = reservations.filter(
-                (reservation) => reservation.date === dayKey
+                (reservation) =>
+                  reservation.date === dayKey && reservation.start !== "12:00"
               );
               const positionedReservations = buildPositionedTimelineItems(
                 dayReservations,
@@ -211,6 +206,17 @@ export function WeeklySchedule({
                 </div>
               );
             })}
+
+            <div
+              className="pointer-events-none absolute right-0 z-[1] flex items-center justify-center bg-[#f1f3f7] text-xs font-extrabold text-[#53617c]"
+              style={{
+                left: 62,
+                top: lunchBlock.top,
+                height: lunchBlock.height,
+              }}
+            >
+              점심시간
+            </div>
           </div>
         </div>
       </section>
@@ -241,14 +247,14 @@ function WeeklyReservationCard({
         patient ? `${patient.petName} (${patient.guardianName})` : item.visitReason
       }`}
       className={[
-        `absolute z-10 flex flex-col overflow-hidden rounded-lg border pl-3 pr-2 text-left shadow-sm transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1 before:rounded-l-lg hover:-translate-y-0.5 hover:shadow-md ${weeklyCardClass[item.status]}`,
+        `absolute z-10 flex flex-col overflow-hidden rounded-lg border pl-3 pr-2 text-left shadow-sm transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1 before:rounded-l-lg hover:shadow-md ${weeklyCardClass[item.status]}`,
         compact ? "py-1" : "py-1.5",
       ].join(" ")}
       style={{
         top,
         height,
-        left: `calc(${(columnIndex / columnCount) * 100}% + 5px)`,
-        width: `calc(${100 / columnCount}% - ${columnCount > 1 ? 10 : 10}px)`,
+        left: `calc(${(columnIndex / columnCount) * 100}% + ${WEEKLY_CARD_INSET}px)`,
+        width: `calc(${100 / columnCount}% - ${WEEKLY_CARD_INSET * 2}px)`,
       }}
     >
       {compact ? (

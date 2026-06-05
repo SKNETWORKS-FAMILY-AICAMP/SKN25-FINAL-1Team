@@ -103,13 +103,13 @@ export default function DashboardPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="flex max-w-[1040px] items-start gap-4">
-        <div className="flex w-40 shrink-0 flex-col gap-3">
-          <div>
-            <h1 className="text-xl font-extrabold tracking-normal text-[#151b28]">
+      <div className="flex min-h-[calc(100vh-160px)] min-w-0 flex-col overflow-y-auto">
+        <div className="mb-4 flex min-w-0 items-start gap-6">
+          <div className="min-w-0 shrink-0">
+            <h1 className="text-2xl font-extrabold text-[#151b28]">
               오늘의 진료 현황
             </h1>
-            <p className="mt-1.5 text-sm font-bold tabular-nums text-[#6b7486]">
+            <p className="mt-2 text-sm font-bold tabular-nums text-[#65718a]">
               {formattedDate}
               {holidayName && (
                 <span className="ml-1 rounded-md bg-[#fcefef] px-1.5 py-0.5 text-xs font-extrabold text-[#e06666]">
@@ -118,9 +118,9 @@ export default function DashboardPage({
               )}
             </p>
           </div>
-          <DashboardSummaryCards summaries={summaryCards} />
+          <DashboardSummaryCards summaries={summaryCards} className="pt-1" />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <DashboardSchedulePanel
             schedules={scheduleItems}
             isLoading={isLoading}

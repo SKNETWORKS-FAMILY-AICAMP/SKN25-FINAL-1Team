@@ -14,7 +14,7 @@ import {
   getTimelineRange,
 } from "../../utils/scheduleTimelineUtils";
 
-const DASHBOARD_TIMELINE_HOUR_HEIGHT = 68;
+const DASHBOARD_TIMELINE_HOUR_HEIGHT = 56;
 
 interface DashboardSchedulePanelProps {
   schedules: DashboardScheduleItem[];
@@ -110,7 +110,7 @@ export function DashboardSchedulePanel({
             ))}
 
             <div
-              className="absolute left-1.5 right-1.5 flex items-center rounded-md bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
+              className="absolute inset-x-0 flex items-center bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
               style={{
                 top: lunchBlock.top,
                 height: lunchBlock.height,

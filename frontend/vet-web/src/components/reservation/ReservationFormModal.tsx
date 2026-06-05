@@ -153,7 +153,7 @@ export function ReservationFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/55 px-4 py-3">
-      <div className="flex max-h-[94vh] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[94vh] w-full max-w-[560px] flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-[#edf1f6] px-5 py-3">
           <h2 className="text-base font-extrabold text-[#151b28]">
             예약 {mode === "add" ? "추가" : "수정"}
@@ -393,7 +393,7 @@ function DatePickerField({
 
       {isOpen && (
         <div
-          className="fixed z-[70] w-[244px] rounded-xl border border-[#dfe6f1] bg-white p-3 shadow-xl"
+          className="fixed z-[70] w-[244px] rounded-lg border border-[#dfe6f1] bg-white p-3 shadow-xl"
           style={{
             left: popoverPosition.left,
             top: popoverPosition.top,
