@@ -12,6 +12,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import Holidays from "date-holidays";
+import { toGenderLabel } from "./genderUtils";
 import type {
   PatientDetailResponse,
   PatientListItemResponse,
@@ -100,16 +101,9 @@ export function dotDate(value: string) {
 }
 
 export function formatGender(value?: string): ReservationPatient["gender"] {
-  const normalized = (value ?? "").toLowerCase();
-
-  if (["female", "f", "여아", "여자", "암컷"].includes(normalized)) {
-    return "여자";
-  }
-
-  if (["male", "m", "남아", "남자", "수컷"].includes(normalized)) {
-    return "남자";
-  }
-
+  const label = toGenderLabel(value);
+  if (label === "암컷") return "여자";
+  if (label === "수컷") return "남자";
   return "미상";
 }
 

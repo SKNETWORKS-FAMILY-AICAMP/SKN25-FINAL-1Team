@@ -298,9 +298,14 @@ export function useEmrData() {
             url: cloudfront_url,
           },
         ]);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[UploadEmrFile] failed:", err);
-        setUploadError("사진 업로드에 실패했습니다. 다시 시도해주세요.");
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 413) {
+          setUploadError("파일 크기는 50MB 이하만 업로드 가능합니다.");
+        } else {
+          setUploadError("사진 업로드에 실패했습니다. 다시 시도해주세요.");
+        }
       } finally {
         setIsUploadingFile(false);
       }

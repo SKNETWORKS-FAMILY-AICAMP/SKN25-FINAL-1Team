@@ -32,6 +32,7 @@ export interface PetInfo {
   notes: string;
   profile_image: string;
   last_visit: string;
+  checkup_date?: string;
 }
 
 export interface TriageSummary {
