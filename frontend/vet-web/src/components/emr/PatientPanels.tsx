@@ -41,7 +41,7 @@ export function PatientInfoPanel({
               <h1 className="text-2xl font-extrabold text-[#151b28]">
                 {patient.pet_name}
               </h1>
-              <span className="text-2xl font-extrabold text-[#e06666]">
+              <span className="text-2xl font-extrabold text-[#ef4444]">
                 <GenderBadge gender={patient.gender} className="text-2xl" />
               </span>
             </div>
@@ -66,7 +66,7 @@ export function PatientInfoPanel({
           onClick={onEdit}
           aria-label="환자 정보 편집"
           disabled={isReadOnly}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef4f4] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef5f4] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
         >
           <Edit3 className="h-5 w-5" />
         </button>
@@ -139,12 +139,12 @@ function HistoryItem({ history }: { history: EmrResult["emr_history"][number] })
       </p>
       <div className="rounded-lg bg-[#f9fafb] p-3">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-extrabold text-[#2a8587]">처방전</p>
+          <p className="text-sm font-extrabold text-[#2f6f67]">처방전</p>
           {history.prescriptions.length > 2 && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs font-extrabold text-[#59657a] hover:text-[#2a8587]"
+              className="text-xs font-extrabold text-[#59657a] hover:text-[#2f6f67]"
             >
               {expanded ? "접기" : "펼치기"}
             </button>

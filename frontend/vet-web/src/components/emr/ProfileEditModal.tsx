@@ -97,7 +97,7 @@ export function ProfileEditModal({
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d]"
+              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70]"
             >
               {GENDER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.label}>{opt.label}</option>
@@ -113,7 +113,7 @@ export function ProfileEditModal({
                 value={weight}
                 inputMode="decimal"
                 onChange={(e) => setWeight(normalizeWeightInput(e.target.value))}
-                className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d]"
+                className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70]"
               />
               <span className="shrink-0 text-sm font-extrabold text-[#4d5874]">kg</span>
             </div>
@@ -126,7 +126,7 @@ export function ProfileEditModal({
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d]"
+              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70]"
             />
           </label>
 
@@ -137,7 +137,7 @@ export function ProfileEditModal({
               type="date"
               value={checkupDate}
               onChange={(e) => setCheckupDate(e.target.value)}
-              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d]"
+              className="h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70]"
             />
           </label>
 
@@ -147,7 +147,7 @@ export function ProfileEditModal({
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="h-24 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d]"
+              className="h-24 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70]"
             />
           </label>
         </div>
@@ -164,7 +164,7 @@ export function ProfileEditModal({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="h-10 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#4d5874] hover:border-[#2f9b9d] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
+            className="h-10 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#4d5874] hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
             {isSaving ? "저장 중..." : "저장"}
           </button>
@@ -189,7 +189,7 @@ function ProfileInput({ label, value, readOnly }: { label: string; value: string
       <input
         defaultValue={value}
         readOnly={readOnly}
-        className={`h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#2f9b9d] ${readOnly ? "bg-[#f8fafb] text-[#a8b0bf]" : ""}`}
+        className={`h-10 w-full rounded-lg border border-[#dfe6f1] px-3 text-sm font-bold text-[#20283a] outline-none focus:border-[#357b70] ${readOnly ? "bg-[#f8fafb] text-[#a8b0bf]" : ""}`}
       />
     </label>
   );

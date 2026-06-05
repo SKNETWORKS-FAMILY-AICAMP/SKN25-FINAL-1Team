@@ -1,8 +1,8 @@
 import { normalizeGender } from "../../utils/genderUtils";
 
 const styles = {
-  female:  { symbol: "♀", label: "암컷",      colorClass: "text-[#e06666]" },
-  male:    { symbol: "♂", label: "수컷",      colorClass: "text-[#2f9b9d]" },
+  female:  { symbol: "♀", label: "암컷",      colorClass: "text-[#ef4444]" },
+  male:    { symbol: "♂", label: "수컷",      colorClass: "text-[#357b70]" },
   unknown: { symbol: "-", label: "성별 모름",  colorClass: "text-[#a8b0bf]" },
 };
 

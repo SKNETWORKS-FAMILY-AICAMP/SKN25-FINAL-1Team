@@ -98,7 +98,7 @@ export default function SettingsPage({
         <div className="min-h-0 w-full max-w-3xl space-y-4 overflow-y-auto">
           <section className="rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
             <div className="flex h-[64px] items-center gap-2.5 border-b border-[#e5eaf2] px-6">
-              <Clock3 className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
+              <Clock3 className="h-5 w-5 text-[#2f6f67]" strokeWidth={2.2} />
               <div>
                 <h2 className="text-base font-extrabold text-[#151b28]">
                   병원 운영 시간
@@ -164,7 +164,7 @@ export default function SettingsPage({
                 <button
                   type="button"
                   onClick={() => setIsOperationSaved(true)}
-                  className="flex h-9 items-center gap-2 rounded-lg bg-[#2563eb] px-4 text-sm font-extrabold text-white transition hover:bg-[#1a6de8]"
+                  className="flex h-9 items-center gap-2 rounded-lg bg-[#2f6f67] px-4 text-sm font-extrabold text-white transition hover:bg-[#255e57]"
                 >
                   <Save className="h-4 w-4" />
                   저장
@@ -182,7 +182,7 @@ export default function SettingsPage({
           {/* 계정 및 보안 섹션 */}
           <section className="rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
             <div className="flex items-center gap-2.5 border-b border-[#e5eaf2] px-6 py-4">
-              <LockKeyhole className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
+              <LockKeyhole className="h-5 w-5 text-[#2f6f67]" strokeWidth={2.2} />
               <h2 className="text-base font-extrabold text-[#151b28]">
                 계정 및 보안
               </h2>
@@ -201,7 +201,7 @@ export default function SettingsPage({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
-                  className="h-9 rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] whitespace-nowrap"
+                  className="h-9 rounded-lg border border-[#aecfc9] bg-white px-4 text-sm font-extrabold text-[#2f6f67] transition hover:bg-[#eef5f4] whitespace-nowrap"
                 >
                   비밀번호 변경
                 </button>
@@ -315,8 +315,8 @@ function PasswordChangeModal({
         <div className="px-6 py-5 space-y-4">
           {success ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#edf5ff]">
-                <CheckCircle2 className="h-8 w-8 text-[#2563eb]" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eef5f4]">
+                <CheckCircle2 className="h-8 w-8 text-[#2f6f67]" />
               </div>
               <p className="text-base font-extrabold text-[#1d2a57]">
                 비밀번호가 변경되었습니다.
@@ -354,7 +354,7 @@ function PasswordChangeModal({
                       className="flex items-center gap-2 text-xs font-semibold"
                     >
                       <CheckCircle2
-                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-[#2563eb]" : "text-[#c5cfe0]"}`}
+                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-[#2f6f67]" : "text-[#c5cfe0]"}`}
                       />
                       <span className={p.isValid ? "text-[#4d5874]" : "text-[#b0b9cc]"}>
                         {p.label}
@@ -388,7 +388,7 @@ function PasswordChangeModal({
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="h-10 rounded-lg bg-[#2563eb] px-5 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-not-allowed disabled:bg-[#a8cbff]"
+              className="h-10 rounded-lg bg-[#2f6f67] px-5 text-sm font-extrabold text-white transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:bg-[#aecfc9]"
             >
               {isLoading ? "변경 중..." : "변경하기"}
             </button>
@@ -422,7 +422,7 @@ function PasswordInputField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-10 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#c5cfe0] focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]"
+          className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-10 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#c5cfe0] focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4]"
         />
       </div>
     </div>
@@ -444,7 +444,7 @@ function TimeSelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#1d2a57] outline-none transition focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]"
+        className="h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#1d2a57] outline-none transition focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4]"
       >
         {timeOptions.map((time) => (
           <option key={time} value={time}>

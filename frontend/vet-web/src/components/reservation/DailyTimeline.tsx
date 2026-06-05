@@ -138,8 +138,8 @@ function ReservationCard({
         `absolute z-10 flex items-center overflow-hidden rounded-lg border pl-4 pr-3 text-left transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${weeklyCardClass[item.status]}`,
         compact ? "gap-2 py-1.5" : "gap-2.5 py-2",
         isSelected
-          ? "z-20 border-[#2563eb] bg-[#f8fbff] shadow-[0_0_0_1px_#8bbcff]"
-          : "shadow-sm hover:border-[#9fc0fb]",
+          ? "z-20 border-[#2f6f67] bg-[#eef5f4] shadow-[0_0_0_1px_#7fb1a8]"
+          : "shadow-sm hover:border-[#aecfc9]",
       ].join(" ")}
       style={{
         top,

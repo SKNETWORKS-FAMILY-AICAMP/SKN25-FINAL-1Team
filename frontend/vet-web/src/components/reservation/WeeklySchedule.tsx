@@ -125,13 +125,13 @@ export function WeeklySchedule({
                 className={[
                   "flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 border-r border-[#e5eaf2] px-1 text-center font-extrabold last:border-r-0",
                   isToday ? "bg-[#f9fbfc]" : "bg-white",
-                  isSunday ? "text-[#e06666]" : "text-[#1d2a57]",
+                  isSunday ? "text-[#ef4444]" : "text-[#1d2a57]",
                 ].join(" ")}
               >
                 <span
                   className={[
                     "text-[11px] leading-none",
-                    isToday ? "text-[#2a8587]" : "text-[#7a8498]",
+                    isToday ? "text-[#2f6f67]" : "text-[#7a8498]",
                   ].join(" ")}
                 >
                   {weekDayLabels[index]}

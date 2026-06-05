@@ -58,7 +58,7 @@ export function MonthlyCalendar({
                 onClick={() => onSelectDate(day)}
                 className={[
                   "min-h-[96px] border-r border-b border-[#edf1f6] p-4 text-left transition hover:bg-[#fbfcfc]",
-                  isToday ? "border-[#2a8587] ring-1 ring-[#2a8587]" : "",
+                  isToday ? "border-[#2f6f67] ring-1 ring-[#2f6f67]" : "",
                 ].join(" ")}
               >
                 <div className="flex items-center gap-3">
@@ -68,21 +68,21 @@ export function MonthlyCalendar({
                       !isCurrentMonth
                         ? "text-[#b8c0cf]"
                         : isSunday || holidayName
-                          ? "text-[#e06666]"
+                          ? "text-[#ef4444]"
                           : isSaturday
-                            ? "text-[#2a8587]"
+                            ? "text-[#2f6f67]"
                             : "text-[#1d2a57]",
                     ].join(" ")}
                   >
                     {day.getDate()}
                   </span>
                   {holidayName && (
-                    <span className="text-xs font-extrabold text-[#e06666]">
+                    <span className="text-xs font-extrabold text-[#ef4444]">
                       {holidayName}
                     </span>
                   )}
                   {isToday && (
-                    <span className="ml-auto rounded-full bg-[#2a8587] px-2 py-0.5 text-xs font-extrabold text-white">
+                    <span className="ml-auto rounded-full bg-[#2f6f67] px-2 py-0.5 text-xs font-extrabold text-white">
                       오늘
                     </span>
                   )}
@@ -104,7 +104,7 @@ export function MonthlyCalendar({
       </section>
 
       <div className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-lg border border-[#e5eaf2] bg-white px-5 py-2.5 text-sm font-extrabold text-[#53617c] shadow-sm">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#2a8587] text-xs text-[#2a8587]">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#2f6f67] text-xs text-[#2f6f67]">
           i
         </span>
         일별 예약 총 건수를 표시합니다.

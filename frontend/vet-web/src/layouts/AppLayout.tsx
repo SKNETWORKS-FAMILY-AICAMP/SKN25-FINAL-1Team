@@ -57,30 +57,30 @@ const alarmTypeMeta: Record<
   reservation_confirmed: {
     label: "예약 확정",
     Icon: CalendarCheck,
-    bgCls: "bg-[#eef4f4]",
-    iconCls: "text-[#2a8587]",
-    labelCls: "text-[#246f71]",
+    bgCls: "bg-[#eef5f4]",
+    iconCls: "text-[#2f6f67]",
+    labelCls: "text-[#255e57]",
   },
   reservation_cancelled: {
     label: "예약 취소",
     Icon: CalendarX,
-    bgCls: "bg-[#fcf4f4]",
-    iconCls: "text-[#e06666]",
-    labelCls: "text-[#c94f4f]",
+    bgCls: "bg-[#fef2f2]",
+    iconCls: "text-[#ef4444]",
+    labelCls: "text-[#dc2626]",
   },
   reservation_updated: {
     label: "예약 수정",
     Icon: CalendarClock,
-    bgCls: "bg-[#fbf8f0]",
-    iconCls: "text-[#e0b54f]",
-    labelCls: "text-[#b3842c]",
+    bgCls: "bg-[#fffbeb]",
+    iconCls: "text-[#f59e0b]",
+    labelCls: "text-[#b45309]",
   },
   chart_ready: {
     label: "차트 준비",
     Icon: ClipboardList,
-    bgCls: "bg-[#eef4f4]",
-    iconCls: "text-[#2a8587]",
-    labelCls: "text-[#246f71]",
+    bgCls: "bg-[#eef5f4]",
+    iconCls: "text-[#2f6f67]",
+    labelCls: "text-[#255e57]",
   },
   followup_received: {
     label: "경과 보고",
@@ -186,7 +186,7 @@ export default function AppLayout({
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f8f9] text-[#1f2937]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#1f2937]">
       <header className="fixed inset-x-0 top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e5eaf2] bg-white px-6">
         <button
           type="button"
@@ -199,7 +199,7 @@ export default function AppLayout({
 
         <div className="ml-auto flex items-center gap-4">
           <div className="hidden items-center gap-2 text-sm font-bold tabular-nums text-[#3f4960] md:flex">
-            <Clock3 className="h-5 w-5 text-[#2a8587]" strokeWidth={2.1} />
+            <Clock3 className="h-5 w-5 text-[#2f6f67]" strokeWidth={2.1} />
             <span>{clockText}</span>
           </div>
 
@@ -213,11 +213,11 @@ export default function AppLayout({
                 if (willOpen && hasUnread) markAllRead();
               }}
               aria-label="알림"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2a8587] transition hover:bg-[#f8f9fa] hover:text-[#2a8587]"
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2f6f67] transition hover:bg-[#f8f9fa] hover:text-[#2f6f67]"
             >
               <Bell className="h-5 w-5" strokeWidth={2.1} />
               {hasUnread && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#e06666]" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ef4444]" />
               )}
             </button>
 
@@ -283,11 +283,11 @@ export default function AppLayout({
                   className={[
                     "flex h-11 w-full items-center gap-3 rounded-lg px-4 text-left text-sm font-extrabold transition",
                     isActive
-                      ? "bg-[#eef4f4] text-[#2a8587]"
-                      : "text-[#20283a] hover:bg-[#f8fafb] hover:text-[#2a8587]",
+                      ? "bg-[#eef5f4] text-[#2f6f67]"
+                      : "text-[#20283a] hover:bg-[#f8fafb] hover:text-[#2f6f67]",
                   ].join(" ")}
                 >
-                  <Icon className="h-5 w-5 shrink-0 text-[#2a8587]" strokeWidth={2.2} />
+                  <Icon className="h-5 w-5 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
                   <span>{label}</span>
                 </button>
               );
@@ -296,7 +296,7 @@ export default function AppLayout({
 
           <section className="rounded-lg border border-[#e5eaf2] bg-white p-4 shadow-sm">
             <div className="flex items-start gap-2.5">
-              <Hospital className="mt-0.5 h-5 w-5 shrink-0 text-[#2f9b9d]" strokeWidth={2.1} />
+              <Hospital className="mt-0.5 h-5 w-5 shrink-0 text-[#357b70]" strokeWidth={2.1} />
               <div>
                 <p className="text-sm font-extrabold text-[#20283a]">
                   {hospitalName}
@@ -324,14 +324,14 @@ export default function AppLayout({
             <button
               type="button"
               onClick={onLogout}
-              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
+              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
             >
               로그아웃
             </button>
           </section>
         </aside>
 
-        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f7f8f9] px-4 pb-8 pt-6">
+        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f8fafc] px-4 pb-8 pt-6">
           {children}
         </main>
       </div>
@@ -368,7 +368,7 @@ function NotificationPanel({
             type="button"
             onClick={onMarkAllRead}
             disabled={isMarkingRead}
-            className="flex items-center gap-1 text-xs font-bold text-[#2a8587] transition hover:text-[#246f71] disabled:opacity-50"
+            className="flex items-center gap-1 text-xs font-bold text-[#2f6f67] transition hover:text-[#255e57] disabled:opacity-50"
           >
             <CheckCheck className="h-3.5 w-3.5" />
             모두 읽음
@@ -455,7 +455,7 @@ function AlarmRow({
       </div>
 
       {!alarm.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2a8587]" />
+        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2f6f67]" />
       )}
     </li>
   );

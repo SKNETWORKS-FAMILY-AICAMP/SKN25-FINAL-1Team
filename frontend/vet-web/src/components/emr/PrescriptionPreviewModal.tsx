@@ -60,7 +60,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
             >
               <Download className="h-4 w-4" />
               PDF 저장
@@ -68,7 +68,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
             >
               <Printer className="h-4 w-4" />
               출력

@@ -39,7 +39,7 @@ export function TopControls({
           <button
             type="button"
             onClick={onPrev}
-            className="flex h-10 w-10 items-center justify-center border-r border-[#edf1f6] text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2563eb]"
+            className="flex h-10 w-10 items-center justify-center border-r border-[#edf1f6] text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2f6f67]"
             aria-label="이전 날짜"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -54,7 +54,7 @@ export function TopControls({
           <button
             type="button"
             onClick={onNext}
-            className="flex h-10 w-10 items-center justify-center border-l border-[#edf1f6] text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2563eb]"
+            className="flex h-10 w-10 items-center justify-center border-l border-[#edf1f6] text-[#53617c] transition hover:bg-[#f3f6fb] hover:text-[#2f6f67]"
             aria-label="다음 날짜"
           >
             <ChevronRight className="h-5 w-5" />
@@ -82,7 +82,7 @@ export function TopControls({
             className={[
               "h-10 rounded-lg px-5 text-sm font-extrabold transition",
               viewMode === mode
-                ? "bg-[#2a8587] text-white shadow-sm"
+                ? "bg-[#2f6f67] text-white shadow-sm"
                 : "border border-[#dfe6f1] bg-white text-[#4d5874]",
             ].join(" ")}
           >
@@ -104,7 +104,7 @@ export function TopControls({
         <button
           type="button"
           onClick={onAdd}
-          className="flex h-10 items-center gap-2 rounded-lg bg-[#2a8587] px-5 text-sm font-extrabold text-white shadow-sm"
+          className="flex h-10 items-center gap-2 rounded-lg bg-[#2f6f67] px-5 text-sm font-extrabold text-white shadow-sm"
         >
           <Plus className="h-4 w-4" />
           예약 추가

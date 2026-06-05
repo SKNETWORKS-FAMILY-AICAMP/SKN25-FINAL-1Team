@@ -3,15 +3,15 @@ import type { VisitType } from "../../api/dashboardApi";
 const styles: Record<VisitType, { label: string; className: string }> = {
   emergency: {
     label: "응급",
-    className: "bg-[#fcefef] text-[#e06666] border-[#f9dcdc]",
+    className: "bg-[#fef2f2] text-[#ef4444] border-[#fee2e2]",
   },
   semiEmergency: {
     label: "준응급",
-    className: "bg-[#faf3e1] text-[#cf9f38] border-[#f4e6bf]",
+    className: "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]",
   },
   normal: {
     label: "일반",
-    className: "bg-[#eef5f0] text-[#437455] border-[#d7e8dd]",
+    className: "bg-[#f0fdf4] text-[#15803d] border-[#dcfce7]",
   },
   checkup: {
     label: "검진",

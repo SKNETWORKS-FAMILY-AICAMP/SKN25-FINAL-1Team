@@ -226,7 +226,7 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f3f6f0] text-slate-900">
+    <div className="flex min-h-screen flex-col bg-[#f8fafc] text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />

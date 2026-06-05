@@ -46,7 +46,7 @@ export function PatientListView({
             value={searchValue}
             onChange={(event) => onSearch(event.target.value)}
             placeholder="강아지 이름 또는 보호자 이름 검색"
-            className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-12 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4]"
+            className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-12 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef5f4]"
           />
         </label>
       </div>
@@ -55,7 +55,7 @@ export function PatientListView({
         <div className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-[#e5eaf2] px-4 xl:px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-[#151b28]">전체 환자</h2>
-            <span className="rounded-full bg-[#eef4f4] px-2.5 py-1 text-sm font-extrabold text-[#2a8587]">
+            <span className="rounded-full bg-[#eef5f4] px-2.5 py-1 text-sm font-extrabold text-[#2f6f67]">
               {totalCount}
             </span>
           </div>
@@ -124,7 +124,7 @@ export function PatientListView({
                             onOpenDetail(patient);
                           }}
                           disabled={isLoading}
-                          className="h-9 w-[70px] whitespace-nowrap rounded-lg border border-[#bdd6d6] bg-white text-xs font-extrabold text-[#2a8587] transition hover:bg-[#eef4f4] disabled:cursor-wait disabled:opacity-60 xl:w-[78px] xl:text-sm"
+                          className="h-9 w-[70px] whitespace-nowrap rounded-lg border border-[#bdd6d6] bg-white text-xs font-extrabold text-[#2f6f67] transition hover:bg-[#eef5f4] disabled:cursor-wait disabled:opacity-60 xl:w-[78px] xl:text-sm"
                         >
                           상세보기
                         </button>
@@ -188,7 +188,7 @@ function Pagination({
             className={[
               "h-9 w-9 rounded-lg text-sm font-extrabold",
               page === currentPage
-                ? "bg-[#eef4f4] text-[#2a8587]"
+                ? "bg-[#eef5f4] text-[#2f6f67]"
                 : "text-[#53617c] hover:bg-[#f5f7f9]",
             ].join(" ")}
           >

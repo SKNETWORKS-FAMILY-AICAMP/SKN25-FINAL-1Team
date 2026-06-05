@@ -49,7 +49,7 @@ export function QueuePanel({
           <button
             type="button"
             onClick={onRefresh}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#edf5ff] px-2.5 text-[11px] font-extrabold text-[#2563eb] transition hover:bg-[#dcecff]"
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#eef5f4] px-2.5 text-[11px] font-extrabold text-[#2f6f67] transition hover:bg-[#d5e7e4]"
           >
             <RefreshCcw className="h-4 w-4" />
             대기열 새로고침
@@ -61,7 +61,7 @@ export function QueuePanel({
             type="button"
             onClick={() => onMoveDate(-1)}
             aria-label="이전 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -70,7 +70,7 @@ export function QueuePanel({
               type="date"
               value={selectedDate}
               onChange={(event) => onChangeDate(event.target.value)}
-              className="h-8 w-full min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-transparent outline-none focus:border-[#4a89ff] focus:ring-2 focus:ring-[#edf5ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-transparent outline-none focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4]"
             />
             <span className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-center text-xs font-extrabold tabular-nums text-[#4d5874]">
               {formatQueueDateLabel(selectedDate)}
@@ -80,7 +80,7 @@ export function QueuePanel({
             type="button"
             onClick={() => onMoveDate(1)}
             aria-label="다음 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -88,7 +88,7 @@ export function QueuePanel({
             type="button"
             onClick={onGoToday}
             disabled={isTodayView}
-            className="h-8 rounded-lg border border-[#dfe6f1] text-xs font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="h-8 rounded-lg border border-[#dfe6f1] text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
           >
             오늘
           </button>
@@ -164,7 +164,7 @@ function QueueTabButton({
       type="button"
       onClick={onClick}
       className={`h-8 rounded-md text-sm font-extrabold transition ${
-        active ? "bg-white text-[#2563eb] shadow-sm" : "text-[#697386]"
+        active ? "bg-white text-[#2f6f67] shadow-sm" : "text-[#697386]"
       }`}
     >
       {label}
