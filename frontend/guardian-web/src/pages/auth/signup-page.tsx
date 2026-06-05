@@ -234,7 +234,7 @@ const SignupPage = () => {
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
-        <section className="flex flex-col justify-between gap-6">
+        <section className="flex flex-col">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
               MediPaw와 함께
@@ -246,7 +246,7 @@ const SignupPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="mt-10 flex flex-1 flex-col justify-between gap-3">
             {serviceItems.map((item) => (
               <article
                 key={item.title}
@@ -257,7 +257,7 @@ const SignupPage = () => {
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-slate-900">{item.title}</h2>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                  <p className="mt-1 text-sm leading-snug text-slate-600">
                     {item.description}
                   </p>
                 </div>

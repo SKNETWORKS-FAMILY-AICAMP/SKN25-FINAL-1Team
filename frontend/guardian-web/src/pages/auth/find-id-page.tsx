@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
-import { Info } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 import { findGuardianId } from "../../api/auth-api";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
@@ -125,7 +125,7 @@ const FindIdPage = () => {
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-        <section className="space-y-5">
+        <section className="space-y-14">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
               아이디 찾기
@@ -137,18 +137,16 @@ const FindIdPage = () => {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-white/80 p-5">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-                <Info className="h-5 w-5" aria-hidden />
-              </span>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">안내사항</h2>
-                <ul className="mt-2 space-y-2 text-base leading-7 text-slate-600">
-                  <li>정보가 일치하면 마스킹된 로그인 ID를 표시합니다.</li>
-                  <li>정보가 일치하지 않으면 아이디를 찾을 수 없습니다.</li>
-                </ul>
-              </div>
+          <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <Lightbulb className="h-6 w-6" aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">안내사항</h2>
+              <ul className="mt-1 space-y-0.5 text-sm leading-snug text-slate-600">
+                <li>정보가 일치하면 마스킹된 로그인 ID를 표시합니다.</li>
+                <li>정보가 일치하지 않으면 아이디를 찾을 수 없습니다.</li>
+              </ul>
             </div>
           </div>
         </section>
