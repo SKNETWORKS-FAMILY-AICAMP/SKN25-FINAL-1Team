@@ -53,7 +53,7 @@ export function PatientInfoPanel({
               최근 내원일: {patient.last_visit}
             </p>
             <p className="mt-1 text-sm font-extrabold text-[#4d5874]">
-              마지막 정기검진일: {patient.checkup_date ?? "검진 이력 없음"}
+              마지막 정기검진일: {patient.checkup_date || "검진 이력 없음"}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <InfoTag label={patient.is_neutered ? "중성화 O" : "중성화 X"} />

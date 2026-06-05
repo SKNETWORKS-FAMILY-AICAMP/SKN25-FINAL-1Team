@@ -24,7 +24,7 @@ export interface PetInfo {
   pet_id: number;
   pet_name: string;
   species: string;
-  gender: "Female" | "Male";
+  gender: "Female" | "Male" | "unknown";
   weight_kg: number;
   age: number;
   birth_date: string;

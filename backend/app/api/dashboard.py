@@ -7,7 +7,7 @@ from app.core.dependencies import get_current_doctor
 from app.db.session import get_db
 from app.crud.dashboard import get_doctor_day_schedules
 from app.models.doctor import Doctor
-from app.utils.timezone import KST, to_kst
+from app.utils.timezone import to_kst
 from app.schemas.dashboard import (
     DashboardResult,
     DashboardScheduleItem,
@@ -84,8 +84,6 @@ async def get_today_dashboard(
     waiting_count = 0
     completed_count = 0
 
-    now = datetime.now(KST)
-
     for schedule, guardian, pet, triage in rows:
         visit_type = _visit_type(triage.urgency_level_num if triage else None)
 
@@ -94,10 +92,7 @@ async def get_today_dashboard(
         if schedule.status in COMPLETED_STATUSES:
             completed_count += 1
         elif schedule.status in WAITING_STATUSES:
-            # 예약 시간이 이미 지난 건은 '대기중'으로 세지 않는다.
-            confirmed = to_kst(schedule.confirmed_time)
-            if confirmed and confirmed >= now:
-                waiting_count += 1
+            waiting_count += 1
 
         schedules.append(DashboardScheduleItem(
             id=schedule.scheduleid,

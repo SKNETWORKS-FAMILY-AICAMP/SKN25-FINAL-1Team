@@ -422,6 +422,15 @@ export function getPasswordPolicyStatus(password: string, userId: string) {
   ];
 }
 
+export async function resetPasswordByLicense(loginid: string, licenseNumber: string): Promise<string> {
+  const res = await axios.post(`${API_BASE_URL}/doctor/auth/reset-password`, {
+    loginid,
+    license_number: licenseNumber,
+  });
+  const data = res.data;
+  return data.result?.temp_password ?? data.temp_password ?? data.data?.temp_password;
+}
+
 function getApiErrorMessage(err: unknown, fallbackMessage: string) {
   if (!axios.isAxiosError(err)) {
     return err instanceof Error ? err.message : fallbackMessage;

@@ -9,6 +9,8 @@ import {
 } from "react-router-dom";
 import { AuthSession } from "../api/authApi";
 import { AppMenuId } from "../layouts/AppLayout";
+import AccountInquiryPage from "../pages/auth/AccountInquiryPage";
+import FindPasswordPage from "../pages/auth/FindPasswordPage";
 import FirstPasswordChangePage from "../pages/auth/FirstPasswordChangePage";
 import LoginPage from "../pages/auth/LoginPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
@@ -130,6 +132,8 @@ function VetRoutes() {
           )
         }
       />
+      <Route path="/account-inquiry" element={<AccountInquiryPage />} />
+      <Route path="/find-password" element={<FindPasswordPage />} />
       <Route
         path="/first-password-change"
         element={

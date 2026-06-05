@@ -141,7 +141,7 @@ export function PatientDetailView({
             ["품종", localPatient.breed],
             ["성별", localPatient.gender],
             ["중성화", localPatient.isNeutered ? "O" : "X"],
-            ["생년월일", localPatient.birthDate ? `${localPatient.birthDate} (${localPatient.age}세)` : "생일 미상"],
+            ["생년월일", localPatient.birthDate ? `${localPatient.birthDate} (${localPatient.age})` : "생일 미상"],
             ["체중", localPatient.weight],
             ["특이사항", localPatient.notes],
           ]}
