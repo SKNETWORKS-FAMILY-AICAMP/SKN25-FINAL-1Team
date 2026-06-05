@@ -52,6 +52,7 @@ async def add_message(
     content: str,
     image_url: str = None,
     photo_analysis: dict | None = None,
+    meta: dict | None = None,
 ):
     messages = list(session.messages or [])
     message = {
@@ -61,6 +62,9 @@ async def add_message(
     }
     if photo_analysis:
         message["photo_analysis"] = photo_analysis
+    # decision tree walker 상태(node_id/section/answers 등)를 메시지에 내장
+    if meta:
+        message["meta"] = meta
     messages.append(message)
 
     session.messages = messages

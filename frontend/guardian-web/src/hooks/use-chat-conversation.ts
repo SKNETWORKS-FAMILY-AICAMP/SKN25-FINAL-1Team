@@ -12,12 +12,34 @@ import {
 } from "../api/chat-api";
 import type { PendingAttachment } from "./use-chat-upload";
 
+/** 슬롯 카드에 표시할 단일 예약 가능 시간 */
+export interface SlotOption {
+  label: string; // 선택 라우팅용 ("5월 20일 16:00")
+  monthDay: string; // "5월 20일"
+  weekday: string; // "월"
+  timeText: string; // "오후 4:00"
+  durationText: string; // "1시간 30분"
+}
+
+/** 챗봇 말풍선 대신 렌더링하는 구조화 카드 */
+export type ChatCard =
+  | { kind: "slots"; slots: SlotOption[] }
+  | {
+      kind: "confirmation";
+      petName: string;
+      dateText: string; // "2024년 5월 20일 (월) 오후 4:00"
+      durationText: string; // "1시간 30분"
+      hospitalName?: string;
+    }
+  | { kind: "instructions"; items: string[] };
+
 export interface ChatMessage {
   id: number;
   role: "user" | "assistant";
   content: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  card?: ChatCard;
 }
 
 interface UseChatConversationParams {
