@@ -65,12 +65,17 @@ export function QueuePanel({
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) => onChangeDate(event.target.value)}
-            className="h-8 min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-[#4d5874] outline-none focus:border-[#4a89ff] focus:ring-2 focus:ring-[#edf5ff]"
-          />
+          <div className="relative min-w-0">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(event) => onChangeDate(event.target.value)}
+              className="h-8 w-full min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-transparent outline-none focus:border-[#4a89ff] focus:ring-2 focus:ring-[#edf5ff]"
+            />
+            <span className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-center text-xs font-extrabold tabular-nums text-[#4d5874]">
+              {formatQueueDateLabel(selectedDate)}
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => onMoveDate(1)}
@@ -139,6 +144,10 @@ export function QueuePanel({
       </div>
     </Panel>
   );
+}
+
+function formatQueueDateLabel(dateValue: string) {
+  return dateValue.replace(/-/g, ".");
 }
 
 function QueueTabButton({

@@ -100,16 +100,16 @@ export default function FirstPasswordChangePage({
         <button
           type="button"
           onClick={onGoLogin}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-white hover:text-blue-600"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-white hover:text-blue-600"
         >
           <Home size={19} />
           첫 화면으로
         </button>
       </div>
 
-      <section className="mx-auto flex min-h-[calc(100vh-84px)] max-w-[1400px] items-center justify-center rounded-3xl border border-slate-200 bg-white px-8 py-6 shadow-sm">
-        <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="flex flex-col justify-center">
+      <section className="mx-auto flex min-h-[calc(100vh-84px)] max-w-[1400px] items-start justify-center rounded-lg border border-slate-200 bg-white px-8 py-8 shadow-sm">
+        <div className="grid w-full grid-cols-1 items-start gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="flex flex-col justify-start">
             <div className="mb-8">
               <img src={logo} alt="MediPaw" className="w-[300px]" />
 
@@ -124,7 +124,7 @@ export default function FirstPasswordChangePage({
             </div>
 
             <div className="flex justify-center py-3">
-              <div className="relative flex h-48 w-48 items-center justify-center rounded-[2rem] bg-blue-50 text-blue-600">
+              <div className="relative flex h-48 w-48 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 <ShieldCheck size={112} strokeWidth={1.6} />
 
                 <div className="absolute bottom-6 right-3 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400 text-white shadow-lg shadow-cyan-100">
@@ -148,10 +148,10 @@ export default function FirstPasswordChangePage({
             </div>
           </section>
 
-          <section className="flex flex-col justify-center">
-            <div className="mx-auto w-full max-w-[600px] rounded-3xl border border-slate-200 bg-white px-8 py-7 shadow-sm">
+          <section className="flex flex-col justify-start">
+            <div className="mx-auto w-full max-w-[600px] rounded-lg border border-slate-200 bg-white px-8 py-7 shadow-sm">
               <div className="mb-5 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                   <LockKeyhole size={26} />
                 </div>
 
@@ -164,7 +164,7 @@ export default function FirstPasswordChangePage({
                 </p>
               </div>
 
-              <div className="mb-4 flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3 text-blue-700">
+              <div className="mb-4 flex items-start gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
                 <KeyRound size={20} className="mt-0.5 shrink-0" />
                 <p className="text-sm font-bold leading-6">
                   계정 보안 강화를 위해 임시 비밀번호를 새 비밀번호로
@@ -201,7 +201,7 @@ export default function FirstPasswordChangePage({
                 />
 
                 {error && (
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-600">
+                  <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-600">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
                       <TriangleAlert size={15} fill="currentColor" />
                     </div>
@@ -210,7 +210,7 @@ export default function FirstPasswordChangePage({
                   </div>
                 )}
 
-                <div className="rounded-xl bg-blue-50 px-5 py-4">
+                <div className="rounded-lg bg-blue-50 px-5 py-4">
                   <h3 className="mb-2 text-sm font-bold text-blue-700">
                     비밀번호 정책
                   </h3>
@@ -238,7 +238,7 @@ export default function FirstPasswordChangePage({
                 <button
                   type="submit"
                   disabled={!canSubmit || isLoading}
-                  className="h-12 w-full rounded-xl bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                  className="h-12 w-full rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
                   {isLoading ? "변경 중..." : "변경 완료"}
                 </button>
@@ -280,7 +280,7 @@ function PasswordField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-12 w-full rounded-xl border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+          className="h-12 w-full rounded-lg border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
         />
 
         <button

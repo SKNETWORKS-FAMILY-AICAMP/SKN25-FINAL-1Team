@@ -32,7 +32,7 @@ export function PatientListView({
 }: PatientListViewProps) {
   return (
     <div className="flex h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden">
-      <div className="mb-3 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mb-4 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold text-[#151b28]">환자 관리</h1>
           <p className="mt-2 text-sm font-bold text-[#65718a]">

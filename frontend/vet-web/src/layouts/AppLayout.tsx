@@ -188,12 +188,14 @@ export default function AppLayout({
   return (
     <div className="min-h-screen bg-[#f6f8fb] text-[#1f2937]">
       <header className="fixed inset-x-0 top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e5eaf2] bg-white px-6">
-        <div className="flex flex-col items-start justify-center">
+        <button
+          type="button"
+          onClick={() => onNavigate?.("home")}
+          className="flex items-center rounded-lg p-1"
+          aria-label="홈으로 이동"
+        >
           <PawLogo />
-          <p className="mt-1 pl-1 text-xs font-extrabold tracking-normal text-[#4b5563]">
-            {serviceName}
-          </p>
-        </div>
+        </button>
 
         <div className="ml-auto flex items-center gap-4">
           <div className="hidden items-center gap-2 text-sm font-bold tabular-nums text-[#3f4960] md:flex">
@@ -220,7 +222,7 @@ export default function AppLayout({
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[380px] overflow-hidden rounded-xl border border-[#e5eaf2] bg-white shadow-xl">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[380px] overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-xl">
                 <NotificationPanel
                   alarms={alarms}
                   isMarkingRead={isMarkingRead}
@@ -464,7 +466,7 @@ function PawLogo() {
     <img
       src={medipawSymbol}
       alt="Medipaw"
-      className="h-9 w-auto object-contain"
+      className="h-12 w-auto object-contain"
     />
   );
 }

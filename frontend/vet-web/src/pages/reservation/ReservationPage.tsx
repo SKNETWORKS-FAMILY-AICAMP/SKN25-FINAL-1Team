@@ -29,6 +29,7 @@ import {
   addDays,
   addMonths,
   getControlLabel,
+  getCompactControlLabel,
   getDateKey,
   statusOrder,
 } from "../../utils/reservationUtils";
@@ -96,6 +97,10 @@ export default function ReservationPage({
 
   const controlLabel = useMemo(
     () => getControlLabel(viewMode, selectedDate),
+    [selectedDate, viewMode]
+  );
+  const compactControlLabel = useMemo(
+    () => getCompactControlLabel(viewMode, selectedDate),
     [selectedDate, viewMode]
   );
 
@@ -198,6 +203,7 @@ export default function ReservationPage({
       <div className="flex h-[calc(100vh-128px)] flex-col overflow-hidden">
         <TopControls
           controlLabel={controlLabel}
+          compactControlLabel={compactControlLabel}
           viewMode={viewMode}
           isLoading={isLoading}
           onChangeViewMode={setViewMode}
@@ -209,7 +215,7 @@ export default function ReservationPage({
         />
 
         {viewMode === "day" && (
-          <div className="grid min-h-0 flex-1 grid-cols-[264px_minmax(460px,1fr)_320px] gap-2">
+          <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr_280px] gap-2">
             <aside className="space-y-3">
               <MiniCalendar
                 selectedDate={selectedDate}
