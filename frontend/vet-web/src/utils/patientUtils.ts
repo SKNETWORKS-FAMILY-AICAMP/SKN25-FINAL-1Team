@@ -6,6 +6,7 @@ import type {
   EmrHistoryRecord,
   PatientProfile,
 } from "../types/patient";
+import { toGenderLabel } from "./genderUtils";
 
 export const speciesOptions = ["강아지", "고양이"];
 export const editableSpeciesOptions = ["강아지", "고양이", "기타"];
@@ -56,7 +57,7 @@ export function mapDetailToPatient(
     phone: info.phone,
     lastVisitDate: detail.emr_history[0]?.visit_date
       ? normalizeDate(detail.emr_history[0].visit_date)
-      : "-",
+      : "검진 이력 없음",
     memo: info.notes,
     imageUrl:
       info.profile_image ||
@@ -64,12 +65,7 @@ export function mapDetailToPatient(
     guardianEmail: "-",
     guardianAddress: "-",
     guardianMemo: info.notes,
-    gender:
-      info.gender === "female"
-        ? "암컷"
-        : info.gender === "male"
-          ? "수컷"
-          : info.gender,
+    gender: toGenderLabel(info.gender),
     isNeutered: Boolean(info.is_neutered),
     birthDate: normalizeDate(info.birth_date),
     weight: `${info.weight_kg}kg`,

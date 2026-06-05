@@ -4,6 +4,7 @@ import type {
   ReservationPatient,
 } from "../../types/reservation";
 import { TriageBadge } from "../common/TriageBadge";
+import { GenderBadge } from "../common/GenderBadge";
 import {
   formatDateWithWeekday,
 } from "../../utils/reservationUtils";
@@ -52,7 +53,7 @@ export function DetailPanel({
             </h3>
             <TriageBadge level={reservation.status} />
             <span className="text-xl font-extrabold text-[#2563eb]">
-              {patient.gender === "남자" ? "♂" : patient.gender === "여자" ? "♀" : "-"}
+              <GenderBadge gender={patient.gender} className="text-xl" />
             </span>
           </div>
           <p className="mt-2 text-xs font-bold text-[#53617c]">
