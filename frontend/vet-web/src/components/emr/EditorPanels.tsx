@@ -42,13 +42,13 @@ function EditableSelect({
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+          className="w-full rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#2f9b9d]"
           autoFocus
         />
         <button
           type="button"
           onClick={() => { onChange(""); setShowInput(false); }}
-          className="shrink-0 text-[#a8b0bf] hover:text-[#ef4444]"
+          className="shrink-0 text-[#a8b0bf] hover:text-[#e06666]"
         >
           <X className="h-3 w-3" />
         </button>
@@ -67,7 +67,7 @@ function EditableSelect({
           onChange(e.target.value);
         }
       }}
-      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#2f9b9d]"
     >
       <option value="">{placeholder}</option>
       {options.map((o) => (
@@ -104,14 +104,14 @@ function DurationSelect({
           min={1}
           value={value || ""}
           onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
-          className="w-14 rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+          className="w-14 rounded border border-[#dfe6f1] px-2 py-1 text-sm outline-none focus:border-[#2f9b9d]"
           autoFocus
         />
         <span className="shrink-0 text-sm text-[#697386]">일</span>
         <button
           type="button"
           onClick={() => { onChange(0); setShowInput(false); }}
-          className="shrink-0 text-[#a8b0bf] hover:text-[#ef4444]"
+          className="shrink-0 text-[#a8b0bf] hover:text-[#e06666]"
         >
           <X className="h-3 w-3" />
         </button>
@@ -130,7 +130,7 @@ function DurationSelect({
           onChange(parseInt(e.target.value, 10));
         }
       }}
-      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#4a89ff]"
+      className="w-full rounded border border-[#dfe6f1] bg-white px-2 py-1 text-sm outline-none focus:border-[#2f9b9d]"
     >
       <option value={0}>기간 선택</option>
       {DURATION_OPTIONS.map((d) => (
@@ -166,7 +166,7 @@ export function EditorPanel({
           type="button"
           onClick={onCompleteVisit}
           disabled={isReadOnly}
-          className="h-9 rounded-lg bg-[#2563eb] px-4 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+          className="h-9 rounded-lg bg-[#2a8587] px-4 text-sm font-extrabold text-white transition hover:bg-[#246f71] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
         >
           진료 완료
         </button>
@@ -177,7 +177,7 @@ export function EditorPanel({
           onChange={(event) => onChange(event.target.value)}
           placeholder="진료 내용을 입력하세요..."
           readOnly={isReadOnly}
-          className="h-36 w-full resize-none rounded-lg border border-[#dfe6f1] px-4 py-3 text-sm font-bold leading-6 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#4a89ff] focus:ring-4 focus:ring-[#edf5ff] read-only:bg-[#f8fafc] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
+          className="h-36 w-full resize-none rounded-lg border border-[#dfe6f1] px-4 py-3 text-sm font-bold leading-6 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#2f9b9d] focus:ring-4 focus:ring-[#eef4f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
         />
         <p className="mt-2 text-right text-xs font-extrabold text-[#8a94a6]">
           글자 수: {count}
@@ -268,7 +268,7 @@ export function PhotoUploadPanel({
             type="button"
             onClick={openFilePicker}
             disabled={disabled}
-            className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
             <Plus className="h-6 w-6" />
             추가
@@ -286,7 +286,7 @@ export function PhotoUploadPanel({
             event.preventDefault();
             handleFilesSelected(event.dataTransfer.files);
           }}
-          className="flex h-16 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+          className="flex h-16 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-[#cfd8e6] text-sm font-extrabold text-[#59657a] transition hover:border-[#2f9b9d] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
         >
           <FileUp className="h-5 w-5" />
           {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
@@ -378,9 +378,9 @@ export function PrescriptionInputPanel({
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="약제명 검색 (예: 아모시실린)"
             readOnly={isReadOnly}
-            className="h-10 w-full rounded-lg border border-[#4a89ff] px-4 pr-10 text-sm font-bold outline-none ring-4 ring-[#edf5ff] read-only:border-[#dfe6f1] read-only:bg-[#f8fafc] read-only:text-[#8a94a6] read-only:ring-0"
+            className="h-10 w-full rounded-lg border border-[#2f9b9d] px-4 pr-10 text-sm font-bold outline-none ring-4 ring-[#eef4f4] read-only:border-[#dfe6f1] read-only:bg-[#f9fafb] read-only:text-[#8a94a6] read-only:ring-0"
           />
-          <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#4a89ff]" />
+          <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#2f9b9d]" />
           {isOpen && (
             <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[#dfe6f1] bg-white shadow-lg">
               {results.map((drug) => (
@@ -388,7 +388,7 @@ export function PrescriptionInputPanel({
                   <button
                     type="button"
                     onClick={() => handleSelect(drug)}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-[#edf5ff]"
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-[#eef4f4]"
                   >
                     <span className="font-extrabold text-[#20283a]">{drug.name}</span>
                     {drug.ingredient_kr && (
@@ -403,7 +403,7 @@ export function PrescriptionInputPanel({
 
         <div className="overflow-hidden rounded-lg border border-[#e8edf4]">
           <table className="w-full table-fixed text-left">
-            <thead className="bg-[#f7f9fc] text-xs font-extrabold text-[#697386]">
+            <thead className="bg-[#f8fafb] text-xs font-extrabold text-[#697386]">
               <tr>
                 <th className="w-[24%] px-4 py-3">약제명</th>
                 <th className="w-[14%] px-3 py-3">형태</th>
@@ -481,7 +481,7 @@ export function PrescriptionInputPanel({
                             onChange={() =>
                               onUpdate?.(clientId, "pil_seon", pilSeon === "필" ? "선" : "필")
                             }
-                            className="h-3.5 w-3.5 cursor-pointer accent-[#2563eb]"
+                            className="h-3.5 w-3.5 cursor-pointer accent-[#2a8587]"
                           />
                         </div>
                       )}
@@ -491,7 +491,7 @@ export function PrescriptionInputPanel({
                         type="button"
                         onClick={() => onRemove(clientId)}
                         disabled={isReadOnly}
-                        className="text-[#ef4444] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+                        className="text-[#e06666] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -509,9 +509,9 @@ export function PrescriptionInputPanel({
             type="button"
             onClick={onGenerate}
             disabled={isReadOnly}
-            className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-5 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-5 text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
-            <Sparkles className="h-4 w-4 text-[#4a89ff]" strokeWidth={2.2} />
+            <Sparkles className="h-4 w-4 text-[#2f9b9d]" strokeWidth={2.2} />
             처방전 자동 생성
           </button>
         </div>

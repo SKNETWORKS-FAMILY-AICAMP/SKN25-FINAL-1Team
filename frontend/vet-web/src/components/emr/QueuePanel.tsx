@@ -49,7 +49,7 @@ export function QueuePanel({
           <button
             type="button"
             onClick={onRefresh}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#edf5ff] px-2.5 text-[11px] font-extrabold text-[#2563eb] transition hover:bg-[#dcecff]"
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#eef4f4] px-2.5 text-[11px] font-extrabold text-[#2a8587] transition hover:bg-[#dbe9e9]"
           >
             <RefreshCcw className="h-4 w-4" />
             대기열 새로고침
@@ -61,7 +61,7 @@ export function QueuePanel({
             type="button"
             onClick={() => onMoveDate(-1)}
             aria-label="이전 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -69,13 +69,13 @@ export function QueuePanel({
             type="date"
             value={selectedDate}
             onChange={(event) => onChangeDate(event.target.value)}
-            className="h-8 min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-[#4d5874] outline-none focus:border-[#4a89ff] focus:ring-2 focus:ring-[#edf5ff]"
+            className="h-8 min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-[#4d5874] outline-none focus:border-[#2f9b9d] focus:ring-2 focus:ring-[#eef4f4]"
           />
           <button
             type="button"
             onClick={() => onMoveDate(1)}
             aria-label="다음 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -83,7 +83,7 @@ export function QueuePanel({
             type="button"
             onClick={onGoToday}
             disabled={isTodayView}
-            className="h-8 rounded-lg border border-[#dfe6f1] text-xs font-extrabold text-[#59657a] transition hover:border-[#4a89ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="h-8 rounded-lg border border-[#dfe6f1] text-xs font-extrabold text-[#59657a] transition hover:border-[#2f9b9d] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
             오늘
           </button>
@@ -91,7 +91,7 @@ export function QueuePanel({
       </div>
 
       {/* 탭 - 고정 */}
-      <div className="grid shrink-0 grid-cols-2 border-y border-[#edf1f6] bg-[#f9fbfe] p-1">
+      <div className="grid shrink-0 grid-cols-2 border-y border-[#edf1f6] bg-[#fbfcfc] p-1">
         <QueueTabButton
           active={activeTab === "waiting"}
           label={`진료 대기 ${waitingCount}`}
@@ -114,8 +114,8 @@ export function QueuePanel({
                 onClick={() => onSelectPatient(patient.schedule_id)}
                 className={`cursor-pointer text-xs text-[#5e6879] ${
                   patient.schedule_id === selectedScheduleId
-                    ? "bg-[#f3f8ff]"
-                    : "hover:bg-[#fafcff]"
+                    ? "bg-[#f8f9fa]"
+                    : "hover:bg-[#fcfdfd]"
                 }`}
               >
                 <td className="w-[86px] px-6 py-2 font-extrabold tabular-nums">
@@ -155,7 +155,7 @@ function QueueTabButton({
       type="button"
       onClick={onClick}
       className={`h-8 rounded-md text-sm font-extrabold transition ${
-        active ? "bg-white text-[#2563eb] shadow-sm" : "text-[#697386]"
+        active ? "bg-white text-[#2a8587] shadow-sm" : "text-[#697386]"
       }`}
     >
       {label}

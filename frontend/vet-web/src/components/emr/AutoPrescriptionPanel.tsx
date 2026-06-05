@@ -83,7 +83,7 @@ export function AutoPrescriptionPanel({
             type="button"
             onClick={onOpenPreview}
             disabled={isReadOnly}
-            className="h-10 w-full rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="h-10 w-full rounded-lg border border-[#dfe6f1] text-sm font-extrabold text-[#4d5874] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
             미리보기
           </button>

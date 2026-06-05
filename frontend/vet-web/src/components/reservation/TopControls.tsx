@@ -69,7 +69,7 @@ export function TopControls({
             className={[
               "h-10 rounded-lg px-5 text-sm font-extrabold transition",
               viewMode === mode
-                ? "bg-[#2563eb] text-white shadow-sm"
+                ? "bg-[#2a8587] text-white shadow-sm"
                 : "border border-[#dfe6f1] bg-white text-[#4d5874]",
             ].join(" ")}
           >
@@ -91,7 +91,7 @@ export function TopControls({
         <button
           type="button"
           onClick={onAdd}
-          className="flex h-10 items-center gap-2 rounded-lg bg-[#2563eb] px-5 text-sm font-extrabold text-white shadow-sm"
+          className="flex h-10 items-center gap-2 rounded-lg bg-[#2a8587] px-5 text-sm font-extrabold text-white shadow-sm"
         >
           <Plus className="h-4 w-4" />
           예약 추가

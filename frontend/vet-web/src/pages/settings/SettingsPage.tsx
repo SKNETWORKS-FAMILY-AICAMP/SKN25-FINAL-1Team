@@ -96,7 +96,7 @@ export default function SettingsPage({
         <div className="max-w-3xl space-y-4">
           <section className="rounded-xl border border-[#e5eaf2] bg-white shadow-sm">
             <div className="flex items-center gap-2.5 border-b border-[#e5eaf2] px-6 py-4">
-              <Clock3 className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
+              <Clock3 className="h-5 w-5 text-[#2a8587]" strokeWidth={2.2} />
               <div>
                 <h2 className="text-base font-extrabold text-[#151b28]">
                   병원 운영 시간
@@ -125,13 +125,13 @@ export default function SettingsPage({
                 />
               </div>
 
-              <div className="rounded-xl border border-[#edf1f6] bg-[#fbfcfe] p-4">
+              <div className="rounded-xl border border-[#edf1f6] bg-[#fcfdfd] p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <Utensils className="h-4 w-4 text-[#f28c18]" />
+                  <Utensils className="h-4 w-4 text-[#cf9f38]" />
                   <p className="text-sm font-extrabold text-[#1d2a57]">
                     점심시간 설정
                   </p>
-                  <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 text-[11px] font-extrabold text-[#c87832]">
+                  <span className="rounded-full bg-[#faf5ea] px-2 py-0.5 text-[11px] font-extrabold text-[#c49c36]">
                     예약 블락
                   </span>
                 </div>
@@ -153,7 +153,7 @@ export default function SettingsPage({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg bg-[#f7f9fc] px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg bg-[#f8fafb] px-4 py-3">
                 <p className="text-xs font-bold text-[#65718a]">
                   현재 설정: {operationSettings.openingTime} -{" "}
                   {operationSettings.closingTime}, 점심{" "}
@@ -162,7 +162,7 @@ export default function SettingsPage({
                 <button
                   type="button"
                   onClick={() => setIsOperationSaved(true)}
-                  className="flex h-9 items-center gap-2 rounded-lg bg-[#2563eb] px-4 text-sm font-extrabold text-white transition hover:bg-[#1a6de8]"
+                  className="flex h-9 items-center gap-2 rounded-lg bg-[#2a8587] px-4 text-sm font-extrabold text-white transition hover:bg-[#246f71]"
                 >
                   <Save className="h-4 w-4" />
                   저장
@@ -180,7 +180,7 @@ export default function SettingsPage({
           {/* 계정 및 보안 섹션 */}
           <section className="rounded-xl border border-[#e5eaf2] bg-white shadow-sm">
             <div className="flex items-center gap-2.5 border-b border-[#e5eaf2] px-6 py-4">
-              <LockKeyhole className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
+              <LockKeyhole className="h-5 w-5 text-[#2a8587]" strokeWidth={2.2} />
               <h2 className="text-base font-extrabold text-[#151b28]">
                 계정 및 보안
               </h2>
@@ -199,7 +199,7 @@ export default function SettingsPage({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
-                  className="h-9 rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff] whitespace-nowrap"
+                  className="h-9 rounded-lg border border-[#bdd6d6] bg-white px-4 text-sm font-extrabold text-[#2a8587] transition hover:bg-[#eef4f4] whitespace-nowrap"
                 >
                   비밀번호 변경
                 </button>
@@ -303,7 +303,7 @@ function PasswordChangeModal({
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f0f4fa] hover:text-[#344055]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f3f5f7] hover:text-[#344055]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -313,8 +313,8 @@ function PasswordChangeModal({
         <div className="px-6 py-5 space-y-4">
           {success ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#edf5ff]">
-                <CheckCircle2 className="h-8 w-8 text-[#2563eb]" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eef4f4]">
+                <CheckCircle2 className="h-8 w-8 text-[#2a8587]" />
               </div>
               <p className="text-base font-extrabold text-[#1d2a57]">
                 비밀번호가 변경되었습니다.
@@ -345,14 +345,14 @@ function PasswordChangeModal({
               />
 
               {newPassword.length > 0 && (
-                <ul className="rounded-lg bg-[#f8fafd] px-4 py-3 space-y-1.5">
+                <ul className="rounded-lg bg-[#f9fbfc] px-4 py-3 space-y-1.5">
                   {policyStatus.map((p) => (
                     <li
                       key={p.label}
                       className="flex items-center gap-2 text-xs font-semibold"
                     >
                       <CheckCircle2
-                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-[#2563eb]" : "text-[#c5cfe0]"}`}
+                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-[#2a8587]" : "text-[#c5cfe0]"}`}
                       />
                       <span className={p.isValid ? "text-[#4d5874]" : "text-[#b0b9cc]"}>
                         {p.label}
@@ -378,7 +378,7 @@ function PasswordChangeModal({
             <button
               type="button"
               onClick={handleClose}
-              className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f0f4fa]"
+              className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f3f5f7]"
             >
               취소
             </button>
@@ -386,7 +386,7 @@ function PasswordChangeModal({
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="h-10 rounded-lg bg-[#2563eb] px-5 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-not-allowed disabled:bg-[#a8cbff]"
+              className="h-10 rounded-lg bg-[#2a8587] px-5 text-sm font-extrabold text-white transition hover:bg-[#246f71] disabled:cursor-not-allowed disabled:bg-[#bdd6d6]"
             >
               {isLoading ? "변경 중..." : "변경하기"}
             </button>
@@ -420,7 +420,7 @@ function PasswordInputField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-10 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#c5cfe0] focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]"
+          className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-10 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#c5cfe0] focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4]"
         />
       </div>
     </div>
@@ -442,7 +442,7 @@ function TimeSelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#1d2a57] outline-none transition focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]"
+        className="h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-extrabold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4]"
       >
         {timeOptions.map((time) => (
           <option key={time} value={time}>

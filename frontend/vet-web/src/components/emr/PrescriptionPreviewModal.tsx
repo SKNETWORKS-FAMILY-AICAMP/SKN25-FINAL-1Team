@@ -60,7 +60,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
             >
               <Download className="h-4 w-4" />
               PDF 저장
@@ -68,7 +68,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#4a89ff] hover:text-[#2563eb]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#2f9b9d] hover:text-[#2a8587]"
             >
               <Printer className="h-4 w-4" />
               출력
@@ -76,7 +76,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#f3f6fb]"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#f5f7f9]"
               aria-label="닫기"
             >
               <X className="h-5 w-5" />
@@ -84,7 +84,7 @@ export function PrescriptionPreviewModal({
           </div>
         </div>
 
-        <div className="max-h-[calc(92vh-78px)] overflow-auto bg-[#f5f7fb] p-6">
+        <div className="max-h-[calc(92vh-78px)] overflow-auto bg-[#f6f8fa] p-6">
           <div className="prescription-print-page prescription-form mx-auto bg-white text-[#111827] shadow-sm">
             <p className="form-rule-title">■ 수의사법 시행규칙 [별지 제10호서식]</p>
             <h1 className="form-title">

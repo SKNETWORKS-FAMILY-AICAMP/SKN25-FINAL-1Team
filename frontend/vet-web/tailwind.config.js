@@ -1,15 +1,199 @@
 /** @type {import('tailwindcss').Config} */
+
+/*
+ * MediPaw Design System — "Misty Slate × Dusty Teal" (shared guardian-web & vet-web).
+ * Primary = Misty Slate (#4E6474), Secondary = Dusty Teal (#7BA3A6),
+ * Semantic = Success #6BA881 / Warning #E0B54F / Danger #E06666 / Info #5BBDEF,
+ * Neutral = cool slate on #F7F8F9 surfaces. Calm, professional, softly warm.
+ * Override Tailwind's hue scales so existing `blue-600`, `red-500`, `slate-50`…
+ * classes adopt the system without rewriting component classes.
+ */
+const palette = {
+  // Primary — Teal (unified brand color, richer/more saturated; on `blue` names)
+  blue: {
+    50: "#eaf6f6",
+    100: "#caebec",
+    200: "#9addde",
+    300: "#62c8c9",
+    400: "#34aeb0",
+    500: "#2f9b9d",
+    600: "#2a8587",
+    700: "#246f71",
+    800: "#205c5d",
+    900: "#1f4d4e",
+    950: "#102a2b",
+  },
+  // Secondary accent surfaces — Dusty Teal (sky-based gradients/highlights)
+  sky: {
+    50: "#eef4f4",
+    100: "#e0ebe9",
+    200: "#c3dad8",
+    300: "#a6c3c5",
+    400: "#78a3a6",
+    500: "#5f8f91",
+    600: "#4e7a7c",
+    700: "#3f6163",
+    800: "#354f50",
+    900: "#2f4344",
+    950: "#18292a",
+  },
+  // Neutral — cool slate; light surfaces at #F7F8F9 / #F3F5F7
+  slate: {
+    50: "#f7f8f9",
+    100: "#f3f5f7",
+    200: "#e5e9ec",
+    300: "#cbd5e1",
+    400: "#94a3b8",
+    500: "#64748b",
+    600: "#475569",
+    700: "#334155",
+    800: "#1e293b",
+    900: "#0f172a",
+    950: "#020617",
+  },
+  // Danger — #E06666
+  red: {
+    50: "#fcefef",
+    100: "#f9dcdc",
+    200: "#f2bcbc",
+    300: "#ea9595",
+    400: "#e57c7c",
+    500: "#e06666",
+    600: "#c94f4f",
+    700: "#a83f3f",
+    800: "#8a3636",
+    900: "#743131",
+    950: "#3f1717",
+  },
+  rose: {
+    50: "#fcefef",
+    100: "#f9dcdc",
+    200: "#f2bcbc",
+    300: "#ea9595",
+    400: "#e57c7c",
+    500: "#e06666",
+    600: "#c94f4f",
+    700: "#a83f3f",
+    800: "#8a3636",
+    900: "#743131",
+    950: "#3f1717",
+  },
+  // Warning — #E0B54F (gold)
+  amber: {
+    50: "#faf3e1",
+    100: "#f4e6bf",
+    200: "#ecd28a",
+    300: "#e4c060",
+    400: "#e0b54f",
+    500: "#cf9f38",
+    600: "#b3842c",
+    700: "#8f6727",
+    800: "#765426",
+    900: "#634723",
+    950: "#382711",
+  },
+  yellow: {
+    50: "#faf3e1",
+    100: "#f4e6bf",
+    200: "#ecd28a",
+    300: "#e4c060",
+    400: "#e0b54f",
+    500: "#cf9f38",
+    600: "#b3842c",
+    700: "#8f6727",
+    800: "#765426",
+    900: "#634723",
+    950: "#382711",
+  },
+  orange: {
+    50: "#faf1e3",
+    100: "#f3ddc1",
+    200: "#e8bd8b",
+    300: "#dd9d5b",
+    400: "#d4863c",
+    500: "#c0712d",
+    600: "#a35d28",
+    700: "#834a25",
+    800: "#6c3e23",
+    900: "#5b351f",
+    950: "#321c10",
+  },
+  // Success — #6BA881
+  green: {
+    50: "#eef5f0",
+    100: "#d7e8dd",
+    200: "#b3d3c0",
+    300: "#8bbba1",
+    400: "#6ba881",
+    500: "#549069",
+    600: "#437455",
+    700: "#385d46",
+    800: "#2f4b3a",
+    900: "#293f31",
+    950: "#142219",
+  },
+  emerald: {
+    50: "#eef5f0",
+    100: "#d7e8dd",
+    200: "#b3d3c0",
+    300: "#8bbba1",
+    400: "#6ba881",
+    500: "#549069",
+    600: "#437455",
+    700: "#385d46",
+    800: "#2f4b3a",
+    900: "#293f31",
+    950: "#142219",
+  },
+  // Secondary — Dusty Teal (#7BA3A6)
+  teal: {
+    50: "#eef4f4",
+    100: "#dbe9e9",
+    200: "#bdd6d6",
+    300: "#9ec1c2",
+    400: "#7ba3a6",
+    500: "#628a8d",
+    600: "#4f7173",
+    700: "#425d5e",
+    800: "#394d4e",
+    900: "#324343",
+    950: "#1c2828",
+  },
+  cyan: {
+    50: "#eaf6fd",
+    100: "#cfeafa",
+    200: "#a6d9f5",
+    300: "#7cc7ef",
+    400: "#5bbdef",
+    500: "#3aa3da",
+    600: "#2c84b6",
+    700: "#276a92",
+    800: "#265a78",
+    900: "#244c64",
+    950: "#163143",
+  },
+};
+
 export default {
-    content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-    theme: {
-        extend: {
-            colors: {
-                brand: {
-                    600: "#2563eb",
-                    700: "#1a6de8",
-                },
-            },
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        ...palette,
+        brand: {
+          600: "#2a8587",
+          700: "#246f71",
         },
+        // Named design-system tokens
+        mistyslate: { 400: "#7d8f9d", 500: "#5f7687", 600: "#4e6474" },
+        dustyteal: { 300: "#a6c3c5", 400: "#7ba3a6", 500: "#5f8f91" },
+        success: "#6ba881",
+        warning: "#e0b54f",
+        danger: "#e06666",
+        info: "#5bbdef",
+        cream: "#f7f8f9",
+      },
     },
-    plugins: [],
+  },
+  plugins: [],
 };

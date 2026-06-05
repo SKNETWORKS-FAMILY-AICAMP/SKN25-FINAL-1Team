@@ -288,7 +288,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                         <div
                           key={item.followup_id}
                           className={`border-l-2 py-1 pl-3 ${
-                            item.emergency_alert ? "border-[#ef4444]" : "border-[#cbd5e1]"
+                            item.emergency_alert ? "border-[#e06666]" : "border-[#cbd5e1]"
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -303,7 +303,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                                 : ""}
                             </p>
                             {item.emergency_alert && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#ef4444]">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#e06666]">
                                 <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
                                 응급 신호 감지
                               </span>
@@ -334,7 +334,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 <button
                   type="button"
                   onClick={handleResetToWaiting}
-                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#4a89ff] hover:text-[#2563eb]"
+                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#2f9b9d] hover:text-[#2a8587]"
                 >
                   진료 대기로 되돌리기
                 </button>
@@ -410,7 +410,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             }
           >
             <div className="space-y-4">
-              <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+              <div className="rounded-xl bg-[#f9fafb] px-4 py-3">
                 <p className="text-sm font-extrabold text-[#151b28]">
                   {currentEmr.pet_info.pet_name}의 오늘 진료를 완료 처리합니다.
                 </p>
@@ -462,7 +462,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
 
 function ReadOnlyBadge({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-[#dfe6f1] bg-[#f8fafc] px-4 py-3 text-sm font-extrabold text-[#59657a]">
+    <div className="flex items-center gap-2 rounded-lg border border-[#dfe6f1] bg-[#f9fafb] px-4 py-3 text-sm font-extrabold text-[#59657a]">
       <TriangleAlert className="h-4 w-4 text-[#64748b]" strokeWidth={2.2} />
       {message}
     </div>

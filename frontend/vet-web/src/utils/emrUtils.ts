@@ -3,14 +3,14 @@ import type { TriageStatus } from "../types/emr";
 export const statusStyle: Record<TriageStatus, { label: string; className: string }> = {
   emergency: {
     label: "응급",
-    className: "bg-[#fff1f2] text-[#ef4444] border-[#fecdd3]",
+    className: "bg-[#fcefef] text-[#e06666] border-[#f9dcdc]",
   },
   semiEmergency: {
     label: "준응급",
-    className: "bg-[#fff7ed] text-[#f97316] border-[#fed7aa]",
+    className: "bg-[#faf3e1] text-[#cf9f38] border-[#f4e6bf]",
   },
   normal: {
     label: "일반",
-    className: "bg-[#f6fbf8] text-[#3f7f5f] border-[#cfe3d7]",
+    className: "bg-[#eef5f0] text-[#437455] border-[#d7e8dd]",
   },
 };

@@ -102,7 +102,7 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#344055] transition hover:border-[#8bbcff] hover:text-[#2563eb]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#344055] transition hover:border-[#9ec1c2] hover:text-[#2a8587]"
         >
           <ArrowLeft className="h-4 w-4" />
           환자 관리로 돌아가기
@@ -110,7 +110,7 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={openEdit}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#a8cbff] bg-white px-4 text-sm font-extrabold text-[#2563eb] transition hover:bg-[#edf5ff]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-[#bdd6d6] bg-white px-4 text-sm font-extrabold text-[#2a8587] transition hover:bg-[#eef4f4]"
         >
           <Settings className="h-4 w-4" />
           수정
@@ -185,8 +185,8 @@ function InfoGrid({ rows }: { rows: Array<[string, string]> }) {
 function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
   const typeMeta =
     record.type === "treatment"
-      ? { label: "진료", className: "bg-[#edf4ff] text-[#4b76c8]" }
-      : { label: "예방", className: "bg-[#edf8f1] text-[#4b9a66]" };
+      ? { label: "진료", className: "bg-[#f4f6f8] text-[#2f9b9d]" }
+      : { label: "예방", className: "bg-[#eef7f2] text-[#549069]" };
 
   const soapRows = [
     ["S", "주관적", record.soap.subjective],
@@ -279,11 +279,11 @@ function FormField({
 }
 
 const inputCls =
-  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]";
+  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4]";
 const selectCls =
-  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff]";
+  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4]";
 const textareaCls =
-  "w-full rounded-lg border border-[#dfe6f1] bg-white px-3 py-2 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#8bbcff] focus:ring-2 focus:ring-[#e6f1ff] resize-none";
+  "w-full rounded-lg border border-[#dfe6f1] bg-white px-3 py-2 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef4f4] resize-none";
 
 function normalizeWeightInput(value: string) {
   const withoutUnit = value.replace(/kg/gi, "");
@@ -320,7 +320,7 @@ function EditPatientModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f0f4fa] hover:text-[#344055]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f3f5f7] hover:text-[#344055]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -426,7 +426,7 @@ function EditPatientModal({
             </FormField>
           </section>
 
-          <div className="rounded-lg border border-[#ffe4a0] bg-[#fff8ec] px-4 py-3 text-xs font-bold text-[#a06a00]">
+          <div className="rounded-lg border border-[#ebdcb4] bg-[#fbf8f0] px-4 py-3 text-xs font-bold text-[#7f6421]">
             EMR 진료 기록은 수정할 수 없습니다.
           </div>
         </div>
@@ -436,7 +436,7 @@ function EditPatientModal({
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f0f4fa] disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f3f5f7] disabled:cursor-not-allowed disabled:opacity-60"
           >
             취소
           </button>
@@ -444,7 +444,7 @@ function EditPatientModal({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="h-10 rounded-lg bg-[#2563eb] px-5 text-sm font-extrabold text-white transition hover:bg-[#1a6de8] disabled:cursor-wait disabled:opacity-60"
+            className="h-10 rounded-lg bg-[#2a8587] px-5 text-sm font-extrabold text-white transition hover:bg-[#246f71] disabled:cursor-wait disabled:opacity-60"
           >
             {isSaving ? "저장 중..." : "저장"}
           </button>

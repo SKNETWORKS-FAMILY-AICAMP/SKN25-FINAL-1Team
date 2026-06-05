@@ -9,7 +9,7 @@ import { Panel } from "./EmrShared";
 const PROFILE_IMAGE_FALLBACK =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="8" fill="#eef2f8"/><g fill="#b9c4d6"><ellipse cx="36" cy="40" rx="6" ry="8"/><ellipse cx="60" cy="40" rx="6" ry="8"/><ellipse cx="26" cy="54" rx="5" ry="7"/><ellipse cx="70" cy="54" rx="5" ry="7"/><path d="M48 52c-9 0-16 7-16 14 0 5 4 8 9 8 3 0 5-1 7-1s4 1 7 1c5 0 9-3 9-8 0-7-7-14-16-14z"/></g></svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="8" fill="#f0f3f6"/><g fill="#b9c4d6"><ellipse cx="36" cy="40" rx="6" ry="8"/><ellipse cx="60" cy="40" rx="6" ry="8"/><ellipse cx="26" cy="54" rx="5" ry="7"/><ellipse cx="70" cy="54" rx="5" ry="7"/><path d="M48 52c-9 0-16 7-16 14 0 5 4 8 9 8 3 0 5-1 7-1s4 1 7 1c5 0 9-3 9-8 0-7-7-14-16-14z"/></g></svg>`
   );
 
 export function PatientInfoPanel({
@@ -41,7 +41,7 @@ export function PatientInfoPanel({
               <h1 className="text-2xl font-extrabold text-[#151b28]">
                 {patient.pet_name}
               </h1>
-              <span className="text-2xl font-extrabold text-[#f43f7c]">
+              <span className="text-2xl font-extrabold text-[#e06666]">
                 <GenderBadge gender={patient.gender} className="text-2xl" />
               </span>
             </div>
@@ -66,7 +66,7 @@ export function PatientInfoPanel({
           onClick={onEdit}
           aria-label="환자 정보 편집"
           disabled={isReadOnly}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#edf5ff] hover:text-[#2563eb] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef4f4] hover:text-[#2a8587] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
         >
           <Edit3 className="h-5 w-5" />
         </button>
@@ -77,7 +77,7 @@ export function PatientInfoPanel({
 
 function InfoTag({ label }: { label: string }) {
   return (
-    <span className="rounded-md bg-[#f3f6fb] px-2.5 py-1 text-xs font-extrabold text-[#59657a]">
+    <span className="rounded-md bg-[#f5f7f9] px-2.5 py-1 text-xs font-extrabold text-[#59657a]">
       {label}
     </span>
   );
@@ -108,7 +108,7 @@ export function HistoryPanel({ histories }: { histories: EmrResult["emr_history"
       </div>
       <div className="max-h-[270px] space-y-3 overflow-y-auto px-5 py-4">
         {histories.length === 0 && (
-          <div className="rounded-lg bg-[#f8fafc] px-4 py-8 text-center text-sm font-bold text-[#8a94a6]">
+          <div className="rounded-lg bg-[#f9fafb] px-4 py-8 text-center text-sm font-bold text-[#8a94a6]">
             과거 문진 기록이 없습니다.
           </div>
         )}
@@ -137,21 +137,21 @@ function HistoryItem({ history }: { history: EmrResult["emr_history"][number] })
       <p className="whitespace-pre-line text-sm font-bold leading-6 text-[#4d5874]">
         {displayMemo}
       </p>
-      <div className="rounded-lg bg-[#f8fafc] p-3">
+      <div className="rounded-lg bg-[#f9fafb] p-3">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-extrabold text-[#2563eb]">처방전</p>
+          <p className="text-sm font-extrabold text-[#2a8587]">처방전</p>
           {history.prescriptions.length > 2 && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs font-extrabold text-[#59657a] hover:text-[#2563eb]"
+              className="text-xs font-extrabold text-[#59657a] hover:text-[#2a8587]"
             >
               {expanded ? "접기" : "펼치기"}
             </button>
           )}
         </div>
         <div className="overflow-hidden rounded-md border border-[#e8edf4]">
-          <div className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#e8edf4] bg-[#f1f4f9] px-2 py-1.5 text-[10px] font-extrabold text-[#8a94a6]">
+          <div className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#e8edf4] bg-[#f3f5f7] px-2 py-1.5 text-[10px] font-extrabold text-[#8a94a6]">
             <span>약제명</span>
             <span>용량</span>
             <span>형태</span>

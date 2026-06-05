@@ -42,8 +42,8 @@ export function StatusFilter({
               className={[
                 "flex w-full items-center justify-between rounded-lg p-1.5 text-left transition",
                 isActive
-                  ? "bg-[#f6f8fb] ring-2 ring-[#2563eb]/20"
-                  : "hover:bg-[#f7f9fc]",
+                  ? "bg-[#f6f8fb] ring-2 ring-[#2a8587]/20"
+                  : "hover:bg-[#f8fafb]",
               ].join(" ")}
             >
               <span

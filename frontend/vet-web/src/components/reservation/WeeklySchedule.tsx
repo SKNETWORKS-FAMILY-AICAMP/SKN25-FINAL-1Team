@@ -119,14 +119,14 @@ export function WeeklySchedule({
                 key={day.toISOString()}
                 className={[
                   "flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 border-r border-[#e5eaf2] px-1 text-center font-extrabold last:border-r-0",
-                  isToday ? "bg-[#f6f9ff]" : "bg-white",
-                  isSunday ? "text-[#ef4444]" : "text-[#1d2a57]",
+                  isToday ? "bg-[#f9fbfc]" : "bg-white",
+                  isSunday ? "text-[#e06666]" : "text-[#1d2a57]",
                 ].join(" ")}
               >
                 <span
                   className={[
                     "text-[11px] leading-none",
-                    isToday ? "text-[#2563eb]" : "text-[#7a8498]",
+                    isToday ? "text-[#2a8587]" : "text-[#7a8498]",
                   ].join(" ")}
                 >
                   {weekDayLabels[index]}
@@ -188,7 +188,7 @@ export function WeeklySchedule({
                   key={day.toISOString()}
                   className={[
                     "relative min-w-0 border-r border-[#edf1f6] last:border-r-0",
-                    isToday ? "bg-[#f8fbff]" : "bg-white",
+                    isToday ? "bg-[#fbfcfc]" : "bg-white",
                   ].join(" ")}
                 >
                   {hourTicks.map((tick) => (

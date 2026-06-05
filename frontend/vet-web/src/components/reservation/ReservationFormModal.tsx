@@ -161,7 +161,7 @@ export function ReservationFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874] hover:bg-[#f3f6fb]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874] hover:bg-[#f5f7f9]"
             aria-label="닫기"
           >
             <X className="h-5 w-5" />
@@ -174,7 +174,7 @@ export function ReservationFormModal({
               <label className="mb-1.5 block text-xs font-extrabold text-[#1d2a57]">
                 환자 검색
               </label>
-              <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2563eb]">
+              <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2a8587]">
                 <input
                   value={searchText}
                   onFocus={() => setIsSearchFocused(true)}
@@ -193,7 +193,7 @@ export function ReservationFormModal({
                         key={item.id}
                         type="button"
                         onClick={() => void handleSelectPatient(item)}
-                        className="flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0 hover:bg-[#f7f9fc]"
+                        className="flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0 hover:bg-[#f8fafb]"
                       >
                         <span>
                           <span className="block text-sm font-extrabold text-[#1d2a57]">
@@ -287,7 +287,7 @@ export function ReservationFormModal({
                   onChange={(event) =>
                     setForm((current) => ({ ...current, memo: event.target.value }))
                   }
-                  className="h-20 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2563eb]"
+                  className="h-20 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2a8587]"
                 />
                 <span className="absolute bottom-3 right-3 text-xs font-extrabold text-[#8a94a6]">
                   {form.memo.length} / 200
@@ -301,7 +301,7 @@ export function ReservationFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 rounded-lg border border-[#b8cdfc] text-sm font-extrabold text-[#1d2a57]"
+            className="h-10 rounded-lg border border-[#bdd6d6] text-sm font-extrabold text-[#1d2a57]"
           >
             취소
           </button>
@@ -313,7 +313,7 @@ export function ReservationFormModal({
                 onSave(selectedPatient, form);
               }
             }}
-            className="h-10 rounded-lg bg-[#2563eb] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#b8c0cf]"
+            className="h-10 rounded-lg bg-[#2a8587] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#b8c0cf]"
           >
             예약 저장
           </button>
@@ -330,7 +330,7 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
       <input
         readOnly
         value={value}
-        className="h-8 w-full min-w-0 rounded-lg border border-[#edf1f6] bg-[#f8fafc] px-3 text-xs font-bold text-[#53617c] outline-none"
+        className="h-8 w-full min-w-0 rounded-lg border border-[#edf1f6] bg-[#f9fafb] px-3 text-xs font-bold text-[#53617c] outline-none"
       />
     </label>
   );
@@ -384,7 +384,7 @@ function DatePickerField({
           ref={calendarButtonRef}
           type="button"
           onClick={toggleCalendar}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[#53617c] hover:bg-[#edf5ff] hover:text-[#2563eb]"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[#53617c] hover:bg-[#eef4f4] hover:text-[#2a8587]"
           aria-label="예약 날짜 선택"
         >
           <CalendarDays className="h-4 w-4" />
@@ -403,7 +403,7 @@ function DatePickerField({
             <button
               type="button"
               onClick={() => setVisibleMonth((date) => addMonths(date, -1))}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f3f6fb]"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f5f7f9]"
               aria-label="이전 달"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -414,7 +414,7 @@ function DatePickerField({
             <button
               type="button"
               onClick={() => setVisibleMonth((date) => addMonths(date, 1))}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f3f6fb]"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f5f7f9]"
               aria-label="다음 달"
             >
               <ChevronRight className="h-4 w-4" />
@@ -450,16 +450,16 @@ function DatePickerField({
                     isPast
                       ? "cursor-not-allowed text-[#d1d5db] line-through"
                       : isSelected
-                        ? "bg-[#2563eb] text-white"
+                        ? "bg-[#2a8587] text-white"
                         : isToday
-                          ? "border border-[#2563eb] text-[#2563eb]"
+                          ? "border border-[#2a8587] text-[#2a8587]"
                           : !isCurrentMonth
                             ? "text-[#c0c7d4]"
                             : isHoliday || isSunday
-                              ? "text-[#ef4444] hover:bg-[#fff1f2]"
+                              ? "text-[#e06666] hover:bg-[#fcefef]"
                               : isSaturday
-                                ? "text-[#2563eb] hover:bg-[#edf5ff]"
-                                : "text-[#20283a] hover:bg-[#f3f6fb]",
+                                ? "text-[#2a8587] hover:bg-[#eef4f4]"
+                                : "text-[#20283a] hover:bg-[#f5f7f9]",
                   ].join(" ")}
                 >
                   {day.getDate()}
@@ -491,7 +491,7 @@ function SelectField({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-8 w-full appearance-none rounded-lg border border-[#dfe6f1] bg-white px-3 pr-8 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2563eb]"
+          className="h-8 w-full appearance-none rounded-lg border border-[#dfe6f1] bg-white px-3 pr-8 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2a8587]"
         >
           <option value="">선택</option>
           {options.map((option) => (

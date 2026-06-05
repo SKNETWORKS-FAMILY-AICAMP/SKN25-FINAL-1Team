@@ -17,19 +17,19 @@ export const summaryToneStyle: Record<
   { wrapper: string; value: string }
 > = {
   blue: {
-    wrapper: "bg-[#eef4ff]",
-    value: "text-[#4a6cff]",
+    wrapper: "bg-[#f5f7f8]",
+    value: "text-[#2f9b9d]",
   },
   orange: {
-    wrapper: "bg-[#fff8e8]",
-    value: "text-[#e97700]",
+    wrapper: "bg-[#faf6ed]",
+    value: "text-[#b3842c]",
   },
   red: {
-    wrapper: "bg-[#ffe8eb]",
-    value: "text-[#ef3333]",
+    wrapper: "bg-[#faeded]",
+    value: "text-[#e06666]",
   },
   green: {
-    wrapper: "bg-[#f1f5f9]",
+    wrapper: "bg-[#f3f5f7]",
     value: "text-[#475569]",
   },
 };
@@ -40,27 +40,27 @@ export const visitTypeStyle: Record<
 > = {
   emergency: {
     label: "응급",
-    badge: "border-[#fecdd3] bg-[#fff1f2] text-[#ef4444]",
-    dot: "bg-[#ef4444]",
-    card: "border-[#fecdd3] bg-[#fff7f8] text-[#20283a] before:bg-[#ef4444]",
+    badge: "border-[#f9dcdc] bg-[#fcefef] text-[#e06666]",
+    dot: "bg-[#e06666]",
+    card: "border-[#f9dcdc] bg-[#fdf9f9] text-[#20283a] before:bg-[#e06666]",
   },
   semiEmergency: {
     label: "준응급",
-    badge: "border-[#fed7aa] bg-[#fff7ed] text-[#f97316]",
-    dot: "bg-[#f97316]",
-    card: "border-[#fed7aa] bg-[#fffaf0] text-[#20283a] before:bg-[#f97316]",
+    badge: "border-[#f4e6bf] bg-[#faf3e1] text-[#cf9f38]",
+    dot: "bg-[#cf9f38]",
+    card: "border-[#f4e6bf] bg-[#fcf9f3] text-[#20283a] before:bg-[#cf9f38]",
   },
   normal: {
     label: "일반",
-    badge: "border-[#cfe3d7] bg-[#f6fbf8] text-[#3f7f5f]",
-    dot: "bg-[#6fa989]",
-    card: "border-[#cfe3d7] bg-[#f8fcfa] text-[#20283a] before:bg-[#6fa989]",
+    badge: "border-[#d7e8dd] bg-[#eef5f0] text-[#437455]",
+    dot: "bg-[#6ba881]",
+    card: "border-[#d7e8dd] bg-[#f8fcfa] text-[#20283a] before:bg-[#6ba881]",
   },
   checkup: {
     label: "검진/일반예약",
-    badge: "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]",
+    badge: "border-[#e2e8f0] bg-[#f9fafb] text-[#64748b]",
     dot: "bg-[#94a3b8]",
-    card: "border-[#e2e8f0] bg-[#f8fafc] text-[#20283a] before:bg-[#94a3b8]",
+    card: "border-[#e2e8f0] bg-[#f9fafb] text-[#20283a] before:bg-[#94a3b8]",
   },
 };
 
