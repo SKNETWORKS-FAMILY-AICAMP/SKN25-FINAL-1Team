@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse } from "lucide-react";
+import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse, Eye, EyeOff } from "lucide-react";
 
 import { loginGuardian } from "../../api/auth-api";
 import { useAuthStore } from "../../stores/auth-store";
@@ -129,14 +129,14 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
         <section className="flex flex-col justify-between gap-6">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
@@ -208,14 +208,19 @@ const LoginPage = () => {
                   aria-invalid={Boolean(errorMessage && !form.password)}
                   className={`${inputClassName(
                     Boolean(errorMessage && !form.password),
-                  )} pr-20`}
+                  )} pr-11`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((current) => !current)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-blue-600"
+                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-blue-600"
                 >
-                  {showPassword ? "숨김" : "표시"}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>

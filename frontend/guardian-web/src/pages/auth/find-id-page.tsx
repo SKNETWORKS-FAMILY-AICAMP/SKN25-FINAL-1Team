@@ -22,7 +22,7 @@ const initialFormState: FindIdFormState = {
 
 const inputClassName = (hasError: boolean) =>
   [
-    "h-10 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4",
+    "mt-2 h-10 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4",
     hasError
       ? "border-red-400 focus:border-red-500 focus:ring-red-100"
       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100",
@@ -97,20 +97,20 @@ const FindIdPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
         <section className="space-y-5">
           <div>
-            <h1 className="text-3xl font-bold leading-tight text-slate-950">
+            <h1 className="text-4xl font-bold leading-tight text-slate-950">
               아이디 찾기
             </h1>
-            <p className="mt-4 text-sm leading-6 text-slate-600">
+            <p className="mt-4 text-base leading-7 text-slate-600">
               가입 시 등록한 이름과 전화번호를 입력하면 로그인 ID를 확인할 수
               있습니다. 입력 정보가 일치하지 않으면 아이디를 찾을 수 없습니다.
             </p>
