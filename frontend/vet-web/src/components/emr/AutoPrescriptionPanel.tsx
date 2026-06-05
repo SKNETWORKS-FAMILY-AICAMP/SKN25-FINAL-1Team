@@ -19,7 +19,7 @@ export function AutoPrescriptionPanel({
   isReadOnly?: boolean;
 }) {
   return (
-    <Panel className="fixed right-4 top-[96px] h-[calc(100vh-112px)] w-[320px] overflow-hidden">
+    <Panel className="sticky top-[96px] h-[calc(100vh-112px)] overflow-hidden">
       <div className="px-5 py-4">
         <h2 className="text-lg font-extrabold text-[#151b28]">처방전 요약</h2>
       </div>

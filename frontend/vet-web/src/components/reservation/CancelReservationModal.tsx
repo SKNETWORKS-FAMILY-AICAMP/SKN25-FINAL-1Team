@@ -13,7 +13,7 @@ export function CancelReservationModal({
 }: CancelReservationModalProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#111827]/55 px-4">
-      <div className="w-full max-w-[520px] rounded-2xl bg-white px-10 py-9 text-center shadow-2xl">
+      <div className="w-full max-w-[520px] rounded-lg bg-white px-10 py-9 text-center shadow-2xl">
         <div className="relative">
           <button
             type="button"

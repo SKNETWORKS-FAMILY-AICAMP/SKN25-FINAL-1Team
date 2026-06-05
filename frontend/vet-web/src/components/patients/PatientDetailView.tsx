@@ -314,7 +314,7 @@ function EditPatientModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-[88vh] w-full max-w-[680px] flex-col rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[88vh] w-full max-w-[680px] flex-col rounded-lg bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-[#e5eaf2] px-6 py-4">
           <h2 className="text-lg font-extrabold text-[#151b28]">환자 정보 수정</h2>
           <button

@@ -35,19 +35,15 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   return (
     <AuthLayout>
-      <div className="mx-auto w-full max-w-[500px] rounded-3xl border border-slate-200 bg-white px-10 py-10 shadow-sm">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-slate-900">병원 관리자 로그인</h2>
-          <p className="mt-4 text-sm font-medium text-slate-500">
+      <div className="mx-auto flex min-h-[560px] w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
+        <div className="mb-10 h-[88px] text-center">
+          <h2 className="text-3xl font-extrabold leading-tight text-slate-900">병원 관리자 로그인</h2>
+          <p className="mt-4 text-sm font-bold text-slate-500">
             MediPaw 시스템에 로그인하세요.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-700">
-            테스트 계정: admin / test1234!
-          </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-700">
               아이디
@@ -56,7 +52,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               value={id}
               onChange={(e) => setId(e.target.value)}
               placeholder="아이디를 입력하세요"
-              className="h-14 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+              className="h-14 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
             />
           </div>
 
@@ -70,7 +66,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="비밀번호를 입력하세요"
-                className="h-14 w-full rounded-xl border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                className="h-14 w-full rounded-lg border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
               />
               <button
                 type="button"
@@ -83,7 +79,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           </div>
 
           {error && (
-            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-600">
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-600">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
                 <TriangleAlert size={15} fill="currentColor" />
               </div>
@@ -104,13 +100,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <button
             type="submit"
             disabled={isLoading}
-            className="h-14 w-full rounded-xl bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+            className="h-14 w-full rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
           >
             {isLoading ? "로그인 중..." : "로그인"}
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-center gap-5 text-sm font-bold text-blue-600">
+        <div className="mt-7 flex items-center justify-center gap-5 text-sm font-bold text-blue-600">
           <button type="button" onClick={() => navigate("/account-inquiry")}>
             계정 문의
           </button>
@@ -121,7 +117,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
         <ShieldCheck size={18} />
         계정 관련 문의는 담당 관리자에게 문의해주세요.
       </div>

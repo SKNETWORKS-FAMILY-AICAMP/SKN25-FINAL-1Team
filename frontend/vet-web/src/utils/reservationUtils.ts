@@ -230,7 +230,7 @@ export function formatDate(date: Date) {
 }
 
 export function formatDateWithWeekday(date: Date) {
-  return `${formatDate(date)} (${dayLabels[date.getDay()]})`;
+  return `${formatDate(date)}(${dayLabels[date.getDay()]})`;
 }
 
 export function getDateKey(date: Date) {
@@ -258,7 +258,23 @@ export function getControlLabel(
     return formatMonthTitle(selectedDate);
   }
 
-  return formatDateWithWeekday(selectedDate);
+  return formatDate(selectedDate);
+}
+
+export function getCompactControlLabel(
+  viewMode: ReservationViewMode,
+  selectedDate: Date
+) {
+  if (viewMode === "week") {
+    const days = getWeekDays(selectedDate);
+    return `${format(days[0], "MM.dd")}-${format(days[6], "MM.dd")}`;
+  }
+
+  if (viewMode === "month") {
+    return format(selectedDate, "yyyy.MM");
+  }
+
+  return formatDate(selectedDate);
 }
 
 export function getHolidayName(date: Date) {

@@ -54,10 +54,10 @@ export function DailyTimeline({
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white p-3 shadow-sm">
       <div className="mb-1.5 shrink-0 text-center">
-        <p className="text-base font-extrabold text-[#151b28]">
+        <p className="text-sm font-extrabold text-[#151b28]">
           {dayLabels[selectedDate.getDay()]}요일
         </p>
-        <p className="text-sm font-extrabold text-[#1d2a57]">
+        <p className="text-xs font-bold text-[#53617c]">
           {selectedDate.getMonth() + 1}/{selectedDate.getDate()}
         </p>
       </div>
@@ -68,7 +68,7 @@ export function DailyTimeline({
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
-                className="absolute left-0 text-sm font-extrabold tabular-nums text-[#1d2a57]"
+                className="absolute left-0 text-xs font-extrabold tabular-nums text-[#556179]"
                 style={{ top: tick.top }}
               >
                 {tick.label}
@@ -89,7 +89,7 @@ export function DailyTimeline({
             ))}
 
             <div
-              className="absolute left-1.5 right-1.5 flex items-center gap-5 rounded-md border border-[#e7ebf2] bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
+              className="absolute inset-x-0 flex items-center gap-5 bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
               style={{
                 top: lunchBlock.top,
                 height: lunchBlock.height,
@@ -128,15 +128,17 @@ function ReservationCard({
 }) {
   const { item, top, height, timeLabel, columnIndex, columnCount } = positioned;
   const compact = height < 54;
+  const imageSizeClass = compact ? "h-7 w-7" : "h-8 w-8";
 
   return (
     <button
       type="button"
       onClick={() => onSelect(item.id)}
       className={[
-        `absolute z-10 flex items-center gap-3 overflow-hidden rounded-lg border py-2 pl-5 pr-3.5 text-left transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${weeklyCardClass[item.status]}`,
+        `absolute z-10 flex items-center overflow-hidden rounded-lg border pl-4 pr-3 text-left transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${weeklyCardClass[item.status]}`,
+        compact ? "gap-2 py-1.5" : "gap-2.5 py-2",
         isSelected
-          ? "z-20 border-[#2563eb] bg-[#eff6ff] shadow-[inset_0_0_0_2px_#2563eb]"
+          ? "z-20 border-[#2563eb] bg-[#f8fbff] shadow-[0_0_0_1px_#8bbcff]"
           : "shadow-sm hover:border-[#9fc0fb]",
       ].join(" ")}
       style={{
@@ -146,26 +148,24 @@ function ReservationCard({
         width: `calc(${100 / columnCount}% - ${columnCount > 1 ? 4 : 0}px)`,
       }}
     >
-      {patient && !compact && (
+      {patient && (
         <img
           src={patient.imageUrl}
           alt={patient.petName}
-          className="h-9 w-9 rounded-md object-cover"
+          className={`${imageSizeClass} shrink-0 rounded-md object-cover`}
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-extrabold tabular-nums text-[#1d2a57]">
+        <p className="text-xs font-extrabold tabular-nums text-[#556179]">
           {timeLabel}
         </p>
-        <p className="truncate text-[15px] font-extrabold text-[#1d2a57]">
+        <p className="truncate text-sm font-extrabold text-[#222b3c]">
           {patient
             ? `${patient.petName} (${patient.guardianName})`
             : item.visitReason}
         </p>
       </div>
-      {!compact && (
-        <TriageBadge level={item.status} />
-      )}
+      <TriageBadge level={item.status} />
     </button>
   );
 }

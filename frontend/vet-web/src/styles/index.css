@@ -11,7 +11,7 @@
 @layer components {
   /* Card — consistent padding + shadow across vet pages */
   .mp-card {
-    @apply rounded-2xl bg-white p-5 shadow-sm;
+    @apply rounded-lg bg-white p-5 shadow-sm;
   }
 
   /* Section heading */

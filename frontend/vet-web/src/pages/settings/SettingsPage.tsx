@@ -85,17 +85,19 @@ export default function SettingsPage({
         />
       )}
 
-      <div className="min-h-[calc(100vh-160px)]">
-        <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-[#151b28]">설정</h1>
-          <p className="mt-1.5 text-sm font-bold text-[#65718a]">
-            병원 운영 환경 및 계정 보안을 관리합니다.
-          </p>
+      <div className="flex h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden">
+        <div className="mb-4 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold text-[#151b28]">설정</h1>
+            <p className="mt-2 text-sm font-bold text-[#65718a]">
+              병원 운영 환경 및 계정 보안을 관리합니다.
+            </p>
+          </div>
         </div>
 
-        <div className="max-w-3xl space-y-4">
-          <section className="rounded-xl border border-[#e5eaf2] bg-white shadow-sm">
-            <div className="flex items-center gap-2.5 border-b border-[#e5eaf2] px-6 py-4">
+        <div className="min-h-0 w-full max-w-3xl space-y-4 overflow-y-auto">
+          <section className="rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
+            <div className="flex h-[64px] items-center gap-2.5 border-b border-[#e5eaf2] px-6">
               <Clock3 className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
               <div>
                 <h2 className="text-base font-extrabold text-[#151b28]">
@@ -125,7 +127,7 @@ export default function SettingsPage({
                 />
               </div>
 
-              <div className="rounded-xl border border-[#edf1f6] bg-[#fbfcfe] p-4">
+              <div className="rounded-lg border border-[#edf1f6] bg-[#fbfcfe] p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Utensils className="h-4 w-4 text-[#f28c18]" />
                   <p className="text-sm font-extrabold text-[#1d2a57]">
@@ -178,7 +180,7 @@ export default function SettingsPage({
           </section>
 
           {/* 계정 및 보안 섹션 */}
-          <section className="rounded-xl border border-[#e5eaf2] bg-white shadow-sm">
+          <section className="rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
             <div className="flex items-center gap-2.5 border-b border-[#e5eaf2] px-6 py-4">
               <LockKeyhole className="h-5 w-5 text-[#2563eb]" strokeWidth={2.2} />
               <h2 className="text-base font-extrabold text-[#151b28]">
@@ -287,7 +289,7 @@ function PasswordChangeModal({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[480px] rounded-2xl bg-white shadow-2xl"
+        className="w-full max-w-[480px] rounded-lg bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}

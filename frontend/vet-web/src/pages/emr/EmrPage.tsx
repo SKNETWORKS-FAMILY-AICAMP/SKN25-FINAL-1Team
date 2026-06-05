@@ -97,8 +97,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
   const isReadOnly = !isTodayView || queueTab === "completed";
   const showEditablePanels = isTodayView;
   const contentGridClass = showEditablePanels
-    ? "grid-cols-[300px_minmax(620px,1fr)_320px]"
-    : "grid-cols-[300px_minmax(620px,1fr)]";
+    ? "grid-cols-[300px_minmax(0,1fr)_320px]"
+    : "grid-cols-[300px_minmax(0,1fr)]";
   const readOnlyMessage = !isTodayView
     ? "조회 전용 날짜입니다. 기록 수정은 오늘 진료에서만 가능합니다."
     : queueTab === "completed"
@@ -281,7 +281,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
                 <HistoryPanel histories={currentEmr.emr_history} />
                 {followupItems.length > 0 && (
-                  <div className="rounded-xl border border-[#e8edf4] bg-white p-5 shadow-sm">
+                  <div className="rounded-lg border border-[#e8edf4] bg-white p-5 shadow-sm">
                     <h3 className="mb-3 text-sm font-extrabold text-[#151b28]">경과 보고</h3>
                     <div className="space-y-3">
                       {followupItems.map((item) => (
@@ -410,7 +410,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             }
           >
             <div className="space-y-4">
-              <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+              <div className="rounded-lg bg-[#f8fafc] px-4 py-3">
                 <p className="text-sm font-extrabold text-[#151b28]">
                   {currentEmr.pet_info.pet_name}의 오늘 진료를 완료 처리합니다.
                 </p>
@@ -471,7 +471,7 @@ function ReadOnlyBadge({ message }: { message: string }) {
 
 function EmrAlertBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-sm">
+    <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-sm">
       <div className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
         <span>{message}</span>

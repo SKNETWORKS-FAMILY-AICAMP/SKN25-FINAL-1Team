@@ -32,15 +32,15 @@ export default function AccountInquiryPage() {
 
   return (
     <AuthLayout>
-      <div className="mx-auto w-full max-w-[500px] rounded-3xl border border-slate-200 bg-white px-10 py-10 shadow-sm">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-slate-900">계정 문의</h2>
-          <p className="mt-3 text-sm font-medium text-slate-500">
+      <div className="mx-auto flex min-h-[560px] w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
+        <div className="mb-10 h-[88px] text-center">
+          <h2 className="text-3xl font-extrabold leading-tight text-slate-900">계정 문의</h2>
+          <p className="mt-4 text-sm font-bold text-slate-500">
             등록된 병원 정보를 입력해주세요.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <FormField
             label="동물병원 이름"
             placeholder="동물병원 이름을 입력하세요"
@@ -62,7 +62,7 @@ export default function AccountInquiryPage() {
         </div>
 
         {submitted && (
-          <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-bold text-blue-700">
+          <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-bold text-blue-700">
             이메일 앱이 열렸습니다. 내용을 확인 후 발송해주세요.
           </div>
         )}
@@ -71,7 +71,7 @@ export default function AccountInquiryPage() {
           type="button"
           onClick={handleSubmit}
           disabled={!isValid}
-          className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           <Mail size={18} />
           문의하기
@@ -80,13 +80,13 @@ export default function AccountInquiryPage() {
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="mt-3 h-11 w-full rounded-xl border border-slate-200 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
+          className="mt-4 h-11 w-full rounded-lg border border-slate-200 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
         >
           로그인으로 돌아가기
         </button>
       </div>
 
-      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
         <ShieldCheck size={18} />
         문의 접수 후 영업일 기준 1~2일 내 답변드립니다.
       </div>
@@ -114,7 +114,7 @@ function FormField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-14 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+        className="h-14 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
       />
     </div>
   );
