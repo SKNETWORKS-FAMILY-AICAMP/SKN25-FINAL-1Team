@@ -129,17 +129,17 @@ function HistoryItem({ history }: { history: EmrResult["emr_history"][number] })
   const visible = expanded ? history.prescriptions : history.prescriptions.slice(0, 2);
 
   return (
-    <article className="grid grid-cols-[120px_1fr_340px] gap-4 rounded-lg border border-[#e8edf4] p-4">
+    <article className="grid grid-cols-1 gap-3 rounded-lg border border-[#e8edf4] p-3 2xl:grid-cols-[96px_minmax(0,1fr)]">
       <div>
-        <p className="text-sm font-extrabold tabular-nums text-[#4d5874]">{history.date}</p>
+        <p className="text-xs font-extrabold tabular-nums text-[#4d5874]">{history.date}</p>
         <p className="mt-2 text-xs font-bold text-[#8a94a6]">{history.doctor_name}</p>
       </div>
-      <p className="whitespace-pre-line text-sm font-bold leading-6 text-[#4d5874]">
+      <p className="min-w-0 whitespace-pre-line text-xs font-bold leading-5 text-[#4d5874]">
         {displayMemo}
       </p>
-      <div className="rounded-lg bg-[#f9fafb] p-3">
+      <div className="rounded-lg bg-[#f9fafb] p-3 2xl:col-span-2">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-extrabold text-[#2f6f67]">처방전</p>
+          <p className="text-xs font-extrabold text-[#2f6f67]">처방전</p>
           {history.prescriptions.length > 2 && (
             <button
               type="button"

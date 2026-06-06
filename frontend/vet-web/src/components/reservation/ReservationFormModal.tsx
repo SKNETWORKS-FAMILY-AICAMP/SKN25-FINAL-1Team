@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -6,6 +6,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import type {
   ReservationFormState,
   ReservationItem,
@@ -67,8 +68,13 @@ export function ReservationFormModal({
   onResolvePatient,
   onSave,
 }: ReservationFormModalProps) {
+  useEscapeToClose(onClose);
+
   const [searchText, setSearchText] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [activePatientIndex, setActivePatientIndex] = useState(0);
+  const patientSearchId = useId();
+  const patientListboxId = `${patientSearchId}-patient-results`;
   const patientResolveRequestIdRef = useRef(0);
   const [selectedPatient, setSelectedPatient] = useState<ReservationPatient | null>(
     mode === "edit" ? patient ?? null : null
@@ -85,7 +91,7 @@ export function ReservationFormModal({
   const filteredPatients = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
     if (!keyword) {
-      return patientOptions;
+      return [];
     }
 
     return patientOptions.filter((item) =>
@@ -94,6 +100,16 @@ export function ReservationFormModal({
         .includes(keyword)
     );
   }, [searchText, patientOptions]);
+
+  useEffect(() => {
+    setActivePatientIndex(0);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (activePatientIndex > filteredPatients.length - 1) {
+      setActivePatientIndex(Math.max(filteredPatients.length - 1, 0));
+    }
+  }, [activePatientIndex, filteredPatients.length]);
 
   // 선택한 날짜에 이미 예약된 시작 시간(수정 중인 본인 예약은 제외)
   const bookedTimes = useMemo(() => {
@@ -148,7 +164,8 @@ export function ReservationFormModal({
     }
   };
 
-  const shouldShowSearchResults = isSearchFocused;
+  const hasPatientSearchKeyword = searchText.trim().length > 0;
+  const shouldShowSearchResults = isSearchFocused && hasPatientSearchKeyword;
   const canSaveReservation = selectedPatient !== null;
 
   return (
@@ -180,20 +197,72 @@ export function ReservationFormModal({
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 120)}
                   onChange={(event) => setSearchText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      if (hasPatientSearchKeyword && filteredPatients.length > 0) {
+                        setIsSearchFocused(true);
+                        setActivePatientIndex((index) =>
+                          Math.min(index + 1, filteredPatients.length - 1)
+                        );
+                      }
+                    }
+
+                    if (event.key === "ArrowUp") {
+                      event.preventDefault();
+                      if (hasPatientSearchKeyword && filteredPatients.length > 0) {
+                        setIsSearchFocused(true);
+                        setActivePatientIndex((index) => Math.max(index - 1, 0));
+                      }
+                    }
+
+                    if (
+                      event.key === "Enter" &&
+                      shouldShowSearchResults &&
+                      filteredPatients[activePatientIndex]
+                    ) {
+                      event.preventDefault();
+                      void handleSelectPatient(filteredPatients[activePatientIndex]);
+                    }
+
+                    if (event.key === "Escape") {
+                      setIsSearchFocused(false);
+                    }
+                  }}
                   placeholder="강아지이름 / 전화번호 뒷자리 검색"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={shouldShowSearchResults}
+                  aria-controls={patientListboxId}
+                  aria-activedescendant={
+                    shouldShowSearchResults && filteredPatients[activePatientIndex]
+                      ? `${patientListboxId}-${activePatientIndex}`
+                      : undefined
+                  }
                   className="min-w-0 flex-1 bg-transparent text-xs font-bold text-[#1d2a57] outline-none placeholder:text-[#a4adbd]"
                 />
                 <ChevronDown className="h-4 w-4 text-[#53617c]" />
               </div>
               {shouldShowSearchResults && (
-                <div className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-[#edf1f6] bg-white shadow-lg">
+                <div
+                  id={patientListboxId}
+                  role="listbox"
+                  className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-[#edf1f6] bg-white shadow-lg"
+                >
                   {filteredPatients.length > 0 ? (
-                    filteredPatients.map((item) => (
+                    filteredPatients.map((item, index) => (
                       <button
                         key={item.id}
                         type="button"
+                        id={`${patientListboxId}-${index}`}
+                        role="option"
+                        aria-selected={index === activePatientIndex}
+                        onMouseEnter={() => setActivePatientIndex(index)}
                         onClick={() => void handleSelectPatient(item)}
-                        className="flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0 hover:bg-[#f8fafb]"
+                        className={[
+                          "flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0",
+                          index === activePatientIndex ? "bg-[#eef5f4]" : "hover:bg-[#f8fafb]",
+                        ].join(" ")}
                       >
                         <span>
                           <span className="block text-sm font-extrabold text-[#1d2a57]">

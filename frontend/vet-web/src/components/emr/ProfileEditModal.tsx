@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import { apiClient } from "../../api/client";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import { useAuthStore } from "../../stores/auth-store";
 import type { AuthState } from "../../stores/auth-store";
 import type { PetInfo } from "../../types/emr";
@@ -38,6 +39,8 @@ export function ProfileEditModal({
   onClose: () => void;
   onSaved?: (updated: Partial<PetInfo>) => void;
 }) {
+  useEscapeToClose(onClose);
+
   const accessToken = useAuthStore((s: AuthState) => s.session?.accessToken ?? "");
   const [weight, setWeight] = useState(normalizeWeightInput(String(patient.weight_kg)));
   const [gender, setGender] = useState(toDisplayGender(patient.gender));

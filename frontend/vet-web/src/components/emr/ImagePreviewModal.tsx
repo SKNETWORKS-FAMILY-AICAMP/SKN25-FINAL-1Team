@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 
 export function ImagePreviewModal({
   image,
@@ -7,6 +8,8 @@ export function ImagePreviewModal({
   image: { url: string; label: string };
   onClose: () => void;
 }) {
+  useEscapeToClose(onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 px-4">
       <div className="w-full max-w-[760px] rounded-lg bg-white shadow-xl">

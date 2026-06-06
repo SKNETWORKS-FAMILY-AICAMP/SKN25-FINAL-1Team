@@ -1,10 +1,15 @@
 import { PhoneCall, TriangleAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import {
+  Group as ResizableGroup,
+  Panel as ResizablePanel,
+  Separator as ResizeSeparator,
+} from "react-resizable-panels";
 import { useLocation } from "react-router-dom";
 import { AuthSession } from "../../api/authApi";
+import type { FollowupItem } from "../../api/emrApi";
 import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
-import { AutoPrescriptionPanel } from "../../components/emr/AutoPrescriptionPanel";
 import {
   EditorPanel,
   PhotoUploadPanel,
@@ -62,7 +67,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleChangeDate,
     handleMoveDate,
     handleGoToday,
-    isLoadingAutoPresc,
     autoPrescriptionError,
     validationResult,
     followupItems,
@@ -96,9 +100,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
   const [alertBannerMessage, setAlertBannerMessage] = useState<string | null>(null);
   const isReadOnly = !isTodayView || queueTab === "completed";
   const showEditablePanels = isTodayView;
-  const contentGridClass = showEditablePanels
-    ? "grid-cols-[300px_minmax(0,1fr)_320px]"
-    : "grid-cols-[300px_minmax(0,1fr)]";
   const readOnlyMessage = !isTodayView
     ? "조회 전용 날짜입니다. 기록 수정은 오늘 진료에서만 가능합니다."
     : queueTab === "completed"
@@ -208,182 +209,172 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       notificationCount={3}
       onLogout={onLogout}
       onNavigate={onNavigate}
+      compact
     >
-      <div className="min-h-[calc(100vh-160px)]">
-        <div className={`grid ${contentGridClass} items-start gap-4`}>
-          <aside className="sticky top-[96px] grid h-[calc(100vh-112px)] grid-rows-[380px_minmax(0,1fr)] gap-3 overflow-hidden self-start">
-            <QueuePanel
-              title={queueTitle}
-              activeTab={queueTab}
-              queue={currentQueue}
-              selectedScheduleId={selectedScheduleId}
-              lastRefreshText={lastRefreshText}
-              waitingCount={waitingQueue.length}
-              completedCount={completedQueue.length}
-              selectedDate={selectedDate}
-              isTodayView={isTodayView}
-              onChangeTab={handleChangeTab}
-              onSelectPatient={setSelectedScheduleId}
-              onRefresh={handleRefreshQueue}
-              onChangeDate={handleChangeDate}
-              onMoveDate={handleMoveDate}
-              onGoToday={handleGoToday}
-            />
+      <div className="relative h-full min-h-0 overflow-hidden text-[12px]">
+        {alertBannerMessage && (
+          <div className="absolute left-1/2 top-2 z-20 w-[min(720px,calc(100%-32px))] -translate-x-1/2">
+            <EmrAlertBanner message={alertBannerMessage} />
+          </div>
+        )}
 
-            {currentEmr && (
-              <IntakePanel
-                emr={currentEmr}
-                visibleFiles={visibleGuardianFiles}
-                hiddenFileCount={hiddenGuardianFileCount}
-                onApplyIntake={handleApplyIntake}
-                onPreviewImage={openPreviewImage}
-                isReadOnly={isReadOnly}
-              />
-            )}
-
-            {/* AI 사전문진 검증 — '예외'만 표시(정상 항목은 숨김). 응급도/증상은 위에서 이미 봤으므로
-                여기엔 문진만 봐선 모를 것(누락·문진↔차트 불일치·응급도 불일치)만 가볍게 띄운다. */}
-            {currentEmr &&
-              validationResult &&
-              validationResult.overall !== "OK" &&
-              Array.isArray(validationResult.checks) && (
-                <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-xs text-yellow-800">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <TriangleAlert className="h-3.5 w-3.5" strokeWidth={2.2} />
-                    <span>검토 권고</span>
-                  </div>
-                  <ul className="mt-1.5 space-y-1 leading-snug text-yellow-900/90">
-                    {(validationResult.checks as Array<{ item: string; status: string; detail: string }>)
-                      .filter((c) => c.status !== "PASS" && c.status !== "SKIPPED")
-                      .map((c) => (
-                        <li key={c.item}>
-                          <span className="font-bold">{c.item}</span> — {c.detail}
-                        </li>
-                      ))}
-                  </ul>
+        <ResizableGroup
+          orientation="horizontal"
+          className="h-full min-h-0 overflow-hidden rounded-md border border-[#cfd8e6] bg-[#dbe3ee]"
+        >
+          <ResizablePanel
+            defaultSize="22%"
+            minSize="16%"
+            maxSize="32%"
+            className="min-w-0"
+          >
+            <WorkspacePane title="접수 / 대기" meta={`${currentQueue.length}명`}>
+              <div className="flex h-full min-h-0 flex-col gap-1.5">
+                <div className="min-h-[240px] flex-[1.15] overflow-hidden">
+                  <QueuePanel
+                    title={queueTitle}
+                    activeTab={queueTab}
+                    queue={currentQueue}
+                    selectedScheduleId={selectedScheduleId}
+                    lastRefreshText={lastRefreshText}
+                    waitingCount={waitingQueue.length}
+                    completedCount={completedQueue.length}
+                    selectedDate={selectedDate}
+                    isTodayView={isTodayView}
+                    onChangeTab={handleChangeTab}
+                    onSelectPatient={setSelectedScheduleId}
+                    onRefresh={handleRefreshQueue}
+                    onChangeDate={handleChangeDate}
+                    onMoveDate={handleMoveDate}
+                    onGoToday={handleGoToday}
+                  />
                 </div>
-              )}
-          </aside>
 
-          <main className="space-y-4">
-            {alertBannerMessage && (
-              <EmrAlertBanner message={alertBannerMessage} />
-            )}
-            {currentEmr ? (
-              <>
-                <PatientInfoPanel
-                  patient={currentEmr.pet_info}
-                  onEdit={() => {
-                    if (isTodayView) setIsProfileEditOpen(true);
-                  }}
-                  isReadOnly={isReadOnly}
-                />
-                {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
-                <HistoryPanel histories={currentEmr.emr_history} />
-                {followupItems.length > 0 && (
-                  <div className="rounded-lg border border-[#e8edf4] bg-white p-5 shadow-sm">
-                    <h3 className="mb-3 text-sm font-extrabold text-[#151b28]">경과 보고</h3>
-                    <div className="space-y-3">
-                      {followupItems.map((item) => (
-                        <div
-                          key={item.followup_id}
-                          className={`border-l-2 py-1 pl-3 ${
-                            item.emergency_alert ? "border-[#ef4444]" : "border-[#cbd5e1]"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-[#a8b0bf]">
-                              {item.created_at
-                                ? new Date(item.created_at).toLocaleString("ko-KR", {
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })
-                                : ""}
-                            </p>
-                            {item.emergency_alert && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#ef4444]">
-                                <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
-                                응급 신호 감지
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[#151b28]">
-                            {item.message?.includes("전화") && (
-                              <PhoneCall className="h-3.5 w-3.5 text-[#64748b]" strokeWidth={2.1} />
-                            )}
-                            {item.message ?? "(내용 없음)"}
-                          </p>
-                          {item.ai_summary && (
-                            <div className="mt-1 bg-slate-50 p-2 rounded text-xs text-[#4e5968] border border-slate-100">
-                              <span className="font-extrabold text-blue-600">AI 요약:</span> {item.ai_summary}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                {currentEmr ? (
+                  <div className="min-h-[220px] flex-1 overflow-hidden">
+                    <IntakePanel
+                      emr={currentEmr}
+                      visibleFiles={visibleGuardianFiles}
+                      hiddenFileCount={hiddenGuardianFileCount}
+                      onApplyIntake={handleApplyIntake}
+                      onPreviewImage={openPreviewImage}
+                      isReadOnly={isReadOnly}
+                    />
                   </div>
+                ) : (
+                  <CompactNotice title="사전 문진" message="환자를 선택하면 문진 요약이 표시됩니다." />
                 )}
-              </>
-            ) : (
-              <EmptyPatientPanel />
-            )}
-            {isTodayView && queueTab === "completed" && currentEmr && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleResetToWaiting}
-                  className="rounded-lg border border-[#dfe6f1] bg-white px-4 py-2 text-sm font-extrabold text-[#59657a] hover:border-[#357b70] hover:text-[#2f6f67]"
-                >
-                  진료 대기로 되돌리기
-                </button>
+
+                {currentEmr &&
+                  validationResult &&
+                  validationResult.overall !== "OK" &&
+                  Array.isArray(validationResult.checks) && (
+                    <ValidationNotice
+                      checks={validationResult.checks as Array<{ item: string; status: string; detail: string }>}
+                    />
+                  )}
               </div>
-            )}
-            {showEditablePanels && (
-              <>
-                <EditorPanel
-                  value={editorValue}
-                  count={editorValue.length}
-                  onChange={setEditorValue}
-                  onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
-                  errorMessage={completeVisitError}
-                  isReadOnly={isReadOnly}
-                />
-                <PhotoUploadPanel
-                  files={uploadedFiles}
-                  onUploadFile={handleUploadFile}
-                  onRemoveFile={handleRemoveFile}
-                  onPreviewImage={openPreviewImage}
-                  isUploading={isUploadingFile}
-                  uploadError={uploadError}
-                  isReadOnly={isReadOnly}
-                />
-                <PrescriptionInputPanel
-                  prescriptions={prescriptions}
-                  onRemove={handleRemovePrescription}
-                  onUpdate={handleUpdatePrescription}
-                  onAdd={handleAddPrescription}
-                  onGenerate={handleGeneratePrescriptionClick}
-                  accessToken={session.accessToken}
-                  errorMessage={autoPrescriptionError}
-                  isReadOnly={isReadOnly}
-                />
-              </>
-            )}
-          </main>
+            </WorkspacePane>
+          </ResizablePanel>
+
+          <SplitHandle />
+
+          <ResizablePanel
+            defaultSize={showEditablePanels ? "28%" : "78%"}
+            minSize={showEditablePanels ? "20%" : "50%"}
+            maxSize={showEditablePanels ? "38%" : "84%"}
+            className="min-w-0"
+          >
+            <WorkspacePane title="환자 정보 / 히스토리" meta={currentEmr?.pet_info.pet_name ?? "미선택"}>
+              <div className="space-y-1.5">
+                {currentEmr ? (
+                  <>
+                    <PatientInfoPanel
+                      patient={currentEmr.pet_info}
+                      onEdit={() => {
+                        if (isTodayView) setIsProfileEditOpen(true);
+                      }}
+                      isReadOnly={isReadOnly}
+                    />
+                    {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
+                    <HistoryPanel histories={currentEmr.emr_history} />
+                    {followupItems.length > 0 && <FollowupPanel items={followupItems} />}
+                    {isTodayView && queueTab === "completed" && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleResetToWaiting}
+                          className="h-8 rounded-md border border-[#dfe6f1] bg-white px-3 text-xs font-extrabold text-[#59657a] hover:border-[#357b70] hover:text-[#2f6f67]"
+                        >
+                          진료 대기로 되돌리기
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <EmptyPatientPanel />
+                )}
+              </div>
+            </WorkspacePane>
+          </ResizablePanel>
 
           {showEditablePanels && (
-            <AutoPrescriptionPanel
-              patient={currentEmr?.pet_info}
-              prescriptions={prescriptions}
-              isLoading={isLoadingAutoPresc}
-              onOpenPreview={handleOpenPrescriptionPreview}
-              previewErrorMessage={prescriptionPreviewError}
-              isReadOnly={isReadOnly}
-            />
+            <>
+              <SplitHandle />
+
+              <ResizablePanel defaultSize="50%" minSize="36%" maxSize="64%" className="min-w-0">
+                <WorkspacePane title="진료 / 첨부 / 처방" meta={isReadOnly ? "조회 전용" : "작성 가능"}>
+                  <div className="grid gap-1.5 2xl:grid-cols-[minmax(0,1.05fr)_minmax(220px,0.75fr)]">
+                    <EditorPanel
+                      value={editorValue}
+                      count={editorValue.length}
+                      onChange={setEditorValue}
+                      onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
+                      errorMessage={completeVisitError}
+                      isReadOnly={isReadOnly}
+                    />
+                    <PhotoUploadPanel
+                      files={uploadedFiles}
+                      onUploadFile={handleUploadFile}
+                      onRemoveFile={handleRemoveFile}
+                      onPreviewImage={openPreviewImage}
+                      isUploading={isUploadingFile}
+                      uploadError={uploadError}
+                      isReadOnly={isReadOnly}
+                    />
+                    <div className="2xl:col-span-2">
+                      <PrescriptionInputPanel
+                        prescriptions={prescriptions}
+                        onRemove={handleRemovePrescription}
+                        onUpdate={handleUpdatePrescription}
+                        onAdd={handleAddPrescription}
+                        onGenerate={handleGeneratePrescriptionClick}
+                        accessToken={session.accessToken}
+                        errorMessage={autoPrescriptionError}
+                        onOpenPreview={handleOpenPrescriptionPreview}
+                        previewErrorMessage={prescriptionPreviewError}
+                        isReadOnly={isReadOnly}
+                      />
+                    </div>
+                  </div>
+                </WorkspacePane>
+              </ResizablePanel>
+            </>
           )}
-        </div>
+
+          {!showEditablePanels && (
+            <>
+              <SplitHandle hidden />
+              <ResizablePanel
+                defaultSize="0%"
+                minSize="0%"
+                maxSize="0%"
+                disabled
+                className="min-w-0 overflow-hidden"
+              />
+            </>
+          )}
+        </ResizableGroup>
 
         {currentEmr && isProfileEditOpen && isTodayView && (
           <ProfileEditModal
@@ -457,6 +448,133 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
         )}
       </div>
     </AppLayout>
+  );
+}
+
+function WorkspacePane({
+  title,
+  meta,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f7fb]">
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-[#cfd8e6] bg-[#eaf0f7] px-2.5">
+        <h2 className="truncate text-[12px] font-extrabold text-[#1f2937]">{title}</h2>
+        {meta && (
+          <span className="ml-2 shrink-0 rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-extrabold text-[#64748b]">
+            {meta}
+          </span>
+        )}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SplitHandle({ hidden = false }: { hidden?: boolean }) {
+  return (
+    <ResizeSeparator
+      disabled={hidden}
+      className={[
+        "group relative w-1 shrink-0 outline-none transition",
+        hidden
+          ? "pointer-events-none bg-transparent"
+          : "bg-[#c7d2e1] hover:bg-[#7aa7cc] focus-visible:bg-[#3b82f6] data-[resize-handle-active]:bg-[#3b82f6]",
+      ].join(" ")}
+    >
+      {!hidden && (
+        <span className="absolute left-1/2 top-1/2 h-10 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70 opacity-0 transition group-hover:opacity-100" />
+      )}
+    </ResizeSeparator>
+  );
+}
+
+function CompactNotice({ title, message }: { title: string; message: string }) {
+  return (
+    <div className="rounded-lg border border-[#e1e8f2] bg-white px-3 py-4 text-center shadow-sm">
+      <p className="text-xs font-extrabold text-[#20283a]">{title}</p>
+      <p className="mt-1 text-[11px] font-bold leading-4 text-[#8a94a6]">{message}</p>
+    </div>
+  );
+}
+
+function ValidationNotice({
+  checks,
+}: {
+  checks: Array<{ item: string; status: string; detail: string }>;
+}) {
+  const visibleChecks = checks.filter((c) => c.status !== "PASS" && c.status !== "SKIPPED");
+
+  if (visibleChecks.length === 0) return null;
+
+  return (
+    <div className="shrink-0 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+      <div className="flex items-center gap-1.5 font-bold">
+        <TriangleAlert className="h-3.5 w-3.5" strokeWidth={2.2} />
+        <span>검토 권고</span>
+      </div>
+      <ul className="mt-1.5 space-y-1 leading-snug text-yellow-900/90">
+        {visibleChecks.map((c) => (
+          <li key={c.item}>
+            <span className="font-bold">{c.item}</span> - {c.detail}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FollowupPanel({ items }: { items: FollowupItem[] }) {
+  return (
+    <div className="rounded-lg border border-[#e8edf4] bg-white p-3 shadow-sm">
+      <h3 className="mb-2 text-xs font-extrabold text-[#151b28]">경과 보고</h3>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div
+            key={item.followup_id}
+            className={`border-l-2 py-1 pl-3 ${
+              item.emergency_alert ? "border-[#ef4444]" : "border-[#cbd5e1]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-[#a8b0bf]">
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleString("ko-KR", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
+              </p>
+              {item.emergency_alert && (
+                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-extrabold text-[#ef4444]">
+                  <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
+                  응급 신호
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs font-bold text-[#151b28]">
+              {item.message?.includes("전화") && (
+                <PhoneCall className="h-3.5 w-3.5 text-[#64748b]" strokeWidth={2.1} />
+              )}
+              {item.message ?? "(내용 없음)"}
+            </p>
+            {item.ai_summary && (
+              <div className="mt-1 rounded border border-slate-100 bg-slate-50 p-2 text-[11px] text-[#4e5968]">
+                <span className="font-extrabold text-blue-600">AI 요약:</span> {item.ai_summary}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
