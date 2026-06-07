@@ -67,6 +67,10 @@ else
   echo "  - 이미 ${DRUGCOUNT}개 있음 → 건너뜀"
 fi
 
+# ── 5.5) Triage RAG 적재 (덤프 있으면 비어있을 때만 — 중복/임베딩비용 방지) ───
+echo "▶ Triage RAG 확인/적재"
+$COMPOSE exec -T backend bash -c "cd /app/backend && python scripts/load_triage_rag.py" || true
+
 # ── 6) 테스트 계정 생성 (있으면 그대로) ────────────────────
 echo "▶ 테스트 계정 확인/생성"
 $COMPOSE exec -T backend bash -c "cd /app/backend && python scripts/create_test_accounts.py" 2>/dev/null || true

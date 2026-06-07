@@ -57,142 +57,417 @@
     "flags": [
       {
         "id": "RF-01",
+        "chief": "발작",
+        "suspected": ["특발성 발작", "중독", "대사성 질환"],
         "label": "지금 발작 중이에요",
         "vtl_ref": "R-NEURO-01",
         "keywords": [
           "currently seizuring",
           "active seizure",
-          "status epilepticus"
+          "status epilepticus",
+          "지금발작중",
+          "발작이안멈",
+          "발작이멈추지",
+          "발작이계속",
+          "계속경련",
+          "경련이안멈"
         ]
       },
       {
         "id": "RF-02",
+        "chief": "호흡곤란",
+        "suspected": ["폐부종", "흉수/기흉", "상기도 폐쇄"],
         "label": "숨을 거의 못 쉬어요 / 입을 벌리고 헐떡여요",
         "vtl_ref": "R-RESP-01",
         "keywords": [
           "severe respiratory distress",
           "open mouth breathing",
-          "cyanosis"
+          "cyanosis",
+          "숨을못쉬",
+          "숨을못쉐",
+          "숨못쉬",
+          "숨이안쉬",
+          "개구호흡",
+          "입을벌리고헐떡",
+          "호흡곤란"
         ]
       },
       {
         "id": "RF-03",
+        "chief": "의식소실",
+        "suspected": ["쇼크", "중독", "두부 외상"],
         "label": "완전히 의식이 없어요 (반응 없음)",
         "vtl_ref": "R-NEURO-02",
         "keywords": [
           "unresponsive",
           "unconscious",
-          "comatose"
+          "comatose",
+          "의식이없",
+          "의식없",
+          "반응이없",
+          "반응없",
+          "못깨워",
+          "정신을잃"
         ]
       },
       {
         "id": "RF-04",
+        "chief": "청색증",
+        "suspected": ["저산소증", "심부전", "폐질환"],
         "label": "잇몸/혀가 파래요 (청색증)",
         "vtl_ref": "R-RESP-01",
         "keywords": [
           "cyanosis",
-          "blue mucous membranes"
+          "blue mucous membranes",
+          "잇몸이파래",
+          "잇몸이보라",
+          "혀가파래",
+          "혀가보라",
+          "청색증"
         ]
       },
       {
         "id": "RF-05",
+        "chief": "급성 복부팽만",
+        "suspected": ["위확장염전(GDV)", "복강내 출혈"],
         "label": "배가 갑자기 크게 부풀었어요 (30분~12시간)",
         "vtl_ref": "R-GI-01",
         "keywords": [
           "rapid onset abdominal distension",
-          "GDV"
+          "GDV",
+          "배가부풀",
+          "배가빵빵",
+          "복부팽만",
+          "배가갑자기커",
+          "위가꼬"
         ]
       },
       {
         "id": "RF-06",
+        "chief": "난산",
+        "suspected": ["난산", "태아 정체"],
         "label": "새끼가 밖으로 나오다 멈췄어요",
         "vtl_ref": "R-OBS-01",
         "keywords": [
           "presenting fetal parts",
-          "dystocia"
+          "dystocia",
+          "새끼가나오다멈",
+          "새끼가걸렸",
+          "분만중에멈"
         ]
       },
       {
         "id": "RF-07",
+        "chief": "장기 노출",
+        "suspected": ["복벽 열창", "장 탈출"],
         "label": "내장이 밖으로 나왔어요",
         "vtl_ref": "O-TRA-01",
         "keywords": [
-          "evisceration"
+          "evisceration",
+          "내장이나왔",
+          "장기가나왔",
+          "내장이튀어나"
         ]
       },
       {
         "id": "RF-08",
+        "chief": "안구 돌출",
+        "suspected": ["안구 탈출", "안와 외상"],
         "label": "눈이 튀어나왔어요",
         "vtl_ref": "O-TRA-03",
         "keywords": [
           "proptosed eye",
-          "ocular proptosis"
+          "ocular proptosis",
+          "눈이튀어나",
+          "눈알이빠",
+          "안구돌출"
         ]
       },
       {
         "id": "RF-09",
+        "chief": "대량 출혈",
+        "suspected": ["응고장애", "대혈관 손상", "저혈량 쇼크"],
         "label": "피가 멈추지 않고 쏟아져요",
         "vtl_ref": "R-CIRC-02",
         "keywords": [
           "exsanguinating hemorrhage",
-          "profuse bleeding"
+          "profuse bleeding",
+          "피가안멈",
+          "피가멈추지",
+          "피가콸콸",
+          "피가쏟아",
+          "대량출혈",
+          "피를많이흘",
+          "피를토"
         ]
       },
       {
         "id": "RF-10",
+        "chief": "뒷다리 마비",
+        "suspected": ["동맥혈전색전증(ATE)"],
         "label": "🐱 고양이가 뒷다리를 끌고 비명을 질러요",
         "vtl_ref": "O-CIRC-02",
         "keywords": [
           "feline ATE",
           "aortic thromboembolism",
-          "absent femoral pulse"
+          "absent femoral pulse",
+          "뒷다리를끌고비명",
+          "뒷다리가갑자기마비",
+          "뒷다리를못쓰고아파"
         ],
         "species": "cat"
       },
       {
         "id": "RF-11",
+        "chief": "허탈/창백",
+        "suspected": ["쇼크", "내출혈", "패혈증"],
         "label": "잇몸이 창백하고 쓰러졌어요",
         "vtl_ref": "R-CIRC-01",
         "keywords": [
           "shock decompensated",
-          "pale gums collapse"
+          "pale gums collapse",
+          "잇몸이창백",
+          "잇몸이하얘",
+          "창백하고쓰러",
+          "쇼크"
         ]
       },
       {
         "id": "RF-12",
+        "chief": "배뇨 불가",
+        "suspected": ["요도폐색", "급성 신손상"],
         "label": "소변을 12시간 이상 전혀 못 봐요",
         "vtl_ref": "O-URO-02",
         "keywords": [
           "urethral obstruction",
-          "anuria 12h"
+          "anuria 12h",
+          "소변을전혀못",
+          "오줌을하루종일못",
+          "12시간넘게소변",
+          "소변이아예안나"
         ]
       },
       {
         "id": "RF-13",
+        "chief": "중독성 발작",
+        "suspected": ["퍼메트린 중독"],
         "label": "🐱 고양이 - 외용 벼룩약 바른 후 발작",
         "vtl_ref": "R-NEURO-01",
         "keywords": [
           "permethrin toxicity cats",
-          "topical insecticide seizure"
+          "topical insecticide seizure",
+          "벼룩약바른후",
+          "퍼메트린"
         ],
         "species": "cat",
         "special_instruction": "즉시 중성 세제(주방세제)로 목욕 후 내원"
       },
       {
         "id": "RF-14",
+        "chief": "독성 교상",
+        "suspected": ["독사/독거미 교상"],
         "label": "독사/독거미에 물렸어요",
         "vtl_ref": "O-TRA-02",
         "keywords": [
-          "high lethality envenomation"
+          "high lethality envenomation",
+          "독사",
+          "뱀에물",
+          "독거미",
+          "거미에물",
+          "지네에물"
         ]
       },
       {
         "id": "RF-15",
+        "chief": "저체온",
+        "suspected": ["쇼크", "저체온증"],
         "label": "체온이 너무 낮아요 (몸이 차갑고 축 늘어짐)",
         "vtl_ref": "R-GEN-03",
         "keywords": [
           "rectal temperature ≤36.7C",
-          "hypothermia critical"
+          "hypothermia critical",
+          "체온이낮",
+          "몸이차갑고늘어",
+          "저체온"
+        ]
+      },
+      {
+        "id": "RF-16",
+        "chief": "독성물질 섭취",
+        "suspected": ["중독"],
+        "label": "독성물질을 먹었어요 (초콜릿·자일리톨·포도·양파·쥐약 등)",
+        "vtl_ref": "R-TOX-01",
+        "keywords": [
+          "toxin ingestion",
+          "초콜릿",
+          "자일리톨",
+          "건포도",
+          "양파",
+          "마늘",
+          "쥐약",
+          "살서제",
+          "사람약",
+          "부동액",
+          "농약",
+          "독극물",
+          "독성물질",
+          "중독"
+        ]
+      },
+      {
+        "id": "RF-17",
+        "chief": "열사병 의심",
+        "suspected": ["열사병", "고체온증"],
+        "label": "더운 곳에 있다가 헥헥대며 축 늘어져요 (열사병 의심)",
+        "vtl_ref": "R-GEN-04",
+        "keywords": [
+          "heatstroke",
+          "hyperthermia",
+          "heat stress",
+          "열사병",
+          "더위먹",
+          "더운차안",
+          "체온이너무높",
+          "몸이뜨겁고늘어",
+          "헥헥대며늘어",
+          "고체온"
+        ]
+      },
+      {
+        "id": "RF-18",
+        "chief": "기도 이물/질식",
+        "suspected": ["기도 이물", "상기도 폐쇄"],
+        "label": "목에 뭔가 걸린 듯 켁켁대고 숨을 못 쉬어요 (질식·기도 이물)",
+        "vtl_ref": "R-RESP-02",
+        "keywords": [
+          "choking",
+          "airway foreign body",
+          "upper airway obstruction",
+          "목에뭔가걸",
+          "목에걸려서",
+          "질식",
+          "기도가막",
+          "숨이막혀",
+          "뭔가걸려서캑"
+        ]
+      },
+      {
+        "id": "RF-19",
+        "chief": "알레르기 반응",
+        "suspected": ["아나필락시스", "혈관부종"],
+        "label": "벌에 쏘이거나 약/백신 후 얼굴이 붓고 무너져요 (알레르기 쇼크)",
+        "vtl_ref": "R-IMM-01",
+        "keywords": [
+          "anaphylaxis",
+          "anaphylactic shock",
+          "facial swelling angioedema",
+          "아나필락시스",
+          "얼굴이부어",
+          "얼굴이퉁퉁",
+          "벌에쏘",
+          "벌에물",
+          "두드러기가전신",
+          "백신맞고무너",
+          "알레르기쇼크"
+        ]
+      },
+      {
+        "id": "RF-20",
+        "chief": "음부 분비물",
+        "suspected": ["자궁축농증"],
+        "label": "중성화 안 한 암컷이 음부에서 고름이 나오고 축 늘어져요 (자궁축농증 의심)",
+        "vtl_ref": "O-REP-01",
+        "keywords": [
+          "pyometra",
+          "자궁축농",
+          "음부에서고름",
+          "음부고름",
+          "자궁에고름",
+          "생식기에서고름"
+        ]
+      },
+      {
+        "id": "RF-21",
+        "chief": "난산",
+        "suspected": ["난산"],
+        "label": "강한 진통/힘주기가 오래 이어지는데 새끼가 안 나와요 (난산)",
+        "vtl_ref": "R-OBS-02",
+        "keywords": [
+          "dystocia",
+          "prolonged labor",
+          "난산",
+          "새끼가안나와",
+          "진통이오래",
+          "힘주는데안나",
+          "분만이안돼"
+        ]
+      },
+      {
+        "id": "RF-22",
+        "chief": "배뇨곤란",
+        "suspected": ["요도폐색"],
+        "label": "소변을 보려고 계속 힘주는데 안 나오고 아파해요 (요도폐색 의심)",
+        "vtl_ref": "O-URO-03",
+        "keywords": [
+          "urethral obstruction early",
+          "blocked cat",
+          "stranguria",
+          "소변을못보고힘",
+          "소변한방울",
+          "오줌을누려고힘",
+          "화장실을들락거리며소변",
+          "소변보려고끙끙"
+        ]
+      },
+      {
+        "id": "RF-23",
+        "chief": "외상",
+        "suspected": ["다발성 외상", "내부 장기 손상", "골절"],
+        "label": "높은 곳에서 떨어지거나 차에 치였어요 (추락·교통사고)",
+        "vtl_ref": "O-TRA-04",
+        "keywords": [
+          "high rise syndrome",
+          "hit by car",
+          "major blunt trauma",
+          "차에치",
+          "교통사고",
+          "높은곳에서떨어",
+          "추락",
+          "창문에서떨어",
+          "베란다에서떨어",
+          "옥상에서떨어"
+        ]
+      },
+      {
+        "id": "RF-24",
+        "chief": "감전/화상",
+        "suspected": ["전기 화상", "폐부종"],
+        "label": "전기 코드를 씹거나 감전됐어요 / 심한 화상을 입었어요",
+        "vtl_ref": "O-TRA-05",
+        "keywords": [
+          "electrocution",
+          "electrical burn",
+          "severe burn",
+          "감전",
+          "전기코드를씹",
+          "콘센트를물",
+          "심한화상",
+          "끓는물에데",
+          "불에데"
+        ]
+      },
+      {
+        "id": "RF-25",
+        "chief": "익수",
+        "suspected": ["흡인성 폐렴", "저산소증"],
+        "label": "물에 빠졌었어요 (익수)",
+        "vtl_ref": "R-RESP-03",
+        "keywords": [
+          "near drowning",
+          "submersion injury",
+          "익수",
+          "물에빠졌",
+          "물에빠진"
         ]
       }
     ]
@@ -672,6 +947,7 @@
               "label": "독성 물질을 먹었을 수 있어요",
               "value": "toxin",
               "urgency_score": 9,
+              "red_flag": true,
               "vtl_discriminator_id": "O-GI-01",
               "keywords": [
                 "toxin ingestion seizure",
@@ -916,6 +1192,7 @@
               "label": "독성 물질을 먹었을 수 있어요",
               "value": "toxin",
               "urgency_score": 8,
+              "red_flag": true,
               "vtl_discriminator_id": "O-GI-01",
               "keywords": [
                 "toxin ingestion collapse"
@@ -1503,6 +1780,7 @@
               "label": "독성 물질을 먹었어요",
               "value": "toxin",
               "urgency_score": 8,
+              "red_flag": true,
               "vtl_discriminator_id": "O-GI-01",
               "keywords": [
                 "toxin ingestion"

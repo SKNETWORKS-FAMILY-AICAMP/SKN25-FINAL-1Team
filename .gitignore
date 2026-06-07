@@ -37,3 +37,13 @@ AGENTS.md
 
 *.log
 frontend/guardian-web/*.log
+
+# Triage RAG 원본/임베딩 데이터 — git 비커밋, DB 덤프로 공유 (vet_triage.json은 추적 유지)
+backend/data/triage/raw/
+backend/data/triage/*.zip
+backend/data/triage/*.dump
+backend/data/triage/*.sql
+backend/data/triage/*.sql.gz
+backend/data/triage/*.jsonl
+backend/data/triage/*.jsonl.gz
+backend/data/triage/*.gz

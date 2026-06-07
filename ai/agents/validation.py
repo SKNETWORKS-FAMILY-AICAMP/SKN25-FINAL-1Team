@@ -107,7 +107,7 @@ def _collect_symptom_text(triage: dict) -> str:
 # 매직넘버가 아니라 '검토 알림'을 띄울지 정하는 명명 상수다. 판정이 아니므로 임상 검증 대상이 아니며,
 # 병원별 오탐 허용치에 맞춰 조정할 수 있다. 패널에 계산 근거("일치율 X% < 50%")가 그대로 노출된다.
 CHART_OVERLAP_THRESHOLD = 0.5   # 문진 증상 키워드의 차트 등장 비율이 이 미만이면 '문진-차트 불일치' 알림
-LOW_URGENCY_THRESHOLD = 4       # triage 응급도 Level ≥ 4(준긴급·비긴급)면 '낮음'으로 보고 응급표현과의 불일치 알림
+LOW_URGENCY_THRESHOLD = 4       # triage urgency_level_num ≥ 4(표시상 '일반')면 '낮음'으로 보고 응급표현과의 불일치 알림
 
 
 def _check_workflow_consistency(triage: dict, chart_result: dict | None) -> dict:

@@ -54,8 +54,12 @@ async def proxy_chat(body: dict, current_user=Depends(get_current_user)):
         raise HTTPException(500, "OpenAI API 키가 서버에 설정되지 않았습니다.")
 
     # 모델 allowlist: 클라이언트가 임의 모델을 지정해 고비용 호출하는 것을 막는다.
-    model = body.get("model", "gpt-4o-mini")
-    if model not in ALLOWED_MODELS:
+    # .env로 운영 모델을 바꿔도 프록시가 막지 않도록 설정값을 allowlist에 포함한다.
+    allowed = ALLOWED_MODELS | {
+        m for m in (settings.OPENAI_MODEL, settings.OPENAI_VISION_MODEL) if m
+    }
+    model = body.get("model") or settings.OPENAI_MODEL or "gpt-4o-mini"
+    if model not in allowed:
         raise HTTPException(400, f"허용되지 않은 모델입니다: {model}")
 
     # max_tokens 상한 강제
