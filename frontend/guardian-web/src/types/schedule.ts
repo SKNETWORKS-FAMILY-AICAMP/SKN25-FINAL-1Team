@@ -22,7 +22,7 @@ export interface ScheduleListItem {
   doctorid: number;
   doctor_name: string;
   duration_min: number;
-  status: ScheduleStatus;
+  status: string;
 }
 
 export interface ScheduleListResult {

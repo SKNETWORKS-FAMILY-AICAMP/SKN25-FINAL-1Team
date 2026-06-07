@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
@@ -6,6 +6,7 @@ import { getPets, type Pet } from "../../api/pets-api";
 import PageHeader from "../../components/common/page-header";
 import CheckupReservationModal from "../../components/schedule/checkup-reservation-modal";
 import GuardianLayout from "../../layouts/guardian-layout";
+import { useTranslation } from "../../i18n/language-context";
 
 const petRegisterPath = "/pets/register";
 
@@ -48,31 +49,6 @@ const defaultProfileImages = [
   "/assets/profile6.png",
 ];
 
-const normalizeGender = (gender?: string) => {
-  if (!gender) {
-    return undefined;
-  }
-
-  if (gender === "male") {
-    return "남아";
-  }
-
-  if (gender === "female") {
-    return "여아";
-  }
-
-  return gender;
-};
-
-const getPetMeta = (pet: Pet) =>
-  [
-    pet.breed || pet.species,
-    pet.age ? `${pet.age}살` : undefined,
-    normalizeGender(pet.gender),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
 const getProfileImage = (pet: Pet) =>
   pet.profile_image ||
   defaultProfileImages[Math.abs(pet.pet_id) % defaultProfileImages.length];
@@ -82,15 +58,60 @@ const sortPetsByName = (petsToSort: Pet[]) =>
     firstPet.petname.localeCompare(secondPet.petname, "ko"),
   );
 
-const PetIllustration = () => (
+const PetIllustration = ({ alt }: { alt: string }) => (
   <img
     src="/assets/medi-paw-logo.png"
-    alt="반려동물 등록 안내"
+    alt={alt}
     className="mx-auto h-56 w-auto object-contain"
   />
 );
 
 const HomePage = () => {
+  const { t, lang } = useTranslation();
+  const normalizeSpecies = (species?: string) => {
+    if (!species) return undefined;
+    if (species === "강아지" || species === "dog") return t("pet.speciesDog");
+    if (species === "고양이" || species === "cat") return t("pet.speciesCat");
+    if (species === "기타" || species === "other") return t("pet.speciesOther");
+    return species;
+  };
+  const normalizeGender = (gender?: string) => {
+    if (!gender) return undefined;
+    if (gender === "male" || gender === "수컷" || gender === "남아") {
+      return t("home.genderMale");
+    }
+    if (gender === "female" || gender === "암컷" || gender === "여아") {
+      return t("home.genderFemale");
+    }
+    if (gender === "모름" || gender === "unknown") return t("pet.unknown");
+    return gender;
+  };
+  const normalizeBreed = (breed?: string) => {
+    if (!breed) return undefined;
+    const breedMap: Record<string, Record<string, string>> = {
+      말티즈: {
+        ko: "말티즈",
+        en: "Maltese",
+        ja: "マルチーズ",
+        zh: "马尔济斯",
+      },
+      코리안숏헤어: {
+        ko: "코리안숏헤어",
+        en: "Korean Shorthair",
+        ja: "コリアンショートヘア",
+        zh: "韩国短毛猫",
+      },
+    };
+    return breedMap[breed]?.[lang] || breed;
+  };
+  const getPetMeta = (pet: Pet) =>
+    [
+      normalizeBreed(pet.breed) || normalizeSpecies(pet.species),
+      pet.age ? t("home.yearsOld", { age: pet.age }) : undefined,
+      normalizeGender(pet.gender),
+    ]
+      .filter(Boolean)
+      .join(" · ");
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const previewMode = import.meta.env.DEV ? searchParams.get("preview") : null;
@@ -102,7 +123,6 @@ const HomePage = () => {
   const [reservationPet, setReservationPet] = useState<Pet | null>(null);
 
   const hasPets = pets.length > 0;
-  const petCountLabel = useMemo(() => `${pets.length}마리`, [pets.length]);
   const refreshRequestedAt =
     (location.state as { petRegisteredAt?: number; petUpdatedAt?: number } | null)
       ?.petRegisteredAt ||
@@ -138,7 +158,7 @@ const HomePage = () => {
         }
 
         if (response.code !== 200) {
-          setErrorMessage(response.message || "반려동물 목록을 불러오지 못했습니다.");
+          setErrorMessage(response.message || t("home.petsLoadError"));
           setPets([]);
           return;
         }
@@ -156,13 +176,12 @@ const HomePage = () => {
 
         if (isAxiosError<{ message?: string }>(error)) {
           setErrorMessage(
-            error.response?.data?.message ||
-              "반려동물 목록을 불러오지 못했습니다.",
+            error.response?.data?.message || t("home.petsLoadError"),
           );
           return;
         }
 
-        setErrorMessage("반려동물 목록을 불러오지 못했습니다.");
+        setErrorMessage(t("home.petsLoadError"));
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -187,7 +206,7 @@ const HomePage = () => {
         <section className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-md rounded-3xl bg-white px-6 py-10 text-center border border-slate-100 shadow-sm">
             <h1 className="text-xl font-bold text-slate-900">
-              홈 화면을 불러오지 못했습니다
+              {t("home.loadError")}
             </h1>
             <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
               {errorMessage}
@@ -197,34 +216,32 @@ const HomePage = () => {
               onClick={() => window.location.reload()}
               className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-700"
             >
-              다시 시도
+              {t("common.retry")}
             </button>
           </div>
         </section>
       ) : !hasPets ? (
         <section className="flex flex-1 flex-col pb-8">
           <PageHeader
-            title="내 반려동물"
-            description="사랑하는 반려동물의 건강을 관리하고 예약해보세요."
+            title={t("home.title")}
+            description={t("home.description")}
             rightAction={
               <Link
                 to={petRegisterPath}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                + 반려동물 등록하기
+                {t("home.registerLong")}
               </Link>
             }
           />
           <div className="flex flex-1 w-full min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
             <div className="text-center">
-              <PetIllustration />
+              <PetIllustration alt={t("home.registerAlt")} />
               <h2 className="mt-8 text-2xl font-bold text-slate-800">
-                등록된 반려동물이 없어요
+                {t("home.emptyTitle")}
               </h2>
               <p className="mx-auto mt-4 max-w-sm text-sm font-semibold leading-6 text-slate-500">
-                반려동물을 등록하면 맞춤 상담과 예약 서비스를
-                <br />
-                더 편리하게 이용하실 수 있습니다.
+                {t("home.emptyDescription")}
               </p>
             </div>
           </div>
@@ -232,21 +249,21 @@ const HomePage = () => {
       ) : (
         <section className="flex flex-1 flex-col pb-8">
           <PageHeader
-            title="내 반려동물"
-            description="사랑하는 반려동물의 건강을 관리하고 예약해보세요."
+            title={t("home.title")}
+            description={t("home.description")}
             rightAction={
               <Link
                 to={petRegisterPath}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                + 반려동물 등록
+                {t("home.registerShort")}
               </Link>
             }
           />
 
           <div className="flex-1 min-h-[480px] rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
             <div className="mb-3 text-sm font-bold text-slate-500">
-              등록된 반려동물 {petCountLabel}
+              {t("home.registeredCount", { count: pets.length })}
             </div>
 
             <div className="space-y-3">
@@ -258,7 +275,7 @@ const HomePage = () => {
                   <div className="mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:mx-0">
                     <img
                       src={getProfileImage(pet)}
-                      alt={`${pet.petname} 프로필`}
+                      alt={t("common.petProfileAlt", { name: pet.petname })}
                       className="h-full w-full object-cover"
                     />
                   </div>
@@ -268,7 +285,7 @@ const HomePage = () => {
                       {pet.petname}
                     </h2>
                     <p className="mt-1 text-sm font-semibold text-slate-500">
-                      {getPetMeta(pet) || pet.species || "반려동물"}
+                      {getPetMeta(pet) || pet.species || t("home.petFallback")}
                     </p>
 
                     <div className="mt-3 border-t border-slate-200 pt-3">
@@ -277,20 +294,20 @@ const HomePage = () => {
                           to={`/pets/${pet.pet_id}`}
                           className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
-                          상세 보기
+                          {t("home.detail")}
                         </Link>
                         <button
                           type="button"
                           onClick={() => setReservationPet(pet)}
                           className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
-                          예약하기
+                          {t("home.reserve")}
                         </button>
                         <Link
                           to={`/chatbot?petId=${pet.pet_id}`}
                           className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-bold text-white transition hover:bg-blue-700"
                         >
-                          챗봇 상담
+                          {t("home.chatConsult")}
                         </Link>
                       </div>
                     </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { cancelSchedule } from "../../api/schedule-api";
 import type { ScheduleListItem } from "../../types/schedule";
 import { getErrorMessage } from "./schedule-utils";
+import { useTranslation } from "../../i18n/language-context";
 
 interface CancelScheduleModalProps {
   schedule: ScheduleListItem;
@@ -38,6 +39,7 @@ const CancelScheduleModal = ({
   onClose,
   onCancelled,
 }: CancelScheduleModalProps) => {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -49,13 +51,13 @@ const CancelScheduleModal = ({
       const response = await cancelSchedule(schedule.schedule_id);
 
       if (response.code !== 200) {
-        setErrorMessage(response.message || "예약 취소에 실패했습니다.");
+        setErrorMessage(response.message || t("schedule.cancelFailed"));
         return;
       }
 
       onCancelled();
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "예약 취소에 실패했습니다."));
+      setErrorMessage(getErrorMessage(error, t("schedule.cancelFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +70,7 @@ const CancelScheduleModal = ({
           type="button"
           onClick={onClose}
           className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-          aria-label="예약 취소 모달 닫기"
+          aria-label={t("schedule.cancelCloseAria")}
         >
           <CloseIcon />
         </button>
@@ -78,11 +80,11 @@ const CancelScheduleModal = ({
         </div>
 
         <h2 className="mt-6 text-xl font-extrabold text-slate-950">
-          예약을 정말 취소하시겠습니까?
+          {t("schedule.cancelTitle")}
         </h2>
 
         <p className="mt-3 text-sm font-bold leading-6 text-slate-500">
-          취소된 예약은 복구할 수 없습니다.
+          {t("schedule.cancelDescription")}
         </p>
 
         {errorMessage ? (
@@ -98,7 +100,7 @@ const CancelScheduleModal = ({
             disabled={isSubmitting}
             className="h-11 rounded-xl border border-slate-200 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            아니요
+            {t("schedule.cancelNo")}
           </button>
 
           <button
@@ -107,7 +109,7 @@ const CancelScheduleModal = ({
             disabled={isSubmitting}
             className="h-11 rounded-xl bg-rose-500 text-sm font-extrabold text-white shadow-lg shadow-rose-100 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
           >
-            {isSubmitting ? "취소 중" : "네, 취소할게요"}
+            {isSubmitting ? t("schedule.canceling") : t("schedule.cancelConfirm")}
           </button>
         </div>
       </section>

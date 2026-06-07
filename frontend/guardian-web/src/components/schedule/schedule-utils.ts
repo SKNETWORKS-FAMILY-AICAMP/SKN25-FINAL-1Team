@@ -19,19 +19,44 @@ const defaultProfileImages = [
   "/assets/profile6.png",
 ];
 
-export const scheduleTabs: Array<{ filter: ScheduleFilter; label: string }> = [
-  { filter: "all", label: "전체" },
-  { filter: "upcoming", label: "예정된 예약" },
-  { filter: "past", label: "지난 예약" },
-  { filter: "cancelled", label: "취소된 예약" },
+export const scheduleTabs: Array<{ filter: ScheduleFilter; labelKey: string }> = [
+  { filter: "all", labelKey: "schedule.tabAll" },
+  { filter: "upcoming", labelKey: "schedule.tabUpcoming" },
+  { filter: "past", labelKey: "schedule.tabPast" },
+  { filter: "cancelled", labelKey: "schedule.tabCancelled" },
 ];
 
-export const scheduleStatusLabel: Record<ScheduleStatus, string> = {
-  PENDING: "예약 대기",
-  CONFIRMED: "예약 확정",
-  COMPLETED: "진료 완료",
-  CANCELLED: "예약 취소",
+export const scheduleStatusKey: Record<ScheduleStatus, string> = {
+  PENDING: "schedule.statusPending",
+  CONFIRMED: "schedule.statusConfirmed",
+  COMPLETED: "schedule.statusCompleted",
+  CANCELLED: "schedule.statusCancelled",
 };
+
+export const normalizeScheduleStatus = (
+  status?: string | null,
+): ScheduleStatus => {
+  if (status === "예약대기" || status === "대기") return "PENDING";
+  if (status === "예약확정") return "CONFIRMED";
+  if (status === "진료완료") return "COMPLETED";
+  if (status === "예약취소" || status === "취소") return "CANCELLED";
+  if (
+    status === "PENDING" ||
+    status === "CONFIRMED" ||
+    status === "COMPLETED" ||
+    status === "CANCELLED"
+  ) {
+    return status;
+  }
+  return "PENDING";
+};
+
+export const getScheduleStatusLabelKey = (status?: string | null) =>
+  scheduleStatusKey[normalizeScheduleStatus(status)];
+
+// i18n 언어 코드 → Intl 로케일 (날짜·시간 포맷용)
+export const localeForLang = (lang: string): string =>
+  ({ ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" })[lang] || "ko-KR";
 
 export const getErrorMessage = (
   error: unknown,
@@ -65,8 +90,13 @@ export const formatDateInput = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-export const formatScheduleDateTime = (isoDate: string) =>
-  new Intl.DateTimeFormat("ko-KR", {
+export const formatScheduleDateTime = (isoDate?: string | null, locale = "ko-KR") => {
+  if (!isoDate) return "";
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -74,15 +104,17 @@ export const formatScheduleDateTime = (isoDate: string) =>
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(isoDate));
+  }).format(date);
+};
 
 export const formatScheduleTimeRange = (
   startTime: string,
   endTime: string,
+  locale = "ko-KR",
 ) => {
   const end = new Date(endTime);
 
-  return `${formatScheduleDateTime(startTime)} - ${String(
+  return `${formatScheduleDateTime(startTime, locale)} - ${String(
     end.getHours(),
   ).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
 };
@@ -92,7 +124,8 @@ export const getProfileImage = (schedule: ScheduleListItem) =>
   defaultProfileImages[Math.abs(schedule.pet_id) % defaultProfileImages.length];
 
 export const canManageSchedule = (schedule: ScheduleListItem) =>
-  schedule.status === "CONFIRMED" && new Date(schedule.confirmed_time) > new Date();
+  normalizeScheduleStatus(schedule.status) === "CONFIRMED" &&
+  new Date(schedule.confirmed_time) > new Date();
 
 export const buildKstDateTime = (date: string, time: string) =>
   `${date}T${time}:00${kstOffset}`;

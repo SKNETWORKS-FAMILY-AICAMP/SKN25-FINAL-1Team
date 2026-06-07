@@ -5,6 +5,7 @@ import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse, Eye, EyeOf
 
 import { loginGuardian } from "../../api/auth-api";
 import { useAuthStore } from "../../stores/auth-store";
+import { useTranslation } from "../../i18n/language-context";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface LoginFormState {
@@ -19,26 +20,10 @@ interface LoginErrorResponse {
 }
 
 const serviceItems = [
-  {
-    icon: MessageCircleMore,
-    title: "AI 챗봇 상담",
-    description: "반려동물 상태를 입력하면 필요한 상담 흐름을 안내합니다.",
-  },
-  {
-    icon: CalendarDays,
-    title: "병원 예약 및 관리",
-    description: "상담 이후 필요한 병원 예약과 예약 내역을 관리할 수 있습니다.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "상담 후 예약 진행",
-    description: "챗봇 상담 결과를 바탕으로 빠르게 예약 절차를 이어갑니다.",
-  },
-  {
-    icon: HeartPulse,
-    title: "상태 기록 및 경과 관리",
-    description: "반려동물의 상태 변화와 상담 기록을 한곳에서 확인합니다.",
-  },
+  { icon: MessageCircleMore, titleKey: "auth.serviceChatTitle", descKey: "auth.serviceChatDesc" },
+  { icon: CalendarDays, titleKey: "auth.serviceBookTitle", descKey: "auth.serviceBookDesc" },
+  { icon: ClipboardCheck, titleKey: "auth.serviceFlowTitle", descKey: "auth.serviceFlowDesc" },
+  { icon: HeartPulse, titleKey: "auth.serviceRecordTitle", descKey: "auth.serviceRecordDesc" },
 ];
 
 const inputClassName = (hasError: boolean) =>
@@ -50,6 +35,7 @@ const inputClassName = (hasError: boolean) =>
   ].join(" ");
 
 const LoginPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [form, setForm] = useState<LoginFormState>({
@@ -82,12 +68,12 @@ const LoginPage = () => {
     event.preventDefault();
 
     if (!form.loginid.trim()) {
-      setErrorMessage("로그인 ID를 입력해주세요.");
+      setErrorMessage(t("auth.login.idRequired"));
       return;
     }
 
     if (!form.password) {
-      setErrorMessage("비밀번호를 입력해주세요.");
+      setErrorMessage(t("auth.login.passwordRequired"));
       return;
     }
 
@@ -102,7 +88,7 @@ const LoginPage = () => {
       });
 
       if (response.code !== 200 || !response.result) {
-        setErrorMessage(response.message || "로그인에 실패했습니다.");
+        setErrorMessage(response.message || t("auth.login.failed"));
         return;
       }
 
@@ -116,13 +102,12 @@ const LoginPage = () => {
     } catch (error) {
       if (isAxiosError<LoginErrorResponse>(error)) {
         setErrorMessage(
-          error.response?.data?.message ||
-            "네트워크 오류가 발생했습니다. 다시 시도해주세요.",
+          error.response?.data?.message || t("auth.networkError"),
         );
         return;
       }
 
-      setErrorMessage("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      setErrorMessage(t("auth.networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -140,28 +125,28 @@ const LoginPage = () => {
         <section className="flex flex-col">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
-              MediPaw와 함께
+              {t("auth.heroTitleLine1")}
               <br />
-              우리 아이의 건강을 지켜주세요
+              {t("auth.heroTitleLine2")}
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              AI 챗봇 상담으로 증상에 맞는 진료 예약을 도와드립니다.
+              {t("auth.heroSubtitle")}
             </p>
           </div>
 
           <div className="mt-10 flex flex-1 flex-col justify-between gap-3">
             {serviceItems.map((item) => (
               <article
-                key={item.title}
+                key={item.titleKey}
                 className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4"
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2a8587] text-white">
                   <item.icon className="h-6 w-6" />
                 </span>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">{item.title}</h2>
+                  <h2 className="text-base font-bold text-slate-900">{t(item.titleKey)}</h2>
                   <p className="mt-1 text-sm leading-snug text-slate-600">
-                    {item.description}
+                    {t(item.descKey)}
                   </p>
                 </div>
               </article>
@@ -171,22 +156,22 @@ const LoginPage = () => {
 
         <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
           <div className="mb-4 text-center">
-            <h2 className="text-2xl font-bold text-slate-950">로그인</h2>
+            <h2 className="text-2xl font-bold text-slate-950">{t("auth.login.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
-              MediPaw 계정으로 로그인해주세요.
+              {t("auth.login.subtitle")}
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="loginid">
-                ID
+                {t("auth.idLabel")}
               </label>
               <input
                 id="loginid"
                 value={form.loginid}
                 onChange={handleChange("loginid")}
-                placeholder="ID를 입력해주세요."
+                placeholder={t("auth.login.idPlaceholder")}
                 autoComplete="username"
                 aria-invalid={Boolean(errorMessage && !form.loginid.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.loginid.trim()))}
@@ -195,7 +180,7 @@ const LoginPage = () => {
 
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="password">
-                비밀번호
+                {t("auth.passwordLabel")}
               </label>
               <div className="relative mt-2">
                 <input
@@ -203,7 +188,7 @@ const LoginPage = () => {
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange("password")}
-                  placeholder="비밀번호를 입력해주세요."
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   autoComplete="current-password"
                   aria-invalid={Boolean(errorMessage && !form.password)}
                   className={`${inputClassName(
@@ -213,7 +198,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((current) => !current)}
-                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
+                  aria-label={showPassword ? t("auth.login.hidePassword") : t("auth.login.showPassword")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-blue-600"
                 >
                   {showPassword ? (
@@ -233,18 +218,18 @@ const LoginPage = () => {
                   onChange={handleRememberChange}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                로그인 상태 유지
+                {t("auth.login.remember")}
               </label>
 
               <div className="flex gap-3">
                 <Link className="font-bold text-blue-600 hover:text-blue-700" to="/find-id">
-                  아이디 찾기
+                  {t("auth.login.findId")}
                 </Link>
                 <Link
                   className="font-bold text-blue-600 hover:text-blue-700"
                   to="/find-password"
                 >
-                  비밀번호 찾기
+                  {t("auth.login.findPassword")}
                 </Link>
               </div>
             </div>
@@ -260,12 +245,12 @@ const LoginPage = () => {
               disabled={isSubmitting}
               className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
             >
-              {isSubmitting ? "로그인 중..." : "로그인"}
+              {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
             </button>
 
             <div className="flex items-center gap-3 py-1">
               <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs font-bold text-slate-400">또는</span>
+              <span className="text-xs font-bold text-slate-400">{t("auth.login.or")}</span>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
 
@@ -273,15 +258,15 @@ const LoginPage = () => {
               to="/signup"
               className="flex h-11 w-full items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
             >
-              회원가입하기
+              {t("auth.login.signupCta")}
             </Link>
           </form>
         </section>
       </main>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
-        <p>© 2026 MediPaw. All rights reserved.</p>
+        <p>{t("auth.footerContact")}</p>
+        <p>{t("auth.footerCopyright")}</p>
       </footer>
     </div>
   );

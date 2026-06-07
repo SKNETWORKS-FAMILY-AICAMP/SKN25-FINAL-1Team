@@ -14,7 +14,10 @@ import {
   formatScheduleTimeRange,
   getErrorMessage,
   getProfileImage,
+  localeForLang,
 } from "./schedule-utils";
+import { useTranslation } from "../../i18n/language-context";
+import { translateKnownText } from "../../i18n/known-text";
 
 interface ChangeScheduleModalProps {
   schedule: ScheduleListItem;
@@ -38,6 +41,8 @@ const ChangeScheduleModal = ({
   onClose,
   onChanged,
 }: ChangeScheduleModalProps) => {
+  const { t, lang } = useTranslation();
+  const weekdays = t("schedule.weekdaysShort").split(",");
   const initialDate = useMemo(
     () => formatDateInput(new Date(schedule.confirmed_time)),
     [schedule.confirmed_time],
@@ -91,9 +96,7 @@ const ChangeScheduleModal = ({
         if (!isMounted) return;
 
         if (response.code !== 200) {
-          setErrorMessage(
-            response.message || "예약 가능 시간을 불러오지 못했습니다.",
-          );
+          setErrorMessage(response.message || t("schedule.slotsError"));
           setSlots([]);
           return;
         }
@@ -102,9 +105,7 @@ const ChangeScheduleModal = ({
       } catch (error) {
         if (!isMounted) return;
 
-        setErrorMessage(
-          getErrorMessage(error, "예약 가능 시간을 불러오지 못했습니다."),
-        );
+        setErrorMessage(getErrorMessage(error, t("schedule.slotsError")));
         setSlots([]);
       } finally {
         if (isMounted) setIsLoadingSlots(false);
@@ -138,13 +139,13 @@ const ChangeScheduleModal = ({
       });
 
       if (response.code !== 200) {
-        setErrorMessage(response.message || "예약 변경에 실패했습니다.");
+        setErrorMessage(response.message || t("schedule.changeFailed"));
         return;
       }
 
       onChanged();
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "예약 변경에 실패했습니다."));
+      setErrorMessage(getErrorMessage(error, t("schedule.changeFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,12 +155,12 @@ const ChangeScheduleModal = ({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4">
       <section className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-          <h2 className="text-lg font-extrabold text-slate-950">예약 변경</h2>
+          <h2 className="text-lg font-extrabold text-slate-950">{t("schedule.changeTitle")}</h2>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-            aria-label="예약 변경 모달 닫기"
+            aria-label={t("schedule.changeCloseAria")}
           >
             <CloseIcon />
           </button>
@@ -169,7 +170,7 @@ const ChangeScheduleModal = ({
           <div className="flex items-center gap-4">
             <img
               src={getProfileImage(schedule)}
-              alt={`${schedule.pet_name} 프로필`}
+              alt={t("common.petProfileAlt", { name: schedule.pet_name })}
               className="h-14 w-14 rounded-lg object-cover"
             />
             <div>
@@ -177,19 +178,20 @@ const ChangeScheduleModal = ({
                 {schedule.pet_name}
               </p>
               <p className="mt-1 text-sm font-bold text-slate-500">
-                {schedule.category}
+                {translateKnownText(schedule.category, t, lang)}
               </p>
             </div>
           </div>
 
           <div className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
-            현재 예약:{" "}
+            {t("schedule.currentBooking")}{" "}
             {formatScheduleTimeRange(
               schedule.confirmed_time,
               schedule.confirmed_end_time,
+              localeForLang(lang),
             )}
             <span className="ml-3 text-blue-500">
-              담당 {schedule.doctor_name}
+              {t("schedule.inCharge", { name: schedule.doctor_name })}
             </span>
           </div>
 
@@ -210,7 +212,10 @@ const ChangeScheduleModal = ({
                   &lt;
                 </button>
                 <h3 className="text-sm font-extrabold text-slate-900">
-                  {calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월
+                  {t("schedule.monthLabel", {
+                    year: calendarMonth.getFullYear(),
+                    month: calendarMonth.getMonth() + 1,
+                  })}
                 </h3>
                 <button
                   type="button"
@@ -222,7 +227,7 @@ const ChangeScheduleModal = ({
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-center text-xs font-extrabold text-slate-400">
-                {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                {weekdays.map((day) => (
                   <div key={day} className="py-2">
                     {day}
                   </div>
@@ -254,10 +259,10 @@ const ChangeScheduleModal = ({
 
             <section className="rounded-xl border border-slate-100 p-4">
               <h3 className="text-sm font-extrabold text-slate-900">
-                시간 및 진료 시간 선택
+                {t("schedule.timeSelectTitle")}
               </h3>
               <p className="mt-1 text-xs font-semibold text-slate-500">
-                {selectedDate} 기준 예약 가능 시간입니다.
+                {t("schedule.availableOn", { date: selectedDate })}
               </p>
 
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -291,15 +296,18 @@ const ChangeScheduleModal = ({
                   })
                 ) : (
                   <p className="col-span-3 rounded-xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500">
-                    예약 가능한 시간이 없습니다.
+                    {t("schedule.noSlots")}
                   </p>
                 )}
               </div>
 
               {selectedSlot ? (
                 <div className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
-                  선택 시간: {selectedDate} {selectedSlot.start_time} -{" "}
-                  {selectedSlot.end_time}
+                  {t("schedule.selectedTime", {
+                    date: selectedDate,
+                    start: selectedSlot.start_time,
+                    end: selectedSlot.end_time,
+                  })}
                 </div>
               ) : null}
             </section>
@@ -313,7 +321,7 @@ const ChangeScheduleModal = ({
             disabled={isSubmitting}
             className="h-11 rounded-xl border border-slate-200 px-6 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            취소
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -321,7 +329,7 @@ const ChangeScheduleModal = ({
             disabled={!selectedSlot || isSubmitting}
             className="h-11 rounded-xl bg-blue-600 px-6 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
           >
-            {isSubmitting ? "변경 중" : "변경하기"}
+            {isSubmitting ? t("schedule.changing") : t("schedule.changeConfirm")}
           </button>
         </div>
       </section>

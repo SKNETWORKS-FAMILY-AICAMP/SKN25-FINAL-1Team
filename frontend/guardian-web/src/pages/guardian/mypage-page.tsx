@@ -12,6 +12,7 @@ import PageHeader from "../../components/common/page-header";
 import SectionCard from "../../components/common/section-card";
 import GuardianLayout from "../../layouts/guardian-layout";
 import { useAuthStore } from "../../stores/auth-store";
+import { useTranslation } from "../../i18n/language-context";
 
 interface ApiMessageResponse {
   code?: number;
@@ -79,6 +80,7 @@ const EditProfileModal = ({
   onClose,
   onSaved,
 }: EditProfileModalProps) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState<EditProfileForm>({
     name: profile.name,
     phone: profile.phone,
@@ -90,9 +92,9 @@ const EditProfileModal = ({
   const trimmedPhone = form.phone.trim();
   const isUnchanged =
     trimmedName === profile.name && trimmedPhone === profile.phone;
-  const nameError = !trimmedName ? "이름을 입력해주세요." : "";
+  const nameError = !trimmedName ? t("mypage.nameRequired") : "";
   const phoneError = !isValidPhone(trimmedPhone)
-    ? "010-1234-5678 형식의 휴대폰 번호를 입력해주세요."
+    ? t("mypage.phoneInvalid")
     : "";
   const canSubmit =
     !isSubmitting && !isUnchanged && !nameError && !phoneError;
@@ -124,7 +126,7 @@ const EditProfileModal = ({
       });
 
       if (response.code !== 200) {
-        setErrorMessage(response.message || "회원 정보 수정에 실패했습니다.");
+        setErrorMessage(response.message || t("mypage.updateFailed"));
         return;
       }
 
@@ -133,10 +135,10 @@ const EditProfileModal = ({
           name: trimmedName,
           phone: trimmedPhone,
         },
-        response.message || "회원 정보가 수정되었습니다.",
+        response.message || t("mypage.updateSuccess"),
       );
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "회원 정보 수정에 실패했습니다."));
+      setErrorMessage(getErrorMessage(error, t("mypage.updateFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -146,12 +148,12 @@ const EditProfileModal = ({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4">
       <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-          <h2 className="text-lg font-extrabold text-slate-950">회원 정보 수정</h2>
+          <h2 className="text-lg font-extrabold text-slate-950">{t("mypage.editTitle")}</h2>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-            aria-label="회원 정보 수정 닫기"
+            aria-label={t("mypage.editClose")}
           >
             ×
           </button>
@@ -160,7 +162,7 @@ const EditProfileModal = ({
         <form onSubmit={handleSubmit} className="px-5 py-5 sm:px-6">
           <div>
             <label className="text-sm font-bold text-slate-800" htmlFor="name">
-              이름
+              {t("mypage.fieldName")}
             </label>
             <input
               id="name"
@@ -179,7 +181,7 @@ const EditProfileModal = ({
 
           <div className="mt-4">
             <label className="text-sm font-bold text-slate-800" htmlFor="phone">
-              휴대폰 번호
+              {t("mypage.fieldPhone")}
             </label>
             <input
               id="phone"
@@ -211,14 +213,14 @@ const EditProfileModal = ({
               disabled={isSubmitting}
               className="h-12 rounded-xl border border-slate-200 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              취소
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={!canSubmit}
               className="h-12 rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {isSubmitting ? "저장 중..." : "저장"}
+              {isSubmitting ? t("mypage.saving") : t("common.save")}
             </button>
           </div>
         </form>
@@ -228,6 +230,7 @@ const EditProfileModal = ({
 };
 
 const MypagePage = () => {
+  const { t } = useTranslation();
   const updateGuardianProfile = useAuthStore(
     (state) => state.updateGuardianProfile,
   );
@@ -251,7 +254,7 @@ const MypagePage = () => {
         }
 
         if (response.code !== 200) {
-          setLoadMessage(response.message || "회원 정보를 불러오지 못했습니다.");
+          setLoadMessage(response.message || t("mypage.loadError"));
           return;
         }
 
@@ -265,7 +268,7 @@ const MypagePage = () => {
           return;
         }
 
-        setLoadMessage(getErrorMessage(error, "회원 정보를 불러오지 못했습니다."));
+        setLoadMessage(getErrorMessage(error, t("mypage.loadError")));
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -284,12 +287,12 @@ const MypagePage = () => {
     () =>
       profile
         ? [
-            { label: "이름", value: profile.name },
-            { label: "휴대폰 번호", value: profile.phone },
-            { label: "가입일", value: profile.created_at },
+            { label: t("mypage.fieldName"), value: profile.name },
+            { label: t("mypage.fieldPhone"), value: profile.phone },
+            { label: t("mypage.fieldJoinedAt"), value: profile.created_at },
           ]
         : [],
-    [profile],
+    [profile, t],
   );
 
   const handleProfileSaved = (
@@ -312,14 +315,14 @@ const MypagePage = () => {
   return (
     <GuardianLayout>
       <PageHeader
-        title="마이페이지"
-        description="보호자 계정 정보와 보안 설정을 관리합니다."
+        title={t("mypage.title")}
+        description={t("mypage.description")}
         rightAction={
           <Link
             to="/mypage/password"
             className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
           >
-            비밀번호 변경
+            {t("mypage.changePassword")}
           </Link>
         }
       />
@@ -335,7 +338,7 @@ const MypagePage = () => {
         ) : loadMessage ? (
           <section className="rounded-2xl border border-rose-100 bg-white px-6 py-10 text-center shadow-sm">
             <h2 className="text-lg font-extrabold text-slate-950">
-              회원 정보를 불러오지 못했습니다.
+              {t("mypage.loadError")}
             </h2>
             <p className="mt-3 text-sm font-bold text-rose-600">
               {loadMessage}
@@ -345,7 +348,7 @@ const MypagePage = () => {
               onClick={() => window.location.reload()}
               className="mt-6"
             >
-              다시 시도
+              {t("common.retry")}
             </ActionButton>
           </section>
         ) : profile ? (
@@ -353,10 +356,10 @@ const MypagePage = () => {
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-950">
-                  회원 정보
+                  {t("mypage.sectionTitle")}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  이름과 휴대폰 번호를 최신 정보로 유지해주세요.
+                  {t("mypage.sectionDescription")}
                 </p>
               </div>
               <ActionButton
@@ -366,7 +369,7 @@ const MypagePage = () => {
                   setIsEditOpen(true);
                 }}
               >
-                정보 수정
+                {t("mypage.editProfile")}
               </ActionButton>
             </div>
 

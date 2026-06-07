@@ -3,6 +3,7 @@ import React, { useRef } from "react";
 import type { Pet } from "../../api/pets-api";
 import ActionButton from "../common/action-button";
 import { useCheckupReservation } from "../../hooks/use-checkup-reservation";
+import { useTranslation } from "../../i18n/language-context";
 
 interface CheckupReservationModalProps {
   pet: Pet;
@@ -24,15 +25,15 @@ const CloseIcon = () => (
   </svg>
 );
 
-const getPetMeta = (pet: Pet) =>
-  [pet.breed || pet.species, pet.age ? `${pet.age}살` : undefined]
-    .filter(Boolean)
-    .join(" · ");
-
 const CheckupReservationModal = ({
   pet,
   onClose,
 }: CheckupReservationModalProps) => {
+  const { t } = useTranslation();
+  const getPetMeta = (item: Pet) =>
+    [item.breed || item.species, item.age ? t("home.yearsOld", { age: item.age }) : undefined]
+      .filter(Boolean)
+      .join(" · ");
   const dateInputRef = useRef<HTMLInputElement>(null);
   const {
     selectedDate,
@@ -74,7 +75,7 @@ const CheckupReservationModal = ({
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 sm:px-6">
           <div>
             <h2 className="text-lg font-extrabold text-slate-950">
-              바로 예약
+              {t("schedule.instantTitle")}
             </h2>
           </div>
 
@@ -82,7 +83,7 @@ const CheckupReservationModal = ({
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-            aria-label="정기검진 예약 모달 닫기"
+            aria-label={t("schedule.checkupCloseAria")}
           >
             <CloseIcon />
           </button>
@@ -95,22 +96,22 @@ const CheckupReservationModal = ({
                 ✓
               </div>
               <h3 className="mt-3 text-xl font-extrabold text-slate-950">
-                예약이 완료되었습니다
+                {t("schedule.completeTitle")}
               </h3>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                예약 일정이 확정되었습니다.
+                {t("schedule.completeDesc")}
               </p>
             </div>
 
             <dl className="mt-4 divide-y divide-slate-100 rounded-2xl border border-slate-100 px-4">
               {[
-                ["반려동물", petDisplayName],
-                ["예약 날짜", completedReservation.date],
+                [t("schedule.fieldPet"), petDisplayName],
+                [t("schedule.fieldDate"), completedReservation.date],
                 [
-                  "예약 시간",
+                  t("schedule.fieldTime"),
                   `${completedReservation.time} - ${completedReservation.end_time}`,
                 ],
-                ["예약 메모", completedReservation.memo || "없음"],
+                [t("schedule.fieldMemo"), completedReservation.memo || t("schedule.memoNone")],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -124,7 +125,7 @@ const CheckupReservationModal = ({
 
             <div className="mt-5 flex justify-end">
               <ActionButton type="button" onClick={onClose} size="lg">
-                홈으로 가기
+                {t("schedule.goHome")}
               </ActionButton>
             </div>
           </div>
@@ -141,13 +142,13 @@ const CheckupReservationModal = ({
                   {pet.petname}
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-500">
-                  {getPetMeta(pet) || "반려동물"}
+                  {getPetMeta(pet) || t("schedule.fieldPet")}
                 </p>
               </div>
 
               <label className="block">
                 <span className="text-sm font-extrabold text-slate-900">
-                  예약 날짜
+                  {t("schedule.fieldDate")}
                 </span>
                 <div className="mt-1.5 flex items-center rounded-xl border border-slate-200 bg-white px-4 transition focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
                   <input
@@ -162,7 +163,7 @@ const CheckupReservationModal = ({
                     type="button"
                     onClick={handleOpenDatePicker}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-                    aria-label="달력 열기"
+                    aria-label={t("schedule.openCalendar")}
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -177,7 +178,7 @@ const CheckupReservationModal = ({
               <section>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-extrabold text-slate-900">
-                    가능한 시간
+                    {t("schedule.availableTime")}
                   </h3>
                   <p className="text-xs font-bold text-slate-400">
                     {selectedDate}
@@ -215,7 +216,7 @@ const CheckupReservationModal = ({
                     })
                   ) : (
                     <p className="col-span-3 rounded-xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500 sm:col-span-4">
-                      예약 가능한 시간이 없습니다.
+                      {t("schedule.noSlots")}
                     </p>
                   )}
                 </div>
@@ -223,12 +224,12 @@ const CheckupReservationModal = ({
 
               <label className="block">
                 <span className="text-sm font-extrabold text-slate-900">
-                  예약 메모
+                  {t("schedule.fieldMemo")}
                 </span>
                 <textarea
                   value={memo}
                   onChange={(event) => setMemo(event.target.value)}
-                  placeholder="검진 전 전달할 내용을 입력해주세요."
+                  placeholder={t("schedule.memoPlaceholder")}
                   rows={3}
                   className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
@@ -248,14 +249,14 @@ const CheckupReservationModal = ({
                 disabled={isSubmitting}
                 variant="secondary"
               >
-                닫기
+                {t("common.close")}
               </ActionButton>
               <ActionButton
                 type="submit"
                 disabled={!selectedSlot || isSubmitting}
                 className="min-w-[112px]"
               >
-                {isSubmitting ? "예약 중" : "예약하기"}
+                {isSubmitting ? t("schedule.reserving") : t("schedule.reserve")}
               </ActionButton>
             </div>
           </form>

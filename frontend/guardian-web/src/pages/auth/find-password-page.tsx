@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Lightbulb } from "lucide-react";
 
 import { findGuardianPassword } from "../../api/auth-api";
+import { useTranslation } from "../../i18n/language-context";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface FindPasswordFormState {
@@ -46,6 +47,7 @@ const formatPhoneNumber = (value: string) => {
 };
 
 const FindPasswordPage = () => {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FindPasswordFormState>(initialFormState);
   const [temporaryPassword, setTemporaryPassword] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -73,22 +75,22 @@ const FindPasswordPage = () => {
     event.preventDefault();
 
     if (!form.loginid.trim()) {
-      setErrorMessage("ID를 입력해주세요.");
+      setErrorMessage(t("auth.findPassword.idRequired"));
       return;
     }
 
     if (!form.name.trim()) {
-      setErrorMessage("이름을 입력해주세요.");
+      setErrorMessage(t("auth.findPassword.nameRequired"));
       return;
     }
 
     if (!form.phone.trim()) {
-      setErrorMessage("전화번호를 입력해주세요.");
+      setErrorMessage(t("auth.findPassword.phoneRequired"));
       return;
     }
 
     if (!/^[0-9-]+$/.test(form.phone.trim())) {
-      setErrorMessage("올바른 전화번호 형식으로 입력해주세요.");
+      setErrorMessage(t("auth.phoneFormatInvalid"));
       return;
     }
 
@@ -105,24 +107,21 @@ const FindPasswordPage = () => {
       });
 
       if (response.code !== 200 || !response.result?.temp_password) {
-        setErrorMessage(
-          response.message || "입력하신 정보와 일치하는 계정을 찾을 수 없습니다.",
-        );
+        setErrorMessage(response.message || t("auth.notFound"));
         return;
       }
 
-      setSuccessMessage(response.message || "임시 비밀번호가 발급되었습니다.");
+      setSuccessMessage(response.message || t("auth.findPassword.tempIssued"));
       setTemporaryPassword(response.result.temp_password);
     } catch (error) {
       if (isAxiosError<FindPasswordErrorResponse>(error)) {
         setErrorMessage(
-          error.response?.data?.message ||
-            "네트워크 오류가 발생했습니다. 다시 시도해주세요.",
+          error.response?.data?.message || t("auth.networkError"),
         );
         return;
       }
 
-      setErrorMessage("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      setErrorMessage(t("auth.networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -140,12 +139,12 @@ const FindPasswordPage = () => {
         <section className="space-y-14">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
-              비밀번호 찾기
+              {t("auth.findPassword.title")}
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              ID와 이름, 전화번호로
+              {t("auth.findPassword.heroSubtitleLine1")}
               <br />
-              임시 비밀번호를 발급받을 수 있습니다.
+              {t("auth.findPassword.heroSubtitleLine2")}
             </p>
           </div>
 
@@ -154,10 +153,10 @@ const FindPasswordPage = () => {
               <Lightbulb className="h-6 w-6" aria-hidden />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900">안내사항</h2>
+              <h2 className="text-base font-bold text-slate-900">{t("auth.infoTitle")}</h2>
               <ul className="mt-1 space-y-0.5 text-sm leading-snug text-slate-600">
-                <li>정보가 일치하면 임시 비밀번호가 발급됩니다.</li>
-                <li>임시 비밀번호로 로그인한 뒤 새 비밀번호로 변경해주세요.</li>
+                <li>{t("auth.findPassword.infoLine1")}</li>
+                <li>{t("auth.findPassword.infoLine2")}</li>
               </ul>
             </div>
           </div>
@@ -165,22 +164,22 @@ const FindPasswordPage = () => {
 
         <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
           <div className="mb-4 text-center">
-            <h2 className="text-2xl font-bold text-slate-950">비밀번호 찾기</h2>
+            <h2 className="text-2xl font-bold text-slate-950">{t("auth.findPassword.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
-              등록된 보호자 정보를 입력해주세요.
+              {t("auth.findPassword.subtitle")}
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="loginid">
-                ID
+                {t("auth.idLabel")}
               </label>
               <input
                 id="loginid"
                 value={form.loginid}
                 onChange={handleChange("loginid")}
-                placeholder="ID를 입력해주세요."
+                placeholder={t("auth.findPassword.idPlaceholder")}
                 autoComplete="username"
                 aria-invalid={Boolean(errorMessage && !form.loginid.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.loginid.trim()))}
@@ -189,13 +188,13 @@ const FindPasswordPage = () => {
 
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="name">
-                이름
+                {t("auth.nameLabel")}
               </label>
               <input
                 id="name"
                 value={form.name}
                 onChange={handleChange("name")}
-                placeholder="이름을 입력해주세요."
+                placeholder={t("auth.findPassword.namePlaceholder")}
                 autoComplete="name"
                 aria-invalid={Boolean(errorMessage && !form.name.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.name.trim()))}
@@ -204,13 +203,13 @@ const FindPasswordPage = () => {
 
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="phone">
-                전화번호
+                {t("auth.phoneLabel")}
               </label>
               <input
                 id="phone"
                 value={form.phone}
                 onChange={handleChange("phone")}
-                placeholder="예: 010-1234-5678"
+                placeholder={t("auth.findPassword.phonePlaceholder")}
                 autoComplete="tel"
                 aria-invalid={Boolean(errorMessage && !form.phone.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.phone.trim()))}
@@ -230,7 +229,7 @@ const FindPasswordPage = () => {
                   {temporaryPassword}
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  임시 비밀번호로 로그인한 후 비밀번호를 변경해주세요.
+                  {t("auth.findPassword.tempLoginGuide")}
                 </p>
               </div>
             )}
@@ -240,7 +239,7 @@ const FindPasswordPage = () => {
               disabled={isSubmitting}
               className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
             >
-              {isSubmitting ? "발급 중..." : "임시 비밀번호 발급"}
+              {isSubmitting ? t("auth.findPassword.submitting") : t("auth.findPassword.submit")}
             </button>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -248,13 +247,13 @@ const FindPasswordPage = () => {
                 to="/login"
                 className="flex h-11 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                로그인 하기
+                {t("auth.loginCta")}
               </Link>
               <Link
                 to="/find-id"
                 className="flex h-11 items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
               >
-                아이디 찾기
+                {t("auth.findPassword.findIdCta")}
               </Link>
             </div>
           </form>
@@ -262,8 +261,8 @@ const FindPasswordPage = () => {
       </main>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
-        <p>© 2026 MediPaw. All rights reserved.</p>
+        <p>{t("auth.footerContact")}</p>
+        <p>{t("auth.footerCopyright")}</p>
       </footer>
     </div>
   );
