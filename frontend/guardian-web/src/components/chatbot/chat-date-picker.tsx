@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
 import { getAvailableScheduleSlots } from "../../api/schedule-api";
+import { useTranslation } from "../../i18n/language-context";
+import type { Language } from "../../i18n/translations";
 
 interface ChatDatePickerProps {
   onSelectSlot: (date: string, time: string, doctorid: number, label: string) => void;
   onCancel: () => void;
 }
 
-const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
 const fmt2 = (n: number) => String(n).padStart(2, "0");
+
+const localeForLang = (lang: Language) =>
+  ({ ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" })[lang];
 
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
 
 const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
+  const { lang, t } = useTranslation();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -60,12 +64,18 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
   const isSelected = (d: Date | null) =>
     d && selectedDate && toDateStr(d) === toDateStr(selectedDate);
 
+  const weekdays = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(localeForLang(lang), { weekday: "short" }).format(
+      new Date(2026, 1, index + 1),
+    ),
+  );
+
   return (
     <div className="w-80 rounded-2xl border border-blue-100 bg-white px-4 py-3 shadow-xl">
       {/* 달력 헤더 */}
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-sm font-extrabold text-slate-800">
-          {viewYear}년 {viewMonth + 1}월
+          {t("chatbot.pickerMonth", { year: viewYear, month: viewMonth + 1 })}
         </span>
         <div className="flex gap-0.5">
           <button
@@ -87,14 +97,14 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
             onClick={onCancel}
             className="ml-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold text-slate-400 hover:bg-white hover:text-rose-500"
           >
-            닫기
+            {t("chatbot.pickerClose")}
           </button>
         </div>
       </div>
 
       {/* 요일 헤더 */}
       <div className="mb-0.5 grid grid-cols-7 text-center">
-        {DAYS.map((d, i) => (
+        {weekdays.map((d, i) => (
           <span
             key={d}
             className={`text-[11px] font-extrabold ${i === 0 ? "text-rose-400" : i === 6 ? "text-blue-500" : "text-slate-400"}`}
@@ -135,18 +145,29 @@ const ChatDatePicker = ({ onSelectSlot, onCancel }: ChatDatePickerProps) => {
       {selectedDate && (
         <div className="mt-2">
           <p className="mb-1.5 text-[10px] font-extrabold text-slate-600">
-            {viewMonth + 1}월 {selectedDate.getDate()}일 예약 가능 시간
+            {t("chatbot.pickerAvailableTime", {
+              month: selectedDate.getMonth() + 1,
+              day: selectedDate.getDate(),
+            })}
           </p>
           {loadingSlots ? (
-            <p className="text-[10px] text-slate-400">슬롯 조회 중...</p>
+            <p className="text-[10px] text-slate-400">
+              {t("chatbot.pickerLoadingSlots")}
+            </p>
           ) : slots.length === 0 ? (
-            <p className="text-[10px] text-slate-400">예약 가능한 시간이 없습니다.</p>
+            <p className="text-[10px] text-slate-400">
+              {t("chatbot.pickerNoSlots")}
+            </p>
           ) : (
             <div className="flex flex-wrap gap-1">
               {slots.map(s => {
                 const time = s.start_time.slice(0, 5);
                 const [, m, dd] = toDateStr(selectedDate).split("-");
-                const label = `${m}월 ${dd}일 ${time}`;
+                const label = t("chatbot.slotLabel", {
+                  month: Number(m),
+                  day: Number(dd),
+                  time,
+                });
                 return (
                   <button
                     key={s.start_time}

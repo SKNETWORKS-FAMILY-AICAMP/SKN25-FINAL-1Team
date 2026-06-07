@@ -1,5 +1,6 @@
 import type { ChatSessionHistory } from "../../api/chat-api";
 import type { Pet } from "../../api/pets-api";
+import { useTranslation } from "../../i18n/language-context";
 
 const HistoryIcon = () => (
   <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
@@ -36,11 +37,13 @@ const ChatSessionList = ({
   onDeleteHistory,
   getHistoryTitle,
 }: ChatSessionListProps) => {
+  const { t } = useTranslation();
+
   return (
     <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-white lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-4">
         <h2 className="text-center text-[15px] font-bold text-slate-900">
-          상담 기록
+          {t("chatbot.history")}
         </h2>
       </div>
 
@@ -51,12 +54,10 @@ const ChatSessionList = ({
               <HistoryIcon />
             </div>
             <p className="mt-4 text-[13px] font-bold text-slate-800">
-              상담 기록을 확인해보세요
+              {t("chatbot.historyEmptyTitle")}
             </p>
             <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
-              왼쪽에서 반려동물을 선택하면
-              <br />
-              지난 상담을 볼 수 있어요.
+              {t("chatbot.historyEmptyDescription")}
             </p>
           </div>
         ) : (
@@ -68,7 +69,7 @@ const ChatSessionList = ({
                 disabled={creatingPetId !== null}
                 className="flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-blue-300"
               >
-                {creatingPetId ? "세션 생성 중" : "새 상담 시작"}
+                {creatingPetId ? t("chatbot.creating") : t("chatbot.newChat")}
               </button>
             </div>
 
@@ -79,7 +80,7 @@ const ChatSessionList = ({
                 </div>
               ) : chatHistories.length === 0 ? (
                 <p className="mt-6 text-center text-xs font-semibold leading-5 text-slate-500">
-                  아직 상담 기록이 없습니다.
+                  {t("chatbot.noHistory")}
                 </p>
               ) : (
                 <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
@@ -112,7 +113,7 @@ const ChatSessionList = ({
                           type="button"
                           onClick={() => onDeleteHistory(history)}
                           className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-extrabold text-slate-400 transition hover:bg-white hover:text-rose-500"
-                          aria-label="상담 기록 삭제"
+                          aria-label={t("chatbot.deleteHistory")}
                         >
                           x
                         </button>

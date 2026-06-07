@@ -1,6 +1,7 @@
 import type { ChangeEvent, FormEvent, RefObject } from "react";
 
 import type { PendingAttachment } from "../../hooks/use-chat-upload";
+import { useTranslation } from "../../i18n/language-context";
 
 const MicrophoneIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -50,6 +51,8 @@ const ChatInputBox = ({
   onSubmitMessage,
   onChangeMessageInput,
 }: ChatInputBoxProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
       {pendingAttachment ? (
@@ -66,7 +69,7 @@ const ChatInputBox = ({
               ) : (
                 <img
                   src={pendingAttachment.previewUrl}
-                  alt="첨부 미리보기"
+                  alt={t("chatbot.attachPreview")}
                   className="h-full w-full object-cover"
                 />
               )}
@@ -75,7 +78,9 @@ const ChatInputBox = ({
               <p className="truncate text-sm font-extrabold text-slate-800">
                 {pendingAttachment.fileName}
               </p>
-              <p className="mt-1 text-xs font-bold text-blue-600">첨부 완료</p>
+              <p className="mt-1 text-xs font-bold text-blue-600">
+                {t("chatbot.attachDone")}
+              </p>
             </div>
           </div>
           <button
@@ -83,7 +88,7 @@ const ChatInputBox = ({
             onClick={onClearPendingAttachment}
             className="h-9 rounded-xl bg-white px-3 text-xs font-extrabold text-slate-500 transition hover:text-blue-600"
           >
-            삭제
+            {t("chatbot.attachDelete")}
           </button>
         </div>
       ) : null}
@@ -103,7 +108,7 @@ const ChatInputBox = ({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploadingAttachment || isStreaming}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-lg font-extrabold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
-          aria-label="첨부파일 추가"
+          aria-label={t("chatbot.attachAdd")}
         >
           {isUploadingAttachment ? "..." : "+"}
         </button>
@@ -112,13 +117,13 @@ const ChatInputBox = ({
           value={messageInput}
           onChange={(event) => onChangeMessageInput(event.target.value)}
           disabled={isStreaming || isUploadingAttachment}
-          placeholder="메시지를 입력해주세요."
+          placeholder={t("chatbot.inputPlaceholder")}
           className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400 disabled:text-slate-400"
         />
         <button
           type="button"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-          aria-label="음성 입력"
+          aria-label={t("chatbot.voiceInput")}
         >
           <MicrophoneIcon />
         </button>
@@ -130,7 +135,7 @@ const ChatInputBox = ({
             isUploadingAttachment
           }
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-700 disabled:bg-slate-300"
-          aria-label="메시지 전송"
+          aria-label={t("chatbot.sendMessage")}
         >
           <SendIcon />
         </button>
