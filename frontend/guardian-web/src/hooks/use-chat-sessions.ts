@@ -138,6 +138,17 @@ export const useChatSessions = ({
       }
 
       const petName = response.result.pet_name || selectedPet.petname;
+      const today = new Date().toISOString().slice(0, 10);
+      setSelectedHistoryId(response.result.session_id);
+      setChatHistories((currentHistories) => [
+        {
+          session_id: response.result.session_id,
+          keywords: [],
+          created_at: today,
+          status: "상담중",
+        },
+        ...currentHistories.filter((history) => history.session_id !== response.result.session_id),
+      ]);
       setSession({
         ...response.result,
         pet_name: petName,
@@ -225,6 +236,16 @@ export const useChatSessions = ({
     }
   };
 
+  const updateChatHistoryKeywords = (sessionId: number, keywords: string[]) => {
+    setChatHistories((currentHistories) =>
+      currentHistories.map((history) =>
+        history.session_id === sessionId
+          ? { ...history, keywords, status: "진료완료" }
+          : history,
+      ),
+    );
+  };
+
   return {
     chatHistories,
     selectedHistoryId,
@@ -237,5 +258,6 @@ export const useChatSessions = ({
     handleSelectHistory,
     handleDeleteHistory,
     refreshChatHistories,
+    updateChatHistoryKeywords,
   };
 };

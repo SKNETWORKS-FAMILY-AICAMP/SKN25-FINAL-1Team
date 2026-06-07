@@ -54,7 +54,8 @@ from app.prompts.triage_prompt import FORCE_COMPLETE_SUFFIX  # noqa: E402
 
 
 # urgency_level_num → 라벨. LLM 출력 방어용 단일 소스.
-_URGENCY_LABELS = {1: "즉시", 2: "응급", 3: "긴급", 4: "준긴급", 5: "비긴급"}
+# 표시 라벨은 3버킷(응급/준응급/일반)으로 통일 — num1=응급, num2~3=준응급, num4~5=일반.
+_URGENCY_LABELS = {1: "응급", 2: "준응급", 3: "준응급", 4: "일반", 5: "일반"}
 
 
 def _coerce_collected_info(info: dict | None) -> dict | None:
@@ -96,7 +97,7 @@ async def run_triage(
     system = build_triage_prompt(pet, rules, emr_history)
 
     update_step("응급도 분류 중...")
-    result = await call_openai(messages, system, model="gpt-4o-mini", max_tokens=2000, agent="triage")
+    result = await call_openai(messages, system, max_tokens=2000, agent="triage")
 
     # LLM 출력 방어: 완료된 문진의 응급도 필드를 안전 범위로 보정
     if isinstance(result, dict) and result.get("collected_info"):

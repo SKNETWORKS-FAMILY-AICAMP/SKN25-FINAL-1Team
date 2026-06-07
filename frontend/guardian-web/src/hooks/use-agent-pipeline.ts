@@ -229,10 +229,10 @@ export const useAgentPipeline = ({
       } | null;
 
       if (!schedRes?.slot_window) {
-        appendBot(
-          "예약 가능한 시간을 불러오지 못했어요. 예약 페이지에서 직접 예약해주세요.",
-        );
-        setPhase("chatting");
+        appendBot("예약 시간을 계산하는 데 시간이 걸리고 있어요. 아래에서 날짜를 선택해 가능한 시간을 확인해주세요. 📅");
+        appendCard({ kind: "slots", slots: [] });
+        setPhase("slot-selection");
+        setShowDatePicker(true);
         return;
       }
 
@@ -287,10 +287,10 @@ export const useAgentPipeline = ({
         setShowDatePicker(true);
       }
     } catch {
-      appendBot(
-        "예약 시간 확인 중 오류가 발생했어요. 예약 페이지에서 직접 예약해주세요.",
-      );
-      setPhase("chatting");
+      appendBot("예약 시간 확인 중 오류가 발생했어요. 아래에서 날짜를 선택해 가능한 시간을 다시 확인해주세요. 📅");
+      appendCard({ kind: "slots", slots: [] });
+      setPhase("slot-selection");
+      setShowDatePicker(true);
     } finally {
       setIsStreaming(false);
     }
@@ -408,11 +408,11 @@ export const useAgentPipeline = ({
         
         const actions = followupRes.recommended_actions || [];
         const actionLabels = actions.map((action: string) => {
-          if (action === "call_hospital") return "📞 병원 전화 연결";
+          if (action === "call_hospital") return "🕒 빠른 예약 가능 시간 보기";
           if (action === "keep_schedule") return "📅 기존 예약 유지";
           if (action === "fast_booking") return "🕒 빠른 예약 가능 시간 보기";
           return action;
-        });
+        }).filter((label: string, index: number, arr: string[]) => arr.indexOf(label) === index);
         
         setGuardianCareRecommendation(actionLabels);
         setQuickReplies(actionLabels);

@@ -79,8 +79,13 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
   return fallbackMessage;
 };
 
-const getHistoryTitle = (history: ChatSessionHistory) =>
-  history.keywords.length > 0 ? history.keywords.join(", ") : "상담 기록";
+const getHistoryTitle = (history: ChatSessionHistory) => {
+  const keywords = history.keywords
+    .map((keyword) => keyword.trim())
+    .filter((keyword) => keyword && keyword.length <= 12)
+    .slice(0, 3);
+  return keywords.length > 0 ? keywords.join(", ") : "상담 기록";
+};
 
 const formatDateToYyyyMmDd = (date: Date) => {
   const year = date.getFullYear();
@@ -195,6 +200,7 @@ const ChatbotPage = () => {
     handleSelectHistory,
     handleDeleteHistory,
     refreshChatHistories,
+    updateChatHistoryKeywords,
   } = useChatSessions({
     selectedPet,
     resetConversationState,
@@ -207,8 +213,9 @@ const ChatbotPage = () => {
   });
 
   // pipeline이 정의된 후 ref를 최신 값으로 동기화
-  onTriageCompleteRef.current = (_sessionId, _keywords, collectedInfo, emrid, scheduleTaskId) => {
+  onTriageCompleteRef.current = (sessionId, keywords, collectedInfo, emrid, scheduleTaskId) => {
     if (selectedPet) {
+      updateChatHistoryKeywords(sessionId, keywords);
       refreshChatHistories(selectedPet.pet_id);
       void pipeline.startSchedulePhase(selectedPet, collectedInfo, emrid, scheduleTaskId);
     }
@@ -374,16 +381,12 @@ const ChatbotPage = () => {
           {/* 상태 확인 안내 배너 (followup에서 escalationPromptVisible=true 시) */}
           {pipeline.escalationPromptVisible ? (
             <div className="border-b border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 sm:px-7 flex justify-between items-center flex-wrap gap-2">
-              <span>🩺 병원에 증상 변화를 문의하거나 일정을 조정하는 것을 권장해 드립니다.</span>
+              <span>🩺 증상 변화가 있어 예약 일정을 다시 확인하는 것을 권장해 드립니다.</span>
               <div className="flex gap-2">
                 {pipeline.guardianCareRecommendation.map((actionLabel, idx) => (
                   <button
                     key={idx}
-                    onClick={() => {
-                      if (actionLabel.includes("전화")) {
-                        window.location.href = "tel:02-0000-0001";
-                      }
-                    }}
+                    type="button"
                     className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold transition"
                   >
                     {actionLabel}

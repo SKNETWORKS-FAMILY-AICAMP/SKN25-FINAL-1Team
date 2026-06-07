@@ -7,7 +7,7 @@
 services:
   # ── PostgreSQL ───────────────────────────────────────────────────
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: medipaw
@@ -88,6 +88,24 @@ services:
       dockerfile: ai/docker/Dockerfile.backend
     command: >
       bash -c "cd /app/backend && python scripts/seed_drugs.py"
+    environment:
+      DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - medipaw_net
+    restart: "no"
+
+  # ── Triage RAG 적재 (1회성) ─────────────────────────────────────
+  # 덤프(data/triage/triage_rag_export.jsonl.gz)가 있으면 비어있을 때만 적재, 이미 있으면 스킵.
+  # 덤프가 없으면 에러 없이 스킵(원본 임베딩은 build_triage_pgvector_index.py로 별도 생성).
+  seed-rag:
+    build:
+      context: ../..
+      dockerfile: ai/docker/Dockerfile.backend
+    command: >
+      bash -c "cd /app/backend && python scripts/load_triage_rag.py"
     environment:
       DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
     depends_on:

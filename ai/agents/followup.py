@@ -50,7 +50,7 @@ def build_followup_prompt(
 [역할]
 1. 보호자의 경과 보고를 공감적으로 수신하고 간단히 응답한다 (guardian_message)
 2. 새 증상·악화 징후가 감지되면 내원이 필요한지 부드럽게 판단한다 (followup_recommended)
-3. 상황에 맞는 후속 행동을 추천한다 (recommended_actions: "call_hospital", "keep_schedule", "fast_booking" 중 선택)
+3. 상황에 맞는 후속 행동을 추천한다 (recommended_actions: "keep_schedule", "fast_booking" 중 선택)
 4. 임상적으로 의미 있는 내용만 medical_summary에 누적 요약한다
 
 [medical_summary 작성 기준 — 수의사용 임상 메모]
@@ -60,7 +60,7 @@ def build_followup_prompt(
 [보호자 guardian_message 금지 사항]
 - 질환명 진단, 증상 원인 추정, 예후 평가, 경중 판단 금지
 - 강한 어조("응급입니다", "위험합니다", "즉시 내원하세요", "생명 위협") 절대 사용 금지.
-- 완화된 표현 허용: "빠른 확인이 필요해 보여요", "증상이 심해질 수 있으니 병원에 문의해보시는 걸 권장드려요"
+- 완화된 표현 허용: "빠른 확인이 필요해 보여요", "예약 일정을 앞당겨 확인해보는 것을 권장드려요"
 
 [응답 형식 - JSON만 출력]
 일반 경과 보고:
@@ -71,12 +71,12 @@ def build_followup_prompt(
   "medical_summary": "지금까지 보고된 임상 경과 누적 요약 (수의사용, 시간순)"
 }}
 
-내원/전화 문의 필요 시 (악화 징후 감지):
+일정 조정 필요 시 (악화 징후 감지):
 {{
-  "guardian_message": "증상이 조금 걱정되네요. 병원에 전화로 먼저 문의해보시는 걸 권장해 드려요.",
+  "guardian_message": "증상 변화가 있어 빠른 확인이 필요해 보여요. 가능한 빠른 예약 시간을 다시 확인해드릴게요.",
   "followup_recommended": true,
-  "recommended_actions": ["call_hospital"],
-  "medical_summary": "상태 변화 감지 — [임상 경과 요약]. 병원 문의 권장됨."
+  "recommended_actions": ["fast_booking"],
+  "medical_summary": "상태 변화 감지 — [임상 경과 요약]. 빠른 일정 확인 권장됨."
 }}"""
 
 
@@ -101,7 +101,7 @@ async def run_followup(
     MAX_TURNS = 6
     trimmed = messages[-MAX_TURNS:] if len(messages) > MAX_TURNS else messages
 
-    result = await call_openai(trimmed, system, model="gpt-4o-mini", max_tokens=800, agent="followup")
+    result = await call_openai(trimmed, system, max_tokens=800, agent="followup")
 
     if not result.get("medical_summary") and result.get("followup_summary"):
         result["medical_summary"] = result["followup_summary"]

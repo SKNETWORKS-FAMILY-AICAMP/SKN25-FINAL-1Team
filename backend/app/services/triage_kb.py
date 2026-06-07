@@ -98,22 +98,74 @@ def _red_flag_label_index() -> tuple[tuple[str, str, str], ...]:
     return tuple(index)
 
 
-def detect_red_flag(text: str) -> dict | None:
-    """결정론적 red flag 감지 — 사용자 발화/선택 텍스트를 라벨 인덱스와 매칭.
+@lru_cache(maxsize=1)
+def _red_flag_keyword_index() -> tuple[tuple[str, str, str], ...]:
+    """(flag_id, normalized_keyword, raw_label) — red_flags.flags[].keywords.
 
-    pill 클릭(라벨 그대로 전송) 또는 자유 텍스트가 red flag 라벨과 정확/포함
-    일치하면 {"id", "label", "source": "deterministic"} 반환, 아니면 None.
-    오탐 방지: 정규화된 라벨 전체가 발화에 포함될 때만 매칭.
+    KB scoring_engine step1의 'free_text matches red_flags[].keywords → RED'를 구현한다.
+    영어 임상용어 키워드는 한국어 발화에 거의 안 잡히고, 한국어 트리거(초콜릿·쥐약 등)만
+    실효적으로 매칭된다. 오탐 방지로 정규화 길이 2 이상만 인덱싱한다.
+    """
+    kb = load_triage_kb()
+    index: list[tuple[str, str, str]] = []
+    for f in kb.get("red_flags", {}).get("flags", []):
+        label = f.get("label", "")
+        fid = f.get("id", "RF-?")
+        for kw in f.get("keywords", []) or []:
+            norm = _normalize(str(kw))
+            if len(norm) >= 2:
+                index.append((fid, norm, label))
+    return tuple(index)
+
+
+@lru_cache(maxsize=1)
+def _flag_meta_by_id() -> dict:
+    """flag_id → {chief(명사형 주증상), suspected(의심질환 목록)} (상위 flags 한정)."""
+    kb = load_triage_kb()
+    return {
+        f.get("id"): {"chief": f.get("chief"), "suspected": f.get("suspected") or []}
+        for f in kb.get("red_flags", {}).get("flags", [])
+    }
+
+
+def _red_flag_hit(fid: str, raw_label: str, source: str) -> dict:
+    """감지 결과 dict — 상위 flag면 chief/suspected를 함께 실어 EMR 요약을 풍부하게 한다."""
+    meta = _flag_meta_by_id().get(fid) or {}
+    return {
+        "id": fid,
+        "label": raw_label,
+        "source": source,
+        "chief": meta.get("chief"),
+        "suspected": meta.get("suspected") or [],
+    }
+
+
+def detect_red_flag(text: str) -> dict | None:
+    """결정론적 red flag 감지 — 사용자 발화/선택 텍스트를 라벨·키워드 인덱스와 매칭.
+
+    1) red flag 라벨(긴 문장)이 발화에 통째로 포함 → {"source": "deterministic"}
+    2) red_flags[].keywords(초콜릿 등 한국어 트리거)가 발화에 포함 → {"source": "keyword"}
+    매칭 시 {"id", "label", "source", "chief", "suspected"} 반환, 없으면 None.
     """
     norm_text = _normalize(text)
-    if len(norm_text) < 4:
+    if not norm_text:
         return None
 
-    for fid, norm_label, raw_label in _red_flag_label_index():
-        if len(norm_label) < 4:
-            continue
-        if norm_label in norm_text or norm_text in norm_label:
-            return {"id": fid, "label": raw_label, "source": "deterministic"}
+    # 1) 라벨 매칭 — "red flag 라벨(긴 문장)이 사용자 발화에 통째로 포함"될 때만.
+    #    역방향(발화가 라벨의 부분문자열)은 카테고리 발화("쓰러졌어요")가 더 긴
+    #    red flag 라벨("잇몸이 창백하고 쓰러졌어요")에 걸리는 오탐을 일으켜 제외한다.
+    #    pill을 그대로 클릭하면 라벨==발화라 forward 매칭으로 정상 동작.
+    if len(norm_text) >= 4:
+        for fid, norm_label, raw_label in _red_flag_label_index():
+            if len(norm_label) < 4:
+                continue
+            if norm_label in norm_text:
+                return _red_flag_hit(fid, raw_label, "deterministic")
+
+    # 2) 키워드 매칭 — KB red_flags[].keywords (초콜릿·쥐약·자일리톨 등)
+    for fid, norm_kw, raw_label in _red_flag_keyword_index():
+        if norm_kw in norm_text:
+            return _red_flag_hit(fid, raw_label, "keyword")
     return None
 
 

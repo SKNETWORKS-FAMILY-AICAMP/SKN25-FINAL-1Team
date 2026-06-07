@@ -52,6 +52,9 @@ Level 3 긴급(<30분): 중간 정도 통증, 피가 섞인 대변 또는 구토
 Level 4 준긴급(<60분): 경미한 통증, 피 없는 구토·설사, 가벼운 피부 문제, 기침, 기운 없음
 Level 5 비긴급(<120분): 정기검진, 예방접종, 안정적 만성질환, 행동 문제, 기생충 예방
 
+[출력 라벨 매핑 — urgency_level_num은 위 1~5로 정하고, urgency_level 문자열은 아래 3개 중 하나로]
+Level 1 → "응급" / Level 2~3 → "준응급" / Level 4~5 → "일반"
+
 [Chain-of-Thought 추론 지침]
 매 응답은 반드시 다음 5단계 추론을 거친다. thinking 필드는 각 STEP을 한 문장으로 간결하게 작성:
 STEP 1: 보호자 발화에서 증상 키워드 추출 (증상명, 발생시점, 빈도, 동반증상)
@@ -88,7 +91,7 @@ message 필드는 반드시 순수 한국어로만 작성. 영어 단어, 의학
   "need_photo": false,
   "collected_info": {{
     "is_triage_complete": true,
-    "urgency_level": "<즉시|응급|긴급|준긴급|비긴급 중 하나>",
+    "urgency_level": "<응급|준응급|일반 중 하나>",
     "urgency_level_num": 3,
     "vtl_basis": "<실제 증상 기반 VTL 판단 근거>",
     "red_flags": [],
