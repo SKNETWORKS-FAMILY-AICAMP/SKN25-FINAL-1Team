@@ -5,6 +5,7 @@ import { Lightbulb } from "lucide-react";
 
 import { findGuardianId } from "../../api/auth-api";
 import { useTranslation } from "../../i18n/language-context";
+import AuthLanguageSelector from "../../components/auth-language-selector";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface FindIdFormState {
@@ -121,6 +122,7 @@ const FindIdPage = () => {
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
         </Link>
+        <AuthLanguageSelector />
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
