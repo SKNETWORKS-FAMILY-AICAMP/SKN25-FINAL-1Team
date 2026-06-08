@@ -13,7 +13,16 @@ router = APIRouter(prefix="/followup", tags=["followup"])
 logger = logging.getLogger(__name__)
 
 
-async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: str) -> dict | None:
+def _format_followup_report(message: str | None, images: list[str] | None) -> str:
+    parts: list[str] = []
+    if message and message.strip():
+        parts.append(f"보호자 보고: {message.strip()}")
+    if images:
+        parts.append(f"첨부 사진: {len(images)}장")
+    return " / ".join(parts).strip()
+
+
+async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict | None:
     from app.db.session import AsyncSessionLocal
     from app.models.pet import Pet
     from app.models.triage_result import TriageResult
@@ -28,6 +37,9 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: 
             f_row = await db.execute(select(Followup).where(Followup.followupid == followup_id))
             followup = f_row.scalar_one_or_none()
             if not followup:
+                return
+            current_report = _format_followup_report(followup.message, followup.images)
+            if not current_report:
                 return
 
             # 2. guardian 정보 및 pet 정보 조회
@@ -52,7 +64,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: 
                     "urgency_level_num": triage.urgency_level_num,
                     "symptom_keywords": triage.symptom_keywords or [],
                     "suspected_diseases": triage.suspected_diseases or [],
-                    "followup_reason": triage.symptom_summary or "",
+                    "followup_reason": triage.followup_reason or "",
                 }
 
             # 4. 예약 정보 조회
@@ -92,7 +104,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: 
                 "appointment_slot": appointment_slot,
                 "accumulated_summary": accumulated_summary,
                 "patient_context": patient_context_data,
-                "messages": [{"role": "user", "content": message}]
+                "messages": [{"role": "user", "content": current_report}],
             }
 
             import asyncio
@@ -104,8 +116,8 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: 
             except asyncio.TimeoutError:
                 logger.warning(f"[FollowupSync] TimeoutError. Using fallback response.")
                 result = {
-                    "medical_summary": "경과 보고 분석 시간 초과 (대기 중)",
-                    "followup_summary": "경과 보고 분석 시간 초과 (대기 중)",
+                    "medical_summary": f"경과 보고 접수됨 — {current_report[:160]}",
+                    "followup_summary": f"경과 보고 접수됨 — {current_report[:160]}",
                     "followup_recommended": False,
                     "guardian_message": "기록되었습니다. 분석이 지연되고 있어요. 증상 변화가 크다면 예약 일정을 다시 확인해주세요.",
                     "recommended_actions": ["keep_schedule"]
@@ -145,6 +157,16 @@ async def create_followup(
     owner_id = await get_emrid_owner_userid(db, request.emrid)
     if owner_id != current_user.userid:
         raise HTTPException(status_code=403, detail="경과 등록 권한이 없습니다.")
+
+    # triage에서 산출·저장한 단일 followup 판정값으로 서버에서도 게이트한다.
+    # 프론트 can_followup 숨김만 믿지 않고 API 직접 호출도 차단한다.
+    from app.models.triage_result import TriageResult
+    triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == request.emrid))
+    triage = triage_row.scalar_one_or_none()
+    if not triage:
+        raise HTTPException(status_code=404, detail="문진 결과를 찾을 수 없습니다.")
+    if not triage.need_followup:
+        raise HTTPException(status_code=403, detail="이 문진은 경과 보고 대상이 아닙니다.")
 
     # 예약 정보 조회 — 시간 가드 + 수의사 알람에 사용
     from datetime import datetime, timezone
@@ -187,12 +209,11 @@ async def create_followup(
             logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
 
     ai_response = None
-    if request.message:
+    if request.message or request.images:
         ai_response = await run_followup_sync(
             followup.followupid,
             request.emrid,
             current_user.userid,
-            request.message
         )
 
     # 경과보고 메시지를 chat_historyDB에도 저장 (재진입 시 기록 유지)

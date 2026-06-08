@@ -485,7 +485,9 @@ async def get_chat_session_detail(
             select(Schedule).where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
         )
         schedule = schedule_row.scalar_one_or_none()
-        need_followup = bool(triage and triage.urgency_level_num is not None and triage.urgency_level_num <= 2)
+        # 게이트는 triage 때 산출·저장된 단일 판정값을 그대로 읽는다(점수 ≤2 재계산 폐기).
+        # 산출 기준: ai.triage.engine.compute_need_followup('동적 증상군' 여부).
+        need_followup = bool(triage and triage.need_followup)
         appointment_not_passed = True
         if schedule and schedule.confirmed_time:
             confirmed = schedule.confirmed_time
