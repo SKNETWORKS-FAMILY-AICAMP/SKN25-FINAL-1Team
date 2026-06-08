@@ -271,6 +271,10 @@ async def generate_auto_prescription(
     )
 
     prompt = f"""수의사 AI 보조입니다. 환자 문진 정보와 아래 약품 목록을 바탕으로 처방전을 작성하세요.
+수의사 진료 메모가 있는 경우 이를 가장 우선적으로 참고하여 처방을 결정하세요.
+
+[수의사 진료 메모] ← 최우선 참고
+{body.doctor_notes.strip() or "없음"}
 
 [환자 정보]
 종류/품종: {pet.species or "강아지"} / {pet.breed or ""}
@@ -280,7 +284,6 @@ async def generate_auto_prescription(
 주요 증상: {", ".join(symptoms) if symptoms else "정보 없음"}
 의심 질환: {", ".join(suspected_diseases) if suspected_diseases else "정보 없음"}
 보호자 메모: {guardian.memo or "없음"}
-수의사 진료 메모: {body.doctor_notes.strip() or "없음"}
 
 [사용 가능한 약품 목록]
 {drug_list_str}
