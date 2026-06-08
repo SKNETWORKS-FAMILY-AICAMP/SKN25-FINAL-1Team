@@ -37,7 +37,7 @@ import {
 interface ReservationPageProps {
   session: AuthSession;
   onLogout: () => void;
-  onNavigate: (menuId: AppMenuId) => void;
+  onNavigate: (menuId: AppMenuId, state?: Record<string, unknown>) => void;
 }
 
 export default function ReservationPage({
@@ -244,6 +244,11 @@ export default function ReservationPage({
               patient={selectedPatient}
               onEdit={() => setModalMode("edit")}
               onCancel={() => setIsCancelOpen(true)}
+              onOpenPatientDetail={() => {
+                if (selectedPatient) {
+                  onNavigate("patients", { patientId: selectedPatient.id });
+                }
+              }}
             />
           </div>
         )}

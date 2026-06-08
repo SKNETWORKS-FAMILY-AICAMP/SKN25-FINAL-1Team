@@ -1,4 +1,4 @@
-import { CalendarDays, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Trash2, UserRound } from "lucide-react";
 import type {
   ReservationItem,
   ReservationPatient,
@@ -15,6 +15,7 @@ interface DetailPanelProps {
   patient?: ReservationPatient;
   onEdit: () => void;
   onCancel: () => void;
+  onOpenPatientDetail: () => void;
 }
 
 export function DetailPanel({
@@ -23,6 +24,7 @@ export function DetailPanel({
   patient,
   onEdit,
   onCancel,
+  onOpenPatientDetail,
 }: DetailPanelProps) {
   if (!reservation || !patient) {
     return (
@@ -49,7 +51,7 @@ export function DetailPanel({
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <h3 className="truncate text-base font-extrabold text-[#1d2a57]">
-              {patient.petName} ({patient.guardianName})
+              {patient.petName}
             </h3>
             <TriageBadge level={reservation.status} />
             <span className="text-xl font-extrabold text-[#2f6f67]">
@@ -65,9 +67,19 @@ export function DetailPanel({
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={onOpenPatientDetail}
+        className="mt-5 flex h-10 items-center justify-center gap-2 rounded-lg border border-[#2f6f67] bg-[#eef5f4] text-sm font-extrabold text-[#2f6f67] transition hover:bg-[#d5e7e4]"
+      >
+        <UserRound className="h-4 w-4" />
+        환자 상세정보
+      </button>
+
       <dl className="mt-7 space-y-4 text-sm">
         <DetailRow label="예약 날짜" value={formatDateWithWeekday(selectedDate)} />
         <DetailRow label="예약 시간" value={reservation.start} />
+        <DetailRow label="보호자" value={patient.guardianName} />
         <DetailRow label="성별" value={patient.gender} />
         <DetailRow label="진료 항목" value={reservation.visitReason} />
         <DetailRow label="담당 수의사" value={reservation.doctorName} />

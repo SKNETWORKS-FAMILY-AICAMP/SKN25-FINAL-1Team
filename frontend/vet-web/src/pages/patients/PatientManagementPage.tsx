@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { AuthSession } from "../../api/authApi";
 import { PatientDetailView } from "../../components/patients/PatientDetailView";
 import { PatientListView } from "../../components/patients/PatientListView";
@@ -15,6 +17,8 @@ export default function PatientManagementPage({
   onLogout,
   onNavigate,
 }: PatientManagementPageProps) {
+  const location = useLocation();
+  const openedPatientIdRef = useRef<number | null>(null);
   const {
     searchValue,
     selectedSpecies,
@@ -29,9 +33,21 @@ export default function PatientManagementPage({
     updateSearch,
     updateSpecies,
     handleOpenDetail,
+    handleOpenDetailById,
     closeDetail,
     handleSaved,
   } = usePatientManagement(session.accessToken);
+
+  const targetPatientId = (location.state as { patientId?: number } | null)?.patientId;
+
+  useEffect(() => {
+    if (!targetPatientId || openedPatientIdRef.current === targetPatientId) {
+      return;
+    }
+
+    openedPatientIdRef.current = targetPatientId;
+    handleOpenDetailById(targetPatientId);
+  }, [handleOpenDetailById, targetPatientId]);
 
   return (
     <AppLayout

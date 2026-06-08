@@ -47,7 +47,7 @@ export function StatusFilter({
               ].join(" ")}
             >
               <span
-                className={`rounded-md px-3 py-1.5 text-sm font-extrabold ${meta.softClass}`}
+                className={`inline-flex h-9 w-[72px] items-center justify-center rounded-md text-sm font-extrabold ${meta.softClass}`}
               >
                 {meta.label}
               </span>
