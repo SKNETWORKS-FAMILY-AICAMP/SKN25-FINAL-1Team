@@ -45,10 +45,12 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
 
 interface UseCheckupReservationParams {
   petId: number;
+  categoryCode?: number;
 }
 
 export const useCheckupReservation = ({
   petId,
+  categoryCode = 1,
 }: UseCheckupReservationParams) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDateState] = useState(() =>
@@ -135,6 +137,7 @@ export const useCheckupReservation = ({
         date: selectedDate,
         time: selectedSlot.start_time,
         memo,
+        category_code: categoryCode,
       });
 
       if (response.code !== 200 || !response.result) {

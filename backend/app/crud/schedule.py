@@ -65,11 +65,10 @@ async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None
 
 
 # 정기검진 예약 생성
-async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int):
+async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int, category_code: int = 1):
 
-    # code=1 = 정기검진
     result = await db.execute(
-        select(CategoryMaster).where(CategoryMaster.code == 1)
+        select(CategoryMaster).where(CategoryMaster.code == category_code)
     )
     category = result.scalar_one_or_none()
     if not category:
