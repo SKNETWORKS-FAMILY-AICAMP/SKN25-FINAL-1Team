@@ -28,7 +28,7 @@ class TimeSlotConflict(Exception):
 # 수의사 대시보드 수동 예약 기본 카테고리: 정기검진(code=1)
 DEFAULT_CATEGORY_CODE = 1
 # 예약 추가 시 기본 응급도(일반, code=3)
-DEFAULT_TRIAGE_CODE = 3
+DEFAULT_TRIAGE_CODE = 5
 DEFAULT_DURATION_MIN = 30
 
 
@@ -206,12 +206,18 @@ async def create_reservation(
     time_str: str,
     doctor_name: str | None = None,
     memo: str | None = None,
+    category_code: int = DEFAULT_CATEGORY_CODE,
 ):
     doctor = await _resolve_doctor(db, doctor_name)
     if not doctor:
         return None
 
-    category = await get_default_category(db)
+    result = await db.execute(
+        select(CategoryMaster).where(CategoryMaster.code == category_code)
+    )
+    category = result.scalars().first()
+    if not category:
+        category = await get_default_category(db)
     if not category:
         return None
 

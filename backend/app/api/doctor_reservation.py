@@ -117,6 +117,7 @@ async def add_reservation(
             time_str=request.time,
             doctor_name=request.doctor_name,
             memo=request.memo,
+            category_code=request.category_code,
         )
     except TimeSlotConflict:
         raise HTTPException(

@@ -86,6 +86,7 @@ export function ReservationFormModal({
     time: reservation?.start ?? "17:00",
     doctorName: reservation?.doctorName ?? doctorOptions[0] ?? "",
     memo: reservation?.memo ?? "",
+    categoryCode: null,
   });
 
   const filteredPatients = useMemo(() => {
@@ -166,7 +167,7 @@ export function ReservationFormModal({
 
   const hasPatientSearchKeyword = searchText.trim().length > 0;
   const shouldShowSearchResults = isSearchFocused && hasPatientSearchKeyword;
-  const canSaveReservation = selectedPatient !== null;
+  const canSaveReservation = selectedPatient !== null && form.categoryCode !== null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/55 px-4 py-3">
@@ -319,6 +320,23 @@ export function ReservationFormModal({
             <h3 className="mb-2 text-sm font-extrabold text-[#1d2a57]">
               예약 정보
             </h3>
+            <div className="mb-3 flex gap-2">
+              {([2, 1] as const).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setForm((cur) => ({ ...cur, categoryCode: code }))}
+                  className={[
+                    "flex-1 h-9 rounded-lg text-xs font-extrabold transition",
+                    form.categoryCode === code
+                      ? "bg-[#2f6f67] text-white"
+                      : "border border-[#dfe6f1] text-[#1d2a57] hover:bg-[#eef5f4]",
+                  ].join(" ")}
+                >
+                  {code === 2 ? "일반진료" : "정기검진"}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <DatePickerField
                 label="예약 날짜"

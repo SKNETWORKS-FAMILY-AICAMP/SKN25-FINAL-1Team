@@ -58,11 +58,15 @@ async def create_checkup(
         date=request.date,
         time=request.time,
         memo=request.memo,
-        doctorid=doctor.doctorid
+        doctorid=doctor.doctorid,
+        category_code=request.category_code,
     )
 
     if schedule is None:
         raise HTTPException(status_code=409, detail="선택하신 시간에 이미 예약이 있습니다.")
+
+    _category_labels = {1: "정기검진", 2: "일반진료"}
+    category_label = _category_labels.get(request.category_code, "정기검진")
 
     # 수의사 알람 생성
     try:
@@ -71,7 +75,7 @@ async def create_checkup(
             doctor_id=doctor.doctorid,
             schedule_id=schedule.scheduleid,
             alarm_type="reservation_confirmed",
-            contents=f"{pet.petname} 보호자가 정기검진 예약을 확정했습니다. ({request.date} {request.time})",
+            contents=f"{pet.petname} 보호자가 {category_label} 예약을 확정했습니다. ({request.date} {request.time})",
         )
     except Exception as e:
         logger.warning(f"[Alarm] create failed schedule_id={schedule.scheduleid}: {e}")
@@ -82,7 +86,7 @@ async def create_checkup(
         "result": {
             "schedule_id": schedule.scheduleid,
             "pet_name": pet.petname,
-            "category": "정기검진",
+            "category": category_label,
             "date": request.date,
             "time": request.time,
             "memo": request.memo,
