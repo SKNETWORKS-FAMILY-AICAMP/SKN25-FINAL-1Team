@@ -1,16 +1,12 @@
 import React, { useMemo, useState } from "react";
 import {
-  Check,
-  CheckCircle2,
   Eye,
   EyeOff,
-  Home,
-  KeyRound,
-  LockKeyhole,
   ShieldCheck,
   TriangleAlert,
+  CheckCircle2,
 } from "lucide-react";
-import logo from "../../../../shared/assets/logo/medipaw-symbol.png";
+import { AuthLayout } from "../../components/auth/AuthLayout";
 import {
   AuthSession,
   changeFirstPassword,
@@ -95,159 +91,112 @@ export default function FirstPasswordChangePage({
   };
 
   return (
-    <main className="min-h-screen bg-[#f6f8fb] px-5 py-4 text-slate-900">
-      <div className="mx-auto mb-2 flex max-w-[1400px] justify-end">
-        <button
-          type="button"
-          onClick={onGoLogin}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-white hover:text-blue-600"
-        >
-          <Home size={19} />
-          첫 화면으로
-        </button>
+    <AuthLayout>
+      <div className="mx-auto flex min-h-[560px] w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <ShieldCheck size={26} />
+          </div>
+          <h2 className="text-3xl font-extrabold leading-tight text-slate-900">
+            비밀번호 변경
+          </h2>
+          <p className="mt-3 text-sm font-bold text-slate-500">
+            첫 로그인 보안 설정 · {session.user.hospitalName}
+          </p>
+        </div>
+
+        <div className="mb-5 flex items-start gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
+          <ShieldCheck size={18} className="mt-0.5 shrink-0" />
+          <p className="text-sm font-bold leading-6">
+            계정 보안 강화를 위해 임시 비밀번호를 새 비밀번호로
+            변경해야 시스템을 이용할 수 있습니다.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <PasswordField
+            label="현재 비밀번호"
+            value={currentPassword}
+            visible={visibleFields.current}
+            placeholder="현재 비밀번호를 입력하세요"
+            onChange={setCurrentPassword}
+            onToggleVisible={() => toggleVisible("current")}
+          />
+
+          <PasswordField
+            label="새 비밀번호"
+            value={newPassword}
+            visible={visibleFields.next}
+            placeholder="새 비밀번호를 입력하세요"
+            onChange={setNewPassword}
+            onToggleVisible={() => toggleVisible("next")}
+          />
+
+          <PasswordField
+            label="새 비밀번호 확인"
+            value={confirmPassword}
+            visible={visibleFields.confirm}
+            placeholder="새 비밀번호를 다시 입력하세요"
+            onChange={setConfirmPassword}
+            onToggleVisible={() => toggleVisible("confirm")}
+          />
+
+          {error && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-600">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <TriangleAlert size={15} fill="currentColor" />
+              </div>
+              <p className="text-sm font-bold leading-5">{error}</p>
+            </div>
+          )}
+
+          {newPassword.length > 0 && (
+            <ul className="rounded-lg bg-slate-50 px-5 py-4 space-y-1.5">
+              <p className="mb-2 text-sm font-bold text-slate-700">비밀번호 정책</p>
+              {policyStatus.map((policy) => (
+                <li
+                  key={policy.label}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-600"
+                >
+                  <CheckCircle2
+                    size={16}
+                    className={
+                      policy.isValid
+                        ? "shrink-0 text-blue-600"
+                        : "shrink-0 text-slate-300"
+                    }
+                  />
+                  {policy.label}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit || isLoading}
+            className="h-14 w-full rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          >
+            {isLoading ? "변경 중..." : "변경 완료"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={onGoLogin}
+            className="text-sm font-bold text-slate-400 transition hover:text-slate-600"
+          >
+            첫 화면으로 돌아가기
+          </button>
+        </div>
       </div>
 
-      <section className="mx-auto flex min-h-[calc(100vh-84px)] max-w-[1400px] items-start justify-center rounded-lg border border-slate-200 bg-white px-8 py-8 shadow-sm">
-        <div className="grid w-full grid-cols-1 items-start gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="flex flex-col justify-start">
-            <div className="mb-8">
-              <img src={logo} alt="MediPaw" className="w-[300px]" />
-
-              <p className="mt-2 pl-2 text-base font-bold tracking-[0.1em] text-slate-500">
-                동물병원 의료 보조 시스템
-              </p>
-            </div>
-
-            <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">
-              <ShieldCheck size={17} />
-              첫 로그인 보안 설정
-            </div>
-
-            <div className="flex justify-center py-3">
-              <div className="relative flex h-48 w-48 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <ShieldCheck size={112} strokeWidth={1.6} />
-
-                <div className="absolute bottom-6 right-3 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400 text-white shadow-lg shadow-cyan-100">
-                  <Check size={36} strokeWidth={4} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 text-center lg:text-left">
-              <h1 className="text-3xl font-bold leading-tight text-slate-900">
-                보안을 위해
-                <br />
-                비밀번호를 변경해주세요.
-              </h1>
-
-              <p className="mt-4 text-base font-semibold leading-7 text-slate-500">
-                안전한 서비스 이용을 위해
-                <br />
-                최초 로그인 시 새로운 비밀번호 설정이 필요합니다.
-              </p>
-            </div>
-          </section>
-
-          <section className="flex flex-col justify-start">
-            <div className="mx-auto w-full max-w-[600px] rounded-lg border border-slate-200 bg-white px-8 py-7 shadow-sm">
-              <div className="mb-5 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <LockKeyhole size={26} />
-                </div>
-
-                <h2 className="text-2xl font-bold text-slate-900">
-                  비밀번호 변경 (첫 로그인)
-                </h2>
-
-                <p className="mt-3 text-sm font-medium text-slate-500">
-                  {session.user.hospitalName} · {session.user.name}
-                </p>
-              </div>
-
-              <div className="mb-4 flex items-start gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
-                <KeyRound size={20} className="mt-0.5 shrink-0" />
-                <p className="text-sm font-bold leading-6">
-                  계정 보안 강화를 위해 임시 비밀번호를 새 비밀번호로
-                  변경해야 시스템을 이용할 수 있습니다.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <PasswordField
-                  label="현재 비밀번호"
-                  value={currentPassword}
-                  visible={visibleFields.current}
-                  placeholder="현재 비밀번호를 입력하세요"
-                  onChange={setCurrentPassword}
-                  onToggleVisible={() => toggleVisible("current")}
-                />
-
-                <PasswordField
-                  label="새 비밀번호"
-                  value={newPassword}
-                  visible={visibleFields.next}
-                  placeholder="새 비밀번호를 입력하세요"
-                  onChange={setNewPassword}
-                  onToggleVisible={() => toggleVisible("next")}
-                />
-
-                <PasswordField
-                  label="새 비밀번호 확인"
-                  value={confirmPassword}
-                  visible={visibleFields.confirm}
-                  placeholder="새 비밀번호를 다시 입력하세요"
-                  onChange={setConfirmPassword}
-                  onToggleVisible={() => toggleVisible("confirm")}
-                />
-
-                {error && (
-                  <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-600">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
-                      <TriangleAlert size={15} fill="currentColor" />
-                    </div>
-
-                    <p className="text-sm font-bold leading-5">{error}</p>
-                  </div>
-                )}
-
-                <div className="rounded-lg bg-blue-50 px-5 py-4">
-                  <h3 className="mb-2 text-sm font-bold text-blue-700">
-                    비밀번호 정책
-                  </h3>
-
-                  <ul className="space-y-1">
-                    {policyStatus.map((policy) => (
-                      <li
-                        key={policy.label}
-                        className="flex items-start gap-2 text-sm font-semibold leading-5 text-slate-600"
-                      >
-                        <CheckCircle2
-                          size={16}
-                          className={
-                            policy.isValid
-                              ? "mt-0.5 shrink-0 text-blue-600"
-                              : "mt-0.5 shrink-0 text-slate-300"
-                          }
-                        />
-                        {policy.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!canSubmit || isLoading}
-                  className="h-12 w-full rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                >
-                  {isLoading ? "변경 중..." : "변경 완료"}
-                </button>
-              </form>
-            </div>
-          </section>
-        </div>
-      </section>
-    </main>
+      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
+        <ShieldCheck size={18} />
+        계정 관련 문의는 담당 관리자에게 문의해주세요.
+      </div>
+    </AuthLayout>
   );
 }
 
@@ -273,16 +222,14 @@ function PasswordField({
       <label className="mb-2 block text-sm font-bold text-slate-700">
         {label}
       </label>
-
       <div className="relative">
         <input
           type={visible ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-12 w-full rounded-lg border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+          className="h-14 w-full rounded-lg border border-slate-200 px-4 pr-12 text-sm font-medium outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
         />
-
         <button
           type="button"
           onClick={onToggleVisible}
