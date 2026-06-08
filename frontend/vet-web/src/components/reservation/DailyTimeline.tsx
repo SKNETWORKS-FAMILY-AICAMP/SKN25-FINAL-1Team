@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   PatientsById,
   ReservationItem,
@@ -9,14 +9,18 @@ import {
   weeklyCardClass,
 } from "../../utils/reservationUtils";
 import {
+  TIMELINE_HOUR_HEIGHT,
   TIMELINE_MIN_CARD_HEIGHT,
   type PositionedTimelineItem,
   buildPositionedTimelineItems,
   getHourTicks,
   getLunchBlockMetrics,
+  getScaledTimelineHeight,
   getTimelineHeight,
   getTimelineRange,
 } from "../../utils/scheduleTimelineUtils";
+
+const DAILY_BOTTOM_PADDING = 24;
 
 interface DailyTimelineProps {
   selectedDate: Date;
@@ -33,23 +37,56 @@ export function DailyTimeline({
   selectedReservationId,
   onSelect,
 }: DailyTimelineProps) {
+  const timelineBodyRef = useRef<HTMLDivElement>(null);
+  const [timelineBodyHeight, setTimelineBodyHeight] = useState(0);
+
   const timelineRange = useMemo(
     () => getTimelineRange(reservations),
     [reservations]
   );
-  const hourTicks = useMemo(() => getHourTicks(timelineRange), [timelineRange]);
-  const timelineHeight = useMemo(
+  const fallbackTimelineHeight = useMemo(
     () => getTimelineHeight(timelineRange),
     [timelineRange]
   );
+  const timelineHourCount =
+    (timelineRange.endMinutes - timelineRange.startMinutes) / 60;
+  const dailyHourHeight =
+    timelineBodyHeight > DAILY_BOTTOM_PADDING && timelineHourCount > 0
+      ? (timelineBodyHeight - DAILY_BOTTOM_PADDING) / timelineHourCount
+      : TIMELINE_HOUR_HEIGHT;
+  const timelineScale = useMemo(
+    () => ({ hourHeight: dailyHourHeight, bottomPadding: DAILY_BOTTOM_PADDING }),
+    [dailyHourHeight]
+  );
+  const hourTicks = useMemo(
+    () => getHourTicks(timelineRange, timelineScale),
+    [timelineRange, timelineScale]
+  );
+  const timelineHeight = useMemo(
+    () =>
+      timelineBodyHeight > 0
+        ? timelineBodyHeight
+        : getScaledTimelineHeight(timelineRange, timelineScale),
+    [timelineBodyHeight, timelineRange, timelineScale]
+  );
   const lunchBlock = useMemo(
-    () => getLunchBlockMetrics(timelineRange),
-    [timelineRange]
+    () => getLunchBlockMetrics(timelineRange, timelineScale),
+    [timelineRange, timelineScale]
   );
   const positionedReservations = useMemo(
-    () => buildPositionedTimelineItems(reservations, timelineRange),
-    [reservations, timelineRange]
+    () => buildPositionedTimelineItems(reservations, timelineRange, timelineScale),
+    [reservations, timelineRange, timelineScale]
   );
+
+  useEffect(() => {
+    const element = timelineBodyRef.current;
+    if (!element) return;
+    const updateHeight = () => setTimelineBodyHeight(element.clientHeight);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white p-3 shadow-sm">
@@ -62,9 +99,15 @@ export function DailyTimeline({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="grid grid-cols-[56px_1fr] gap-2">
-          <div className="relative" style={{ height: timelineHeight }}>
+      <div ref={timelineBodyRef} className="min-h-0 flex-1 overflow-hidden pr-1">
+        <div
+          className="grid grid-cols-[56px_1fr] gap-2"
+          style={{
+            height:
+              timelineBodyHeight > 0 ? timelineHeight : fallbackTimelineHeight,
+          }}
+        >
+          <div className="relative">
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
@@ -76,10 +119,7 @@ export function DailyTimeline({
             ))}
           </div>
 
-          <div
-            className="relative overflow-hidden rounded-lg border border-[#edf1f6] bg-white"
-            style={{ height: timelineHeight }}
-          >
+          <div className="relative overflow-hidden rounded-lg border border-[#edf1f6] bg-white">
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}

@@ -25,7 +25,7 @@ import {
 
 const WEEKLY_BOTTOM_PADDING = 8;
 const WEEKLY_FULL_CARD_HEIGHT = 58;
-const WEEKLY_CARD_INSET = 4;
+const WEEKLY_CARD_INSET = 0;
 
 interface WeeklyScheduleProps {
   selectedDate: Date;

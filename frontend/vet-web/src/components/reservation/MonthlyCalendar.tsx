@@ -30,9 +30,9 @@ export function MonthlyCalendar({
   }, [reservations]);
 
   return (
-    <div>
-      <section className="overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-        <div className="grid grid-cols-7 border-b border-[#e5eaf2]">
+    <div className="flex h-full flex-col">
+      <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
+        <div className="grid shrink-0 grid-cols-7 border-b border-[#e5eaf2]">
           {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
             <div
               key={day}
@@ -43,7 +43,7 @@ export function MonthlyCalendar({
           ))}
         </div>
 
-        <div className="grid grid-cols-7">
+        <div className="grid flex-1 grid-cols-7 grid-rows-6">
           {monthDays.map((day) => {
             const isCurrentMonth = day.getMonth() === selectedDate.getMonth();
             const isToday = isSameDate(day, TODAY);
@@ -57,7 +57,7 @@ export function MonthlyCalendar({
                 type="button"
                 onClick={() => onSelectDate(day)}
                 className={[
-                  "min-h-[96px] border-r border-b border-[#edf1f6] p-4 text-left transition hover:bg-[#fbfcfc]",
+                  "h-full border-r border-b border-[#edf1f6] p-4 text-left transition hover:bg-[#fbfcfc]",
                   isToday ? "border-[#2f6f67] ring-1 ring-[#2f6f67]" : "",
                 ].join(" ")}
               >
@@ -102,13 +102,6 @@ export function MonthlyCalendar({
           })}
         </div>
       </section>
-
-      <div className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-lg border border-[#e5eaf2] bg-white px-5 py-2.5 text-sm font-extrabold text-[#53617c] shadow-sm">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#2f6f67] text-xs text-[#2f6f67]">
-          i
-        </span>
-        일별 예약 총 건수를 표시합니다.
-      </div>
     </div>
   );
 }
