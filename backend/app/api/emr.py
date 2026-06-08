@@ -357,27 +357,35 @@ async def doctor_followup(
     db: AsyncSession = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
-    """보호자가 등록한 경과 사진/메시지를 수의사가 조회한다."""
+    """보호자가 등록한 전체 경과를 하나의 누적 보고로 묶어 반환한다."""
     result = await db.execute(
         select(Followup)
         .where(Followup.emrid == emrid)
         .order_by(Followup.created_at.asc())
     )
     followups = result.scalars().all()
+    if not followups:
+        return {"code": 200, "result": []}
+
+    messages = [f.message.strip() for f in followups if f.message and f.message.strip()]
+    images = [image for f in followups for image in (f.images or [])]
+    latest_summary = next(
+        (f.ai_summary for f in reversed(followups) if f.ai_summary and f.ai_summary.strip()),
+        None,
+    )
+    latest = followups[-1]
+
     return {
         "code": 200,
-        "result": [
-            {
-                "followup_id": f.followupid,
-                "emrid": f.emrid,
-                "images": f.images,
-                "message": f.message,
-                "ai_summary": f.ai_summary,
-                "emergency_alert": f.emergency_alert,
-                "created_at": f.created_at.isoformat() if f.created_at else None,
-            }
-            for f in followups
-        ],
+        "result": [{
+            "followup_id": latest.followupid,
+            "emrid": emrid,
+            "images": images,
+            "message": " / ".join(messages) or None,
+            "ai_summary": latest_summary,
+            "emergency_alert": any(bool(f.emergency_alert) for f in followups),
+            "created_at": latest.created_at.isoformat() if latest.created_at else None,
+        }],
     }
 
 

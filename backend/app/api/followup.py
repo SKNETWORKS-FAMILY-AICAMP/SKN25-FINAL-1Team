@@ -42,6 +42,19 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
             if not current_report:
                 return
 
+            # 같은 문진에서 지금까지 받은 경과 보고 전체를 시간순으로 전달한다.
+            # 원본은 건별 저장하되, 에이전트는 여러 보고를 합친 누적 한 줄을 생성한다.
+            all_f_rows = await db.execute(
+                select(Followup)
+                .where(Followup.emrid == emrid)
+                .order_by(Followup.created_at.asc())
+            )
+            all_reports = [
+                report
+                for row in all_f_rows.scalars().all()
+                if (report := _format_followup_report(row.message, row.images))
+            ]
+
             # 2. guardian 정보 및 pet 정보 조회
             g_row = await db.execute(select(Guardian).where(Guardian.emrid == emrid))
             guardian = g_row.scalar_one_or_none()
@@ -104,7 +117,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
                 "appointment_slot": appointment_slot,
                 "accumulated_summary": accumulated_summary,
                 "patient_context": patient_context_data,
-                "messages": [{"role": "user", "content": current_report}],
+                "messages": [{"role": "user", "content": report} for report in all_reports],
             }
 
             import asyncio
@@ -115,9 +128,11 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"[FollowupSync] TimeoutError. Using fallback response.")
+                fallback_parts = [part for part in (accumulated_summary, current_report) if part]
+                fallback_summary = " / ".join(fallback_parts)[:100]
                 result = {
-                    "medical_summary": f"경과 보고 접수됨 — {current_report[:160]}",
-                    "followup_summary": f"경과 보고 접수됨 — {current_report[:160]}",
+                    "medical_summary": fallback_summary,
+                    "followup_summary": fallback_summary,
                     "followup_recommended": False,
                     "guardian_message": "기록되었습니다. 분석이 지연되고 있어요. 증상 변화가 크다면 예약 일정을 다시 확인해주세요.",
                     "recommended_actions": ["keep_schedule"]

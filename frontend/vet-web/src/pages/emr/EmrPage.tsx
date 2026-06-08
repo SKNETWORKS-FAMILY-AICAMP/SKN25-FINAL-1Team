@@ -1,4 +1,4 @@
-import { PhoneCall, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import {
   Group as ResizableGroup,
@@ -555,17 +555,9 @@ function FollowupPanel({ items }: { items: FollowupItem[] }) {
                 </span>
               )}
             </div>
-            <p className="mt-0.5 flex items-center gap-1.5 text-xs font-bold text-[#151b28]">
-              {item.message?.includes("전화") && (
-                <PhoneCall className="h-3.5 w-3.5 text-[#64748b]" strokeWidth={2.1} />
-              )}
-              {item.message ?? "(내용 없음)"}
+            <p className="mt-1 text-xs font-bold leading-relaxed text-[#151b28]">
+              {item.ai_summary ?? "경과 요약을 생성 중입니다."}
             </p>
-            {item.ai_summary && (
-              <div className="mt-1 rounded border border-slate-100 bg-slate-50 p-2 text-[11px] text-[#4e5968]">
-                <span className="font-extrabold text-blue-600">AI 요약:</span> {item.ai_summary}
-              </div>
-            )}
           </div>
         ))}
       </div>
