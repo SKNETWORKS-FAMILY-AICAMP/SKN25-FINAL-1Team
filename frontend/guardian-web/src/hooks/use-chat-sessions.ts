@@ -1,8 +1,10 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
   type Dispatch,
+  type MutableRefObject,
   type SetStateAction,
 } from "react";
 
@@ -18,6 +20,12 @@ import { useTranslation } from "../i18n/language-context";
 import type { Pet } from "../api/pets-api";
 import type { ChatMessage } from "./use-chat-conversation";
 
+/** 현재 화면에 떠 있는 라이브 세션의 식별자 + 보호자가 한마디라도 했는지 여부. */
+export interface LiveSessionInfo {
+  id: number;
+  hasUserMessage: boolean;
+}
+
 interface UseChatSessionsParams {
   selectedPet?: Pet;
   resetConversationState: () => void;
@@ -27,6 +35,16 @@ interface UseChatSessionsParams {
   getErrorMessage: (error: unknown, fallbackMessage: string) => string;
   getProfileImage: (pet: Pet) => string;
   onFollowupRestore?: (emrid: number) => void;
+  /** 문진 미완료 세션을 라이브 문진으로 재개(req4). */
+  onResumeTriage?: (params: {
+    sessionId: number;
+    messages: ChatMessage[];
+    quickReplies: string[];
+  }) => void;
+  /** 문진 완료·예약 미확정 세션의 슬롯 선택 단계 재개(req4). */
+  onResumeSchedule?: (params: { sessionId: number; emrid: number }) => void;
+  /** 보호자가 한마디도 안 한 빈 세션을 떠날 때 삭제하기 위한 추적 ref. */
+  liveSessionRef: MutableRefObject<LiveSessionInfo | null>;
 }
 
 export const useChatSessions = ({
@@ -38,6 +56,9 @@ export const useChatSessions = ({
   getErrorMessage,
   getProfileImage,
   onFollowupRestore,
+  onResumeTriage,
+  onResumeSchedule,
+  liveSessionRef,
 }: UseChatSessionsParams) => {
   const { t } = useTranslation();
   const [chatHistories, setChatHistories] = useState<ChatSessionHistory[]>([]);
@@ -114,7 +135,25 @@ export const useChatSessions = ({
     };
   }, [getErrorMessage, selectedPet, setErrorMessage, t]);
 
+  // 보호자가 한마디도 안 한 채로 떠나는 라이브 세션을 삭제한다(req1).
+  // 새 세션 생성 / 다른 기록 선택 / 반려동물 변경 / 페이지 이탈 시 호출.
+  const discardEmptyLiveSession = useCallback(() => {
+    const live = liveSessionRef.current;
+    if (!live || live.hasUserMessage) {
+      return;
+    }
+    liveSessionRef.current = null;
+    const emptyId = live.id;
+    setChatHistories((current) =>
+      current.filter((history) => history.session_id !== emptyId),
+    );
+    void deleteChatSession(emptyId).catch(() => {
+      // best-effort — 삭제 실패는 무시(다음 진입 시 다시 정리됨)
+    });
+  }, [liveSessionRef]);
+
   const resetSessionStateForPetChange = () => {
+    discardEmptyLiveSession();
     setSelectedHistoryId(null);
     setChatHistories([]);
     setIsLoadingHistoryMessages(false);
@@ -126,6 +165,7 @@ export const useChatSessions = ({
     if (!selectedPet || creatingPetId !== null) {
       return;
     }
+    discardEmptyLiveSession();
 
     try {
       setCreatingPetId(selectedPet.pet_id);
@@ -168,6 +208,7 @@ export const useChatSessions = ({
   };
 
   const handleSelectHistory = async (historyId: number) => {
+    discardEmptyLiveSession();
     setSelectedHistoryId(historyId);
     resetConversationState();
     setErrorMessage("");
@@ -182,17 +223,34 @@ export const useChatSessions = ({
         return;
       }
 
-      setMessages(
-        response.result.messages.map((message, index) => ({
+      const detail = response.result;
+      const restoredMessages: ChatMessage[] = detail.messages.map(
+        (message, index) => ({
           id: historyId * 100000 + index,
           role: message.role,
           content: message.content,
           attachmentUrl: message.image_url || undefined,
-        })),
+        }),
       );
 
-      if (response.result.can_followup && response.result.emrid) {
-        onFollowupRestore?.(response.result.emrid);
+      // 문진 미완료 → 라이브 문진으로 이어서 진행(입력 활성화).
+      if (detail.resumable_triage && selectedPet) {
+        onResumeTriage?.({
+          sessionId: detail.session_id,
+          messages: restoredMessages,
+          quickReplies: detail.resume_quick_replies || [],
+        });
+        return;
+      }
+
+      setMessages(restoredMessages);
+
+      // 문진 완료·예약 미확정 → 슬롯 선택 단계 재개.
+      if (detail.resumable_schedule && detail.emrid && selectedPet) {
+        onResumeSchedule?.({ sessionId: detail.session_id, emrid: detail.emrid });
+      } else if (detail.can_followup && detail.emrid) {
+        // 팔로우업 활성(진료 시간 전) → 경과 입력 활성화.
+        onFollowupRestore?.(detail.emrid);
       }
     } catch (error) {
       setErrorMessage(
@@ -261,5 +319,6 @@ export const useChatSessions = ({
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    discardEmptyLiveSession,
   };
 };

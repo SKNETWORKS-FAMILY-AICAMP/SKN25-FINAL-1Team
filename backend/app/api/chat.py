@@ -5,13 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import asyncio
 import logging
+import re
 import uuid
 import base64
 from datetime import date
 from langchain_openai import ChatOpenAI
 from ai.observability import get_langfuse_handler
 from app.db.session import get_db
-from app.schemas.chat import ChatSessionCreate, ChatMessageRequest
+from app.schemas.chat import ChatSessionCreate, ChatMessageRequest, TranslateRequest
 from app.crud.chat import (
     create_chat_session, get_chat_session, get_chat_sessions_by_petid,
     add_message, delete_chat_session, update_session_complete,
@@ -303,6 +304,8 @@ async def send_message(
     if not request.content and not request.image_url:
         raise HTTPException(status_code=400, detail="메시지를 입력해주세요.")
 
+    ui_lang = request.lang if request.lang in _LANG_NAMES else "ko"
+
     session = await get_chat_session(db, session_id, current_user.userid)
     if not session:
         raise HTTPException(status_code=404, detail="상담 세션을 찾을 수 없습니다.")
@@ -312,10 +315,17 @@ async def send_message(
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
+    # 한국어 triage 엔진이 이해하도록, 한글이 없는 입력(영어/일본어/중국어 등 자유 입력)은
+    # 한국어로 번역해 처리한다. 저장·표시는 보호자가 보낸 원문 그대로 유지한다.
+    # (pill 클릭은 프론트가 한국어 원문을 보내므로 한글이 있어 번역 대상이 아니다.)
+    processing_text = request.content or ""
+    if processing_text.strip() and not _has_hangul(processing_text):
+        processing_text = (await _translate_batch([processing_text], "ko"))[0]
+
     photo_analysis = None
     if request.image_url:
-        photo_analysis = await _analyze_chat_photo(request.image_url, request.content)
-        visual_observation = await _describe_chat_photo(request.image_url, request.content)
+        photo_analysis = await _analyze_chat_photo(request.image_url, processing_text)
+        visual_observation = await _describe_chat_photo(request.image_url, processing_text)
         if visual_observation:
             photo_analysis = photo_analysis or {}
             photo_analysis["visual_observation"] = visual_observation
@@ -350,16 +360,37 @@ async def send_message(
             result = await run_triage_turn(
                 db=db,
                 messages=session.messages or [],
-                raw_user_text=request.content or "",
+                raw_user_text=processing_text,
                 image_url=request.image_url,
                 photo_analysis=photo_analysis,
                 species=pet.species or "dog",
                 gender=pet.gender,
             )
 
-            await add_message(db, session, "assistant", result.reply, meta=result.meta)
-            async for c in stream_msg(result.reply):
+            # 어시스턴트 메시지 meta에 현재 quick_replies(pill)를 함께 저장한다.
+            # → 세션을 나갔다 돌아와도 마지막 pill을 그대로 복원(req4, FREEFORM 포함).
+            meta_to_store = result.meta
+            if result.quick_replies:
+                meta_to_store = {**(result.meta or {}), "quick_replies": list(result.quick_replies)}
+            # DB에는 항상 한국어 원문을 저장한다(수의사 차트 + 추후 언어 전환 재번역의 원본).
+            await add_message(db, session, "assistant", result.reply, meta=meta_to_store)
+
+            # UI 언어가 한국어가 아니면, 답변과 추천(pill)을 그 언어로 미리 번역해
+            # '번역된 텍스트를 바로 스트리밍'한다 → 한국어 플래시 없이 빠르게 표시.
+            reply_text = result.reply
+            qr_display = list(result.quick_replies or [])
+            if ui_lang != "ko":
+                batch = await _translate_batch([result.reply, *qr_display], ui_lang)
+                reply_text = batch[0]
+                qr_display = batch[1:]
+
+            async for c in stream_msg(reply_text):
                 yield c
+
+            # 번역이 실제로 적용된 경우에만 contentLang을 태깅한다.
+            # (번역 실패로 한국어가 그대로 스트리밍되면 프론트가 한국어 원문으로 재번역하도록 둔다.)
+            if ui_lang != "ko" and reply_text != result.reply:
+                yield f"data: {json.dumps({'type': 'message_meta', 'source': result.reply, 'lang': ui_lang}, ensure_ascii=False)}\n\n"
 
             if result.is_complete and result.collected_info:
                 emrid, sched = await _complete_and_schedule(
@@ -372,7 +403,8 @@ async def send_message(
             if result.quick_replies:
                 payload = {
                     "type": "quick_replies",
-                    "options": result.quick_replies,
+                    "options": list(result.quick_replies),  # 라우팅용 한국어 원문
+                    "options_display": qr_display,            # 표시용 번역본(프론트 캐시 프라임)
                     "multi": result.multi,
                 }
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
@@ -442,6 +474,80 @@ async def upload_chat_file(
     return {"code": 200, "result": result}
 
 
+_LANG_NAMES = {
+    "ko": "Korean",
+    "en": "English",
+    "ja": "Japanese",
+    "zh": "Simplified Chinese",
+}
+
+
+_HANGUL_RE = re.compile(r"[ᄀ-ᇿ㄰-㆏가-힣]")
+
+
+def _has_hangul(text: str | None) -> bool:
+    return bool(text and _HANGUL_RE.search(text))
+
+
+async def _translate_batch(texts: list[str], target: str) -> list[str]:
+    """주어진 문구들을 target 언어로 일괄 번역한다. 실패 시 원문을 그대로 반환."""
+    target = target if target in _LANG_NAMES else "en"
+    items = [(i, text) for i, text in enumerate(texts) if text and text.strip()]
+    translations: list[str] = list(texts)
+    if not items:
+        return translations
+
+    try:
+        llm = ChatOpenAI(
+            model=settings.OPENAI_MODEL or "gpt-4o-mini",
+            api_key=settings.OPENAI_API_KEY,
+            temperature=0.0,
+            timeout=30.0,
+            max_retries=1,
+            model_kwargs={"response_format": {"type": "json_object"}},
+        )
+        numbered = "\n".join(f'{i}: {text}' for i, text in items)
+        response = await llm.ainvoke(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        f"You are a translation engine. Translate each numbered line into {_LANG_NAMES[target]}. "
+                        "Keep meaning, tone, emojis, numbers, dates and times unchanged. "
+                        "If a line is already in the target language, return it unchanged. "
+                        'Return ONLY a JSON object of the form {"translations": {"<index>": "<translated text>"}} '
+                        "using the same indices you were given."
+                    ),
+                },
+                {"role": "user", "content": numbered},
+            ],
+            config={"run_name": "chat_translate", "callbacks": [get_langfuse_handler()]},
+        )
+        raw = response.content if isinstance(response.content, str) else "{}"
+        parsed = json.loads(raw or "{}")
+        mapping = parsed.get("translations", parsed)
+        if isinstance(mapping, dict):
+            for i, _ in items:
+                value = mapping.get(str(i), mapping.get(i))
+                if isinstance(value, str) and value.strip():
+                    translations[i] = value
+    except Exception as exc:
+        # 번역 실패 시 원문을 그대로 반환 — 화면이 비지 않도록 한다.
+        logger.warning("[Chat/Translate] failed target=%s: %s", target, exc, exc_info=True)
+
+    return translations
+
+
+# 메시지/추천 일괄 번역 — 언어 변경 시 챗봇 답변·사용자 메시지를 선택 언어로 다시 렌더링
+@router.post("/translate")
+async def translate_texts(
+    request: TranslateRequest,
+    current_user=Depends(get_current_user),
+):
+    translations = await _translate_batch(request.texts, request.target_lang)
+    return {"code": 200, "result": {"translations": translations}}
+
+
 # 상담 기록 목록 조회
 @router.get("/sessions")
 async def get_chat_sessions(
@@ -476,6 +582,7 @@ async def get_chat_session_detail(
         raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
 
     can_followup = False
+    booking_complete = False
     emrid = session.emrid
     if emrid is not None:
         from datetime import datetime, timezone
@@ -495,6 +602,44 @@ async def get_chat_session_detail(
                 confirmed = confirmed.replace(tzinfo=timezone.utc)
             appointment_not_passed = datetime.now(timezone.utc) <= confirmed
         can_followup = bool(need_followup and schedule and schedule.status != "COMPLETED" and appointment_not_passed)
+        # 예약 확정 = 취소되지 않은 schedule에 확정 시각이 존재.
+        booking_complete = bool(schedule and schedule.confirmed_time and schedule.status != "CANCELLED")
+
+    messages = session.messages or []
+
+    # 재개(resume) 신호 — 나갔다 돌아와도 '활성' 상태로 이어가야 하는 채팅 판별.
+    #  · resumable_triage  : 문진 미완료(is_complete=False) → 라이브 문진으로 이어서 진행
+    #  · resumable_schedule: 문진 완료·예약 미확정 → 슬롯 선택 단계 재개(서버에서 schedule 재실행)
+    has_user_message = any(
+        isinstance(m, dict) and m.get("role") == "user" for m in messages
+    )
+    resumable_triage = bool(not session.is_complete and has_user_message)
+    resumable_schedule = bool(session.is_complete and emrid is not None and not booking_complete)
+
+    # 라이브 문진 재개 시 마지막에 보여줬던 pill(quick_replies)을 함께 내려 보낸다.
+    # 1순위: 어시스턴트 메시지 meta에 저장된 quick_replies(FREEFORM 동적 chips 포함).
+    # 2순위: KB 노드 pill_labels (구버전 메시지 호환).
+    resume_quick_replies: list[str] = []
+    if resumable_triage:
+        try:
+            from ai.triage import engine as triage_engine
+            last_meta = next(
+                (m.get("meta") for m in reversed(messages)
+                 if isinstance(m, dict) and m.get("role") == "assistant" and isinstance(m.get("meta"), dict)),
+                None,
+            )
+            stored = (last_meta or {}).get("quick_replies")
+            if isinstance(stored, list) and stored:
+                resume_quick_replies = [str(s) for s in stored]
+            else:
+                node_id = (last_meta or {}).get("node_id") or triage_engine.START_NODE
+                pet_row = await db.execute(select(Pet).where(Pet.petid == session.petid))
+                pet_obj = pet_row.scalar_one_or_none()
+                resume_quick_replies = triage_engine.pill_labels(
+                    node_id, pet_obj.species if pet_obj else None
+                )
+        except Exception:
+            resume_quick_replies = []
 
     return {
         "code": 200,
@@ -502,11 +647,97 @@ async def get_chat_session_detail(
             "session_id": session.id,
             "pet_id": session.petid,
             "emrid": emrid,
-            "messages": session.messages or [],
+            "messages": messages,
             "keywords": session.keywords or [],
             "is_complete": session.is_complete,
             "can_followup": can_followup,
+            "booking_complete": booking_complete,
+            "resumable_triage": resumable_triage,
+            "resumable_schedule": resumable_schedule,
+            "resume_quick_replies": resume_quick_replies,
             "created_at": str(session.created_at),
+        },
+    }
+
+
+def _triage_result_to_dict(triage) -> dict:
+    """저장된 TriageResult ORM 행을 schedule 에이전트 입력 dict로 복원한다."""
+    return {
+        "is_triage_complete": True,
+        "urgency_level": triage.urgency_level,
+        "urgency_level_num": triage.urgency_level_num,
+        "vtl_basis": triage.vtl_basis,
+        "red_flags": triage.red_flags or [],
+        "chief_complaint": triage.chief_complaint,
+        "symptom_onset": triage.symptom_onset,
+        "symptom_keywords": triage.symptom_keywords or [],
+        "suspected_diseases": triage.suspected_diseases or [],
+        "symptom_summary": triage.symptom_summary,
+        "need_followup": bool(triage.need_followup),
+    }
+
+
+# 슬롯 선택 단계 재개 — 문진 완료·예약 미확정 세션이 다시 열렸을 때
+# 서버에서 schedule 에이전트를 재실행하고 task_id만 클라이언트로 내려준다.
+# (Shadow Triage 정책: 진단성 triage 데이터는 클라이언트로 보내지 않는다.)
+@router.post("/sessions/{session_id}/resume-schedule")
+async def resume_schedule(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    session = await get_chat_session(db, session_id, current_user.userid)
+    if not session:
+        raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
+    if session.emrid is None:
+        raise HTTPException(status_code=400, detail="예약 가능한 상담이 아닙니다.")
+
+    triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == session.emrid))
+    triage = triage_row.scalar_one_or_none()
+    if not triage:
+        raise HTTPException(status_code=400, detail="문진 데이터가 없습니다. 처음부터 상담을 다시 진행해주세요.")
+
+    pet_row = await db.execute(select(Pet).where(Pet.petid == session.petid))
+    pet = pet_row.scalar_one_or_none()
+    if not pet:
+        raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
+
+    from app.crud.patient import build_patient_context
+    from ai.router import _execute_agent
+
+    patient_context_data = await build_patient_context(db, session.petid)
+    pet_age = (date.today().year - pet.birth_date.year) if pet.birth_date else None
+    pet_payload = {
+        "name": pet.petname,
+        "species": pet.species or "dog",
+        "breed": pet.breed or "알 수 없음",
+        "age": pet_age,
+        "gender": pet.gender,
+        "weight": float(pet.weight_kg) if pet.weight_kg else None,
+    }
+    collected_info = _triage_result_to_dict(triage)
+
+    task_id = str(uuid.uuid4())
+    _task_store[task_id] = {"status": TaskStatus.QUEUED, "step": ""}
+    safe_create_task(
+        _execute_agent(
+            task_id,
+            "schedule",
+            {"pet": pet_payload, "triage_result": collected_info, "patient_context": patient_context_data},
+            session.emrid,
+            None,
+            None,
+        ),
+        task_id=task_id,
+        name="resume_schedule",
+    )
+
+    return {
+        "code": 200,
+        "result": {
+            "schedule_task_id": task_id,
+            "emrid": session.emrid,
+            "triage_info": _guardian_safe_triage(collected_info),
         },
     }
 

@@ -46,7 +46,24 @@ export interface ChatSessionDetailResult {
   keywords: string[];
   is_complete: boolean;
   can_followup: boolean;
+  booking_complete?: boolean;
+  /** 문진 미완료 — 라이브 문진으로 이어서 진행 가능. */
+  resumable_triage?: boolean;
+  /** 문진 완료·예약 미확정 — 슬롯 선택 단계 재개 가능. */
+  resumable_schedule?: boolean;
+  /** 라이브 문진 재개 시 현재 노드의 추천(pill). */
+  resume_quick_replies?: string[];
   created_at: string;
+}
+
+export interface ResumeScheduleResponse {
+  code: number;
+  message?: string;
+  result?: {
+    schedule_task_id: string;
+    emrid: number;
+    triage_info: Record<string, unknown>;
+  };
 }
 
 export interface ChatSessionDetailResponse {
@@ -63,6 +80,7 @@ export interface DeleteChatSessionResponse {
 export interface SendChatMessagePayload {
   content: string;
   image_url?: string;
+  lang?: string;
 }
 
 export interface ChatUploadPresignedUrlResponse {
@@ -90,7 +108,13 @@ export type ChatStreamEvent =
   | {
       type: "quick_replies";
       options: string[];
+      options_display?: string[];
       multi?: boolean;
+    }
+  | {
+      type: "message_meta";
+      source: string;
+      lang: string;
     }
   | {
       type: "triage_complete";
@@ -166,6 +190,57 @@ export const deleteChatSession = async (
     `/chat/sessions/${sessionId}`,
   );
   return response.data;
+};
+
+/** 문진 완료·예약 미확정 세션의 슬롯 선택 단계를 서버에서 재개. */
+export const resumeSchedule = async (
+  sessionId: number,
+): Promise<ResumeScheduleResponse> => {
+  const response = await apiClient.post<ResumeScheduleResponse>(
+    `/chat/sessions/${sessionId}/resume-schedule`,
+  );
+  return response.data;
+};
+
+/**
+ * 탭/브라우저 종료(beforeunload) 시점에 빈 세션을 삭제하기 위한 best-effort 호출.
+ * sendBeacon은 Authorization 헤더를 못 실으므로 keepalive fetch를 사용한다.
+ */
+export const deleteChatSessionKeepalive = (
+  sessionId: number,
+  accessToken: string,
+): void => {
+  try {
+    void fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/chat/sessions/${sessionId}`,
+      {
+        method: "DELETE",
+        keepalive: true,
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+  } catch {
+    // best-effort — 실패해도 무시
+  }
+};
+
+export interface TranslateResponse {
+  code: number;
+  result?: {
+    translations: string[];
+  };
+}
+
+/** 임의의 문구 목록을 target 언어로 일괄 번역(언어 변경 시 메시지/추천 번역). */
+export const translateTexts = async (
+  texts: string[],
+  targetLang: string,
+): Promise<string[]> => {
+  const response = await apiClient.post<TranslateResponse>("/chat/translate", {
+    texts,
+    target_lang: targetLang,
+  });
+  return response.data.result?.translations ?? texts;
 };
 
 export const getChatUploadPresignedUrl = async (

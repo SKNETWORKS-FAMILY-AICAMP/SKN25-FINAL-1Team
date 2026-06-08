@@ -11,15 +11,19 @@ import {
   type ChatStreamEvent,
 } from "../api/chat-api";
 import { useTranslation } from "../i18n/language-context";
+import { primeTranslationCache } from "../i18n/use-dynamic-translation";
 import type { PendingAttachment } from "./use-chat-upload";
 
 /** 슬롯 카드에 표시할 단일 예약 가능 시간 */
 export interface SlotOption {
   label: string; // 선택 라우팅용 ("5월 20일 16:00")
-  monthDay: string; // "5월 20일"
-  weekday: string; // "월"
-  timeText: string; // "오후 4:00"
-  durationText: string; // "1시간 30분"
+  date?: string; // "2026-06-09"
+  time?: string; // "09:00"
+  durationMin?: number;
+  monthDay?: string; // legacy fallback: "5월 20일"
+  weekday?: string; // legacy fallback: "월"
+  timeText?: string; // legacy fallback: "오후 4:00"
+  durationText?: string; // legacy fallback: "1시간 30분"
 }
 
 /** 챗봇 말풍선 대신 렌더링하는 구조화 카드 */
@@ -28,8 +32,11 @@ export type ChatCard =
   | {
       kind: "confirmation";
       petName: string;
-      dateText: string; // "2024년 5월 20일 (월) 오후 4:00"
-      durationText: string; // "1시간 30분"
+      date?: string;
+      time?: string;
+      durationMin?: number;
+      dateText?: string; // legacy fallback: "2024년 5월 20일 (월) 오후 4:00"
+      durationText?: string; // legacy fallback: "1시간 30분"
       hospitalName?: string;
     }
   | { kind: "instructions"; items: string[] };
@@ -41,6 +48,14 @@ export interface ChatMessage {
   attachmentUrl?: string;
   attachmentType?: string;
   card?: ChatCard;
+  /** content가 한국어가 아닐 때 보관하는 한국어 원문 — 이후 언어 전환 시 재번역 원본. */
+  sourceContent?: string;
+  /** content가 이미 어떤 언어로 렌더링됐는지(백엔드 선번역 스트리밍 결과). */
+  contentLang?: string;
+  /** 생성 시점 문자열 대신 렌더 시점 언어로 다시 표시할 로컬 UI 문구 키. */
+  i18nKey?: string;
+  i18nVars?: Record<string, string | number>;
+  pipelineKey?: "checking-slots" | "slots-result" | "slot-error" | "booking-status" | "followup-restore";
 }
 
 interface UseChatConversationParams {
@@ -68,7 +83,7 @@ export const useChatConversation = ({
   getErrorMessage,
   onTriageComplete,
 }: UseChatConversationParams) => {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [session, setSession] = useState<ChatSessionResult | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
@@ -103,7 +118,27 @@ export const useChatConversation = ({
     }
 
     if (event.type === "quick_replies") {
+      // 라우팅용 한국어 원문을 저장하고, 표시용 번역본으로 캐시를 미리 채워 즉시 표시.
+      if (event.options_display && event.options_display.length === event.options.length) {
+        const entries: Record<string, string> = {};
+        event.options.forEach((option, index) => {
+          entries[option] = event.options_display![index];
+        });
+        primeTranslationCache(lang, entries);
+      }
       setQuickReplies(event.options);
+      return;
+    }
+
+    if (event.type === "message_meta") {
+      // 스트리밍된 본문이 어떤 언어인지 + 한국어 원문을 메시지에 보관.
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, sourceContent: event.source, contentLang: event.lang }
+            : message,
+        ),
+      );
       return;
     }
 
@@ -175,6 +210,7 @@ export const useChatConversation = ({
         {
           content: trimmedContent,
           image_url: attachmentToSend?.cloudfrontUrl,
+          lang,
         },
         (event) => applyStreamEvent(event, assistantMessageId),
       );
