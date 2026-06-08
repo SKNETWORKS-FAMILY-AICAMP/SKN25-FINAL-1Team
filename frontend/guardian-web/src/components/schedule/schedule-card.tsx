@@ -29,18 +29,16 @@ const ScheduleCard = ({
   const canManage = canManageSchedule(schedule);
   const normalizedStatus = normalizeScheduleStatus(schedule.status);
 
-  const isPastConfirmed =
-    normalizedStatus === "CONFIRMED" &&
-    new Date(schedule.confirmed_time) <= new Date();
-
+  // 확정 예약은 시간이 지나도 흐리게 처리하지 않는다.
+  // 수의사가 실제로 진료완료(COMPLETED) 처리하기 전까지는 활성(예약 확정)으로 유지한다.
   const isInactive =
     selectedFilter === "all" &&
-    (normalizedStatus === "COMPLETED" || normalizedStatus === "CANCELLED" || isPastConfirmed);
+    (normalizedStatus === "COMPLETED" || normalizedStatus === "CANCELLED");
   const statusLabel = t(getScheduleStatusLabelKey(schedule.status));
 
   const badgeClassName =
     normalizedStatus === "CONFIRMED"
-      ? "bg-blue-100 text-blue-600 ring-blue-200"
+      ? "bg-sky-100 text-sky-600 ring-sky-200"
       : normalizedStatus === "CANCELLED"
         ? "bg-rose-100 text-rose-500 ring-rose-200"
         : "bg-slate-100 text-slate-500 ring-slate-200";
