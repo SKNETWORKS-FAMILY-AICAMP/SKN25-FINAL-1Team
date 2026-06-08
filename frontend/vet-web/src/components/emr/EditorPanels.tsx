@@ -1,4 +1,4 @@
-import { ChevronDown, FileUp, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { ChevronDown, FileUp, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { DrugSearchResult } from "../../api/prescriptionApi";
 import { searchDrugs } from "../../api/prescriptionApi";
@@ -13,6 +13,16 @@ const DOSAGE_OPTIONS = [
 ];
 const FREQUENCY_OPTIONS = ["SID(하루 1회)", "BID(하루 2회)", "TID(하루 3회)", "QID(하루 4회)", "필요 시"];
 const DURATION_OPTIONS = [3, 5, 7, 10, 14, 30];
+
+type PhotoUploadFieldsProps = {
+  files: UploadedFile[];
+  onUploadFile: (file: File) => void;
+  onRemoveFile: (fileId: number) => void;
+  onPreviewImage: (url: string, label: string) => void;
+  isUploading?: boolean;
+  uploadError?: string | null;
+  isReadOnly?: boolean;
+};
 
 function EditableComboBox({
   value,
@@ -184,17 +194,27 @@ function DurationComboBox({
 
 export function EditorPanel({
   value,
-  count,
   onChange,
   onCompleteVisit,
+  files,
+  onUploadFile,
+  onRemoveFile,
+  onPreviewImage,
   errorMessage = null,
+  isUploading = false,
+  uploadError = null,
   isReadOnly = false,
 }: {
   value: string;
-  count: number;
   onChange: (value: string) => void;
   onCompleteVisit: () => void;
+  files: UploadedFile[];
+  onUploadFile: (file: File) => void;
+  onRemoveFile: (fileId: number) => void;
+  onPreviewImage: (url: string, label: string) => void;
   errorMessage?: string | null;
+  isUploading?: boolean;
+  uploadError?: string | null;
   isReadOnly?: boolean;
 }) {
   return (
@@ -212,26 +232,35 @@ export function EditorPanel({
           진료 완료
         </button>
       </div>
-      <div className="px-4 py-3">
+      <div className="space-y-4 px-4 py-3">
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="진료 내용을 입력하세요..."
           readOnly={isReadOnly}
-          className="h-32 w-full resize-none rounded-md border border-[#dfe6f1] px-3 py-2.5 text-xs font-bold leading-5 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
+          className="h-60 w-full resize-none rounded-md border border-[#dfe6f1] px-3 py-2.5 text-xs font-bold leading-5 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
         />
-        <p className="mt-2 text-right text-xs font-extrabold text-[#8a94a6]">
-          글자 수: {count}
-        </p>
         {errorMessage && (
-          <p className="mt-2 text-xs font-bold text-red-500">{errorMessage}</p>
+          <p className="text-xs font-bold text-red-500">{errorMessage}</p>
         )}
+        <div className="border-t border-[#edf1f6] pt-3">
+          <h3 className="mb-2 text-sm font-extrabold text-[#151b28]">사진 등록</h3>
+          <PhotoUploadFields
+            files={files}
+            onUploadFile={onUploadFile}
+            onRemoveFile={onRemoveFile}
+            onPreviewImage={onPreviewImage}
+            isUploading={isUploading}
+            uploadError={uploadError}
+            isReadOnly={isReadOnly}
+          />
+        </div>
       </div>
     </Panel>
   );
 }
 
-export function PhotoUploadPanel({
+function PhotoUploadFields({
   files,
   onUploadFile,
   onRemoveFile,
@@ -239,15 +268,7 @@ export function PhotoUploadPanel({
   isUploading = false,
   uploadError = null,
   isReadOnly = false,
-}: {
-  files: UploadedFile[];
-  onUploadFile: (file: File) => void;
-  onRemoveFile: (fileId: number) => void;
-  onPreviewImage: (url: string, label: string) => void;
-  isUploading?: boolean;
-  uploadError?: string | null;
-  isReadOnly?: boolean;
-}) {
+}: PhotoUploadFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const disabled = isReadOnly || isUploading;
 
@@ -261,85 +282,85 @@ export function PhotoUploadPanel({
   };
 
   return (
-    <Panel>
-      <div className="border-b border-[#edf1f6] px-4 py-2">
-        <h2 className="text-sm font-extrabold text-[#151b28]">사진 등록</h2>
-      </div>
-      <div className="space-y-2 px-4 py-3">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,application/pdf,video/mp4"
-          multiple
-          className="hidden"
-          onChange={(event) => {
-            handleFilesSelected(event.target.files);
-            // 같은 파일을 다시 선택해도 onChange가 발생하도록 비운다.
-            event.target.value = "";
-          }}
-        />
-        <div className="flex flex-wrap gap-2">
-          {files.map((file) => (
+    <div className="space-y-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,application/pdf,video/mp4"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          handleFilesSelected(event.target.files);
+          // 같은 파일을 다시 선택해도 onChange가 발생하도록 비운다.
+          event.target.value = "";
+        }}
+      />
+      <div className="flex flex-wrap gap-2">
+        {files.map((file) => (
+          <div
+            key={file.id}
+            className="relative h-16 w-16 overflow-hidden rounded-md bg-[#edf1f6]"
+          >
             <button
               type="button"
-              key={file.id}
               onClick={() => onPreviewImage(file.url, file.label)}
-              className="relative h-16 w-16 overflow-hidden rounded-md bg-[#edf1f6]"
+              className="block h-full w-full"
             >
               <img
                 src={file.url}
                 alt={file.label}
                 className="h-full w-full object-cover"
               />
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRemoveFile(file.id);
-                }}
-                aria-label="첨부 삭제"
-                disabled={isReadOnly}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#111827]/70 text-white disabled:hidden"
-              >
-                <X className="h-3 w-3" />
-              </button>
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={openFilePicker}
-            disabled={disabled}
-            className="flex h-16 w-16 flex-col items-center justify-center rounded-md border border-dashed border-[#cfd8e6] text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
-          >
-            <Plus className="h-5 w-5" />
-            추가
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={openFilePicker}
-          disabled={disabled}
-          onDragOver={(event) => {
-            if (!disabled) event.preventDefault();
-          }}
-          onDrop={(event) => {
-            if (disabled) return;
-            event.preventDefault();
-            handleFilesSelected(event.dataTransfer.files);
-          }}
-          className="grid min-h-12 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-md border border-dashed border-[#cfd8e6] px-3 py-2 text-left text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
-        >
-          <FileUp className="row-span-2 h-4 w-4 shrink-0" />
-          <span className="min-w-0 break-keep leading-4">
-            {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
-          </span>
-          <span className="min-w-0 break-keep text-[11px] font-bold leading-4 text-[#8a94a6]">
-            JPG, PNG, PDF, MP4 · 최대 50MB
-          </span>
-        </button>
-        {uploadError && (
-          <p className="text-xs font-bold text-red-500">{uploadError}</p>
-        )}
+            <button
+              type="button"
+              onClick={() => onRemoveFile(file.id)}
+              aria-label="첨부 삭제"
+              disabled={isReadOnly}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#111827]/70 text-white disabled:hidden"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={openFilePicker}
+        disabled={disabled}
+        onDragOver={(event) => {
+          if (!disabled) event.preventDefault();
+        }}
+        onDrop={(event) => {
+          if (disabled) return;
+          event.preventDefault();
+          handleFilesSelected(event.dataTransfer.files);
+        }}
+        className="grid min-h-12 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-md border border-dashed border-[#cfd8e6] px-3 py-2 text-left text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
+      >
+        <FileUp className="row-span-2 h-4 w-4 shrink-0" />
+        <span className="min-w-0 break-keep leading-4">
+          {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
+        </span>
+        <span className="min-w-0 break-keep text-[11px] font-bold leading-4 text-[#8a94a6]">
+          JPG, PNG, PDF, MP4 · 최대 50MB
+        </span>
+      </button>
+      {uploadError && (
+        <p className="text-xs font-bold text-red-500">{uploadError}</p>
+      )}
+    </div>
+  );
+}
+
+export function PhotoUploadPanel(props: PhotoUploadFieldsProps) {
+  return (
+    <Panel>
+      <div className="border-b border-[#edf1f6] px-4 py-2">
+        <h2 className="text-sm font-extrabold text-[#151b28]">사진 등록</h2>
+      </div>
+      <div className="px-4 py-3">
+        <PhotoUploadFields {...props} />
       </div>
     </Panel>
   );
@@ -435,15 +456,15 @@ export function PrescriptionInputPanel({
             type="button"
             onClick={onGenerate}
             disabled={isReadOnly}
-            className="flex h-7 items-center gap-1 rounded-md border border-[#dfe6f1] bg-white px-2.5 text-[11px] font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
+            className="flex h-9 items-center gap-1.5 rounded-md border border-[#dfe6f1] bg-white px-3.5 text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
-            <Sparkles className="h-3.5 w-3.5 text-[#357b70]" strokeWidth={2.2} />
-            자동 생성
+            <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+            처방전 자동 생성
           </button>
           <button
             type="button"
             onClick={onOpenPreview}
-            className="h-7 rounded-md border border-[#dfe6f1] bg-white px-2.5 text-[11px] font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+            className="h-9 rounded-md border border-[#dfe6f1] bg-white px-3.5 text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
           >
             미리보기
           </button>

@@ -12,7 +12,6 @@ import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import {
   EditorPanel,
-  PhotoUploadPanel,
   PrescriptionInputPanel,
 } from "../../components/emr/EditorPanels";
 import { ImagePreviewModal } from "../../components/emr/ImagePreviewModal";
@@ -252,17 +251,16 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
 
                 {currentEmr ? (
                   <div className="min-h-[220px] flex-1 overflow-hidden">
-                    <IntakePanel
-                      emr={currentEmr}
-                      visibleFiles={visibleGuardianFiles}
-                      hiddenFileCount={hiddenGuardianFileCount}
-                      onApplyIntake={handleApplyIntake}
-                      onPreviewImage={openPreviewImage}
+                    <PatientInfoPanel
+                      patient={currentEmr.pet_info}
+                      onEdit={() => {
+                        if (isTodayView) setIsProfileEditOpen(true);
+                      }}
                       isReadOnly={isReadOnly}
                     />
                   </div>
                 ) : (
-                  <CompactNotice title="사전 문진" message="환자를 선택하면 문진 요약이 표시됩니다." />
+                  <CompactNotice title="환자 정보" message="환자를 선택하면 기본 정보가 표시됩니다." />
                 )}
 
                 {currentEmr &&
@@ -285,15 +283,16 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             maxSize={showEditablePanels ? "38%" : "84%"}
             className="min-w-0"
           >
-            <WorkspacePane title="환자 정보 / 히스토리" meta={currentEmr?.pet_info.pet_name ?? "미선택"}>
+            <WorkspacePane title="사전 문진 / 히스토리" meta={currentEmr?.pet_info.pet_name ?? "미선택"}>
               <div className="space-y-1.5">
                 {currentEmr ? (
                   <>
-                    <PatientInfoPanel
-                      patient={currentEmr.pet_info}
-                      onEdit={() => {
-                        if (isTodayView) setIsProfileEditOpen(true);
-                      }}
+                    <IntakePanel
+                      emr={currentEmr}
+                      visibleFiles={visibleGuardianFiles}
+                      hiddenFileCount={hiddenGuardianFileCount}
+                      onApplyIntake={handleApplyIntake}
+                      onPreviewImage={openPreviewImage}
                       isReadOnly={isReadOnly}
                     />
                     {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
@@ -324,38 +323,32 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
 
               <ResizablePanel defaultSize="50%" minSize="36%" maxSize="64%" className="min-w-0">
                 <WorkspacePane title="진료 / 첨부 / 처방" meta={isReadOnly ? "조회 전용" : "작성 가능"}>
-                  <div className="grid gap-1.5 2xl:grid-cols-[minmax(0,1.05fr)_minmax(220px,0.75fr)]">
+                  <div className="grid gap-1.5">
                     <EditorPanel
                       value={editorValue}
-                      count={editorValue.length}
                       onChange={setEditorValue}
                       onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
-                      errorMessage={completeVisitError}
-                      isReadOnly={isReadOnly}
-                    />
-                    <PhotoUploadPanel
                       files={uploadedFiles}
                       onUploadFile={handleUploadFile}
                       onRemoveFile={handleRemoveFile}
                       onPreviewImage={openPreviewImage}
+                      errorMessage={completeVisitError}
                       isUploading={isUploadingFile}
                       uploadError={uploadError}
                       isReadOnly={isReadOnly}
                     />
-                    <div className="2xl:col-span-2">
-                      <PrescriptionInputPanel
-                        prescriptions={prescriptions}
-                        onRemove={handleRemovePrescription}
-                        onUpdate={handleUpdatePrescription}
-                        onAdd={handleAddPrescription}
-                        onGenerate={handleGeneratePrescriptionClick}
-                        accessToken={session.accessToken}
-                        errorMessage={autoPrescriptionError}
-                        onOpenPreview={handleOpenPrescriptionPreview}
-                        previewErrorMessage={prescriptionPreviewError}
-                        isReadOnly={isReadOnly}
-                      />
-                    </div>
+                    <PrescriptionInputPanel
+                      prescriptions={prescriptions}
+                      onRemove={handleRemovePrescription}
+                      onUpdate={handleUpdatePrescription}
+                      onAdd={handleAddPrescription}
+                      onGenerate={handleGeneratePrescriptionClick}
+                      accessToken={session.accessToken}
+                      errorMessage={autoPrescriptionError}
+                      onOpenPreview={handleOpenPrescriptionPreview}
+                      previewErrorMessage={prescriptionPreviewError}
+                      isReadOnly={isReadOnly}
+                    />
                   </div>
                 </WorkspacePane>
               </ResizablePanel>

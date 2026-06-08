@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Clock3,
   Home,
-  Hospital,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -306,21 +305,7 @@ export default function AppLayout({
           </nav>
 
           <section className="rounded-lg border border-[#e5eaf2] bg-white p-2.5 shadow-sm">
-            <div className="flex items-start gap-2">
-              <Hospital className="mt-0.5 h-4 w-4 shrink-0 text-[#357b70]" strokeWidth={2.1} />
-              <div className="min-w-0">
-                <p className="truncate text-xs font-extrabold text-[#20283a]">
-                  {hospitalName}
-                </p>
-                <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 text-[#778196]">
-                  서울특별시 강남구 테헤란로 123
-                </p>
-                <p className="mt-1 text-[10px] font-semibold text-[#778196]">
-                  02-1234-5678
-                </p>
-              </div>
-            </div>
-            <div className="mt-2 border-t border-[#edf1f6] pt-2">
+            <div>
               <p className="text-[10px] font-bold text-[#4c5870]">수의사 계정</p>
               <p className="mt-0.5 truncate text-xs font-extrabold text-[#20283a]">
                 {session.user.name}

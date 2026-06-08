@@ -23,21 +23,21 @@ export function PatientInfoPanel({
 }) {
   return (
     <Panel>
-      <div className="flex items-start justify-between px-5 py-4">
-        <div className="flex gap-4">
-          <img
-            src={patient.profile_image || PROFILE_IMAGE_FALLBACK}
-            alt={`${patient.pet_name} 사진`}
-            className="h-24 w-24 rounded-lg object-cover"
-            onError={(event) => {
-              const img = event.currentTarget;
-              if (img.src !== PROFILE_IMAGE_FALLBACK) {
-                img.src = PROFILE_IMAGE_FALLBACK;
-              }
-            }}
-          />
-          <div>
-            <div className="flex items-center gap-3">
+      <div className="relative px-5 py-4">
+        <div className="flex max-w-full flex-col">
+          <div className="flex items-center gap-4 pr-10">
+            <img
+              src={patient.profile_image || PROFILE_IMAGE_FALLBACK}
+              alt={`${patient.pet_name} 사진`}
+              className="h-24 w-24 shrink-0 rounded-lg object-cover"
+              onError={(event) => {
+                const img = event.currentTarget;
+                if (img.src !== PROFILE_IMAGE_FALLBACK) {
+                  img.src = PROFILE_IMAGE_FALLBACK;
+                }
+              }}
+            />
+            <div className="flex min-w-0 items-center gap-3">
               <h1 className="text-2xl font-extrabold text-[#151b28]">
                 {patient.pet_name}
               </h1>
@@ -45,6 +45,8 @@ export function PatientInfoPanel({
                 <GenderBadge gender={patient.gender} className="text-2xl" />
               </span>
             </div>
+          </div>
+          <div className="mt-3 text-left">
             <p className="mt-2 text-sm font-extrabold text-[#4d5874]">
               {patient.species} | {toGenderLabel(patient.gender)} | {patient.weight_kg}kg |{" "}
               {patient.birth_date ? `${patient.age}살(${patient.birth_date})` : "생일 미상"}
@@ -66,7 +68,7 @@ export function PatientInfoPanel({
           onClick={onEdit}
           aria-label="환자 정보 편집"
           disabled={isReadOnly}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef5f4] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef5f4] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
         >
           <Edit3 className="h-5 w-5" />
         </button>

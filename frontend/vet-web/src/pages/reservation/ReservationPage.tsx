@@ -204,8 +204,10 @@ export default function ReservationPage({
         <TopControls
           controlLabel={controlLabel}
           compactControlLabel={compactControlLabel}
+          selectedDate={selectedDate}
           viewMode={viewMode}
           isLoading={isLoading}
+          onSelectDate={setSelectedDate}
           onChangeViewMode={setViewMode}
           onAdd={() => setModalMode("add")}
           onPrev={handlePrev}
