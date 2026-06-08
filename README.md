@@ -408,6 +408,14 @@ Follow-up Agent는 추가 관찰이 필요한 환자에 대해 경과 내용을 
 
 이 한 줄이면 **.env 자동 생성 → 포트 정리 → 빌드·실행 → 약 데이터 seed → 테스트 계정 생성**까지 끝.
 
+이미 한 번 빌드한 뒤 Docker를 껐다 켜는 정도라면 빠른 실행 모드를 쓰면 됩니다.
+
+```bash
+./dev.sh fast
+```
+
+`fast`는 재빌드 없이 **DB + 백엔드 + 보호자 앱 + 수의사 앱** 전체를 기존 이미지로 다시 띄웁니다. 보호자 앱만 수정했다면 `./dev.sh guardian`, 수의사 앱만 수정했다면 `./dev.sh vet`로 해당 프론트만 다시 빌드/재시작할 수 있습니다. Dockerfile, `requirements.txt`, `package.json`처럼 의존성이나 이미지 구성이 바뀐 뒤에는 기존처럼 `./dev.sh`를 쓰세요.
+
 | 앱 | 주소 | 테스트 계정 |
 | :--- | :--- | :--- |
 | 보호자 | http://localhost:5173 | `guardian_test` / `Test1234!` |
@@ -415,6 +423,15 @@ Follow-up Agent는 추가 관찰이 필요한 환자에 대해 경과 내용을 
 | API 문서 | http://localhost:8000/docs | — |
 
 끄기: `./dev.sh down` (윈도우 `.\dev.ps1 down`) · 초기화: `./dev.sh reset`
+
+| 상황 | 명령어 | 설명 |
+| :--- | :--- | :--- |
+| 처음 켜거나 의존성 변경 후 | `./dev.sh` | 전체 빌드 후 실행 |
+| Docker만 껐다가 다시 켤 때 | `./dev.sh fast` | 재빌드 없이 전체 스택 실행 |
+| 보호자 화면만 수정 후 | `./dev.sh guardian` | guardian 프론트만 빌드/재시작 |
+| 수의사 화면만 수정 후 | `./dev.sh vet` | vet 프론트만 빌드/재시작 |
+| 끄기 | `./dev.sh down` | DB 데이터 유지 |
+| 완전 초기화 | `./dev.sh reset` | DB 데이터까지 삭제 |
 
 > 💡 `OPENAI_API_KEY` 가 비어 있어도 서버는 뜹니다(AI 기능만 비활성). `backend/.env`에 팀 공용 키를 넣으면 활성화.
 

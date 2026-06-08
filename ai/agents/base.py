@@ -61,7 +61,7 @@ def _parse_json(text: str) -> dict:
 async def call_openai(
     messages: list[dict],
     system: str,
-    model: str = "gpt-4o-mini",
+    model: str | None = None,
     max_tokens: int = 1200,
     json_mode: bool = True,
     temperature: float = 0.3,
@@ -69,12 +69,18 @@ async def call_openai(
 ) -> dict | str:
     """LangChain ChatOpenAI 비동기 호출.
 
+    - model=None이면 settings.OPENAI_MODEL(.env)을 따른다 → 모델 단일 관리.
+      개별 에이전트는 더 강한 모델이 필요할 때만 명시 override 한다.
     - timeout(30s) + 1회 재시도로 일시 오류·깨진 JSON에 대응한다.
     - json_mode=True면 파싱된 dict를 반환한다.
     - 모든 시도가 실패하면 마지막 예외를 raise → 호출부(에이전트 러너)가
       격리/로깅하도록 둔다. (상위에서 fallback 처리)
     - agent: Langfuse 트레이스 이름(run_name)으로 쓰여 에이전트별 구분이 된다.
     """
+    if model is None:
+        from app.core.config import settings
+
+        model = settings.OPENAI_MODEL or "gpt-4o-mini"
     client = _get_client(model, temperature, max_tokens, json_mode)
     lc_messages = [{"role": "system", "content": system}, *messages]
 
@@ -102,7 +108,7 @@ async def call_openai(
 async def call_openai_once(
     user_prompt: str,
     system: str,
-    model: str = "gpt-4o-mini",
+    model: str | None = None,
     max_tokens: int = 1200,
     json_mode: bool = True,
     agent: str = "unknown",

@@ -13,6 +13,7 @@ import GuardianNavbar from "../../components/guardian-navbar";
 import PetForm from "../../components/pets/pet-form";
 import PetImageUploader from "../../components/pets/pet-image-uploader";
 import { usePetForm } from "../../hooks/use-pet-form";
+import { useTranslation } from "../../i18n/language-context";
 
 const maxImageSize = 5 * 1024 * 1024;
 
@@ -23,6 +24,7 @@ const PawIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
 );
 
 const PetRegisterPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { petId } = useParams();
   const parsedPetId = petId ? Number(petId) : NaN;
@@ -48,10 +50,10 @@ const PetRegisterPage = () => {
     validateForm,
     buildPayload,
     buildUpdatePayload,
-  } = usePetForm({ customSpeciesInputRef });
+  } = usePetForm({ customSpeciesInputRef, t });
   const [submitMessage, setSubmitMessage] = useState("");
   const [loadMessage, setLoadMessage] = useState(
-    isPetDataRoute && !isValidPetId ? "잘못된 접근입니다." : "",
+    isPetDataRoute && !isValidPetId ? t("pet.invalidAccess") : "",
   );
   const [isLoading, setIsLoading] = useState(Boolean(isDetailMode || isEditMode));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,7 +62,7 @@ const PetRegisterPage = () => {
   useEffect(() => {
     if (isPetDataRoute && !isValidPetId) {
       resetPetFormState();
-      setLoadMessage("잘못된 접근입니다.");
+      setLoadMessage(t("pet.invalidAccess"));
       setIsLoading(false);
       return;
     }
@@ -89,7 +91,7 @@ const PetRegisterPage = () => {
         }
 
         if (response.code !== 200) {
-          setLoadMessage(response.message || "반려동물 정보를 불러오지 못했습니다.");
+          setLoadMessage(response.message || t("pet.loadError"));
           return;
         }
 
@@ -101,13 +103,12 @@ const PetRegisterPage = () => {
 
         if (isAxiosError<{ message?: string }>(error)) {
           setLoadMessage(
-            error.response?.data?.message ||
-              "반려동물 정보를 불러오지 못했습니다.",
+            error.response?.data?.message || t("pet.loadError"),
           );
           return;
         }
 
-        setLoadMessage("반려동물 정보를 불러오지 못했습니다.");
+        setLoadMessage(t("pet.loadError"));
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -138,7 +139,7 @@ const PetRegisterPage = () => {
     if (!["image/jpeg", "image/png"].includes(file.type)) {
       setErrors((current) => ({
         ...current,
-        profileImage: "JPG, PNG 파일만 업로드할 수 있습니다.",
+        profileImage: t("pet.imageOnlyType"),
       }));
       return;
     }
@@ -146,7 +147,7 @@ const PetRegisterPage = () => {
     if (file.size > maxImageSize) {
       setErrors((current) => ({
         ...current,
-        profileImage: "대표 사진은 최대 5MB까지 업로드할 수 있습니다.",
+        profileImage: t("pet.imageTooLarge"),
       }));
       return;
     }
@@ -163,7 +164,7 @@ const PetRegisterPage = () => {
       } else {
         setErrors((current) => ({
           ...current,
-          profileImage: "사진 업로드에 실패했습니다. 다시 시도해주세요.",
+          profileImage: t("pet.imageUploadFailed"),
         }));
       }
     } catch (error) {
@@ -172,7 +173,7 @@ const PetRegisterPage = () => {
         : undefined;
       setErrors((current) => ({
         ...current,
-        profileImage: message || "사진 업로드에 실패했습니다. 다시 시도해주세요.",
+        profileImage: message || t("pet.imageUploadFailed"),
       }));
     } finally {
       setIsUploadingImage(false);
@@ -215,9 +216,7 @@ const PetRegisterPage = () => {
       if (!([200, 201] as number[]).includes(response.code)) {
         setSubmitMessage(
           response.message ||
-            (isEditMode
-              ? "반려동물 수정에 실패했습니다."
-              : "반려동물 등록에 실패했습니다."),
+            (isEditMode ? t("pet.editFailed") : t("pet.registerFailed")),
         );
         return;
       }
@@ -236,30 +235,24 @@ const PetRegisterPage = () => {
       if (isAxiosError<{ message?: string }>(error)) {
         setSubmitMessage(
           error.response?.data?.message ||
-            (isEditMode
-              ? "반려동물 수정에 실패했습니다."
-              : "반려동물 등록에 실패했습니다."),
+            (isEditMode ? t("pet.editFailed") : t("pet.registerFailed")),
         );
         return;
       }
 
-      setSubmitMessage(
-        isEditMode
-          ? "반려동물 수정에 실패했습니다."
-          : "반려동물 등록에 실패했습니다.",
-      );
+      setSubmitMessage(isEditMode ? t("pet.editFailed") : t("pet.registerFailed"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-cream text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <GuardianNavbar />
 
       <main className="mx-auto w-full max-w-[1280px] px-6 py-8">
         <section className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
             <img
               src={pawOnlyLogo}
               alt=""
@@ -273,26 +266,22 @@ const PetRegisterPage = () => {
                 isEditMode ? "text-xl" : "text-2xl"
               }`}
             >
-              {isEditMode
-                ? "반려동물 상세 정보"
-                : "반려동물 등록하기"}
+              {isEditMode ? t("pet.detailTitle") : t("pet.registerTitle")}
             </h1>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              {isEditMode
-                ? "등록된 정보를 확인하고 필요한 항목을 수정해주세요."
-                : "반려동물 정보를 입력해주세요."}
+              {isEditMode ? t("pet.detailSubtitle") : t("pet.registerSubtitle")}
             </p>
           </div>
         </section>
 
         {isLoading ? (
           <section className="mt-6 flex min-h-[420px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-100 border-t-violet-600" />
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-teal-100 border-t-teal-700" />
           </section>
         ) : loadMessage ? (
           <section className="mt-6 rounded-2xl border border-red-100 bg-white px-6 py-10 text-center shadow-sm">
             <h2 className="text-lg font-extrabold text-slate-900">
-              반려동물 정보를 불러오지 못했습니다
+              {t("pet.loadErrorTitle")}
             </h2>
             <p className="mt-3 text-sm font-semibold text-red-500">
               {loadMessage}
@@ -300,9 +289,9 @@ const PetRegisterPage = () => {
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="mt-6 h-11 rounded-xl bg-violet-600 px-6 text-sm font-extrabold text-white transition hover:bg-violet-700"
+              className="mt-6 h-11 rounded-xl bg-teal-700 px-6 text-sm font-extrabold text-white transition hover:bg-teal-800"
             >
-              홈으로 돌아가기
+              {t("pet.backHome")}
             </button>
           </section>
         ) : (
@@ -316,21 +305,21 @@ const PetRegisterPage = () => {
               errorMessage={errors.profileImage}
             />
 
-            <section className="relative overflow-hidden rounded-2xl bg-violet-50 p-6 ring-1 ring-violet-100">
-              <div className="flex items-center gap-2 text-violet-700">
+            <section className="relative overflow-hidden rounded-2xl bg-teal-50 p-6 ring-1 ring-teal-100">
+              <div className="flex items-center gap-2 text-teal-700">
                 <PawIcon className="h-5 w-5" />
-                <h2 className="text-lg font-extrabold">안내사항</h2>
+                <h2 className="text-lg font-extrabold">{t("pet.noticeTitle")}</h2>
               </div>
               <ul className="mt-6 space-y-4 pr-6 text-sm font-semibold leading-6 text-slate-700">
                 {isEditMode ? (
                   <>
-                    <li>수정이 필요한 항목을 변경한 뒤 하단의 수정하기 버튼을 눌러주세요.</li>
-                    <li>정확한 정보는 AI 상담과 진료 예약 정확도 향상에 도움이 됩니다.</li>
+                    <li>{t("pet.noticeEdit1")}</li>
+                    <li>{t("pet.noticeCommon")}</li>
                   </>
                 ) : (
                   <>
-                    <li>입력하지 않은 항목은 나중에 반려동물 관리에서 수정할 수 있습니다.</li>
-                    <li>정확한 정보는 AI 상담과 진료 예약 정확도 향상에 도움이 됩니다.</li>
+                    <li>{t("pet.noticeNew1")}</li>
+                    <li>{t("pet.noticeCommon")}</li>
                   </>
                 )}
               </ul>
@@ -367,23 +356,23 @@ const PetRegisterPage = () => {
                 onClick={closeModal}
                 className="h-11 min-w-32 rounded-xl border border-slate-200 bg-white px-6 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50"
               >
-                취소
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || isUploadingImage}
-                className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-sm font-extrabold text-white shadow-sm transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:from-violet-300 disabled:to-indigo-300"
+                className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-teal-700 px-6 text-sm font-extrabold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-teal-300"
               >
                 <PawIcon className="h-4 w-4" />
                 {isUploadingImage
-                  ? "사진 업로드 중..."
+                  ? t("pet.uploadingImage")
                   : isSubmitting
                     ? isEditMode
-                      ? "수정 중..."
-                      : "등록 중..."
+                      ? t("pet.editing")
+                      : t("pet.registering")
                     : isEditMode
-                      ? "수정하기"
-                      : "등록하기"}
+                      ? t("pet.editSubmit")
+                      : t("pet.registerSubmit")}
               </button>
             </footer>
           </form>

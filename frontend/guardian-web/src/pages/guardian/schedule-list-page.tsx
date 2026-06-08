@@ -11,9 +11,11 @@ import ScheduleSkeleton from "../../components/schedule/schedule-skeleton";
 import ScheduleTabs from "../../components/schedule/schedule-tabs";
 import {
   getErrorMessage,
+  normalizeScheduleStatus,
   pageSize,
 } from "../../components/schedule/schedule-utils";
 import GuardianLayout from "../../layouts/guardian-layout";
+import { useTranslation } from "../../i18n/language-context";
 import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
 
 const CalendarIcon = () => (
@@ -29,6 +31,7 @@ const CalendarIcon = () => (
 );
 
 const ScheduleListPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState<ScheduleFilter>("all");
   const [schedules, setSchedules] = useState<ScheduleListItem[]>([]);
@@ -45,7 +48,10 @@ const ScheduleListPage = () => {
   );
 
   const visibleSchedules = useMemo(
-    () => schedules.filter((schedule) => schedule.status !== "PENDING"),
+    () =>
+      schedules.filter(
+        (schedule) => normalizeScheduleStatus(schedule.status) !== "PENDING",
+      ),
     [schedules],
   );
 
@@ -74,7 +80,7 @@ const ScheduleListPage = () => {
       });
 
       if (response.code !== 200) {
-        setErrorMessage(response.message || "예약 목록을 불러오지 못했습니다.");
+        setErrorMessage(response.message || t("schedule.listError"));
 
         if (!append) {
           setSchedules([]);
@@ -84,7 +90,7 @@ const ScheduleListPage = () => {
       }
 
       const filteredItems = response.result.items.filter(
-        (schedule) => schedule.status !== "PENDING",
+        (schedule) => normalizeScheduleStatus(schedule.status) !== "PENDING",
       );
 
       setSchedules((currentSchedules) =>
@@ -93,7 +99,7 @@ const ScheduleListPage = () => {
       setPage(response.result.page);
       setHasNext(response.result.has_next);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "예약 목록을 불러오지 못했습니다."));
+      setErrorMessage(getErrorMessage(error, t("schedule.listError")));
 
       if (!append) {
         setSchedules([]);
@@ -149,8 +155,8 @@ const ScheduleListPage = () => {
   return (
     <GuardianLayout>
       <PageHeader
-        title="예약 내역"
-        description="예정된 예약과 지난 예약을 확인할 수 있습니다."
+        title={t("schedule.title")}
+        description={t("schedule.description")}
       />
 
       <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-8 pb-8 shadow-sm">
@@ -158,6 +164,10 @@ const ScheduleListPage = () => {
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
         />
+
+        <p className="mt-3 text-[11px] font-medium text-slate-400">
+          {t("schedule.timeDisclaimer")}
+        </p>
 
         <div className="py-6">
           {errorMessage ? (
@@ -176,16 +186,16 @@ const ScheduleListPage = () => {
                 </div>
 
                 <h2 className="mt-6 text-2xl font-bold text-slate-800">
-                  {selectedFilter === "upcoming" && "예정된 진료가 없습니다."}
-                  {selectedFilter === "past" && "지난 진료가 없습니다."}
-                  {selectedFilter === "cancelled" && "취소된 진료가 없습니다."}
-                  {selectedFilter === "all" && "아직 예약된 진료가 없습니다."}
+                  {selectedFilter === "upcoming" && t("schedule.emptyUpcoming")}
+                  {selectedFilter === "past" && t("schedule.emptyPast")}
+                  {selectedFilter === "cancelled" && t("schedule.emptyCancelled")}
+                  {selectedFilter === "all" && t("schedule.emptyAll")}
                 </h2>
 
                 {(selectedFilter === "all" || selectedFilter === "upcoming") ? (
                   <>
                     <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-                      AI 챗봇 상담을 통해 간편하게 예약을 진행해보세요.
+                      {t("schedule.emptyHint")}
                     </p>
                     <ActionButton
                       type="button"
@@ -193,7 +203,7 @@ const ScheduleListPage = () => {
                       size="md"
                       className="mt-6"
                     >
-                      챗봇 상담 시작하기
+                      {t("schedule.startChat")}
                     </ActionButton>
                   </>
                 ) : null}
@@ -223,7 +233,7 @@ const ScheduleListPage = () => {
                 size="md"
                 className="px-7"
               >
-                {isLoadingMore ? "불러오는 중" : "더보기"}
+                {isLoadingMore ? t("schedule.loadingMore") : t("schedule.more")}
               </ActionButton>
             </div>
           ) : null}

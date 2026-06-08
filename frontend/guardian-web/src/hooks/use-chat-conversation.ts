@@ -10,6 +10,7 @@ import {
   type ChatSessionResult,
   type ChatStreamEvent,
 } from "../api/chat-api";
+import { useTranslation } from "../i18n/language-context";
 import type { PendingAttachment } from "./use-chat-upload";
 
 /** 슬롯 카드에 표시할 단일 예약 가능 시간 */
@@ -67,6 +68,7 @@ export const useChatConversation = ({
   getErrorMessage,
   onTriageComplete,
 }: UseChatConversationParams) => {
+  const { t } = useTranslation();
   const [session, setSession] = useState<ChatSessionResult | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
@@ -125,7 +127,7 @@ export const useChatConversation = ({
     }
 
     if (event.type === "error") {
-      setErrorMessage(event.message || "응답을 불러오지 못했습니다.");
+      setErrorMessage(event.message || t("chatbot.responseLoadError"));
       setIsStreaming(false);
     }
   };
@@ -150,7 +152,7 @@ export const useChatConversation = ({
       {
         id: userMessageId,
         role: "user",
-        content: trimmedContent || "첨부파일을 보냈습니다.",
+        content: trimmedContent || t("chatbot.attachmentSent"),
         attachmentUrl: attachmentToSend?.previewUrl,
         attachmentType: attachmentToSend?.contentType,
       },
@@ -178,7 +180,7 @@ export const useChatConversation = ({
       );
     } catch (error) {
       caughtError = true;
-      setErrorMessage(getErrorMessage(error, "메시지를 전송하지 못했습니다."));
+      setErrorMessage(getErrorMessage(error, t("chatbot.sendFailed")));
       setMessages((currentMessages) =>
         currentMessages.filter((message) => message.id !== assistantMessageId),
       );
@@ -188,7 +190,7 @@ export const useChatConversation = ({
         setMessages((currentMessages) =>
           currentMessages.map((message) =>
             message.id === assistantMessageId && message.content.trim() === ""
-              ? { ...message, content: "응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요." }
+              ? { ...message, content: t("chatbot.responseDelayed") }
               : message,
           ),
         );

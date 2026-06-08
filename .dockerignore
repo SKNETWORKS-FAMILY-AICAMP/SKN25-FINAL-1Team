@@ -1,0 +1,29 @@
+.git
+.github
+.DS_Store
+
+# Local environment and secrets are injected at runtime by compose/CI.
+.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Frontend dependency/build artifacts are recreated inside Docker.
+**/node_modules
+**/dist
+**/.vite
+**/.turbo
+**/.next
+**/coverage
+
+# Python caches and local test artifacts.
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+
+# Runtime files should live in Docker volumes, not image layers.
+backend/uploads
+backend/logs

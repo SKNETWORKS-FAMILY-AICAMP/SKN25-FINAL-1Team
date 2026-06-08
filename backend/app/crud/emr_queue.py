@@ -21,11 +21,9 @@ from app.utils.timezone import KST, to_kst
 
 
 def _urgency_to_triage_status(urgency_num: Optional[int]) -> str:
-    if urgency_num == 1:
-        return "emergency"
-    if urgency_num == 2:
-        return "semiEmergency"
-    return "normal"
+    # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
+    from app.services.triage_engine import urgency_num_to_visit_type
+    return urgency_num_to_visit_type(urgency_num)
 
 
 def _calc_age(birth_date) -> int:
@@ -153,7 +151,7 @@ async def get_emr_detail(db: AsyncSession, schedule_id: int):
     summary: list[str] = []
     if triage:
         if triage.symptom_summary:
-            summary.append(triage.symptom_summary)
+            summary.append(f"간단 요약: {triage.symptom_summary}")
         if triage.symptom_keywords:
             kws = triage.symptom_keywords
             if isinstance(kws, list) and kws:

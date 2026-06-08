@@ -7,6 +7,7 @@ import ActionButton from "../../components/common/action-button";
 import PageHeader from "../../components/common/page-header";
 import SectionCard from "../../components/common/section-card";
 import GuardianLayout from "../../layouts/guardian-layout";
+import { useTranslation } from "../../i18n/language-context";
 
 interface ApiMessageResponse {
   code?: number;
@@ -57,6 +58,7 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
 };
 
 const ChangePasswordPage = () => {
+  const { t } = useTranslation();
   const [form, setForm] = useState<PasswordForm>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<PasswordFieldErrors>({});
   const [message, setMessage] = useState("");
@@ -90,18 +92,17 @@ const ChangePasswordPage = () => {
     const nextErrors: PasswordFieldErrors = {};
 
     if (!form.current_password) {
-      nextErrors.current_password = "현재 비밀번호를 입력해주세요.";
+      nextErrors.current_password = t("changePassword.currentRequired");
     }
 
     if (!isNewPasswordValid) {
-      nextErrors.new_password =
-        "영문, 숫자, 특수문자를 포함해 8자 이상 입력해주세요.";
+      nextErrors.new_password = t("changePassword.passwordHelper");
     }
 
     if (!form.new_password_confirm) {
-      nextErrors.new_password_confirm = "새 비밀번호 확인을 입력해주세요.";
+      nextErrors.new_password_confirm = t("changePassword.confirmRequired");
     } else if (form.new_password !== form.new_password_confirm) {
-      nextErrors.new_password_confirm = "새 비밀번호가 일치하지 않습니다.";
+      nextErrors.new_password_confirm = t("changePassword.mismatch");
     }
 
     return nextErrors;
@@ -124,17 +125,17 @@ const ChangePasswordPage = () => {
 
       if (response.code !== 200) {
         setMessageType("error");
-        setMessage(response.message || "비밀번호 변경에 실패했습니다.");
+        setMessage(response.message || t("changePassword.failed"));
         return;
       }
 
       setForm(initialForm);
       setFieldErrors({});
       setMessageType("success");
-      setMessage(response.message || "비밀번호가 변경되었습니다.");
+      setMessage(response.message || t("changePassword.success"));
     } catch (error) {
       setMessageType("error");
-      setMessage(getErrorMessage(error, "비밀번호 변경에 실패했습니다."));
+      setMessage(getErrorMessage(error, t("changePassword.failed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -143,8 +144,8 @@ const ChangePasswordPage = () => {
   return (
     <GuardianLayout>
       <PageHeader
-        title="비밀번호 변경"
-        description="계정 보호를 위해 현재 비밀번호 확인 후 새 비밀번호를 설정합니다."
+        title={t("changePassword.title")}
+        description={t("changePassword.description")}
       />
 
       <SectionCard>
@@ -154,7 +155,7 @@ const ChangePasswordPage = () => {
                 className="text-sm font-bold text-slate-800"
                 htmlFor="current_password"
               >
-                현재 비밀번호
+                {t("changePassword.currentLabel")}
               </label>
               <input
                 id="current_password"
@@ -177,7 +178,7 @@ const ChangePasswordPage = () => {
                 className="text-sm font-bold text-slate-800"
                 htmlFor="new_password"
               >
-                새 비밀번호
+                {t("changePassword.newLabel")}
               </label>
               <input
                 id="new_password"
@@ -194,8 +195,7 @@ const ChangePasswordPage = () => {
                   fieldErrors.new_password ? "text-red-500" : "text-slate-500",
                 ].join(" ")}
               >
-                {fieldErrors.new_password ||
-                  "영문, 숫자, 특수문자를 포함해 8자 이상 입력해주세요."}
+                {fieldErrors.new_password || t("changePassword.passwordHelper")}
               </p>
             </div>
 
@@ -204,7 +204,7 @@ const ChangePasswordPage = () => {
                 className="text-sm font-bold text-slate-800"
                 htmlFor="new_password_confirm"
               >
-                새 비밀번호 확인
+                {t("changePassword.confirmLabel")}
               </label>
               <input
                 id="new_password_confirm"
@@ -242,13 +242,13 @@ const ChangePasswordPage = () => {
                 type="submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "변경 중..." : "비밀번호 변경"}
+                {isSubmitting ? t("changePassword.submitting") : t("changePassword.submit")}
               </ActionButton>
               <Link
                 to="/mypage"
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50"
               >
-                마이페이지
+                {t("changePassword.mypageCta")}
               </Link>
             </div>
           </form>

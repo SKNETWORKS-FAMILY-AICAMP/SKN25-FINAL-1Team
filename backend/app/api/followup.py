@@ -107,7 +107,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int, message: 
                     "medical_summary": "경과 보고 분석 시간 초과 (대기 중)",
                     "followup_summary": "경과 보고 분석 시간 초과 (대기 중)",
                     "followup_recommended": False,
-                    "guardian_message": "기록되었습니다. (분석 시간이 지연되고 있으나, 이상 징후가 의심되는 경우 병원으로 문의 부탁드립니다.)",
+                    "guardian_message": "기록되었습니다. 분석이 지연되고 있어요. 증상 변화가 크다면 예약 일정을 다시 확인해주세요.",
                     "recommended_actions": ["keep_schedule"]
                 }
             

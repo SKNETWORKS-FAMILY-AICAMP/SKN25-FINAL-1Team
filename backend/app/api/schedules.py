@@ -380,6 +380,28 @@ async def _run_post_booking_agents(
         "slot_window": actual_slot_window,
     }
 
+    # 공용 RAG 지식 레이어: 트리/freeform 무관하게 triage 결과로 유사 상담사례를 모아
+    # chart agent에 감별진단 근거로 주입한다. 실패해도 파이프라인을 막지 않는다(보조 힌트).
+    chart_rag_context: list[dict] = []
+    try:
+        from app.services.triage_rag import search_similar_triage_cases
+
+        rag_query = " ".join(filter(None, [
+            triage_info.get("chief_complaint") or "",
+            " ".join(triage_info.get("symptom_keywords") or []),
+            triage_info.get("symptom_summary") or "",
+        ])).strip()
+        if rag_query:
+            async with AsyncSessionLocal() as db_rag:
+                matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
+            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= 0.60]
+            logger.info(
+                "[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
+                emrid, rag_query[:60], len(chart_rag_context), len(matches),
+            )
+    except Exception as exc:
+        logger.warning(f"[PostBooking] chart RAG skipped emrid={emrid}: {exc}")
+
     chart_payload = {
         "pet": pet_payload,
         "triage_result": triage_info,
@@ -387,6 +409,7 @@ async def _run_post_booking_agents(
         "patient_context": patient_context_data,
         "schedule_slot": schedule_slot,
         "schedule_result": schedule_slot,
+        "rag_context": chart_rag_context,
     }
     validation_payload = {
         "pet": pet_payload,
@@ -396,23 +419,24 @@ async def _run_post_booking_agents(
         "schedule_slot": schedule_slot,
         "schedule_result": schedule_slot,
     }
-    # Judge QA: fetch actual chat history for this emrid
-    judge_chat_history: list = []
-    if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0:
-        try:
-            from app.models.chat_history import ChatHistory
-            async with AsyncSessionLocal() as db_j:
-                ch_row = await db_j.execute(
-                    select(ChatHistory).where(ChatHistory.emrid == emrid)
-                )
-                ch = ch_row.scalar_one_or_none()
-                if ch and ch.messages:
-                    judge_chat_history = [
-                        m for m in ch.messages
-                        if m.get("role") in ("user", "assistant") and m.get("content")
-                    ]
-        except Exception as _exc:
-            logger.warning(f"[PostBooking] judge chat_history fetch failed emrid={emrid}: {_exc}")
+    # Fetch actual chat history for chart/judge context.
+    agent_chat_history: list = []
+    try:
+        from app.models.chat_history import ChatHistory
+        async with AsyncSessionLocal() as db_j:
+            ch_row = await db_j.execute(
+                select(ChatHistory).where(ChatHistory.emrid == emrid)
+            )
+            ch = ch_row.scalar_one_or_none()
+            if ch and ch.messages:
+                agent_chat_history = [
+                    m for m in ch.messages
+                    if m.get("role") in ("user", "assistant") and m.get("content")
+                ]
+    except Exception as _exc:
+        logger.warning(f"[PostBooking] chat_history fetch failed emrid={emrid}: {_exc}")
+
+    chart_payload["chat_history"] = agent_chat_history
 
     def make_updater(tid: str):
         def update_step(step: str) -> None:
@@ -453,7 +477,7 @@ async def _run_post_booking_agents(
     judge_payload = {
         "triage_result": triage_info,
         "triage_info": triage_info,
-        "chat_history": judge_chat_history,
+        "chat_history": agent_chat_history if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0 else [],
     }
     if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0:
         try:

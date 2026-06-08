@@ -1,5 +1,6 @@
 import type { ScheduleFilter } from "../../types/schedule";
 import { scheduleTabs } from "./schedule-utils";
+import { useTranslation } from "../../i18n/language-context";
 
 interface ScheduleTabsProps {
   selectedFilter: ScheduleFilter;
@@ -10,6 +11,8 @@ const ScheduleTabs = ({
   selectedFilter,
   onSelectFilter,
 }: ScheduleTabsProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className="flex gap-8 overflow-x-auto border-b border-slate-100">
       {scheduleTabs.map((tab) => (
@@ -24,7 +27,7 @@ const ScheduleTabs = ({
               : "border-transparent text-slate-600 hover:text-blue-600",
           ].join(" ")}
         >
-          {tab.label}
+          {t(tab.labelKey)}
         </button>
       ))}
     </div>

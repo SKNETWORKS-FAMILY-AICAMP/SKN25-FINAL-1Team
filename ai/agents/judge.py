@@ -94,7 +94,6 @@ async def run_judge(
         result = await call_openai_once(
             "운영 품질을 평가하세요.",
             build_judge_prompt(triage_result, chat_history),
-            model="gpt-4o-mini",
             max_tokens=800,
             agent="judge",
         )

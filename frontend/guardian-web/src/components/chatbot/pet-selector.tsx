@@ -2,6 +2,7 @@ import { PawPrint } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Pet } from "../../api/pets-api";
+import { useTranslation } from "../../i18n/language-context";
 
 interface PetSelectorProps {
   pets: Pet[];
@@ -18,11 +19,13 @@ const PetSelector = ({
   onSelectPet,
   getProfileImage,
 }: PetSelectorProps) => {
+  const { t } = useTranslation();
+
   return (
     <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-slate-50/70 lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-3">
         <h2 className="text-center text-[15px] font-bold text-slate-900">
-          반려동물
+          {t("chatbot.pets")}
         </h2>
       </div>
 
@@ -37,13 +40,13 @@ const PetSelector = ({
               <PawPrint className="h-8 w-8" />
             </div>
             <p className="mt-3 text-[13px] font-bold leading-5 text-slate-600">
-              등록된 반려동물이 없습니다.
+              {t("chatbot.noPets")}
             </p>
             <Link
               to="/pets/register"
               className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
             >
-              + 반려동물 등록
+              {t("chatbot.registerPet")}
             </Link>
           </div>
         ) : (
@@ -65,7 +68,7 @@ const PetSelector = ({
                 >
                   <img
                     src={getProfileImage(pet)}
-                    alt={`${pet.petname} 프로필`}
+                    alt={t("chatbot.petProfileAlt", { name: pet.petname })}
                     className="h-11 w-11 rounded-full object-cover ring-2 ring-white"
                   />
                   <span className="min-w-0 flex-1 truncate text-sm font-extrabold text-slate-900">

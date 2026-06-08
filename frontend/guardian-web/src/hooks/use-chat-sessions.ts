@@ -14,6 +14,7 @@ import {
   type ChatSessionHistory,
   type ChatSessionResult,
 } from "../api/chat-api";
+import { useTranslation } from "../i18n/language-context";
 import type { Pet } from "../api/pets-api";
 import type { ChatMessage } from "./use-chat-conversation";
 
@@ -38,6 +39,7 @@ export const useChatSessions = ({
   getProfileImage,
   onFollowupRestore,
 }: UseChatSessionsParams) => {
+  const { t } = useTranslation();
   const [chatHistories, setChatHistories] = useState<ChatSessionHistory[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(
     null,
@@ -83,7 +85,7 @@ export const useChatSessions = ({
         }
 
         if (response.code !== 200) {
-          setErrorMessage(response.message || "상담 기록을 불러오지 못했습니다.");
+          setErrorMessage(response.message || t("chatbot.historyLoadError"));
           setChatHistories([]);
           return;
         }
@@ -95,7 +97,7 @@ export const useChatSessions = ({
         }
 
         setErrorMessage(
-          getErrorMessage(error, "상담 기록을 불러오지 못했습니다."),
+          getErrorMessage(error, t("chatbot.historyLoadError")),
         );
         setChatHistories([]);
       } finally {
@@ -110,7 +112,7 @@ export const useChatSessions = ({
     return () => {
       isMounted = false;
     };
-  }, [getErrorMessage, selectedPet, setErrorMessage]);
+  }, [getErrorMessage, selectedPet, setErrorMessage, t]);
 
   const resetSessionStateForPetChange = () => {
     setSelectedHistoryId(null);
@@ -133,11 +135,22 @@ export const useChatSessions = ({
 
       const response = await createChatSession({ pet_id: selectedPet.pet_id });
       if (response.code !== 201) {
-        setErrorMessage(response.message || "상담 세션을 시작하지 못했습니다.");
+        setErrorMessage(response.message || t("chatbot.sessionStartError"));
         return;
       }
 
       const petName = response.result.pet_name || selectedPet.petname;
+      const today = new Date().toISOString().slice(0, 10);
+      setSelectedHistoryId(response.result.session_id);
+      setChatHistories((currentHistories) => [
+        {
+          session_id: response.result.session_id,
+          keywords: [],
+          created_at: today,
+          status: t("chatbot.statusConsulting"),
+        },
+        ...currentHistories.filter((history) => history.session_id !== response.result.session_id),
+      ]);
       setSession({
         ...response.result,
         pet_name: petName,
@@ -147,7 +160,7 @@ export const useChatSessions = ({
       setMessages([]);
     } catch (error) {
       setErrorMessage(
-        getErrorMessage(error, "상담 세션을 시작하지 못했습니다."),
+        getErrorMessage(error, t("chatbot.sessionStartError")),
       );
     } finally {
       setCreatingPetId(null);
@@ -164,7 +177,7 @@ export const useChatSessions = ({
       const response = await getChatSession(historyId);
 
       if (response.code !== 200 || !response.result) {
-        setErrorMessage(response.message || "상담 기록을 불러오지 못했습니다.");
+        setErrorMessage(response.message || t("chatbot.historyLoadError"));
         setMessages([]);
         return;
       }
@@ -183,7 +196,7 @@ export const useChatSessions = ({
       }
     } catch (error) {
       setErrorMessage(
-        getErrorMessage(error, "상담 기록을 불러오지 못했습니다."),
+        getErrorMessage(error, t("chatbot.historyLoadError")),
       );
       setMessages([]);
     } finally {
@@ -192,7 +205,7 @@ export const useChatSessions = ({
   };
 
   const handleDeleteHistory = async (history: ChatSessionHistory) => {
-    const isConfirmed = window.confirm("상담 기록을 삭제하시겠습니까?");
+    const isConfirmed = window.confirm(t("chatbot.deleteConfirm"));
     if (!isConfirmed) {
       return;
     }
@@ -202,7 +215,7 @@ export const useChatSessions = ({
 
       const response = await deleteChatSession(history.session_id);
       if (response.code !== 200) {
-        setErrorMessage(response.message || "상담 기록을 삭제하지 못했습니다.");
+        setErrorMessage(response.message || t("chatbot.historyDeleteError"));
         return;
       }
 
@@ -220,9 +233,19 @@ export const useChatSessions = ({
       }
     } catch (error) {
       setErrorMessage(
-        getErrorMessage(error, "상담 기록을 삭제하지 못했습니다."),
+        getErrorMessage(error, t("chatbot.historyDeleteError")),
       );
     }
+  };
+
+  const updateChatHistoryKeywords = (sessionId: number, keywords: string[]) => {
+    setChatHistories((currentHistories) =>
+      currentHistories.map((history) =>
+        history.session_id === sessionId
+          ? { ...history, keywords, status: t("chatbot.statusCompleted") }
+          : history,
+      ),
+    );
   };
 
   return {
@@ -237,5 +260,6 @@ export const useChatSessions = ({
     handleSelectHistory,
     handleDeleteHistory,
     refreshChatHistories,
+    updateChatHistoryKeywords,
   };
 };
