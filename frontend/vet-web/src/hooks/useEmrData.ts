@@ -423,7 +423,7 @@ export function useEmrData() {
     setAutoPrescriptionError(null);
     setIsLoadingAutoPresc(true);
     try {
-      const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId });
+      const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId, doctorNotes: editorValue });
       setPrescriptions(
         meds.map((m) => ({
           client_id: makePrescriptionClientId(),
@@ -441,7 +441,7 @@ export function useEmrData() {
     } finally {
       setIsLoadingAutoPresc(false);
     }
-  }, [selectedScheduleId, accessToken, isTodayView]);
+  }, [selectedScheduleId, accessToken, isTodayView, editorValue]);
 
   const handleAddPrescription = useCallback((drug: DrugSearchResult) => {
     if (!isTodayView) return;

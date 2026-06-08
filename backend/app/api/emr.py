@@ -12,7 +12,8 @@ import json
 import re
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from ai.observability import get_langfuse_handler
 from sqlalchemy import select
@@ -179,9 +180,14 @@ async def emr_validation(
 # 7순위: AI 처방전 자동 생성
 # ──────────────────────────────────────────────
 
+class AutoPrescriptionRequest(BaseModel):
+    doctor_notes: str = ""
+
+
 @router.post("/{schedule_id}/auto-prescription", status_code=200)
 async def generate_auto_prescription(
     schedule_id: int,
+    body: AutoPrescriptionRequest = Body(default_factory=AutoPrescriptionRequest),
     db: AsyncSession = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
@@ -274,6 +280,7 @@ async def generate_auto_prescription(
 주요 증상: {", ".join(symptoms) if symptoms else "정보 없음"}
 의심 질환: {", ".join(suspected_diseases) if suspected_diseases else "정보 없음"}
 보호자 메모: {guardian.memo or "없음"}
+수의사 진료 메모: {body.doctor_notes.strip() or "없음"}
 
 [사용 가능한 약품 목록]
 {drug_list_str}
