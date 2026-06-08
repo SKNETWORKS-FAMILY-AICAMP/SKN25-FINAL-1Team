@@ -3,6 +3,7 @@ import type {
   PatientsById,
   ReservationItem,
 } from "../../types/reservation";
+import { useOperatingHours } from "../../contexts/OperatingHoursContext";
 import { TriageBadge } from "../common/TriageBadge";
 import {
   dayLabels,
@@ -37,12 +38,13 @@ export function DailyTimeline({
   selectedReservationId,
   onSelect,
 }: DailyTimelineProps) {
+  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const [timelineBodyHeight, setTimelineBodyHeight] = useState(0);
 
   const timelineRange = useMemo(
-    () => getTimelineRange(reservations),
-    [reservations]
+    () => getTimelineRange(reservations, { startTime, endTime, lunchStart, lunchEnd }),
+    [reservations, startTime, endTime, lunchStart, lunchEnd]
   );
   const fallbackTimelineHeight = useMemo(
     () => getTimelineHeight(timelineRange),
@@ -70,8 +72,8 @@ export function DailyTimeline({
     [timelineBodyHeight, timelineRange, timelineScale]
   );
   const lunchBlock = useMemo(
-    () => getLunchBlockMetrics(timelineRange, timelineScale),
-    [timelineRange, timelineScale]
+    () => getLunchBlockMetrics(timelineRange, { ...timelineScale, lunchStart, lunchEnd }),
+    [timelineRange, timelineScale, lunchStart, lunchEnd]
   );
   const positionedReservations = useMemo(
     () => buildPositionedTimelineItems(reservations, timelineRange, timelineScale),

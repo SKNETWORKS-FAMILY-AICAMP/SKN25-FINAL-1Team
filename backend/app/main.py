@@ -105,6 +105,7 @@ from app.api.followup import router as followup_router
 from app.api.prescriptions import router as prescriptions_router
 from app.api.emr import router as emr_router
 from app.api.alarm import router as alarm_router
+from app.api.settings import router as settings_router
 from app.core.config import settings
 from app.middleware.request_id import RequestIDMiddleware, get_request_id
 from ai.router import router as agent_router
@@ -230,4 +231,5 @@ app.include_router(followup_router)
 app.include_router(prescriptions_router)
 app.include_router(emr_router)
 app.include_router(alarm_router)
+app.include_router(settings_router)
 app.include_router(agent_router)
