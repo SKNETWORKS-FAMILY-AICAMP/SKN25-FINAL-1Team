@@ -7,6 +7,7 @@ import { useTranslation } from "../../i18n/language-context";
 
 interface CheckupReservationModalProps {
   pet: Pet;
+  categoryCode?: number;
   onClose: () => void;
 }
 
@@ -27,9 +28,11 @@ const CloseIcon = () => (
 
 const CheckupReservationModal = ({
   pet,
+  categoryCode = 1,
   onClose,
 }: CheckupReservationModalProps) => {
   const { t } = useTranslation();
+  const categoryLabel = categoryCode === 2 ? "일반진료" : "정기검진";
   const getPetMeta = (item: Pet) =>
     [item.breed || item.species, item.age ? t("home.yearsOld", { age: item.age }) : undefined]
       .filter(Boolean)
@@ -48,7 +51,7 @@ const CheckupReservationModal = ({
     setSelectedSlot,
     setMemo,
     reserveCheckup,
-  } = useCheckupReservation({ petId: pet.pet_id });
+  } = useCheckupReservation({ petId: pet.pet_id, categoryCode });
   const petDisplayName =
     completedReservation?.pet_name ?? (pet as PetWithOptionalName).name ?? pet.petname;
 
@@ -77,6 +80,9 @@ const CheckupReservationModal = ({
             <h2 className="text-lg font-extrabold text-slate-950">
               {t("schedule.instantTitle")}
             </h2>
+            <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-600">
+              {categoryLabel}
+            </span>
           </div>
 
           <button
