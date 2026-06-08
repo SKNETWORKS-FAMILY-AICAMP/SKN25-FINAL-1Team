@@ -42,7 +42,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     bind = op.get_bind()
-    Base.metadata.create_all(bind=bind)
+
+    # triage_rag_documents 는 다음 마이그레이션(160babc)이 vector 확장과 함께 생성한다.
+    # env.py 가 해당 모델을 import 하므로 Base.metadata 에는 포함되지만, 여기서 만들면:
+    #   1) 이 시점엔 vector 확장이 없어 VECTOR 컬럼 생성이 'type "vector" does not exist' 로 실패
+    #   2) 설령 만들어도 160babc 의 create_table 과 'already exists' 충돌
+    # → 빈 DB 셋업이 통째로 깨지므로 0001 에서는 제외하고 160babc 에 맡긴다.
+    tables = [t for t in Base.metadata.sorted_tables if t.name != "triage_rag_documents"]
+    Base.metadata.create_all(bind=bind, tables=tables)
 
     bind.execute(
         sa.text(
