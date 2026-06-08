@@ -27,7 +27,7 @@ _async_url = _to_async_url(settings.DATABASE_URL)
 # statement_cache_size는 asyncpg 전용 인자다. SQLite(aiosqlite) 등 다른 드라이버에
 # 그대로 넘기면 'unexpected keyword argument' 로 연결이 깨지므로 dialect별로 분기한다.
 # (asyncpg: prepared statement 캐시 비활성화 → 마이그레이션 후 'cached plan' 오류 방지)
-_connect_args = {"statement_cache_size": 0} if "+asyncpg" in _async_url else {}
+_connect_args = {"statement_cache_size": 0, "ssl": False} if "+asyncpg" in _async_url else {}
 
 engine = create_async_engine(
     _async_url,

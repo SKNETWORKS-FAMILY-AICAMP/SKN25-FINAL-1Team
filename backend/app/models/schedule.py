@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index
+from sqlalchemy.sql import func, text
 from app.db.base import Base
 
 class Schedule(Base):
@@ -16,4 +16,14 @@ class Schedule(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     # 소프트 삭제(의료 데이터): NULL = 활성, 값이 있으면 삭제된 시각
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index(
+            "uq_schedule_doctor_time",
+            "doctorid",
+            "confirmed_time",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL AND status != 'CANCELLED'"),
+        ),
+    )
 

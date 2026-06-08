@@ -15,7 +15,6 @@ from app.models.doctor import Doctor
 from app.models.emr import EMR
 from app.models.master import TriageMaster, CategoryMaster
 from app.models.triage_result import TriageResult
-from app.models.vet_schedule import VetSchedule
 from app.utils.timezone import to_kst
 
 
@@ -24,9 +23,6 @@ class TimeSlotConflict(Exception):
     pass
 
 
-class DuplicatePetReservation(Exception):
-    """같은 반려동물의 활성 예약이 이미 존재할 때"""
-    pass
 
 
 # 수의사 대시보드 수동 예약 기본 카테고리: 정기검진(code=1)
@@ -52,11 +48,12 @@ async def _resolve_doctor(db: AsyncSession, doctor_name: str | None) -> Doctor |
 async def has_time_conflict(
     db: AsyncSession,
     confirmed: datetime,
+    duration_min: int = DEFAULT_DURATION_MIN,
     exclude_schedule_id: int | None = None,
 ) -> bool:
-    """소프트 삭제되지 않은 예약 중 같은 날짜·시각이 있는지 확인."""
+    """새 예약(confirmed ~ confirmed+duration_min)이 기존 예약과 겹치는지 확인."""
     target_date = confirmed.date()
-    target_hm = confirmed.strftime("%H:%M")
+    new_end = confirmed + timedelta(minutes=duration_min)
 
     stmt = (
         select(Schedule)
@@ -68,11 +65,12 @@ async def has_time_conflict(
         stmt = stmt.where(Schedule.scheduleid != exclude_schedule_id)
 
     result = await db.execute(stmt)
-    for schedule in result.scalars().all():
-        # 저장된 값은 asyncpg가 UTC로 반환하므로 KST로 변환 후 비교해야
-        # 새 예약("13:00")과 기존 예약이 같은 시각인지 올바르게 판정된다.
-        ct = to_kst(schedule.confirmed_time)
-        if ct and ct.date() == target_date and ct.strftime("%H:%M") == target_hm:
+    for s in result.scalars().all():
+        ct = to_kst(s.confirmed_time)
+        if not ct or ct.date() != target_date:
+            continue
+        et = to_kst(s.confirmed_end_time) if s.confirmed_end_time else ct + timedelta(minutes=s.duration_min)
+        if confirmed < et and new_end > ct:
             return True
 
     return False
@@ -219,22 +217,8 @@ async def create_reservation(
 
     triage = await get_default_triage(db)
 
-    # 같은 반려동물 중복 예약 확인
-    dup_result = await db.execute(
-        select(Schedule)
-        .join(Guardian, Schedule.emrid == Guardian.emrid)
-        .where(
-            Guardian.petid == pet_id,
-            Schedule.status == "CONFIRMED",
-            Schedule.deleted_at.is_(None)
-        )
-        .limit(1)
-    )
-    if dup_result.scalars().first():
-        raise DuplicatePetReservation()
-
     confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
-    if await has_time_conflict(db, confirmed):
+    if await has_time_conflict(db, confirmed, duration_min=DEFAULT_DURATION_MIN):
         raise TimeSlotConflict()
 
     guardian = Guardian(
@@ -278,9 +262,9 @@ async def update_reservation(
 
     if date_str and time_str:
         confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
-        if await has_time_conflict(db, confirmed, exclude_schedule_id=schedule_id):
-            raise TimeSlotConflict()
         duration = schedule.duration_min or DEFAULT_DURATION_MIN
+        if await has_time_conflict(db, confirmed, duration_min=duration, exclude_schedule_id=schedule_id):
+            raise TimeSlotConflict()
         schedule.confirmed_time = confirmed
         schedule.confirmed_end_time = confirmed + timedelta(minutes=duration)
         if guardian:
@@ -312,23 +296,6 @@ async def delete_reservation(db: AsyncSession, schedule_id: int) -> bool:
         f"emrid={schedule.emrid} status={schedule.status}"
     )
 
-    # VetSchedule 슬롯 해제
-    slot_restored = False
-    confirmed_kst = to_kst(schedule.confirmed_time)
-    end_kst = to_kst(schedule.confirmed_end_time)
-    if confirmed_kst and end_kst:
-        vet_result = await db.execute(
-            select(VetSchedule).where(
-                VetSchedule.doctorid == schedule.doctorid,
-                VetSchedule.date == confirmed_kst.date(),
-                VetSchedule.start_time >= confirmed_kst.time(),
-                VetSchedule.end_time <= end_kst.time()
-            )
-        )
-        for slot in vet_result.scalars().all():
-            slot.is_available = True
-            slot_restored = True
-
     now = datetime.now(timezone.utc)
     schedule.deleted_at = now
     schedule.status = "CANCELLED"
@@ -336,8 +303,5 @@ async def delete_reservation(db: AsyncSession, schedule_id: int) -> bool:
         guardian.deleted_at = now
 
     await db.commit()
-    logger.info(
-        f"[delete_reservation] done schedule_id={schedule_id} "
-        f"slot_restored={slot_restored}"
-    )
+    logger.info(f"[delete_reservation] done schedule_id={schedule_id}")
     return True

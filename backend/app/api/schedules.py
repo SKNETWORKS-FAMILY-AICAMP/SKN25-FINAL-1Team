@@ -22,8 +22,6 @@ from ai.tasks import _task_store, cleanup_task_after_ttl, safe_create_task, Pipe
 from app.crud.alarm import create_alarm
 
 logger = logging.getLogger(__name__)
-from app.models.schedule import Schedule
-
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 KST = timezone(timedelta(hours=9))
@@ -47,20 +45,6 @@ async def create_checkup(
     pet = result.scalar_one_or_none()
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
-
-    # 미래 예약 중복 확인 (과거 예약은 허용)
-    dup_result = await db.execute(
-        select(Schedule)
-        .join(Guardian, Schedule.emrid == Guardian.emrid)
-        .where(
-            Guardian.petid == request.pet_id,
-            Schedule.status == "CONFIRMED",
-            Schedule.deleted_at.is_(None),
-            Schedule.confirmed_time > datetime.now(),
-        )
-    )
-    if dup_result.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="해당 반려동물의 예약이 이미 존재합니다.")
 
     # 수의사 확인 (첫 번째 수의사로 자동 배정)
     result = await db.execute(select(Doctor))
