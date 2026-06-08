@@ -18,20 +18,15 @@ from app.models.pet import Pet
 from app.models.doctor import Doctor
 from app.models.guardian import Guardian
 from app.models.triage_result import TriageResult
-from ai.tasks import RUNNERS, _task_store, save_result, cleanup_task_after_ttl, safe_create_task, PipelineState
+from ai.tasks import _task_store, cleanup_task_after_ttl, safe_create_task, PipelineState
 from app.crud.alarm import create_alarm
 
 logger = logging.getLogger(__name__)
-audit_logger = logging.getLogger("medipaw.audit")
 from app.models.schedule import Schedule
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 KST = timezone(timedelta(hours=9))
-
-# Judge(LLM-as-a-Judge) QA 샘플링 비율: emrid % N == 0 일 때만 실행해 비용을 제어한다.
-# 매 예약마다 돌리려면 1로 설정.
-JUDGE_SAMPLE_RATE = 5
 
 
 
@@ -384,7 +379,7 @@ async def _run_post_booking_agents(
     # chart agent에 감별진단 근거로 주입한다. 실패해도 파이프라인을 막지 않는다(보조 힌트).
     chart_rag_context: list[dict] = []
     try:
-        from app.services.triage_rag import search_similar_triage_cases
+        from ai.triage.rag import search_similar_triage_cases
 
         rag_query = " ".join(filter(None, [
             triage_info.get("chief_complaint") or "",
@@ -438,59 +433,26 @@ async def _run_post_booking_agents(
 
     chart_payload["chat_history"] = agent_chat_history
 
-    def make_updater(tid: str):
-        def update_step(step: str) -> None:
-            _task_store[tid]["step"] = step
-        return update_step
-
-    # 순차 실행: Chart → Validation(차트 전달) → Judge.
-    # Validation B(문진-차트 일관성)가 차트 초안을 비교하려면 차트가 먼저 완성돼야 한다.
-    # 각 단계는 try/except로 격리해 한 단계 실패가 다음 단계를 막지 않게 한다.
-    # (모두 예약 확정 응답 이후 백그라운드 실행이므로 보호자 대기시간엔 영향 없음.)
-
-    # 1) Chart
-    _task_store[chart_task_id] = {"status": "running", "step": "차트 초안 생성 중..."}
-    chart_result = None
-    try:
-        chart_result = await RUNNERS["chart"](chart_payload, make_updater(chart_task_id), emrid, scheduleid)
-        _task_store[chart_task_id] = {"status": "done", "result": chart_result}
-        await save_result("chart", chart_result, emrid, scheduleid, user_id)
-        logger.info(f"[PostBooking] chart done emrid={emrid}")
-    except Exception as e:
-        logger.error(f"[PostBooking] chart failed emrid={emrid}: {e}", exc_info=True)
-        _task_store[chart_task_id] = {"status": "error", "detail": str(e)}
-        chart_result = None
-
-    # 2) Validation — 차트 초안을 함께 전달(B. 워크플로우 일관성 점검용)
-    _task_store[validation_task_id] = {"status": "running", "step": "품질·안전성 검증 중..."}
-    validation_payload["chart_result"] = chart_result
-    try:
-        validation_result = await RUNNERS["validation"](validation_payload, make_updater(validation_task_id), emrid, scheduleid)
-        _task_store[validation_task_id] = {"status": "done", "result": validation_result}
-        await save_result("validation", validation_result, emrid, scheduleid, user_id)
-        logger.info(f"[PostBooking] validation done emrid={emrid} overall={validation_result.get('overall')}")
-    except Exception as e:
-        logger.error(f"[PostBooking] validation failed emrid={emrid}: {e}", exc_info=True)
-        _task_store[validation_task_id] = {"status": "error", "detail": str(e)}
-
-    # 3) Judge — 운영 품질 모니터링(환자 안전 검증 아님). 샘플링 + audit log만(DB 저장 없음).
     judge_payload = {
         "triage_result": triage_info,
         "triage_info": triage_info,
-        "chat_history": agent_chat_history if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0 else [],
+        "chat_history": agent_chat_history,
     }
-    if emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0:
-        try:
-            judge_result = await RUNNERS["judge"](judge_payload, lambda _: None, emrid, scheduleid)
-            audit_logger.info(
-                "[JudgeAudit] emrid=%s verdict=%s scores=%s turns=%s",
-                emrid,
-                judge_result.get("monitoring_verdict"),
-                judge_result.get("quality_scores"),
-                judge_result.get("turn_count"),
-            )
-        except Exception as exc:
-            logger.warning(f"[PostBooking] judge audit failed emrid={emrid}: {exc}")
+
+    # chart → validation → (조건부)judge 오케스트레이션은 LangGraph가 담당.
+    # 노드별 task_store 갱신·save_result·예외격리·judge 샘플링은 그래프 내부에서 처리한다.
+    from ai.graph import post_booking_graph
+    await post_booking_graph.ainvoke({
+        "emrid": emrid,
+        "scheduleid": scheduleid,
+        "user_id": user_id,
+        "chart_payload": chart_payload,
+        "validation_payload": validation_payload,
+        "judge_payload": judge_payload,
+        "chart_task_id": chart_task_id,
+        "validation_task_id": validation_task_id,
+        "judge_task_id": judge_task_id,
+    })
     _task_store[judge_task_id] = {"status": "done", "result": None}
 
     logger.info(

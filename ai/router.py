@@ -1,28 +1,20 @@
 """AI 에이전트 FastAPI 라우터.
 
 엔드포인트:
-  POST /api/agent/chat          → OpenAI API 프록시 (API 키 서버 보관)
   POST /api/agent/run           → BackgroundTasks 에이전트 실행, task_id 반환
   GET  /api/agent/sse/{task_id} → SSE 실시간 진행 스트리밍
-  POST /api/agent/vision/skin   → 피부질환 CNN 분석
-  POST /api/agent/vision/eye    → 안구질환 CNN 분석
 
-backend 통합:
-  1. 이 파일을 backend/app/api/agent.py 로 복사
-  2. backend/app/main.py 에 아래 두 줄 추가:
-       from app.api.agent import router as agent_router
-       app.include_router(agent_router)
+참고: vision CNN(피부/안구)은 챗봇 사진 업로드 흐름(chat.py)에서 vision_service를
+직접 호출한다. 보호자 예약 흐름의 schedule 에이전트가 /run+/sse를 fallback으로 사용.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import os
 import uuid
 
-import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.core.dependencies import get_current_user
@@ -30,64 +22,8 @@ from app.core.dependencies import get_current_user
 router = APIRouter(prefix="/api/agent", tags=["AI 에이전트"])
 logger = logging.getLogger(__name__)
 
-ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
-
-# 비용 폭탄·모델 abuse 방지: 프록시가 허용하는 모델/토큰 상한 고정
-ALLOWED_MODELS = {"gpt-4o", "gpt-4o-mini"}
-MAX_OUTPUT_TOKENS = 2000
-
 # chat.py와 공유하는 태스크 스토어 (ai.tasks에서 단일 관리)
 from ai.tasks import _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus
-
-
-# ── OpenAI 프록시 ─────────────────────────────────────────────────
-@router.post("/chat")
-async def proxy_chat(body: dict, current_user=Depends(get_current_user)):
-    """OpenAI Chat Completions 프록시 — API 키를 클라이언트에 노출하지 않습니다.
-
-    인증된 보호자만 호출 가능하며, 모델/토큰 상한을 강제해 abuse를 차단한다.
-    """
-    from app.core.config import settings
-
-    if not settings.OPENAI_API_KEY:
-        raise HTTPException(500, "OpenAI API 키가 서버에 설정되지 않았습니다.")
-
-    # 모델 allowlist: 클라이언트가 임의 모델을 지정해 고비용 호출하는 것을 막는다.
-    # .env로 운영 모델을 바꿔도 프록시가 막지 않도록 설정값을 allowlist에 포함한다.
-    allowed = ALLOWED_MODELS | {
-        m for m in (settings.OPENAI_MODEL, settings.OPENAI_VISION_MODEL) if m
-    }
-    model = body.get("model") or settings.OPENAI_MODEL or "gpt-4o-mini"
-    if model not in allowed:
-        raise HTTPException(400, f"허용되지 않은 모델입니다: {model}")
-
-    # max_tokens 상한 강제
-    try:
-        max_tokens = min(int(body.get("max_tokens", 1000)), MAX_OUTPUT_TOKENS)
-    except (TypeError, ValueError):
-        max_tokens = 1000
-
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        res = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model":       model,
-                "max_tokens":  max_tokens,
-                "temperature": body.get("temperature", 0.3),
-                "messages":    body.get("messages", []),
-                **({"response_format": {"type": "json_object"}} if body.get("json_mode", True) else {}),
-            },
-        )
-
-    if not res.is_success:
-        raise HTTPException(res.status_code, f"OpenAI 오류: {res.text[:200]}")
-
-    return res.json()
 
 
 # ── BackgroundTasks 기반 에이전트 실행 ────────────────────────────
@@ -198,83 +134,3 @@ async def agent_sse(task_id: str, current_user=Depends(get_current_user)):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
-
-
-# ── Vision API 공용 업로드 헬퍼 ──────────────────────────────────
-async def _save_upload(file: UploadFile) -> tuple[bytes, str]:
-    if file.content_type not in ALLOWED_MIME:
-        raise HTTPException(400, "지원하지 않는 파일 형식입니다. JPEG, PNG, WEBP, GIF만 허용됩니다.")
-
-    contents = await file.read()
-    if len(contents) > MAX_FILE_BYTES:
-        raise HTTPException(413, "파일 크기가 10MB를 초과합니다.")
-
-    upload_dir = "uploads"
-    os.makedirs(upload_dir, exist_ok=True)
-    ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
-    filename = f"{uuid.uuid4()}.{ext}"
-    with open(os.path.join(upload_dir, filename), "wb") as f:
-        f.write(contents)
-
-    return contents, f"/uploads/{filename}"
-
-
-# ── 피부질환 CNN 분석 ─────────────────────────────────────────────
-@router.post("/vision/skin")
-async def analyze_skin_image(file: UploadFile = File(...), current_user=Depends(get_current_user)):
-    """이미지를 저장하고 피부질환 모델(6클래스)로 분석합니다.
-    모델 실패 시에도 image_url은 항상 반환합니다.
-    """
-    try:
-        contents, image_url = await _save_upload(file)
-        try:
-            from ai.services.vision_model import vision_service
-            result = vision_service.analyze_skin(contents)
-            if "error" not in result:
-                return {
-                    "prediction":     result["top_1"],
-                    "top_class":      result.get("top_class"),
-                    "top_confidence": result.get("top_confidence"),
-                    "details":        result["details"],
-                    "image_url":      image_url,
-                    "model_scope":    ["allergy", "dermatitis", "fungal", "healthy", "mange", "ringworm"],
-                }
-        except Exception as model_err:
-            logger.warning(f"[Vision/Skin] 모델 오류 (계속): {model_err}")
-
-        return {"prediction": None, "top_class": None, "top_confidence": None, "details": [], "image_url": image_url}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, str(e))
-
-
-# ── 안구질환 CNN 분석 ─────────────────────────────────────────────
-@router.post("/vision/eye")
-async def analyze_eye_image(file: UploadFile = File(...), current_user=Depends(get_current_user)):
-    """이미지를 저장하고 안구질환 모델(11클래스, EfficientNet-B0)로 분석합니다.
-    모델 실패 시에도 image_url은 항상 반환합니다.
-    """
-    try:
-        contents, image_url = await _save_upload(file)
-        try:
-            from ai.services.vision_model import vision_service
-            result = vision_service.analyze_eye(contents)
-            if "error" not in result:
-                return {
-                    "prediction":     result["top_1"],
-                    "top_class":      result.get("top_class"),
-                    "top_confidence": result.get("top_confidence"),
-                    "details":        result["details"],
-                    "image_url":      image_url,
-                    "model_scope":    ["결막염", "궤양성각막질환", "백내장", "비궤양성각막질환",
-                                       "색소침착성각막염", "안검내반증", "안검염", "안검종양", "유루증", "핵경화", "정상"],
-                }
-        except Exception as model_err:
-            logger.warning(f"[Vision/Eye] 모델 오류 (계속): {model_err}")
-
-        return {"prediction": None, "top_class": None, "top_confidence": None, "details": [], "image_url": image_url}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, str(e))

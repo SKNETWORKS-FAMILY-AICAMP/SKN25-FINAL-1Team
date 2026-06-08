@@ -24,11 +24,10 @@ from app.models.pet import Pet
 from app.models.triage_result import TriageResult
 from app.models.schedule import Schedule
 from app.crud.triage import build_triage_result
-from app.prompts.triage_prompt import _build_triage_system_prompt
-from app.services.triage_kb import detect_red_flag, red_flag_trigger
-from app.services import triage_engine as te
-from app.services.triage_rag import TriageRagMatch, search_similar_triage_cases
-from ai.tasks import RUNNERS, _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
+from ai.triage.kb import detect_red_flag, red_flag_trigger
+from ai.triage import engine as te
+from ai.triage.rag import TriageRagMatch, search_similar_triage_cases
+from ai.tasks import _task_store, cleanup_task_after_ttl, safe_create_task, TaskStatus, PipelineState
 
 import random
 import re
@@ -245,33 +244,32 @@ def _guardian_safe_triage(info: dict | None) -> dict | None:
     return {k: info.get(k) for k in _GUARDIAN_SAFE_FIELDS if k in info}
 
 
-async def _run_schedule_background(
+async def _run_triage_complete_background(
     task_id: str,
     emrid: int,
     pet_payload: dict,
-    triage_info: dict,
+    collected_info: dict,
     patient_context: dict,
+    messages: list[dict],
 ) -> None:
-    """triage_complete 직후 asyncio.create_task로 실행되는 Schedule Agent 백그라운드 러너."""
-    logger.info(f"[Schedule BG] start task_id={task_id} emrid={emrid}")
-    _task_store[task_id] = {"status": "running", "step": "예약 슬롯 계산 중..."}
+    """문진 완료 직후 백그라운드 — LangGraph triage_complete 그래프.
 
-    def update_step(step: str) -> None:
-        _task_store[task_id]["step"] = step
-
+    triage요약(LLM, symptom_summary 갱신) ∥ schedule(슬롯 계산)을 병렬 실행한다.
+    schedule 결과는 task_id(task_store)로 SSE 폴링되며, 요약은 DB를 갱신한다.
+    """
+    logger.info(f"[TriageComplete BG] start task_id={task_id} emrid={emrid}")
     try:
-        payload = {
+        from ai.graph import triage_complete_graph
+        await triage_complete_graph.ainvoke({
+            "emrid": emrid,
+            "schedule_task_id": task_id,
             "pet": pet_payload,
-            "triage_info": triage_info,
-            "triage_result": triage_info,
+            "collected_info": collected_info,
             "patient_context": patient_context,
-            "existing_bookings": [],
-        }
-        result = await RUNNERS["schedule"](payload, update_step, emrid, None)
-        _task_store[task_id] = {"status": "done", "result": result}
-        logger.info(f"[Schedule BG] done task_id={task_id} slot_window={result.get('slot_window')}")
+            "messages": messages,
+        })
     except Exception as exc:
-        logger.error(f"[Schedule BG] failed task_id={task_id}: {exc}", exc_info=True)
+        logger.error(f"[TriageComplete BG] failed task_id={task_id}: {exc}", exc_info=True)
         _task_store[task_id] = {"status": "error", "detail": str(exc)}
     finally:
         safe_create_task(
@@ -904,16 +902,25 @@ async def _complete_and_schedule(
         await db.rollback()
         logger.error(f"[TriageResult] save failed emrid={emrid}: {e}")
 
+    # 요약 노드에 넘길 전체 대화(보호자+챗봇)
+    session_messages = [
+        {"role": m.get("role"), "content": _content_text(m.get("content"))}
+        for m in (session.messages or [])
+        if m.get("role") in ("user", "assistant") and _content_text(m.get("content"))
+    ]
+
     schedule_task_id = str(uuid.uuid4())
     _task_store[schedule_task_id] = {"status": TaskStatus.QUEUED, "step": ""}
     logger.info(
-        "[Schedule BG] queued pipeline_state=%s task_id=%s emrid=%s",
+        "[TriageComplete BG] queued pipeline_state=%s task_id=%s emrid=%s",
         PipelineState.SCHEDULE_PENDING, schedule_task_id, emrid,
     )
     safe_create_task(
-        _run_schedule_background(schedule_task_id, emrid, pet_payload, collected_info, patient_context_data),
+        _run_triage_complete_background(
+            schedule_task_id, emrid, pet_payload, collected_info, patient_context_data, session_messages,
+        ),
         task_id=schedule_task_id,
-        name="schedule_bg",
+        name="triage_complete_bg",
     )
     return emrid, schedule_task_id
 
