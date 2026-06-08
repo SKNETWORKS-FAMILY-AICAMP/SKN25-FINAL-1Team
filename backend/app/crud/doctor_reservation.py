@@ -15,7 +15,6 @@ from app.models.doctor import Doctor
 from app.models.emr import EMR
 from app.models.master import TriageMaster, CategoryMaster
 from app.models.triage_result import TriageResult
-from app.models.vet_schedule import VetSchedule
 from app.utils.timezone import to_kst
 
 
@@ -312,23 +311,6 @@ async def delete_reservation(db: AsyncSession, schedule_id: int) -> bool:
         f"emrid={schedule.emrid} status={schedule.status}"
     )
 
-    # VetSchedule 슬롯 해제
-    slot_restored = False
-    confirmed_kst = to_kst(schedule.confirmed_time)
-    end_kst = to_kst(schedule.confirmed_end_time)
-    if confirmed_kst and end_kst:
-        vet_result = await db.execute(
-            select(VetSchedule).where(
-                VetSchedule.doctorid == schedule.doctorid,
-                VetSchedule.date == confirmed_kst.date(),
-                VetSchedule.start_time >= confirmed_kst.time(),
-                VetSchedule.end_time <= end_kst.time()
-            )
-        )
-        for slot in vet_result.scalars().all():
-            slot.is_available = True
-            slot_restored = True
-
     now = datetime.now(timezone.utc)
     schedule.deleted_at = now
     schedule.status = "CANCELLED"
@@ -336,8 +318,5 @@ async def delete_reservation(db: AsyncSession, schedule_id: int) -> bool:
         guardian.deleted_at = now
 
     await db.commit()
-    logger.info(
-        f"[delete_reservation] done schedule_id={schedule_id} "
-        f"slot_restored={slot_restored}"
-    )
+    logger.info(f"[delete_reservation] done schedule_id={schedule_id}")
     return True
