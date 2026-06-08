@@ -56,6 +56,7 @@ export interface CheckupReservationPayload {
   date: string;
   time: string;
   memo: string;
+  category_code?: number;
 }
 
 export interface CheckupReservationResult {

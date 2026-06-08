@@ -7,6 +7,7 @@ from app.models.schedule import Schedule
 from app.models.master import CategoryMaster
 from app.models.pet import Pet
 from app.models.doctor import Doctor
+from app.models.vet_schedule import VetSchedule
 from app.utils.timezone import to_kst, KST
 
 # 병원 휴무일: 주말 + 법정 공휴일 (2026~2027)
@@ -64,11 +65,10 @@ async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None
 
 
 # 정기검진 예약 생성
-async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int):
+async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int, category_code: int = 1):
 
-    # code=1 = 정기검진
     result = await db.execute(
-        select(CategoryMaster).where(CategoryMaster.code == 1)
+        select(CategoryMaster).where(CategoryMaster.code == category_code)
     )
     category = result.scalar_one_or_none()
     if not category:
@@ -236,12 +236,38 @@ async def update_schedule_time(db: AsyncSession, schedule: Schedule, confirmed_t
     return schedule
 
 
-# 수의사 운영 시간 슬롯 (30분 단위, 점심 12:00~13:00 제외)
-_VET_TIME_SLOTS = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00",
-]
+def _to_minutes(t: str) -> int:
+    h, m = map(int, t.split(":"))
+    return h * 60 + m
+
+
+def _generate_time_slots(
+    start: str,
+    end: str,
+    lunch_start: str,
+    lunch_end: str,
+    interval_min: int = 30,
+) -> list[str]:
+    """운영시간 내 예약 가능 슬롯 목록 생성.
+
+    마감 1시간 전이 마지막 시작 슬롯 (예: 19:00 마감 → 18:00 마지막).
+    점심시간과 겹치는 슬롯은 제외.
+    """
+    start_min = _to_minutes(start)
+    end_min = _to_minutes(end)
+    lunch_s = _to_minutes(lunch_start)
+    lunch_e = _to_minutes(lunch_end)
+    last_start = end_min - 60  # 마감 1시간 전까지만 예약 가능
+
+    slots = []
+    cur = start_min
+    while cur <= last_start:
+        slot_end = cur + interval_min
+        # 슬롯이 점심시간과 겹치면 제외
+        if not (cur < lunch_e and slot_end > lunch_s):
+            slots.append(f"{cur // 60:02d}:{cur % 60:02d}")
+        cur += interval_min
+    return slots
 
 
 class AvailableSlot:
@@ -252,7 +278,7 @@ class AvailableSlot:
         self.doctor_name = doctor_name
 
 
-# 빈 슬롯 조회 (Schedule 테이블 기반 동적 계산 — VetSchedule 의존 없음)
+# 빈 슬롯 조회 (vet_scheduleDB 운영시간 기반 동적 계산)
 async def get_available_slots(db: AsyncSession, date: str, duration_min: int, doctorid: int = None):
     target_date = datetime.strptime(date, "%Y-%m-%d").date()
     now_kst = datetime.now(KST)
@@ -273,6 +299,24 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
         return []
 
     resolved_doctorid = doctor.doctorid
+
+    # 운영시간 조회 (가장 최근 레코드, 없으면 기본값)
+    config_result = await db.execute(
+        select(VetSchedule)
+        .where(VetSchedule.doctorid == resolved_doctorid)
+        .order_by(VetSchedule.date.desc())
+        .limit(1)
+    )
+    config = config_result.scalar_one_or_none()
+    if config:
+        op_start = config.start_time.strftime("%H:%M")
+        op_end = config.end_time.strftime("%H:%M")
+        lunch_start = config.lunch_start.strftime("%H:%M") if config.lunch_start else "12:00"
+        lunch_end = config.lunch_end.strftime("%H:%M") if config.lunch_end else "13:00"
+    else:
+        op_start, op_end, lunch_start, lunch_end = "09:00", "18:00", "12:00", "13:00"
+
+    vet_time_slots = _generate_time_slots(op_start, op_end, lunch_start, lunch_end)
 
     # 해당 날짜에 이미 활성 예약된 시작 시간 수집
     sched_result = await db.execute(
@@ -298,18 +342,18 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     current_hhmm = now_kst.strftime("%H:%M") if is_today else "00:00"
 
     avail = [
-        t for t in _VET_TIME_SLOTS
+        t for t in vet_time_slots
         if t not in booked and (not is_today or t > current_hhmm)
     ]
 
-    # duration_min 기반 연속 슬롯 계산
+    # duration_min 기반 연속 슬롯 계산 (30분 간격 기준)
     needed = max(1, -(-duration_min // 30))
     available_starts = []
 
     for i in range(len(avail) - needed + 1):
         consecutive = True
         for j in range(1, needed):
-            if _VET_TIME_SLOTS.index(avail[i + j]) != _VET_TIME_SLOTS.index(avail[i + j - 1]) + 1:
+            if _to_minutes(avail[i + j]) != _to_minutes(avail[i + j - 1]) + 30:
                 consecutive = False
                 break
         if consecutive:

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAlarms } from "../contexts/AlarmContext";
+import { OperatingHoursProvider } from "../contexts/OperatingHoursContext";
 import {
   Bell,
   CalendarCheck,
@@ -334,7 +335,9 @@ export default function AppLayout({
               : "h-[calc(100vh-56px)] overflow-y-auto px-4 pb-8 pt-5"
           }`}
         >
-          {children}
+          <OperatingHoursProvider session={session}>
+            {children}
+          </OperatingHoursProvider>
         </main>
       </div>
     </div>

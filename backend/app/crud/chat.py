@@ -113,14 +113,13 @@ def _infer_category_code(keywords: list[str], chief_complaint: str = "") -> int:
     return 10  # 기타
 
 
-# AI 트리아지용 Guardian(emrid) 신규 생성 — 초기에는 '기타(10)' 임시 배정
+# AI 트리아지용 Guardian(emrid) 신규 생성 — 챗봇은 항상 일반진료(code=2)
 async def create_triage_guardian(db: AsyncSession, petid: int) -> Guardian:
     category_result = await db.execute(
-        select(CategoryMaster).where(CategoryMaster.code == 10)
+        select(CategoryMaster).where(CategoryMaster.code == 2)
     )
     category = category_result.scalar_one_or_none()
     if not category:
-        # 기타 없으면 첫 번째 카테고리 fallback
         category_result = await db.execute(select(CategoryMaster))
         category = category_result.scalars().first()
 

@@ -19,6 +19,10 @@ export interface TimelineRange {
 export interface TimelineScaleOptions {
   hourHeight?: number;
   bottomPadding?: number;
+  startTime?: string;
+  endTime?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
 }
 
 export interface PositionedTimelineItem<T extends TimelineTimeRange> {
@@ -43,11 +47,14 @@ export function formatMinutesAsTime(minutes: number) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-export function getTimelineRange(items: TimelineTimeRange[] = []): TimelineRange {
-  const defaultStart = parseTimeToMinutes(DEFAULT_TIMELINE_START);
-  const defaultEnd = parseTimeToMinutes(DEFAULT_TIMELINE_END);
-  const lunchStart = parseTimeToMinutes(LUNCH_START);
-  const lunchEnd = parseTimeToMinutes(LUNCH_END);
+export function getTimelineRange(
+  items: TimelineTimeRange[] = [],
+  options: Pick<TimelineScaleOptions, "startTime" | "endTime" | "lunchStart" | "lunchEnd"> = {}
+): TimelineRange {
+  const defaultStart = parseTimeToMinutes(options.startTime ?? DEFAULT_TIMELINE_START);
+  const defaultEnd = parseTimeToMinutes(options.endTime ?? DEFAULT_TIMELINE_END);
+  const lunchStart = parseTimeToMinutes(options.lunchStart ?? LUNCH_START);
+  const lunchEnd = parseTimeToMinutes(options.lunchEnd ?? LUNCH_END);
 
   const itemStarts = items.map((item) => parseTimeToMinutes(item.start));
   const itemEnds = items.map((item) => parseTimeToMinutes(item.end));
@@ -121,7 +128,9 @@ export function getLunchBlockMetrics(
   range: TimelineRange,
   options: TimelineScaleOptions = {}
 ) {
-  return getTimelineBlockMetrics(LUNCH_START, LUNCH_END, range, options);
+  const lStart = options.lunchStart ?? LUNCH_START;
+  const lEnd = options.lunchEnd ?? LUNCH_END;
+  return getTimelineBlockMetrics(lStart, lEnd, range, options);
 }
 
 export function buildPositionedTimelineItems<T extends TimelineTimeRange>(

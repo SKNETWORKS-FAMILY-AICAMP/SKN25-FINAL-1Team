@@ -9,6 +9,7 @@ class ReservationCreate(BaseModel):
     time: str
     doctor_name: Optional[str] = None
     memo: Optional[str] = None
+    category_code: int = 1  # 1=정기검진, 2=일반진료
 
 
 # 예약 수정 요청

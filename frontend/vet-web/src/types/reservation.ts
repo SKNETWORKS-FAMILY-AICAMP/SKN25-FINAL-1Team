@@ -8,7 +8,7 @@ export interface ReservationPatient {
   petName: string;
   guardianName: string;
   phone: string;
-  species: "강아지" | "고양이";
+  species: string;
   breed: string;
   birthDate: string;
   age: string;
@@ -37,6 +37,7 @@ export interface ReservationFormState {
   time: string;
   doctorName: string;
   memo: string;
+  categoryCode: number | null;
 }
 
 export type PatientsById = Record<number, ReservationPatient>;

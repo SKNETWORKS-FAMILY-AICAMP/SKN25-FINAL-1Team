@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { DashboardScheduleItem } from "../../api/dashboardApi";
+import { useOperatingHours } from "../../contexts/OperatingHoursContext";
 import { Panel } from "../common/Panel";
 import { TriageBadge } from "../common/TriageBadge";
 import { ClinicRoomIcon } from "./DashboardIcons";
@@ -29,7 +30,11 @@ export function DashboardSchedulePanel({
   errorMessage,
   holidayName,
 }: DashboardSchedulePanelProps) {
-  const timelineRange = useMemo(() => getTimelineRange(schedules), [schedules]);
+  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
+  const timelineRange = useMemo(
+    () => getTimelineRange(schedules, { startTime, endTime, lunchStart, lunchEnd }),
+    [schedules, startTime, endTime, lunchStart, lunchEnd]
+  );
   const timelineScale = useMemo(
     () => ({ hourHeight: DASHBOARD_TIMELINE_HOUR_HEIGHT }),
     []
@@ -43,8 +48,8 @@ export function DashboardSchedulePanel({
     [timelineRange, timelineScale]
   );
   const lunchBlock = useMemo(
-    () => getLunchBlockMetrics(timelineRange, timelineScale),
-    [timelineRange, timelineScale]
+    () => getLunchBlockMetrics(timelineRange, { ...timelineScale, lunchStart, lunchEnd }),
+    [timelineRange, timelineScale, lunchStart, lunchEnd]
   );
   const positionedSchedules = useMemo(
     () => buildPositionedTimelineItems(schedules, timelineRange, timelineScale),

@@ -16,6 +16,7 @@ class CheckupScheduleRequest(BaseModel):
     date: str
     time: str
     memo: Optional[str] = None
+    category_code: int = 1  # 1=정기검진, 2=일반진료
 
 # 챗봇 예약 확정 요청
 class ConfirmScheduleRequest(BaseModel):

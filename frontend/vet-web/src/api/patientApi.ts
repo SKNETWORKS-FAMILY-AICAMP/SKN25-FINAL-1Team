@@ -7,6 +7,7 @@ export interface PatientListItemResponse {
   age: string;
   owner_name: string;
   phone: string;
+  species: string;
   breed: string;
   last_visit_date: string;
   memo: string;
