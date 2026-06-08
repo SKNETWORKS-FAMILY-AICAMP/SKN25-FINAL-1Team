@@ -13,7 +13,7 @@ import pytest
 # backend 루트를 sys.path에 추가
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.prompts.triage_prompt import _build_triage_system_prompt, FORCE_COMPLETE_SUFFIX
+from ai.triage.prompt import _build_triage_system_prompt, FORCE_COMPLETE_SUFFIX
 
 CASES_DIR = Path(__file__).parent / "cases"
 

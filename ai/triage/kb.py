@@ -19,8 +19,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# backend/app/services/triage_kb.py → parents[2] == backend
-_KB_PATH = Path(__file__).resolve().parents[2] / "data" / "triage" / "vet_triage.json"
+# ai/triage/kb.py → parents[2] == repo root. 데이터는 backend/data/triage에 있다.
+_KB_PATH = Path(__file__).resolve().parents[2] / "backend" / "data" / "triage" / "vet_triage.json"
 
 
 @lru_cache(maxsize=1)

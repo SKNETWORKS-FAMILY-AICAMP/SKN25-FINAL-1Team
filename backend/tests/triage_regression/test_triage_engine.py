@@ -5,7 +5,7 @@ pytest 없이도 `python3 tests/triage_regression/test_triage_engine.py` 로 실
 """
 from __future__ import annotations
 
-from app.services import triage_engine as te
+from ai.triage import engine as te
 
 
 def _walk(node_id: str, path: list[str], species: str | None = None,

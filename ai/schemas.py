@@ -2,22 +2,13 @@
 
 사용처: ai/router.py (FastAPI 엔드포인트 입출력)
 backend 통합 시: backend/app/schemas/agent.py 로 복사 후
-  from app.schemas.agent import AgentRunIn, AgentRunOut, ChatProxyIn
+  from app.schemas.agent import AgentRunIn, AgentRunOut
 """
 from __future__ import annotations
 
 from typing import Any
 
 from pydantic import BaseModel, Field
-
-
-class ChatProxyIn(BaseModel):
-    """POST /api/agent/chat — OpenAI API 프록시 요청 바디."""
-    messages: list[dict]
-    model: str = "gpt-4o-mini"
-    max_tokens: int = 1000
-    temperature: float = 0.3
-    json_mode: bool = True
 
 
 class AgentRunIn(BaseModel):

@@ -1,4 +1,4 @@
-from .triage import build_triage_prompt, run_triage
+from .triage import run_triage
 from .schedule import build_schedule_prompt, run_schedule
 from .chart import build_chart_prompt, run_chart
 from .validation import run_validation
@@ -6,7 +6,7 @@ from .judge import build_judge_prompt, run_judge
 from .followup import build_followup_prompt, run_followup
 
 __all__ = [
-    "build_triage_prompt", "run_triage",
+    "run_triage",
     "build_schedule_prompt", "run_schedule",
     "build_chart_prompt", "run_chart",
     "run_validation",

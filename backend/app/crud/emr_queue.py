@@ -22,7 +22,7 @@ from app.utils.timezone import KST, to_kst
 
 def _urgency_to_triage_status(urgency_num: Optional[int]) -> str:
     # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
-    from app.services.triage_engine import urgency_num_to_visit_type
+    from ai.triage.engine import urgency_num_to_visit_type
     return urgency_num_to_visit_type(urgency_num)
 
 
@@ -147,19 +147,30 @@ async def get_emr_detail(db: AsyncSession, schedule_id: int):
                 if url and url not in attachments:
                     attachments.append(url)
 
-    # Step 4: triage_summary.summary 구성
+    # Step 3-2: chart 에이전트 출력(reportDB) 조회.
+    # "AI 요약 문진" 자리는 chart 에이전트의 intake_summary(보호자말요약/증상/의심질환)가 차지한다.
+    # (triage 요약은 chart가 쓰는 내부 입력일 뿐, 출력은 chart가 만든다.)
+    from app.models.report import Report
+    report = (await db.execute(
+        select(Report).where(Report.emrid == emrid, Report.scheduleid == schedule_id)
+    )).scalar_one_or_none()
+    intake = report.ai_draft_json.get("intake_summary") if (report and isinstance(report.ai_draft_json, dict)) else None
+
+    # Step 4: triage_summary.summary 구성 — chart intake_summary 우선, 아직 없으면 triage 폴백.
     summary: list[str] = []
-    if triage:
-        if triage.symptom_summary:
-            summary.append(f"간단 요약: {triage.symptom_summary}")
-        if triage.symptom_keywords:
-            kws = triage.symptom_keywords
-            if isinstance(kws, list) and kws:
-                summary.append(f"주요 증상: {', '.join(kws)}")
-        if triage.suspected_diseases:
-            diseases = triage.suspected_diseases
-            if isinstance(diseases, list) and diseases:
-                summary.append(f"의심 질환: {', '.join(diseases)}")
+
+    def _add_summary(report_text, keywords, diseases):
+        if report_text:
+            summary.append(f"간단 요약: {report_text}")
+        if isinstance(keywords, list) and keywords:
+            summary.append(f"주요 증상: {', '.join(keywords)}")
+        if isinstance(diseases, list) and diseases:
+            summary.append(f"의심 질환: {', '.join(diseases)}")
+
+    if isinstance(intake, dict) and (intake.get("guardian_report") or intake.get("key_symptoms")):
+        _add_summary(intake.get("guardian_report"), intake.get("key_symptoms"), intake.get("suspected_diseases"))
+    elif triage:
+        _add_summary(triage.symptom_summary, triage.symptom_keywords, triage.suspected_diseases)
 
     # Step 5: 과거 EMR 히스토리 (이 반려동물의 전체 진료 기록)
     emr_rows = (await db.execute(

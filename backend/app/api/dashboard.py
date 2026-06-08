@@ -47,7 +47,7 @@ def _hhmm(dt: datetime | None) -> str:
 
 def _visit_type(urgency_num: int | None) -> str:
     # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
-    from app.services.triage_engine import urgency_num_to_visit_type
+    from ai.triage.engine import urgency_num_to_visit_type
     return urgency_num_to_visit_type(urgency_num)
 
 
