@@ -5,14 +5,14 @@ import { searchDrugs } from "../../api/prescriptionApi";
 import type { Prescription, UploadedFile } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
-const FORM_OPTIONS = ["PO(경구)", "IV(정맥)", "SC(피하)", "IM(근육)", "외용", "점안", "흡입"];
-const DOSAGE_OPTIONS = [
+export const FORM_OPTIONS = ["PO(경구)", "IV(정맥)", "SC(피하)", "IM(근육)", "외용", "점안", "흡입"];
+export const DOSAGE_OPTIONS = [
   "0.5mg/kg", "1mg/kg", "2mg/kg", "5mg/kg", "10mg/kg",
   "0.5ml", "1ml", "2ml", "5ml",
   "1정", "1/2정", "2정",
 ];
-const FREQUENCY_OPTIONS = ["SID(하루 1회)", "BID(하루 2회)", "TID(하루 3회)", "QID(하루 4회)", "필요 시"];
-const DURATION_OPTIONS = [3, 5, 7, 10, 14, 30];
+export const FREQUENCY_OPTIONS = ["SID(하루 1회)", "BID(하루 2회)", "TID(하루 3회)", "QID(하루 4회)", "필요 시"];
+export const DURATION_OPTIONS = [3, 5, 7, 10, 14, 30];
 
 type PhotoUploadFieldsProps = {
   files: UploadedFile[];
@@ -38,18 +38,20 @@ function EditableComboBox({
   isReadOnly?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasTyped, setHasTyped] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const reactId = useId();
   const listboxId = `${reactId}-options`;
-  const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(value.toLowerCase())
-  );
+  const filteredOptions = hasTyped
+    ? options.filter((option) => option.toLowerCase().includes(value.toLowerCase()))
+    : options;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setHasTyped(false);
       }
     };
 
@@ -70,6 +72,7 @@ function EditableComboBox({
   const selectOption = (option: string) => {
     onChange(option);
     setIsOpen(false);
+    setHasTyped(false);
   };
 
   if (isReadOnly) return <span className="text-xs text-[#4d5874]">{value || "-"}</span>;
@@ -78,8 +81,9 @@ function EditableComboBox({
     <div ref={wrapperRef} className="relative">
       <input
         value={value}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => { setHasTyped(false); setIsOpen(true); }}
         onChange={(event) => {
+          setHasTyped(true);
           onChange(event.target.value);
           setIsOpen(true);
         }}
@@ -107,6 +111,7 @@ function EditableComboBox({
 
           if (event.key === "Escape") {
             setIsOpen(false);
+            setHasTyped(false);
           }
         }}
         placeholder={placeholder}
@@ -238,7 +243,7 @@ export function EditorPanel({
           onChange={(event) => onChange(event.target.value)}
           placeholder="진료 내용을 입력하세요..."
           readOnly={isReadOnly}
-          className="h-60 w-full resize-none rounded-md border border-[#dfe6f1] px-3 py-2.5 text-xs font-bold leading-5 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
+          className="h-[180px] w-full resize-none rounded-md border border-[#dfe6f1] px-3 py-2.5 text-xs font-bold leading-5 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
         />
         {errorMessage && (
           <p className="text-xs font-bold text-red-500">{errorMessage}</p>
@@ -377,6 +382,7 @@ export function PrescriptionInputPanel({
   errorMessage = null,
   previewErrorMessage = null,
   isReadOnly = false,
+  isGenerating = false,
 }: {
   prescriptions: Prescription[];
   onRemove: (clientId: string) => void;
@@ -388,6 +394,7 @@ export function PrescriptionInputPanel({
   errorMessage?: string | null;
   previewErrorMessage?: string | null;
   isReadOnly?: boolean;
+  isGenerating?: boolean;
 }) {
   const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState<DrugSearchResult[]>([]);
@@ -455,11 +462,23 @@ export function PrescriptionInputPanel({
           <button
             type="button"
             onClick={onGenerate}
-            disabled={isReadOnly}
+            disabled={isReadOnly || isGenerating}
             className="flex h-9 items-center gap-1.5 rounded-md border border-[#dfe6f1] bg-white px-3.5 text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
           >
-            <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
-            처방전 자동 생성
+            {isGenerating ? (
+              <>
+                <svg className="h-4 w-4 animate-spin text-[#357b70]" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                생성 중...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+                처방전 자동 생성
+              </>
+            )}
           </button>
           <button
             type="button"

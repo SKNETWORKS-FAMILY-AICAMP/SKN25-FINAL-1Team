@@ -279,6 +279,11 @@ async def generate_auto_prescription(
 {drug_list_str}
 
 위 약품 목록에서 증상에 적합한 2~4가지를 선택하고, 각 약품의 투여 형태·용량·빈도·기간을 작성하세요.
+반드시 아래 허용값 중에서만 선택하세요 (목록 외 값 사용 금지):
+- form(투여형태): PO(경구), IV(정맥), SC(피하), IM(근육), 외용, 점안, 흡입
+- dosage(용량): 0.5mg/kg, 1mg/kg, 2mg/kg, 5mg/kg, 10mg/kg, 0.5ml, 1ml, 2ml, 5ml, 1정, 1/2정, 2정
+- frequency(빈도): SID(하루 1회), BID(하루 2회), TID(하루 3회), QID(하루 4회), 필요 시
+- duration(기간, 정수): 3, 5, 7, 10, 14, 30
 반드시 아래 JSON 형식으로만 응답하세요 (duration은 반드시 정수):
 
 {{
@@ -287,7 +292,7 @@ async def generate_auto_prescription(
       "name": "폴리펜젝트 20(POLYPENJECT 20)",
       "form": "SC(피하)",
       "dosage": "10mg/kg",
-      "frequency": "SID",
+      "frequency": "SID(하루 1회)",
       "duration": 5
     }}
   ]
