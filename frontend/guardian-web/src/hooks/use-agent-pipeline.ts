@@ -7,9 +7,15 @@ import {
   confirmSchedule,
 } from "../api/schedule-api";
 import { useTranslation } from "../i18n/language-context";
-import type { Language } from "../i18n/translations";
 import type { Pet } from "../api/pets-api";
 import type { ChatCard, ChatMessage, SlotOption } from "./use-chat-conversation";
+import {
+  formatChatDateTimeFull,
+  formatChatDuration,
+  formatChatMonthDay,
+  formatChatTime,
+  weekdayOf,
+} from "../utils/chat-format";
 
 export type PipelinePhase =
   | "chatting"
@@ -104,37 +110,6 @@ const getExtendedBusinessDates = (startOffset: number, scanDays = 21): string[] 
 
 const nextId = () => Date.now() + Math.random();
 
-const localeForLang = (lang: Language) =>
-  ({ ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" })[lang];
-
-const weekdayOf = (dateStr: string, lang: Language) =>
-  new Intl.DateTimeFormat(localeForLang(lang), { weekday: "short" }).format(
-    new Date(dateStr),
-  );
-
-/** "16:00" → "오후 4:00" */
-const formatTime = (
-  hhmm: string,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string => {
-  const [h, m] = hhmm.split(":").map(Number);
-  const period = h < 12 ? t("chatbot.am") : t("chatbot.pm");
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${period} ${h12}:${String(m).padStart(2, "0")}`;
-};
-
-/** 90 → "1시간 30분", 60 → "1시간", 30 → "30분" */
-const formatDuration = (
-  min: number,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string => {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h && m) return t("chatbot.durationHourMin", { h, m });
-  if (h) return t("chatbot.durationHour", { h });
-  return t("chatbot.durationMin", { m });
-};
-
 export const useAgentPipeline = ({
   setMessages,
   setQuickReplies,
@@ -154,6 +129,7 @@ export const useAgentPipeline = ({
   const slotMapRef = useRef<Record<string, { date: string; time: string; doctorid: number }>>({});
   const emridRef = useRef<number | null>(null);
   const lastRequestRef = useRef<number>(0);
+  const scheduleRequestRef = useRef<number>(0);
 
   const appendBot = (content: string) => {
     setMessages((prev) => [
@@ -162,24 +138,56 @@ export const useAgentPipeline = ({
     ]);
   };
 
-  const appendCard = (card: ChatCard) => {
+  const appendBotKey = (
+    i18nKey: string,
+    pipelineKey: ChatMessage["pipelineKey"],
+    i18nVars?: Record<string, string | number>,
+  ) => {
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: "assistant" as const, content: "", card },
+      {
+        id: nextId(),
+        role: "assistant" as const,
+        content: i18nKey,
+        i18nKey,
+        i18nVars,
+        pipelineKey,
+      },
     ]);
+  };
+
+  const appendCard = (card: ChatCard, pipelineKey?: ChatMessage["pipelineKey"]) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId(), role: "assistant" as const, content: "", card, pipelineKey },
+    ]);
+  };
+
+  const clearScheduleArtifacts = () => {
+    setMessages((prev) =>
+      prev.filter(
+        (message) =>
+          message.pipelineKey !== "checking-slots" &&
+          message.pipelineKey !== "slots-result" &&
+          message.pipelineKey !== "slot-error" &&
+          message.card?.kind !== "slots",
+      ),
+    );
   };
 
   /** 현재 slotMapRef로부터 슬롯 카드 옵션을 재구성(예약 실패 시 카드 재노출용) */
   const buildSlotOptions = (): SlotOption[] => {
     const durationMin = (scheduleResultRef.current?.estimated_duration_min as number) || 30;
     return Object.entries(slotMapRef.current).map(([label, s]) => {
-      const [, m, d] = s.date.split("-");
       return {
         label,
-        monthDay: t("chatbot.monthDay", { month: Number(m), day: Number(d) }),
+        date: s.date,
+        time: s.time,
+        durationMin,
+        monthDay: formatChatMonthDay(s.date, t),
         weekday: weekdayOf(s.date, lang),
-        timeText: formatTime(s.time, t),
-        durationText: formatDuration(durationMin, t),
+        timeText: formatChatTime(s.time, t),
+        durationText: formatChatDuration(durationMin, t),
       };
     });
   };
@@ -219,7 +227,9 @@ export const useAgentPipeline = ({
     emridRef.current = emrid ?? null;
     setPhase("scheduling");
     setIsStreaming(true);
-    appendBot(t("chatbot.checkingSlots"));
+    const requestId = ++scheduleRequestRef.current;
+    clearScheduleArtifacts();
+    appendBotKey("chatbot.checkingSlots", "checking-slots");
 
     try {
       // 서버가 triage 완료 직후 schedule agent를 이미 실행해 둔 경우(schedule_task_id)
@@ -235,6 +245,7 @@ export const useAgentPipeline = ({
       }
 
       const raw = await streamAgentResult(task_id);
+      if (requestId !== scheduleRequestRef.current) return;
       const schedRes = raw as {
         slot_window: string;
         estimated_duration_min: number;
@@ -243,8 +254,8 @@ export const useAgentPipeline = ({
       } | null;
 
       if (!schedRes?.slot_window) {
-        appendBot(t("chatbot.slotsLoadSlow"));
-        appendCard({ kind: "slots", slots: [] });
+        appendBotKey("chatbot.slotsLoadSlow", "slots-result");
+        appendCard({ kind: "slots", slots: [] }, "slots-result");
         setPhase("slot-selection");
         setShowDatePicker(true);
         return;
@@ -256,6 +267,7 @@ export const useAgentPipeline = ({
       // 1차: urgency window 기준 영업일 탐색 — 추천 슬롯 3개 제시
       const dates = getDatesForWindow(schedRes.slot_window);
       let collected = await collectSlots(dates, 3, schedRes.estimated_duration_min);
+      if (requestId !== scheduleRequestRef.current) return;
 
       // 2차: 1차 탐색에서 슬롯을 못 찾은 경우 최대 21영업일 확장 탐색
       if (collected.length === 0) {
@@ -265,6 +277,7 @@ export const useAgentPipeline = ({
           3,
           schedRes.estimated_duration_min,
         );
+        if (requestId !== scheduleRequestRef.current) return;
       }
 
       const newSlotMap: Record<string, { date: string; time: string; doctorid: number }> = {};
@@ -282,10 +295,13 @@ export const useAgentPipeline = ({
         newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1 };
         slotOptions.push({
           label,
-          monthDay: t("chatbot.monthDay", { month: Number(m), day: Number(d) }),
+          date: s.date,
+          time,
+          durationMin,
+          monthDay: formatChatMonthDay(s.date, t),
           weekday: weekdayOf(s.date, lang),
-          timeText: formatTime(time, t),
-          durationText: formatDuration(durationMin, t),
+          timeText: formatChatTime(time, t),
+          durationText: formatChatDuration(durationMin, t),
         });
       }
 
@@ -294,23 +310,24 @@ export const useAgentPipeline = ({
       // 내원 전 준비사항(pre_visit_instructions)은 여기서 보여주지 않고
       // 예약 확정 후 확정 카드 아래에 정리해서 노출한다(scheduleResultRef에 보관됨).
       if (slotOptions.length > 0) {
-        appendBot(t("chatbot.slotsFound"));
-        appendCard({ kind: "slots", slots: slotOptions });
+        appendBotKey("chatbot.slotsFound", "slots-result");
+        appendCard({ kind: "slots", slots: slotOptions }, "slots-result");
         setPhase("slot-selection");
       } else {
         // 슬롯을 찾지 못했어도 '날짜 보기'는 카드에서 항상 제공
-        appendBot(t("chatbot.noSlotsPickDate"));
-        appendCard({ kind: "slots", slots: [] });
+        appendBotKey("chatbot.noSlotsPickDate", "slots-result");
+        appendCard({ kind: "slots", slots: [] }, "slots-result");
         setPhase("slot-selection");
         setShowDatePicker(true);
       }
     } catch {
-      appendBot(t("chatbot.slotCheckRetry"));
-      appendCard({ kind: "slots", slots: [] });
+      if (requestId !== scheduleRequestRef.current) return;
+      appendBotKey("chatbot.slotCheckRetry", "slot-error");
+      appendCard({ kind: "slots", slots: [] }, "slot-error");
       setPhase("slot-selection");
       setShowDatePicker(true);
     } finally {
-      setIsStreaming(false);
+      if (requestId === scheduleRequestRef.current) setIsStreaming(false);
     }
   };
 
@@ -344,21 +361,17 @@ export const useAgentPipeline = ({
       });
 
       if (resp.code === 200 || resp.code === 201) {
-        const [y, m, d] = slot.date.split("-");
-        const dateText = t("chatbot.dateTextFull", {
-          year: y,
-          month: Number(m),
-          day: Number(d),
-          weekday: weekdayOf(slot.date, lang),
-          time: formatTime(slot.time, t),
-        });
+        const dateText = formatChatDateTimeFull(slot.date, slot.time, lang, t);
 
         // ① 예약 확정 카드
         appendCard({
           kind: "confirmation",
           petName: currentPetRef.current?.petname ?? t("chatbot.petFallback"),
+          date: slot.date,
+          time: slot.time,
+          durationMin: duration,
           dateText,
-          durationText: formatDuration(duration, t),
+          durationText: formatChatDuration(duration, t),
           hospitalName: resp.result?.hospital_name ?? undefined,
         });
 
@@ -487,6 +500,7 @@ export const useAgentPipeline = ({
   const resetPipeline = () => {
     setPhase("chatting");
     setShowDatePicker(false);
+    scheduleRequestRef.current += 1;
     triageResultRef.current = null;
     scheduleResultRef.current = null;
     currentPetRef.current = null;
@@ -497,7 +511,7 @@ export const useAgentPipeline = ({
   const restoreFollowupPhase = (emrid: number) => {
     emridRef.current = emrid;
     setPhase("followup");
-    appendBot(t("chatbot.restoreFollowup"));
+    appendBotKey("chatbot.restoreFollowup", "followup-restore");
   };
 
   return {

@@ -8,8 +8,14 @@ import {
 } from "react";
 import { isAxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
-import { type ChatSessionHistory } from "../../api/chat-api";
+import {
+  deleteChatSessionKeepalive,
+  resumeSchedule,
+  type ChatSessionHistory,
+} from "../../api/chat-api";
 import { getPets, type Pet } from "../../api/pets-api";
+import { useAuthStore } from "../../stores/auth-store";
+import type { LiveSessionInfo } from "../../hooks/use-chat-sessions";
 import ChatDatePicker from "../../components/chatbot/chat-date-picker";
 import ChatInputBox from "../../components/chatbot/chat-input-box";
 import ChatMessageList from "../../components/chatbot/chat-message-list";
@@ -122,6 +128,8 @@ const ChatbotPage = () => {
   );
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  // 보호자가 한마디도 안 한 빈 세션 추적 — 이탈 시 삭제(req1).
+  const liveSessionRef = useRef<LiveSessionInfo | null>(null);
 
   const {
     pendingAttachment,
@@ -194,6 +202,7 @@ const ChatbotPage = () => {
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    discardEmptyLiveSession,
   } = useChatSessions({
     selectedPet,
     resetConversationState,
@@ -203,7 +212,82 @@ const ChatbotPage = () => {
     getErrorMessage,
     getProfileImage,
     onFollowupRestore: pipeline.restoreFollowupPhase,
+    onResumeTriage: ({ sessionId, messages: restoredMessages, quickReplies: resumedQuickReplies }) => {
+      if (!selectedPet) return;
+      // 라이브 문진 재개 — 세션을 살리고 입력을 활성화한다(req4).
+      pipeline.resetPipeline();
+      setSession({
+        session_id: sessionId,
+        pet_name: selectedPet.petname,
+        profile_image: getProfileImage(selectedPet),
+      });
+      // 저장되지 않는 최초 질문 말풍선을 앞에 복원해 라이브 UX와 맞춘다.
+      setMessages([
+        {
+          id: sessionId * 100000 - 1,
+          role: "assistant",
+          content: t("chatbot.initialQuestion"),
+        },
+        ...restoredMessages,
+      ]);
+      setQuickReplies(resumedQuickReplies);
+    },
+    onResumeSchedule: ({ sessionId, emrid }) => {
+      if (!selectedPet) return;
+      // 슬롯 선택 단계 재개 — 서버에서 schedule 재실행 후 슬롯 카드 노출(req4).
+      pipeline.resetPipeline();
+      setSession({
+        session_id: sessionId,
+        pet_name: selectedPet.petname,
+        profile_image: getProfileImage(selectedPet),
+      });
+      void (async () => {
+        try {
+          const response = await resumeSchedule(sessionId);
+          if (response.code === 200 && response.result) {
+            await pipeline.startSchedulePhase(
+              selectedPet,
+              response.result.triage_info ?? {},
+              response.result.emrid ?? emrid,
+              response.result.schedule_task_id,
+            );
+          } else {
+            setErrorMessage(response.message || t("chatbot.slotsLoadError"));
+          }
+        } catch (error) {
+          setErrorMessage(getErrorMessage(error, t("chatbot.slotsLoadError")));
+        }
+      })();
+    },
+    liveSessionRef,
   });
+
+  // 라이브 세션의 '보호자 발화 여부'를 ref로 동기화한다.
+  useEffect(() => {
+    liveSessionRef.current = session
+      ? {
+          id: session.session_id,
+          hasUserMessage: messages.some((message) => message.role === "user"),
+        }
+      : null;
+  }, [session, messages]);
+
+  // 페이지 이탈(SPA 언마운트) 및 탭/새로고침 종료 시 빈 세션 정리.
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const live = liveSessionRef.current;
+      if (!live || live.hasUserMessage) return;
+      const accessToken = useAuthStore.getState().guardian?.accessToken;
+      if (accessToken) {
+        deleteChatSessionKeepalive(live.id, accessToken);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      discardEmptyLiveSession();
+    };
+  }, [discardEmptyLiveSession]);
 
   // pipeline이 정의된 후 ref를 최신 값으로 동기화
   onTriageCompleteRef.current = (sessionId, keywords, collectedInfo, emrid, scheduleTaskId) => {

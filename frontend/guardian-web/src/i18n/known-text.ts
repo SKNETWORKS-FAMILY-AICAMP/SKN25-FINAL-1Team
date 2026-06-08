@@ -15,6 +15,9 @@ const knownTextKey: Record<string, string> = {
   식욕저하: "chatbot.symptomLowAppetite",
   눈물: "chatbot.symptomTears",
   절뚝거림: "chatbot.symptomLimping",
+  "기침/호흡": "chatbot.pillCoughRespiratory",
+  "구토/설사": "chatbot.pillVomitDiarrhea",
+  "피부/눈/기타": "chatbot.pillSkinEyeOther",
   상담중: "chatbot.statusConsulting",
   진료완료: "chatbot.statusCompleted",
   예약대기: "schedule.statusPending",
@@ -80,6 +83,10 @@ const knownTextKey: Record<string, string> = {
 
 const koFallback = (value: string, lang: Language) =>
   lang === "ko" ? value : undefined;
+
+/** 사전(knownTextKey)에 등록된 고정 문구인지 여부 — 즉시·무비용 번역 가능. */
+export const isKnownText = (value: string | null | undefined): boolean =>
+  !!value && value.trim() in knownTextKey;
 
 export const translateKnownText = (
   value: string | null | undefined,

@@ -16,6 +16,7 @@ class ChatSessionResponse(BaseModel):
 class ChatMessageRequest(BaseModel):
     content: str
     image_url: Optional[str] = None
+    lang: Optional[str] = "ko"  # UI 언어 — 답변/추천을 이 언어로 스트리밍
 
 # 상담 기록 목록 응답
 class ChatSessionListResponse(BaseModel):
@@ -23,3 +24,8 @@ class ChatSessionListResponse(BaseModel):
     keywords: Optional[List[str]] = []
     created_at: str
     status: Optional[str] = None
+
+# 메시지 일괄 번역 요청
+class TranslateRequest(BaseModel):
+    texts: List[str]
+    target_lang: str  # "ko" | "en" | "ja" | "zh"
