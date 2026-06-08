@@ -50,6 +50,8 @@ def build_followup_prompt(
 {accumulated_summary or '아직 경과 보고 없음 — 이번이 첫 보고입니다.'}
 ※ medical_summary는 위 누적 요약에 이번 보고를 통합한 '전체 경과 한 줄'입니다. 누적 요약을 덮어쓰듯 갱신하세요.
 ※ 보호자가 이번에 여러 내용을 한꺼번에 보냈다면 임상적으로 의미 있는 변화만 골라 하나의 짧은 문장으로 묶으세요.
+※ 이전 누적 요약이 있다면 그 핵심 사실을 버리지 말고 이번 변화와 연결하세요. 이번 보고만 단독으로 요약하면 안 됩니다.
+※ 시간순 변화가 드러나게 "처음 상태 → 이후 변화"를 한 문장으로 합치세요.
 
 [역할]
 1. 보호자의 경과 보고를 공감적으로 수신하고 간단히 응답한다 (guardian_message)
@@ -59,8 +61,8 @@ def build_followup_prompt(
 
 [medical_summary 작성 기준 — 수의사용 임상 메모]
 포함 O: 증상 변화(발작 빈도·지속시간, 구토·설사 횟수, 출혈량), 새 신체 징후, 식욕·수분·배변 변화, 투약 반응
-포함 X: 보호자 감정 표현, 일상 호소, 의학 무관 맥락, 사진 내용 추정·판단, 이전 요약 반복
-길이: 정확히 한 문장(80자 이내). 전체 경과의 핵심 변화만 압축. 평서형.
+포함 X: 보호자 감정 표현, 일상 호소, 의학 무관 맥락, 사진 내용 추정·판단, 같은 사실의 불필요한 반복
+길이: 정확히 한 문장(100자 이내). 이전 보고와 이번 보고를 합친 전체 경과의 핵심 변화만 압축. 평서형.
 ※ 반려동물 건강·증상과 무관한 발화(잡담, 일반 지식 질문 등)는 medical_summary에 절대 반영하지 말 것. 관련 내용이 전혀 없으면 medical_summary는 빈 문자열("")로 두세요.
 
 [보호자 guardian_message 금지 사항]
@@ -74,7 +76,7 @@ def build_followup_prompt(
   "guardian_message": "보호자 응답 (공감적, 1~2문장, 진단·권유 금지)",
   "followup_recommended": false,
   "recommended_actions": ["keep_schedule"],
-  "medical_summary": "수의사용 전체 경과 한 줄 요약(한 문장, 80자 이내)."
+  "medical_summary": "수의사용 누적 전체 경과 한 줄 요약(한 문장, 100자 이내)."
 }}
 
 일정 조정 필요 시 (악화 징후 감지):
@@ -135,8 +137,8 @@ async def run_followup(
     if not result.get("medical_summary") and result.get("followup_summary"):
         result["medical_summary"] = result["followup_summary"]
     if result.get("medical_summary"):
-        # 한 줄 보장 — 공백 정규화 후 80자 컷
-        result["medical_summary"] = " ".join(str(result["medical_summary"]).split())[:80]
+        # 한 줄 보장 — 누적 변화를 담을 수 있도록 공백 정규화 후 100자 컷
+        result["medical_summary"] = " ".join(str(result["medical_summary"]).split())[:100]
 
     update_step("경과 요약 업데이트 중...")
     logger.info(
