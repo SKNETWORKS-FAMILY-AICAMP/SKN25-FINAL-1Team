@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 interface PageHeaderProps {
   title: string;
   description?: string;
+  note?: ReactNode;
   rightAction?: ReactNode;
 }
 
 const PageHeader = ({
   title,
   description,
+  note,
   rightAction,
 }: PageHeaderProps) => {
   return (
@@ -19,6 +21,12 @@ const PageHeader = ({
         {description ? (
           <p className="mt-1 text-sm text-slate-500">
             {description}
+          </p>
+        ) : null}
+
+        {note ? (
+          <p className="mt-1 text-[11px] font-medium text-slate-400">
+            {note}
           </p>
         ) : null}
       </div>

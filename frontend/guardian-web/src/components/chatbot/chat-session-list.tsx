@@ -49,11 +49,11 @@ const ChatSessionList = ({
 
       <div className="flex min-h-0 flex-1 flex-col">
         {!selectedPet ? (
-          <div className="flex flex-1 flex-col items-center px-6 pt-[150px] text-center">
+          <div className="flex flex-1 flex-col items-center px-4 pt-[150px] text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <HistoryIcon />
             </div>
-            <p className="mt-4 text-[13px] font-bold text-slate-800">
+            <p className="mt-4 text-[13px] font-bold text-slate-800 [text-wrap:balance]">
               {t("chatbot.historyEmptyTitle")}
             </p>
             <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
