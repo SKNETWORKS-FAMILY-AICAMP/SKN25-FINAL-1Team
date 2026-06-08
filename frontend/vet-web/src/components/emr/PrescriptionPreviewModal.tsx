@@ -1,5 +1,6 @@
 import html2pdf from "html2pdf.js";
 import { Download, Printer, X } from "lucide-react";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import type { PrescriptionDocumentResponse } from "../../types/emr";
 
 export function PrescriptionPreviewModal({
@@ -9,6 +10,8 @@ export function PrescriptionPreviewModal({
   document: PrescriptionDocumentResponse;
   onClose: () => void;
 }) {
+  useEscapeToClose(onClose);
+
   const data = document.result;
 
   const handleDownloadPdf = () => {

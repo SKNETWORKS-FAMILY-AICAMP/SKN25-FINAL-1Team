@@ -14,6 +14,7 @@ import {
   isPasswordPolicyValid,
   getPasswordPolicyStatus,
 } from "../../api/authApi";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
 
 interface SettingsPageProps {
@@ -243,6 +244,8 @@ function PasswordChangeModal({
     setError("");
     onClose();
   };
+
+  useEscapeToClose(handleClose, !isLoading);
 
   const handleSubmit = async () => {
     setError("");
