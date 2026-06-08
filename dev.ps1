@@ -53,7 +53,7 @@ Compose up --build -d
 # --- 4) backend 기동 대기 ---
 Write-Host -NoNewline "▶ backend 기동 대기"
 for ($i=0; $i -lt 60; $i++) {
-    try { Invoke-WebRequest -UseBasicParsing "http://localhost:8000/docs" -TimeoutSec 3 | Out-Null; Write-Host " ✓"; break }
+    try { Invoke-WebRequest -UseBasicParsing "http://localhost:8000/docs" -TimeoutSec 3 | Out-Null; Write-Host " OK"; break }
     catch { Write-Host -NoNewline "."; Start-Sleep -Seconds 2 }
 }
 
