@@ -144,7 +144,7 @@ const FindIdPage = () => {
             </span>
             <div>
               <h2 className="text-base font-bold text-slate-900">{t("auth.infoTitle")}</h2>
-              <ul className="mt-1 space-y-0.5 text-sm leading-snug text-slate-600">
+              <ul className="mt-1 space-y-0.5 whitespace-pre-line text-sm leading-snug text-slate-600">
                 <li>{t("auth.findId.infoLine1")}</li>
                 <li>{t("auth.findId.infoLine2")}</li>
               </ul>
