@@ -162,10 +162,11 @@ export interface AutoPrescriptionItem {
 export async function generateAutoPrescription(params: {
   accessToken: string;
   scheduleId: number;
+  doctorNotes?: string;
 }): Promise<AutoPrescriptionItem[]> {
   const { data } = await apiClient.post<{ code: number; result: AutoPrescriptionItem[] }>(
     `/doctor/emr/${params.scheduleId}/auto-prescription`,
-    {},
+    { doctor_notes: params.doctorNotes ?? "" },
     { headers: { Authorization: `Bearer ${params.accessToken}` } }
   );
   return data.result;

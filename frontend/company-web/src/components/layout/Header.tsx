@@ -4,7 +4,7 @@ import { navItems, siteConfig } from "../../config/site";
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <a href="#" className="flex items-center gap-2 rounded-lg" aria-label="MediPaw 홈">
           <img src={medipawSymbol} alt="MediPaw" className="h-9 w-auto" />

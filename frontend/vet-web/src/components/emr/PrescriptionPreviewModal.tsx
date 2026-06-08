@@ -136,14 +136,14 @@ export function PrescriptionPreviewModal({
                   <th rowSpan={3} className="side-head">
                     개별 처방
                     <br />
-                    [ ]
+                    [✓]
                   </th>
                   <th>동물의 이름</th>
                   <td>{data.pet.name}</td>
                   <th rowSpan={3} className="side-head">
                     동물의
                     <br />
-                    소유자[ ]
+                    소유자[✓]
                     <br />
                     관리인[ ]
                   </th>
@@ -173,7 +173,7 @@ export function PrescriptionPreviewModal({
                   <th>축사번호</th>
                   <td>-</td>
                   <th rowSpan={3} className="side-head shade">
-                    동물병원[ ]
+                    동물병원[✓]
                     <br />
                     축산농장[ ]
                   </th>
