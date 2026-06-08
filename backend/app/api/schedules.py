@@ -416,6 +416,7 @@ async def _run_post_booking_agents(
     }
     # Fetch actual chat history for chart/judge context.
     agent_chat_history: list = []
+    photo_predictions: list[dict] = []
     try:
         from app.models.chat_history import ChatHistory
         async with AsyncSessionLocal() as db_j:
@@ -428,8 +429,28 @@ async def _run_post_booking_agents(
                     m for m in ch.messages
                     if m.get("role") in ("user", "assistant") and m.get("content")
                 ]
+                for m in ch.messages:
+                    if not isinstance(m, dict):
+                        continue
+                    analysis = m.get("photo_analysis") or {}
+                    image_url = m.get("image_url")
+                    for key, model_type in (("skin", "skin"), ("eye", "eye")):
+                        item = analysis.get(key)
+                        if not isinstance(item, dict) or item.get("error"):
+                            continue
+                        photo_predictions.append({
+                            "model_type": model_type,
+                            "prediction": item.get("top_1"),
+                            "top_class": item.get("top_class"),
+                            "confidence": item.get("top_confidence"),
+                            "details": item.get("details") or [],
+                            "image_url": image_url,
+                        })
     except Exception as _exc:
         logger.warning(f"[PostBooking] chat_history fetch failed emrid={emrid}: {_exc}")
+
+    if photo_predictions:
+        triage_info["photo_predictions"] = photo_predictions
 
     chart_payload["chat_history"] = agent_chat_history
 

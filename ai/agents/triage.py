@@ -1,11 +1,10 @@
-"""Triage Agent — 문진 대화 LLM 요약 노드.
+"""Triage Agent — 라이브 문진과 완료 후 요약의 public entrypoint.
 
-라이브 트리아지(질문 생성·응급도 점수·red flag·off-tree RAG)는 ai.triage.engine + chat.py가
-담당한다(결정론). 이 에이전트는 LangGraph triage_complete 그래프의 첫 노드로, 완료된 대화를
-받아 SOAP의 S(주관적)에 해당하는 '한 줄 평서형' 요약을 LLM으로 생성한다.
+chat.py는 이 파일의 run_triage_turn만 호출한다. 라이브 트리아지는 여기서 노출하고,
+내부 구현은 ai.triage.session의 decision-tree/RAG/image-aware runner를 사용한다.
 
-응급도/키워드/red flag/의심질환은 엔진 결과(collected_info)를 그대로 유지하고,
-symptom_summary만 LLM 요약으로 업그레이드한다(주요증상·의심질환은 명사형이므로 요약은 서술형).
+또한 LangGraph triage_complete 그래프에서는 run_triage를 호출한다. 이 함수는 완료된
+문진 대화를 받아 SOAP의 S(주관적)에 해당하는 '한 줄 평서형' 요약을 LLM으로 생성한다.
 """
 from __future__ import annotations
 
@@ -13,8 +12,26 @@ import logging
 from collections.abc import Callable
 
 from .base import call_openai
+from ai.triage.session import (
+    INITIAL_MESSAGE,
+    INITIAL_PILLS,
+    TriageTurnResult,
+    content_text,
+    photo_triage_text,
+    run_triage_turn,
+)
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    "INITIAL_MESSAGE",
+    "INITIAL_PILLS",
+    "TriageTurnResult",
+    "content_text",
+    "photo_triage_text",
+    "run_triage_turn",
+    "run_triage",
+]
 
 
 def _format_conversation(messages: list[dict]) -> str:
