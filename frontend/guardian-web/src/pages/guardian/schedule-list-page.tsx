@@ -18,6 +18,24 @@ import GuardianLayout from "../../layouts/guardian-layout";
 import { useTranslation } from "../../i18n/language-context";
 import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
 
+const InfoIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    className="h-4 w-4 shrink-0"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+    <path
+      d="M12 11v5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="8" r="1" fill="currentColor" />
+  </svg>
+);
+
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
     <path
@@ -157,7 +175,6 @@ const ScheduleListPage = () => {
       <PageHeader
         title={t("schedule.title")}
         description={t("schedule.description")}
-        note={t("schedule.timeDisclaimer")}
       />
 
       <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-8 pb-8 shadow-sm">
@@ -165,6 +182,11 @@ const ScheduleListPage = () => {
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
         />
+
+        <p className="mt-4 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+          <InfoIcon />
+          <span>{t("schedule.timeDisclaimer")}</span>
+        </p>
 
         <div className="py-6">
           {errorMessage ? (

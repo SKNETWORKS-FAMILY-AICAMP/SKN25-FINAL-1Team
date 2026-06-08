@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse, Eye, EyeOff } from "lucide-react";
 
 import { loginGuardian } from "../../api/auth-api";
+import { getMyProfile } from "../../api/user-api";
 import { useAuthStore } from "../../stores/auth-store";
 import { useTranslation } from "../../i18n/language-context";
 import AuthLanguageSelector from "../../components/auth-language-selector";
@@ -39,6 +40,9 @@ const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const updateGuardianProfile = useAuthStore(
+    (state) => state.updateGuardianProfile,
+  );
   const [form, setForm] = useState<LoginFormState>({
     loginid: "",
     password: "",
@@ -99,6 +103,21 @@ const LoginPage = () => {
         refreshToken: response.result.refresh_token,
         remember: form.remember,
       });
+
+      // 로그인 응답에는 이름이 없으므로 프로필을 조회해 보호자 이름을 채운다.
+      // 실패해도 로그인 자체는 진행한다(이름은 마이페이지 진입 시 다시 보정됨).
+      try {
+        const profile = await getMyProfile();
+        if (profile.code === 200 && profile.result) {
+          updateGuardianProfile({
+            name: profile.result.name,
+            phone: profile.result.phone,
+          });
+        }
+      } catch {
+        // 프로필 조회 실패는 무시 — 네비게이션을 막지 않는다.
+      }
+
       navigate("/home");
     } catch (error) {
       if (isAxiosError<LoginErrorResponse>(error)) {
@@ -131,7 +150,7 @@ const LoginPage = () => {
               <br />
               {t("auth.heroTitleLine2")}
             </h1>
-            <p className="mt-4 text-base leading-7 text-slate-600">
+            <p className="mt-4 whitespace-pre-line text-base leading-7 text-slate-600">
               {t("auth.heroSubtitle")}
             </p>
           </div>
@@ -147,7 +166,7 @@ const LoginPage = () => {
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-slate-900">{t(item.titleKey)}</h2>
-                  <p className="mt-1 whitespace-pre-line text-sm leading-snug text-slate-600">
+                  <p className="mt-1 whitespace-pre-line text-[13px] leading-snug text-slate-600">
                     {t(item.descKey)}
                   </p>
                 </div>
