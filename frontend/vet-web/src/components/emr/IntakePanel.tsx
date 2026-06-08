@@ -95,9 +95,9 @@ export function IntakePanel({
               첨부 파일
             </p>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="flex flex-wrap gap-2">
             {visibleFiles.length === 0 && (
-              <div className="col-span-4 rounded-lg bg-[#f9fafb] px-3 py-3 text-center text-xs font-bold text-[#8a94a6]">
+              <div className="w-full rounded-lg bg-[#f9fafb] px-3 py-3 text-center text-xs font-bold text-[#8a94a6]">
                 보호자 첨부 파일 없음
               </div>
             )}
@@ -106,7 +106,7 @@ export function IntakePanel({
                 type="button"
                 key={fileUrl}
                 onClick={() => onPreviewImage(fileUrl, `보호자 첨부 ${index + 1}`)}
-                className="relative h-12 overflow-hidden rounded-lg bg-[#edf1f6]"
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#edf1f6]"
               >
                 <img
                   src={fileUrl}
