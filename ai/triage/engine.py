@@ -279,6 +279,50 @@ def section_label(section_id: str | None) -> str:
     return section_id
 
 
+# 경과 모니터링(followup)이 임상적으로 의미 있는 = "시간에 따라 변하고 악화 가능성이 있는"
+# 동적 증상군. 응급도(얼마나 빨리 봐야 하나)와는 별개의 축 — 모니터링 가치(변화가 일정을
+# 바꾸나)로 판단한다. 출처: vet_triage.json need_followup 임상 정의(발작·경련, 반복 구토·
+# 설사, 진행성 출혈, 호흡 이상, 의식·활동성 급저하, 독성물질 섭취).
+# 제외: UNABLE_TO_WALK(마비·정적), UROGENITAL/GENERAL(즉시 내원형 또는 비특이) — 점수가
+# 높아도 '지켜보기'보다 '지금 가기'라 모니터링 가치가 낮다.
+_MONITORABLE_SECTIONS = {
+    "SEIZURE",      # 발작·경련 — 빈도/지속시간 변화
+    "GI",           # 반복 구토·설사, 혈변 — 횟수 변화
+    "BLEEDING",     # 진행성 출혈
+    "RESPIRATORY",  # 호흡 이상 — 급격 악화 가능
+    "COLLAPSE",     # 의식·활동성 급격 저하
+    "CARDIAC",      # 실신·부정맥 — 동적
+    "TRAUMA",       # 외상·출혈 진행
+}
+
+
+def compute_need_followup(
+    *,
+    urgency_level_num: int | None,
+    red_flags: list | None = None,
+    section: str | None = None,
+    dynamic_signals: dict | None = None,
+) -> tuple[bool, str | None]:
+    """경과 모니터링(followup) 활성 여부 단일 판정.
+
+    점수(urgency_level_num ≤ 2) 단독이 아니라 '동적 증상군'인지로 결정한다.
+    - red flag(응급 징후): 항상 모니터링
+    - decision tree: 모니터링 대상 섹션 + 일반(GREEN/num4) 초과
+    - freeform: 진행·출혈 등 동적 신호 + 일반 초과
+    Returns: (need_followup, followup_reason)
+    """
+    if red_flags:
+        return True, "응급 징후 확인 — 경과 모니터링 필요"
+    # 일반(GREEN, num4 이상) 경미 케이스는 모니터링 불필요
+    if urgency_level_num is None or urgency_level_num >= 4:
+        return False, None
+    if section and section in _MONITORABLE_SECTIONS:
+        return True, f"{section_label(section)} — 경과 모니터링"
+    if dynamic_signals and (dynamic_signals.get("rapid_worsening") or dynamic_signals.get("active_bleeding")):
+        return True, "악화·출혈 진행 — 경과 모니터링"
+    return False, None
+
+
 def visible_pills(node_id: str, species: str | None = None) -> list[dict]:
     """현재 노드에서 보여줄 pill 목록(종 한정 pill은 종 불일치 시 제외)."""
     node = get_node(node_id)
@@ -457,6 +501,9 @@ def to_collected_info(answers: list[dict], species: str | None, section: str | N
 
     label = section_label(section)
     summary = _summarize_answers(answers, section, keywords)
+    need_followup, followup_reason = compute_need_followup(
+        urgency_level_num=u["urgency_level_num"], red_flags=red_flags, section=section,
+    )
     return {
         "is_triage_complete": True,
         "urgency_level": u["urgency_level"],
@@ -469,6 +516,6 @@ def to_collected_info(answers: list[dict], species: str | None, section: str | N
         "suspected_diseases": suspected[:3],
         "symptom_summary": summary,
         "recommended_action": "내원 권장",
-        "need_followup": u["urgency_level_num"] <= 2,
-        "followup_reason": (f"응급도 {u['urgency_level']}" if u["urgency_level_num"] <= 2 else None),
+        "need_followup": need_followup,
+        "followup_reason": followup_reason,
     }

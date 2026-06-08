@@ -992,6 +992,9 @@ def _freeform_collected_info(
     summary = analysis.get("symptom_summary") or content_text(symptom)[:300]
     chief = analysis.get("chief_complaint") or (keywords[0] if keywords else content_text(symptom)[:40])
     num = u["urgency_level_num"]
+    need_followup, followup_reason = te.compute_need_followup(
+        urgency_level_num=num, dynamic_signals=analysis.get("signals"),
+    )
     return {
         "is_triage_complete": True,
         "urgency_level": u["urgency_level"],
@@ -1004,8 +1007,8 @@ def _freeform_collected_info(
         "suspected_diseases": diseases[:3],
         "symptom_summary": summary,
         "recommended_action": "진료 예약 권장",
-        "need_followup": num <= 2,
-        "followup_reason": (f"응급도 {u['urgency_level']}" if num <= 2 else None),
+        "need_followup": need_followup,
+        "followup_reason": followup_reason,
     }
 
 
