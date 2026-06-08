@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { ClipboardList, TriangleAlert } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import {
   Group as ResizableGroup,
@@ -295,10 +295,10 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                       onApplyIntake={handleApplyIntake}
                       onPreviewImage={openPreviewImage}
                       isReadOnly={isReadOnly}
+                      followupContent={followupItems.length > 0 ? <FollowupPanel items={followupItems} /> : null}
                     />
                     {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
                     <HistoryPanel histories={currentEmr.emr_history} />
-                    {followupItems.length > 0 && <FollowupPanel items={followupItems} />}
                     {isTodayView && queueTab === "completed" && (
                       <div className="flex justify-end">
                         <button
@@ -526,41 +526,27 @@ function ValidationNotice({
 }
 
 function FollowupPanel({ items }: { items: FollowupItem[] }) {
+  const latest = items[items.length - 1];
+  const hasEmergencyAlert = items.some((item) => item.emergency_alert);
+  if (!latest) return null;
+
   return (
-    <div className="rounded-lg border border-[#e8edf4] bg-white p-3 shadow-sm">
-      <h3 className="mb-2 text-xs font-extrabold text-[#151b28]">경과 보고</h3>
-      <div className="space-y-2">
-        {items.map((item) => (
-          <div
-            key={item.followup_id}
-            className={`border-l-2 py-1 pl-3 ${
-              item.emergency_alert ? "border-[#ef4444]" : "border-[#cbd5e1]"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] text-[#a8b0bf]">
-                {item.created_at
-                  ? new Date(item.created_at).toLocaleString("ko-KR", {
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : ""}
-              </p>
-              {item.emergency_alert && (
-                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-extrabold text-[#ef4444]">
-                  <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
-                  응급 신호
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs font-bold leading-relaxed text-[#151b28]">
-              {item.ai_summary ?? "경과 요약을 생성 중입니다."}
-            </p>
-          </div>
-        ))}
+    <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
+          <ClipboardList className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+          경과 보고
+        </p>
+        {hasEmergencyAlert && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-[10px] font-extrabold text-[#ef4444]">
+            <TriangleAlert className="h-3 w-3" strokeWidth={2.2} />
+            응급 신호
+          </span>
+        )}
       </div>
+      <p className="text-xs font-bold leading-5 text-[#59657a]">
+        {latest.ai_summary ?? "경과 요약을 생성 중입니다."}
+      </p>
     </div>
   );
 }

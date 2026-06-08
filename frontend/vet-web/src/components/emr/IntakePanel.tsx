@@ -1,4 +1,5 @@
 import { FileText, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 import type { EmrResult } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -9,6 +10,7 @@ export function IntakePanel({
   onApplyIntake,
   onPreviewImage,
   isReadOnly = false,
+  followupContent,
 }: {
   emr: EmrResult;
   visibleFiles: string[];
@@ -16,6 +18,7 @@ export function IntakePanel({
   onApplyIntake: (target: "summary" | "memo" | "all") => void;
   onPreviewImage: (url: string, label: string) => void;
   isReadOnly?: boolean;
+  followupContent?: ReactNode;
 }) {
   const summary = emr.triage_summary.summary;
   const memo = emr.triage_summary.memo;
@@ -88,6 +91,8 @@ export function IntakePanel({
             {memo ?? "수의사 메모가 없습니다."}
           </p>
         </div>
+
+        {followupContent}
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
