@@ -287,7 +287,11 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     for s in sched_result.scalars().all():
         ct = to_kst(s.confirmed_time)
         if ct and ct.date() == target_date:
-            booked.add(ct.strftime("%H:%M"))
+            end_dt = to_kst(s.confirmed_end_time) if s.confirmed_end_time else ct + timedelta(minutes=s.duration_min)
+            current = ct
+            while current < end_dt:
+                booked.add(current.strftime("%H:%M"))
+                current += timedelta(minutes=30)
 
     # 오늘이면 현재 시간 이전 슬롯 제외
     is_today = target_date == now_kst.date()
