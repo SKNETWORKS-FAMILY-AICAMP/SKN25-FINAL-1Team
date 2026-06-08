@@ -11,9 +11,9 @@ import WorkflowSection from "./sections/WorkflowSection";
 
 function App() {
   return (
-    <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-800">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-800">
       <Header />
-      <main>
+      <main className="pt-16">
         <HeroSection />
         <MarqueeSection />
         <ServiceSection />
