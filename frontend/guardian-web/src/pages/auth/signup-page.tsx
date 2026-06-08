@@ -242,7 +242,7 @@ const SignupPage = () => {
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-slate-900">{t(item.titleKey)}</h2>
-                  <p className="mt-1 text-sm leading-snug text-slate-600">
+                  <p className="mt-1 whitespace-pre-line text-sm leading-snug text-slate-600">
                     {t(item.descKey)}
                   </p>
                 </div>
@@ -251,7 +251,7 @@ const SignupPage = () => {
           </div>
         </section>
 
-        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
+        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:min-h-[34rem]">
           <div className="mb-4 text-center">
             <h2 className="text-2xl font-bold text-slate-950">{t("auth.signup.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">

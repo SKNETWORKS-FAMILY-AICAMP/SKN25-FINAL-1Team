@@ -157,6 +157,7 @@ const ScheduleListPage = () => {
       <PageHeader
         title={t("schedule.title")}
         description={t("schedule.description")}
+        note={t("schedule.timeDisclaimer")}
       />
 
       <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-8 pb-8 shadow-sm">
@@ -164,10 +165,6 @@ const ScheduleListPage = () => {
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
         />
-
-        <p className="mt-3 text-[11px] font-medium text-slate-400">
-          {t("schedule.timeDisclaimer")}
-        </p>
 
         <div className="py-6">
           {errorMessage ? (
