@@ -217,10 +217,11 @@ function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
       </div>
 
       <div>
-        <p className="text-xs font-extrabold text-[#7a8599]">의사 소견</p>
-        <h3 className="mt-1 text-lg font-extrabold text-[#151b28]">{record.title}</h3>
+        {record.title && record.title !== "의사 작성 메모" && (
+          <h3 className="text-lg font-extrabold text-[#151b28]">{record.title}</h3>
+        )}
         {onlyMemo ? (
-          <p className="mt-3 whitespace-pre-line break-words text-sm font-bold leading-6 text-[#344055]">
+          <p className="whitespace-pre-line break-words text-sm font-bold leading-6 text-[#344055]">
             {record.soap.subjective}
           </p>
         ) : (
