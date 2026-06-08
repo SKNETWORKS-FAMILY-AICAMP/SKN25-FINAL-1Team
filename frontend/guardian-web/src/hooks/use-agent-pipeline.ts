@@ -6,6 +6,8 @@ import {
   getAvailableScheduleSlots,
   confirmSchedule,
 } from "../api/schedule-api";
+import { useTranslation } from "../i18n/language-context";
+import type { Language } from "../i18n/translations";
 import type { Pet } from "../api/pets-api";
 import type { ChatCard, ChatMessage, SlotOption } from "./use-chat-conversation";
 
@@ -102,24 +104,35 @@ const getExtendedBusinessDates = (startOffset: number, scanDays = 21): string[] 
 
 const nextId = () => Date.now() + Math.random();
 
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const weekdayOf = (dateStr: string) => WEEKDAYS[new Date(dateStr).getDay()];
+const localeForLang = (lang: Language) =>
+  ({ ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" })[lang];
+
+const weekdayOf = (dateStr: string, lang: Language) =>
+  new Intl.DateTimeFormat(localeForLang(lang), { weekday: "short" }).format(
+    new Date(dateStr),
+  );
 
 /** "16:00" → "오후 4:00" */
-const formatTime = (hhmm: string): string => {
+const formatTime = (
+  hhmm: string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
   const [h, m] = hhmm.split(":").map(Number);
-  const period = h < 12 ? "오전" : "오후";
+  const period = h < 12 ? t("chatbot.am") : t("chatbot.pm");
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${period} ${h12}:${String(m).padStart(2, "0")}`;
 };
 
 /** 90 → "1시간 30분", 60 → "1시간", 30 → "30분" */
-const formatDuration = (min: number): string => {
+const formatDuration = (
+  min: number,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
   const h = Math.floor(min / 60);
   const m = min % 60;
-  if (h && m) return `${h}시간 ${m}분`;
-  if (h) return `${h}시간`;
-  return `${m}분`;
+  if (h && m) return t("chatbot.durationHourMin", { h, m });
+  if (h) return t("chatbot.durationHour", { h });
+  return t("chatbot.durationMin", { m });
 };
 
 export const useAgentPipeline = ({
@@ -127,6 +140,7 @@ export const useAgentPipeline = ({
   setQuickReplies,
   setIsStreaming,
 }: UseAgentPipelineParams) => {
+  const { lang, t } = useTranslation();
   const [phase, setPhase] = useState<PipelinePhase>("chatting");
   const [internalAlertFlag, setInternalAlertFlag] = useState(false);
   const [escalationPromptVisible, setEscalationPromptVisible] = useState(false);
@@ -162,10 +176,10 @@ export const useAgentPipeline = ({
       const [, m, d] = s.date.split("-");
       return {
         label,
-        monthDay: `${Number(m)}월 ${Number(d)}일`,
-        weekday: weekdayOf(s.date),
-        timeText: formatTime(s.time),
-        durationText: formatDuration(durationMin),
+        monthDay: t("chatbot.monthDay", { month: Number(m), day: Number(d) }),
+        weekday: weekdayOf(s.date, lang),
+        timeText: formatTime(s.time, t),
+        durationText: formatDuration(durationMin, t),
       };
     });
   };
@@ -205,7 +219,7 @@ export const useAgentPipeline = ({
     emridRef.current = emrid ?? null;
     setPhase("scheduling");
     setIsStreaming(true);
-    appendBot("잠시만요, 예약 가능한 시간을 확인하고 있어요 ⏳");
+    appendBot(t("chatbot.checkingSlots"));
 
     try {
       // 서버가 triage 완료 직후 schedule agent를 이미 실행해 둔 경우(schedule_task_id)
@@ -229,7 +243,7 @@ export const useAgentPipeline = ({
       } | null;
 
       if (!schedRes?.slot_window) {
-        appendBot("예약 시간을 계산하는 데 시간이 걸리고 있어요. 아래에서 날짜를 선택해 가능한 시간을 확인해주세요. 📅");
+        appendBot(t("chatbot.slotsLoadSlow"));
         appendCard({ kind: "slots", slots: [] });
         setPhase("slot-selection");
         setShowDatePicker(true);
@@ -260,14 +274,18 @@ export const useAgentPipeline = ({
       for (const s of collected) {
         const time = s.start_time.slice(0, 5);
         const [, m, d] = s.date.split("-");
-        const label = `${m}월 ${d}일 ${time}`;
+        const label = t("chatbot.slotLabel", {
+          month: Number(m),
+          day: Number(d),
+          time,
+        });
         newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1 };
         slotOptions.push({
           label,
-          monthDay: `${Number(m)}월 ${Number(d)}일`,
-          weekday: weekdayOf(s.date),
-          timeText: formatTime(time),
-          durationText: formatDuration(durationMin),
+          monthDay: t("chatbot.monthDay", { month: Number(m), day: Number(d) }),
+          weekday: weekdayOf(s.date, lang),
+          timeText: formatTime(time, t),
+          durationText: formatDuration(durationMin, t),
         });
       }
 
@@ -276,18 +294,18 @@ export const useAgentPipeline = ({
       // 내원 전 준비사항(pre_visit_instructions)은 여기서 보여주지 않고
       // 예약 확정 후 확정 카드 아래에 정리해서 노출한다(scheduleResultRef에 보관됨).
       if (slotOptions.length > 0) {
-        appendBot("예약 가능한 시간을 찾았어요. 편한 시간을 선택해주세요. 🗓️");
+        appendBot(t("chatbot.slotsFound"));
         appendCard({ kind: "slots", slots: slotOptions });
         setPhase("slot-selection");
       } else {
         // 슬롯을 찾지 못했어도 '날짜 보기'는 카드에서 항상 제공
-        appendBot("지금 바로 추천드릴 시간이 없어요. 아래에서 직접 날짜를 선택해주세요. 📅");
+        appendBot(t("chatbot.noSlotsPickDate"));
         appendCard({ kind: "slots", slots: [] });
         setPhase("slot-selection");
         setShowDatePicker(true);
       }
     } catch {
-      appendBot("예약 시간 확인 중 오류가 발생했어요. 아래에서 날짜를 선택해 가능한 시간을 다시 확인해주세요. 📅");
+      appendBot(t("chatbot.slotCheckRetry"));
       appendCard({ kind: "slots", slots: [] });
       setPhase("slot-selection");
       setShowDatePicker(true);
@@ -304,11 +322,11 @@ export const useAgentPipeline = ({
 
     setPhase("booking");
     setIsStreaming(true);
-    appendBot("예약을 처리하고 있어요...");
+    appendBot(t("chatbot.processingBooking"));
 
     const emrid = emridRef.current;
     if (!emrid) {
-      appendBot("문진 예약 데이터가 존재하지 않습니다. 처음부터 상담을 진행해주세요.");
+      appendBot(t("chatbot.noTriageData"));
       setPhase("chatting");
       setIsStreaming(false);
       return false;
@@ -327,14 +345,20 @@ export const useAgentPipeline = ({
 
       if (resp.code === 200 || resp.code === 201) {
         const [y, m, d] = slot.date.split("-");
-        const dateText = `${y}년 ${Number(m)}월 ${Number(d)}일 (${weekdayOf(slot.date)}) ${formatTime(slot.time)}`;
+        const dateText = t("chatbot.dateTextFull", {
+          year: y,
+          month: Number(m),
+          day: Number(d),
+          weekday: weekdayOf(slot.date, lang),
+          time: formatTime(slot.time, t),
+        });
 
         // ① 예약 확정 카드
         appendCard({
           kind: "confirmation",
-          petName: currentPetRef.current?.petname ?? "반려동물",
+          petName: currentPetRef.current?.petname ?? t("chatbot.petFallback"),
           dateText,
-          durationText: formatDuration(duration),
+          durationText: formatDuration(duration, t),
           hospitalName: resp.result?.hospital_name ?? undefined,
         });
 
@@ -351,7 +375,7 @@ export const useAgentPipeline = ({
           (urgencyNum !== undefined && urgencyNum <= 2);
         if (needFollowup) {
           appendBot(
-            "예약일까지 증상 변화를 모니터링할게요. 증상이 변하면 여기에 알려주세요.",
+            t("chatbot.monitoring"),
           );
           setPhase("followup");
         } else {
@@ -359,13 +383,13 @@ export const useAgentPipeline = ({
         }
       } else {
         appendBot(
-          "예약 중 오류가 발생했어요. 아래 시간에서 다시 선택해주세요.",
+          t("chatbot.bookingError"),
         );
         appendCard({ kind: "slots", slots: buildSlotOptions() });
         setPhase("slot-selection");
       }
     } catch {
-      appendBot("예약 중 오류가 발생했어요. 아래 시간에서 다시 선택해주세요.");
+      appendBot(t("chatbot.bookingError"));
       appendCard({ kind: "slots", slots: buildSlotOptions() });
       setPhase("slot-selection");
     } finally {
@@ -399,7 +423,7 @@ export const useAgentPipeline = ({
       if (followupRes?.guardian_message) {
         appendBot(followupRes.guardian_message);
       } else {
-        appendBot("경과가 기록되었어요. 담당 수의사에게 전달됩니다.");
+        appendBot(t("chatbot.followupRecorded"));
       }
 
       if (followupRes?.followup_recommended) {
@@ -408,9 +432,9 @@ export const useAgentPipeline = ({
         
         const actions = followupRes.recommended_actions || [];
         const actionLabels = actions.map((action: string) => {
-          if (action === "call_hospital") return "🕒 빠른 예약 가능 시간 보기";
-          if (action === "keep_schedule") return "📅 기존 예약 유지";
-          if (action === "fast_booking") return "🕒 빠른 예약 가능 시간 보기";
+          if (action === "call_hospital") return t("chatbot.actionCallHospital");
+          if (action === "keep_schedule") return t("chatbot.actionKeepSchedule");
+          if (action === "fast_booking") return t("chatbot.actionFastBooking");
           return action;
         }).filter((label: string, index: number, arr: string[]) => arr.indexOf(label) === index);
         
@@ -424,7 +448,7 @@ export const useAgentPipeline = ({
     } catch (err) {
       if (requestId === lastRequestRef.current) {
         setMessages(messagesBackup); // Rollback to backup state
-        appendBot("기록에 실패했어요. 다시 시도해주세요.");
+        appendBot(t("chatbot.recordFailed"));
       }
     } finally {
       if (requestId === lastRequestRef.current) {
@@ -443,7 +467,7 @@ export const useAgentPipeline = ({
     setShowDatePicker(false);
     const emrid = emridRef.current;
     if (!emrid) {
-      appendBot("문진 데이터가 없습니다. 처음부터 상담을 다시 진행해주세요.");
+      appendBot(t("chatbot.noTriageDataRestart"));
       return;
     }
     // 슬롯맵에 등록 후 기존 handleSlotSelect 재사용
@@ -473,7 +497,7 @@ export const useAgentPipeline = ({
   const restoreFollowupPhase = (emrid: number) => {
     emridRef.current = emrid;
     setPhase("followup");
-    appendBot("이전 경과 보고를 이어서 진행할 수 있어요. 증상 변화나 사진을 보내주세요. 📸");
+    appendBot(t("chatbot.restoreFollowup"));
   };
 
   return {

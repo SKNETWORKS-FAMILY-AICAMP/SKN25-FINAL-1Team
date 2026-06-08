@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -7,7 +8,20 @@ import {
 } from "react";
 import { isAxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
+import { type ChatSessionHistory } from "../../api/chat-api";
+import { getPets, type Pet } from "../../api/pets-api";
 import ChatDatePicker from "../../components/chatbot/chat-date-picker";
+import ChatInputBox from "../../components/chatbot/chat-input-box";
+import ChatMessageList from "../../components/chatbot/chat-message-list";
+import ChatSessionList from "../../components/chatbot/chat-session-list";
+import PetSelector from "../../components/chatbot/pet-selector";
+import GuardianNavbar from "../../components/guardian-navbar";
+import { useAgentPipeline } from "../../hooks/use-agent-pipeline";
+import { useChatConversation } from "../../hooks/use-chat-conversation";
+import { useChatSessions } from "../../hooks/use-chat-sessions";
+import { useChatUpload } from "../../hooks/use-chat-upload";
+import { useTranslation } from "../../i18n/language-context";
+import { translateKnownText } from "../../i18n/known-text";
 
 const SYMPTOM_PILLS = [
   "구토",
@@ -18,8 +32,6 @@ const SYMPTOM_PILLS = [
   "눈물",
   "절뚝거림",
 ] as const;
-
-const INITIAL_BOT_MESSAGE = "어떤 증상 때문에 예약을 원하시나요?";
 
 // chatPhase: UI 레이어에서 사용하는 상태 머신
 // IDLE / SYMPTOM_COLLECTING → pipeline.phase === "chatting"
@@ -34,18 +46,6 @@ type ChatPhase =
   | "SLOT_RECOMMENDING"
   | "BOOKING_CONFIRMED"
   | "FOLLOWUP_ACTIVE";
-
-import { type ChatSessionHistory } from "../../api/chat-api";
-import { getPets, type Pet } from "../../api/pets-api";
-import ChatInputBox from "../../components/chatbot/chat-input-box";
-import ChatMessageList from "../../components/chatbot/chat-message-list";
-import ChatSessionList from "../../components/chatbot/chat-session-list";
-import PetSelector from "../../components/chatbot/pet-selector";
-import GuardianNavbar from "../../components/guardian-navbar";
-import { useChatConversation } from "../../hooks/use-chat-conversation";
-import { useChatSessions } from "../../hooks/use-chat-sessions";
-import { useChatUpload } from "../../hooks/use-chat-upload";
-import { useAgentPipeline } from "../../hooks/use-agent-pipeline";
 
 const defaultProfileImages = [
   "/assets/profile1.png",
@@ -77,14 +77,6 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
   }
 
   return fallbackMessage;
-};
-
-const getHistoryTitle = (history: ChatSessionHistory) => {
-  const keywords = history.keywords
-    .map((keyword) => keyword.trim())
-    .filter((keyword) => keyword && keyword.length <= 12)
-    .slice(0, 3);
-  return keywords.length > 0 ? keywords.join(", ") : "상담 기록";
 };
 
 const formatDateToYyyyMmDd = (date: Date) => {
@@ -120,6 +112,7 @@ const TrashIcon = () => (
 );
 
 const ChatbotPage = () => {
+  const { lang, t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams] = useSearchParams();
   const selectedPetIdFromQuery = Number(searchParams.get("petId"));
@@ -236,12 +229,12 @@ const ChatbotPage = () => {
         {
           id: Date.now(),
           role: "assistant",
-          content: session.initial_message || INITIAL_BOT_MESSAGE,
+          content: session.initial_message || t("chatbot.initialQuestion"),
         },
       ]);
       setQuickReplies(session.initial_pills?.length ? session.initial_pills : [...SYMPTOM_PILLS]);
     }
-  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // pipeline.phase → chatPhase 매핑 (UI 상태 제어용)
   const chatPhase = useMemo((): ChatPhase => {
@@ -258,6 +251,17 @@ const ChatbotPage = () => {
 
   const todayChatTitle = useMemo(() => formatDateToYyyyMmDd(new Date()), []);
 
+  const getHistoryTitle = useCallback(
+    (history: ChatSessionHistory) => {
+      const keywords = history.keywords
+        .map((keyword) => translateKnownText(keyword.trim(), t, lang))
+        .filter((keyword) => keyword && keyword.length <= 24)
+        .slice(0, 3);
+      return keywords.length > 0 ? keywords.join(", ") : t("chatbot.historyDefaultTitle");
+    },
+    [lang, t],
+  );
+
   useEffect(() => {
     let isMounted = true;
 
@@ -271,7 +275,7 @@ const ChatbotPage = () => {
 
         if (response.code !== 200) {
           setErrorMessage(
-            response.message || "반려동물 목록을 불러오지 못했습니다.",
+            response.message || t("chatbot.petLoadError"),
           );
           setPets([]);
           return;
@@ -285,7 +289,7 @@ const ChatbotPage = () => {
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
-          getErrorMessage(error, "반려동물 목록을 불러오지 못했습니다."),
+          getErrorMessage(error, t("chatbot.petLoadError")),
         );
       } finally {
         if (isMounted) setIsLoadingPets(false);
@@ -294,7 +298,7 @@ const ChatbotPage = () => {
 
     loadPets();
     return () => { isMounted = false; };
-  }, []);
+  }, [t]);
 
   const handleSelectPet = (petId: number) => {
     if (petId === selectedPetId) return;
@@ -325,7 +329,7 @@ const ChatbotPage = () => {
           {
             id: Date.now() + 1,
             role: "assistant" as const,
-            content: "위 시간 중 하나를 선택해주세요.",
+            content: t("chatbot.selectSlotPrompt"),
           },
         ]);
         setQuickReplies(pipeline.getSlotLabels());
@@ -372,8 +376,12 @@ const ChatbotPage = () => {
       <main className="mx-auto flex w-full max-w-[1200px] flex-col px-6 pt-10 pb-6 lg:h-[calc(100vh-4rem)] lg:min-h-0">
         <div className="mb-6 shrink-0 flex items-end justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">챗봇 상담</h1>
-            <p className="mt-0.5 text-sm text-slate-500">AI와 증상을 상담하고 간편하게 진료를 예약하세요.</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {t("chatbot.title")}
+            </h1>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {t("chatbot.subtitle")}
+            </p>
           </div>
         </div>
         <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:min-h-0 lg:flex-1">
@@ -381,7 +389,7 @@ const ChatbotPage = () => {
           {/* 상태 확인 안내 배너 (followup에서 escalationPromptVisible=true 시) */}
           {pipeline.escalationPromptVisible ? (
             <div className="border-b border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 sm:px-7 flex justify-between items-center flex-wrap gap-2">
-              <span>🩺 증상 변화가 있어 예약 일정을 다시 확인하는 것을 권장해 드립니다.</span>
+              <span>{t("chatbot.escalation")}</span>
               <div className="flex gap-2">
                 {pipeline.guardianCareRecommendation.map((actionLabel, idx) => (
                   <button
@@ -429,7 +437,7 @@ const ChatbotPage = () => {
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
                     <div className="min-w-0 flex-1">
                       <h2 className="truncate text-base font-extrabold text-slate-950">
-                        {todayChatTitle} 새 상담
+                        {t("chatbot.newChatTitle", { date: todayChatTitle })}
                       </h2>
                     </div>
                   </div>
@@ -459,12 +467,12 @@ const ChatbotPage = () => {
                   {/* 상태별 입력 영역 */}
                   {chatPhase === "BOOKING_CONFIRMED" ? (
                     <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
-                      상담이 완료되었습니다. 새 상담을 시작하려면 왼쪽에서 선택해주세요.
+                      {t("chatbot.bookingComplete")}
                     </div>
                   ) : chatPhase === "SLOT_RECOMMENDING" ? (
                     <div className="border-t border-slate-100 px-4 py-3 text-center">
                       <span className="text-xs font-semibold text-slate-400">
-                        위 카드에서 시간을 선택하거나 '예약 가능한 날짜 보기'로 직접 고르세요
+                        {t("chatbot.slotHint")}
                       </span>
                     </div>
                   ) : (
@@ -496,7 +504,7 @@ const ChatbotPage = () => {
                       type="button"
                       onClick={() => handleDeleteHistory(selectedHistory)}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"
-                      aria-label="상담 기록 삭제"
+                      aria-label={t("chatbot.deleteHistory")}
                     >
                       <TrashIcon />
                     </button>
@@ -506,7 +514,7 @@ const ChatbotPage = () => {
                     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-7">
                       <div className="flex-1" />
                       <div className="max-w-[82%] rounded-3xl rounded-bl-lg bg-slate-100 px-5 py-4 text-sm font-semibold leading-6 text-slate-700">
-                        이전 상담 내용을 불러오는 중입니다.
+                        {t("chatbot.loadingHistory")}
                       </div>
                     </div>
                   ) : (
@@ -537,7 +545,7 @@ const ChatbotPage = () => {
                 <>
                   <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-5 sm:px-7">
                     <h2 className="truncate text-[15px] font-bold text-slate-900">
-                      챗봇 상담
+                      {t("chatbot.title")}
                     </h2>
                   </div>
                   <div className="flex flex-1 flex-col items-center px-6 pt-[150px] text-center">
@@ -546,12 +554,10 @@ const ChatbotPage = () => {
                     </div>
                     <div>
                       <h2 className="mt-5 text-2xl font-bold text-slate-800">
-                        상담을 선택해주세요
+                        {t("chatbot.emptyTitle")}
                       </h2>
                       <p className="mt-3 text-sm font-semibold leading-5 text-slate-500">
-                        반려동물을 선택한 뒤 상담 기록을 열거나
-                        <br className="hidden sm:block" />새 상담을 시작할 수
-                        있어요.
+                        {t("chatbot.emptyDescription")}
                       </p>
                     </div>
                   </div>

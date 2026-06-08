@@ -10,6 +10,7 @@ import type {
   AvailableScheduleSlot,
   CheckupReservationResult,
 } from "../types/schedule";
+import { useTranslation } from "../i18n/language-context";
 
 const checkupDurationMin = 30;
 
@@ -49,6 +50,7 @@ interface UseCheckupReservationParams {
 export const useCheckupReservation = ({
   petId,
 }: UseCheckupReservationParams) => {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDateState] = useState(() =>
     formatDateInput(new Date()),
   );
@@ -88,7 +90,7 @@ export const useCheckupReservation = ({
 
         if (response.code !== 200) {
           setErrorMessage(
-            response.message || "예약 가능한 시간을 불러오지 못했습니다.",
+            response.message || t("schedule.slotsError"),
           );
           setAvailableSlots([]);
           return;
@@ -101,7 +103,7 @@ export const useCheckupReservation = ({
         }
 
         setErrorMessage(
-          getErrorMessage(error, "예약 가능한 시간을 불러오지 못했습니다."),
+          getErrorMessage(error, t("schedule.slotsError")),
         );
         setAvailableSlots([]);
       } finally {
@@ -120,7 +122,7 @@ export const useCheckupReservation = ({
 
   const reserveCheckup = async () => {
     if (!selectedSlot) {
-      setErrorMessage("예약 시간을 선택해주세요.");
+      setErrorMessage(t("schedule.selectTimePrompt"));
       return;
     }
 
@@ -136,14 +138,14 @@ export const useCheckupReservation = ({
       });
 
       if (response.code !== 200 || !response.result) {
-        setErrorMessage(response.message || "정기검진 예약에 실패했습니다.");
+        setErrorMessage(response.message || t("schedule.checkupFailed"));
         return;
       }
 
       setCompletedReservation(response.result);
     } catch (error) {
       setErrorMessage(
-        getErrorMessage(error, "정기검진 예약에 실패했습니다."),
+        getErrorMessage(error, t("schedule.checkupFailed")),
       );
     } finally {
       setIsSubmitting(false);

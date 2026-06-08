@@ -1,4 +1,4 @@
-import type { ChangeEvent, RefObject } from "react";
+import { useRef, type ChangeEvent, type RefObject } from "react";
 
 import {
   genderOptions,
@@ -8,11 +8,12 @@ import {
   type PetFormState,
   speciesOptions,
 } from "../../hooks/use-pet-form";
+import { useTranslation } from "../../i18n/language-context";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 const selectClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 const errorInputClass = "border-red-400 focus:border-red-500 focus:ring-red-100";
 const labelClass = "text-sm font-extrabold text-slate-800";
 
@@ -32,7 +33,7 @@ const choiceTone = {
   pink: "border-pink-300 bg-pink-50 text-pink-700",
   green: "border-emerald-300 bg-emerald-50 text-emerald-700",
   orange: "border-orange-300 bg-orange-50 text-orange-700",
-  purple: "border-indigo-300 bg-indigo-50 text-indigo-700",
+  teal: "border-teal-300 bg-teal-50 text-teal-700",
   slate: "border-slate-300 bg-slate-50 text-slate-700",
 };
 
@@ -44,8 +45,91 @@ const getChoiceClass = (
     "flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition",
     isSelected
       ? choiceTone[tone]
-      : "border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/60",
+      : "border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:bg-teal-50/60",
   ].join(" ");
+
+const localeForLang = (lang: string) =>
+  ({ ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" })[lang] || "ko-KR";
+
+const formatDatePreview = (value: string, lang: string) => {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(localeForLang(lang), {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+};
+
+interface LocalizedDateInputProps {
+  id: string;
+  label: string;
+  value: string;
+  disabled: boolean;
+  lang: string;
+  onChange: (value: string) => void;
+}
+
+const LocalizedDateInput = ({
+  id,
+  label,
+  value,
+  disabled,
+  lang,
+  onChange,
+}: LocalizedDateInputProps) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const displayValue = value ? formatDatePreview(value, lang) : label;
+
+  const openPicker = () => {
+    if (disabled) return;
+    const input = inputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+    } else {
+      input.focus();
+    }
+  };
+
+  return (
+    <div className="relative mt-2">
+      <button
+        type="button"
+        onClick={openPicker}
+        disabled={disabled}
+        className={[
+          "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-semibold outline-none transition",
+          disabled
+            ? "cursor-not-allowed bg-slate-50 text-slate-400"
+            : "text-slate-900 hover:border-teal-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100",
+        ].join(" ")}
+      >
+        <span className={value ? "text-slate-900" : "text-slate-400"}>
+          {displayValue}
+        </span>
+        <span className="text-slate-500" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M8 2v4M16 2v4M3 10h18" />
+          </svg>
+        </span>
+      </button>
+      <input
+        ref={inputRef}
+        id={id}
+        type="date"
+        aria-label={label}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="pointer-events-none absolute inset-0 h-11 w-full opacity-0"
+        tabIndex={-1}
+      />
+    </div>
+  );
+};
 
 interface PetFormProps {
   form: PetFormState;
@@ -69,18 +153,26 @@ const PetForm = ({
   handleNameChange,
   handleNotesChange,
 }: PetFormProps) => {
+  const { t, lang } = useTranslation();
+  const speciesLabel = (value: string) =>
+    ({ "강아지": t("pet.speciesDog"), "고양이": t("pet.speciesCat"), "기타": t("pet.speciesOther") })[value] || value;
+  const genderLabel = (value: string) =>
+    ({ "수컷": t("pet.genderMale"), "암컷": t("pet.genderFemale"), "모름": t("pet.unknown") })[value] || value;
+  const neuteredLabel = (value: string) =>
+    ({ "예": t("pet.yes"), "아니오": t("pet.no"), "모름": t("pet.unknown") })[value] || value;
+
   return (
     <>
       <section className="p-6">
-        <div className="mb-5 flex items-center gap-2 text-violet-700">
+        <div className="mb-5 flex items-center gap-2 text-teal-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">기본 정보</h2>
+          <h2 className="text-lg font-extrabold">{t("pet.basicInfo")}</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="petname" className={labelClass}>
-              이름
+              {t("pet.nameLabel")}
               <RequiredMark />
             </label>
             <input
@@ -88,7 +180,7 @@ const PetForm = ({
               value={form.petname}
               onChange={handleNameChange}
               readOnly={isDetailMode}
-              placeholder="예시) 몽몽이"
+              placeholder={t("pet.namePlaceholder")}
               className={`${inputClass} mt-2 ${
                 errors.petname ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
@@ -98,7 +190,7 @@ const PetForm = ({
 
           <div>
             <label htmlFor="gender" className={labelClass}>
-              성별
+              {t("pet.genderLabel")}
               <RequiredMark />
             </label>
             <select
@@ -110,10 +202,10 @@ const PetForm = ({
                 errors.gender ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
             >
-              <option value="">선택해주세요</option>
+              <option value="">{t("pet.selectPlaceholder")}</option>
               {genderOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {genderLabel(option)}
                 </option>
               ))}
             </select>
@@ -122,7 +214,7 @@ const PetForm = ({
 
           <div>
             <label htmlFor="weight" className={labelClass}>
-              몸무게
+              {t("pet.weightLabel")}
               <RequiredMark />
             </label>
             <div className="relative mt-2">
@@ -134,7 +226,7 @@ const PetForm = ({
                 value={form.weight}
                 readOnly={isDetailMode}
                 onChange={(event) => updateForm("weight", event.target.value)}
-                placeholder="예) 4.2"
+                placeholder={t("pet.weightPlaceholder")}
                 className={`${inputClass} pr-12 ${
                   errors.weight ? errorInputClass : ""
                 } ${isDetailMode ? "bg-slate-50" : ""}`}
@@ -148,7 +240,7 @@ const PetForm = ({
 
           <div>
             <label htmlFor="is-neutered" className={labelClass}>
-              중성화 여부
+              {t("pet.neuteredLabel")}
               <RequiredMark />
             </label>
             <select
@@ -162,10 +254,10 @@ const PetForm = ({
                 errors.isNeutered ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
             >
-              <option value="">선택해주세요</option>
+              <option value="">{t("pet.selectPlaceholder")}</option>
               {neuteredOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {neuteredLabel(option)}
                 </option>
               ))}
             </select>
@@ -175,14 +267,14 @@ const PetForm = ({
       </section>
 
       <section className="border-t border-slate-100 p-6">
-        <div className="mb-5 flex items-center gap-2 text-violet-700">
+        <div className="mb-5 flex items-center gap-2 text-teal-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">종류</h2>
+          <h2 className="text-lg font-extrabold">{t("pet.speciesSection")}</h2>
         </div>
 
         <div>
           <label className={labelClass}>
-            종
+            {t("pet.speciesLabel")}
             <RequiredMark />
           </label>
           <div className="mt-2 grid gap-3 sm:grid-cols-3">
@@ -199,7 +291,7 @@ const PetForm = ({
                 }}
                 className={getChoiceClass(
                   form.species === option,
-                  option === "기타" ? "purple" : "slate",
+                  option === "기타" ? "teal" : "slate",
                 )}
               >
                 <span>
@@ -209,7 +301,7 @@ const PetForm = ({
                       ? "🐱"
                       : "+"}
                 </span>
-                {option}
+                {speciesLabel(option)}
               </button>
             ))}
           </div>
@@ -224,7 +316,7 @@ const PetForm = ({
             onChange={(event) =>
               updateForm("customSpecies", event.target.value)
             }
-            placeholder="직접 입력해주세요. 예: 카피바라"
+            placeholder={t("pet.customSpeciesPlaceholder")}
             className={`${inputClass} disabled:bg-slate-50 disabled:text-slate-400 ${
               errors.customSpecies ? errorInputClass : ""
             }`}
@@ -234,38 +326,43 @@ const PetForm = ({
 
         <div className="mt-4">
           <label htmlFor="breed" className={labelClass}>
-            품종 (선택)
+            {t("pet.breedLabel")}
           </label>
           <input
             id="breed"
             value={form.breed}
             readOnly={isDetailMode}
             onChange={(event) => updateForm("breed", event.target.value)}
-            placeholder="예) 말티즈, 코리안숏헤어 등"
+            placeholder={t("pet.breedPlaceholder")}
             className={`${inputClass} mt-2 ${isDetailMode ? "bg-slate-50" : ""}`}
           />
         </div>
       </section>
 
       <section className="border-t border-slate-100 p-6">
-        <div className="mb-5 flex items-center gap-2 text-violet-700">
+        <div className="mb-5 flex items-center gap-2 text-teal-700">
           <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">건강 정보</h2>
+          <h2 className="text-lg font-extrabold">{t("pet.healthInfo")}</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="birth-date" className={labelClass}>
-              생년월일
+              {t("pet.birthDate")}
             </label>
-            <input
+            <LocalizedDateInput
               id="birth-date"
-              type="date"
               value={form.birthDate}
               disabled={isDetailMode || form.isBirthUnknown}
-              onChange={(event) => updateForm("birthDate", event.target.value)}
-              className={`${inputClass} mt-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:placeholder:text-slate-400`}
+              label={t("pet.datePlaceholder")}
+              lang={lang}
+              onChange={(value) => updateForm("birthDate", value)}
             />
+            {form.birthDate && !form.isBirthUnknown ? (
+              <p className="mt-1 text-xs font-bold text-slate-500">
+                {t("pet.selectedDate", { date: formatDatePreview(form.birthDate, lang) })}
+              </p>
+            ) : null}
             <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
               <input
                 type="checkbox"
@@ -277,26 +374,29 @@ const PetForm = ({
                     updateForm("birthDate", "");
                   }
                 }}
-                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
               />
-              날짜를 모르겠어요
+              {t("pet.birthUnknown")}
             </label>
           </div>
 
           <div>
             <label htmlFor="checkup-date" className={labelClass}>
-              마지막 정기검진
+              {t("pet.lastCheckup")}
             </label>
-            <input
+            <LocalizedDateInput
               id="checkup-date"
-              type="date"
               value={form.checkupDate}
               disabled={isDetailMode || form.isCheckupUnknown}
-              onChange={(event) =>
-                updateForm("checkupDate", event.target.value)
-              }
-              className={`${inputClass} mt-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:placeholder:text-slate-400`}
+              label={t("pet.datePlaceholder")}
+              lang={lang}
+              onChange={(value) => updateForm("checkupDate", value)}
             />
+            {form.checkupDate && !form.isCheckupUnknown ? (
+              <p className="mt-1 text-xs font-bold text-slate-500">
+                {t("pet.selectedDate", { date: formatDatePreview(form.checkupDate, lang) })}
+              </p>
+            ) : null}
             <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
               <input
                 type="checkbox"
@@ -308,16 +408,16 @@ const PetForm = ({
                     updateForm("checkupDate", "");
                   }
                 }}
-                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
               />
-              검진 날짜를 모르겠어요
+              {t("pet.checkupUnknown")}
             </label>
           </div>
 
           <div className="md:col-span-2">
             <div className="flex items-center justify-between">
               <label htmlFor="notes" className={labelClass}>
-                특이사항 (선택)
+                {t("pet.notesLabel")}
               </label>
             </div>
             <div className="relative mt-2">
@@ -326,8 +426,8 @@ const PetForm = ({
                 value={form.notes}
                 readOnly={isDetailMode}
                 onChange={handleNotesChange}
-                placeholder="알레르기, 질병 이력, 성격 등 간단히 입력해주세요."
-                className={`h-[88px] w-full resize-none rounded-xl border border-slate-200 px-4 py-3 pb-7 text-sm font-semibold leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 ${
+                placeholder={t("pet.notesPlaceholder")}
+                className={`h-[88px] w-full resize-none rounded-xl border border-slate-200 px-4 py-3 pb-7 text-sm font-semibold leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 ${
                   isDetailMode ? "bg-slate-50" : "bg-white"
                 }`}
               />

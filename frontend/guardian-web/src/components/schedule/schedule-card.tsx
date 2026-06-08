@@ -3,10 +3,14 @@ import ListItemCard from "../common/list-item-card";
 import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
 import {
   canManageSchedule,
-  formatScheduleDateTime,
+  formatScheduleTimeRange,
+  getScheduleStatusLabelKey,
   getProfileImage,
-  scheduleStatusLabel,
+  localeForLang,
+  normalizeScheduleStatus,
 } from "./schedule-utils";
+import { useTranslation } from "../../i18n/language-context";
+import { translateKnownText } from "../../i18n/known-text";
 
 interface ScheduleCardProps {
   schedule: ScheduleListItem;
@@ -21,21 +25,23 @@ const ScheduleCard = ({
   onOpenChange,
   onOpenCancel,
 }: ScheduleCardProps) => {
+  const { t, lang } = useTranslation();
   const canManage = canManageSchedule(schedule);
+  const normalizedStatus = normalizeScheduleStatus(schedule.status);
 
   const isPastConfirmed =
-    schedule.status === "CONFIRMED" &&
+    normalizedStatus === "CONFIRMED" &&
     new Date(schedule.confirmed_time) <= new Date();
 
   const isInactive =
     selectedFilter === "all" &&
-    (schedule.status === "COMPLETED" || schedule.status === "CANCELLED" || isPastConfirmed);
-  const statusLabel = scheduleStatusLabel[schedule.status];
+    (normalizedStatus === "COMPLETED" || normalizedStatus === "CANCELLED" || isPastConfirmed);
+  const statusLabel = t(getScheduleStatusLabelKey(schedule.status));
 
   const badgeClassName =
-    schedule.status === "CONFIRMED"
+    normalizedStatus === "CONFIRMED"
       ? "bg-blue-100 text-blue-600 ring-blue-200"
-      : schedule.status === "CANCELLED"
+      : normalizedStatus === "CANCELLED"
         ? "bg-rose-100 text-rose-500 ring-rose-200"
         : "bg-slate-100 text-slate-500 ring-slate-200";
 
@@ -50,7 +56,7 @@ const ScheduleCard = ({
       <div className="h-20 w-20 overflow-hidden rounded-lg bg-slate-100">
         <img
           src={getProfileImage(schedule)}
-          alt={`${schedule.pet_name} 프로필`}
+          alt={t("common.petProfileAlt", { name: schedule.pet_name })}
           className="h-full w-full object-cover"
         />
       </div>
@@ -71,11 +77,15 @@ const ScheduleCard = ({
         </div>
 
         <p className="mt-2 text-base font-extrabold text-slate-900">
-          {schedule.category}
+          {translateKnownText(schedule.category, t, lang)}
         </p>
 
         <p className="mt-1.5 text-sm font-bold text-blue-600">
-          {formatScheduleDateTime(schedule.confirmed_time)}
+          {formatScheduleTimeRange(
+            schedule.confirmed_time,
+            schedule.confirmed_end_time,
+            localeForLang(lang),
+          )}
         </p>
       </div>
 
@@ -88,7 +98,7 @@ const ScheduleCard = ({
             size="sm"
             className="min-w-[96px] whitespace-nowrap rounded-lg"
           >
-            예약 변경
+            {t("schedule.changeBooking")}
           </ActionButton>
 
           <ActionButton
@@ -98,7 +108,7 @@ const ScheduleCard = ({
             size="sm"
             className="min-w-[96px] whitespace-nowrap rounded-lg"
           >
-            예약 취소
+            {t("schedule.cancelBooking")}
           </ActionButton>
         </div>
       ) : null}

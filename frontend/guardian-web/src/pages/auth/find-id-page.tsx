@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { Lightbulb } from "lucide-react";
 
 import { findGuardianId } from "../../api/auth-api";
+import { useTranslation } from "../../i18n/language-context";
+import AuthLanguageSelector from "../../components/auth-language-selector";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 
 interface FindIdFormState {
@@ -44,6 +46,7 @@ const formatPhoneNumber = (value: string) => {
 };
 
 const FindIdPage = () => {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FindIdFormState>(initialFormState);
   const [foundLoginId, setFoundLoginId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -69,17 +72,17 @@ const FindIdPage = () => {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      setErrorMessage("이름을 입력해주세요.");
+      setErrorMessage(t("auth.findId.nameRequired"));
       return;
     }
 
     if (!form.phone.trim()) {
-      setErrorMessage("전화번호를 입력해주세요.");
+      setErrorMessage(t("auth.findId.phoneRequired"));
       return;
     }
 
     if (!/^[0-9-]+$/.test(form.phone.trim())) {
-      setErrorMessage("올바른 전화번호 형식으로 입력해주세요.");
+      setErrorMessage(t("auth.phoneFormatInvalid"));
       return;
     }
 
@@ -94,9 +97,7 @@ const FindIdPage = () => {
       });
 
       if (response.code !== 200 || !response.result?.loginid) {
-        setErrorMessage(
-          response.message || "입력하신 정보와 일치하는 계정을 찾을 수 없습니다.",
-        );
+        setErrorMessage(response.message || t("auth.notFound"));
         return;
       }
 
@@ -104,13 +105,12 @@ const FindIdPage = () => {
     } catch (error) {
       if (isAxiosError<FindIdErrorResponse>(error)) {
         setErrorMessage(
-          error.response?.data?.message ||
-            "아이디 찾기에 실패했습니다. 다시 시도해주세요.",
+          error.response?.data?.message || t("auth.findId.failed"),
         );
         return;
       }
 
-      setErrorMessage("아이디 찾기에 실패했습니다. 다시 시도해주세요.");
+      setErrorMessage(t("auth.findId.failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,18 +122,19 @@ const FindIdPage = () => {
         <Link to="/login" className="flex items-center gap-3">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto sm:h-9" />
         </Link>
+        <AuthLanguageSelector />
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
         <section className="space-y-14">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
-              아이디 찾기
+              {t("auth.findId.title")}
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              이름과 전화번호로
+              {t("auth.findId.heroSubtitleLine1")}
               <br />
-              가입 시 등록한 로그인 ID를 확인할 수 있습니다.
+              {t("auth.findId.heroSubtitleLine2")}
             </p>
           </div>
 
@@ -142,10 +143,10 @@ const FindIdPage = () => {
               <Lightbulb className="h-6 w-6" aria-hidden />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900">안내사항</h2>
+              <h2 className="text-base font-bold text-slate-900">{t("auth.infoTitle")}</h2>
               <ul className="mt-1 space-y-0.5 text-sm leading-snug text-slate-600">
-                <li>정보가 일치하면 마스킹된 로그인 ID를 표시합니다.</li>
-                <li>정보가 일치하지 않으면 아이디를 찾을 수 없습니다.</li>
+                <li>{t("auth.findId.infoLine1")}</li>
+                <li>{t("auth.findId.infoLine2")}</li>
               </ul>
             </div>
           </div>
@@ -153,22 +154,22 @@ const FindIdPage = () => {
 
         <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
           <div className="mb-4 text-center">
-            <h2 className="text-2xl font-bold text-slate-950">아이디 찾기</h2>
+            <h2 className="text-2xl font-bold text-slate-950">{t("auth.findId.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
-              등록된 보호자 정보를 입력해주세요.
+              {t("auth.findId.subtitle")}
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="name">
-                이름
+                {t("auth.nameLabel")}
               </label>
               <input
                 id="name"
                 value={form.name}
                 onChange={handleChange("name")}
-                placeholder="이름을 입력해주세요."
+                placeholder={t("auth.findId.namePlaceholder")}
                 autoComplete="name"
                 aria-invalid={Boolean(errorMessage && !form.name.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.name.trim()))}
@@ -177,13 +178,13 @@ const FindIdPage = () => {
 
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="phone">
-                전화번호
+                {t("auth.phoneLabel")}
               </label>
               <input
                 id="phone"
                 value={form.phone}
                 onChange={handleChange("phone")}
-                placeholder="예: 010-1234-5678"
+                placeholder={t("auth.findId.phonePlaceholder")}
                 autoComplete="tel"
                 aria-invalid={Boolean(errorMessage && !form.phone.trim())}
                 className={inputClassName(Boolean(errorMessage && !form.phone.trim()))}
@@ -198,7 +199,7 @@ const FindIdPage = () => {
 
             {foundLoginId && (
               <div className="rounded-2xl bg-blue-50 px-4 py-5 text-center">
-                <p className="text-xs font-bold text-blue-600">확인된 로그인 ID</p>
+                <p className="text-xs font-bold text-blue-600">{t("auth.findId.foundLabel")}</p>
                 <p className="mt-2 text-xl font-extrabold text-blue-700">
                   {foundLoginId}
                 </p>
@@ -210,7 +211,7 @@ const FindIdPage = () => {
               disabled={isSubmitting}
               className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
             >
-              {isSubmitting ? "확인 중..." : "아이디 찾기"}
+              {isSubmitting ? t("auth.findId.submitting") : t("auth.findId.submit")}
             </button>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -218,13 +219,13 @@ const FindIdPage = () => {
                 to="/login"
                 className="flex h-11 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                로그인 하기
+                {t("auth.loginCta")}
               </Link>
               <Link
                 to="/find-password"
                 className="flex h-11 items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
               >
-                비밀번호 찾기
+                {t("auth.findId.findPasswordCta")}
               </Link>
             </div>
           </form>
@@ -232,8 +233,8 @@ const FindIdPage = () => {
       </main>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>고객센터 02-123-4567 · aoj.medipaw@gmail.com · 평일 09:00 - 18:00</p>
-        <p>© 2026 MediPaw. All rights reserved.</p>
+        <p>{t("auth.footerContact")}</p>
+        <p>{t("auth.footerCopyright")}</p>
       </footer>
     </div>
   );

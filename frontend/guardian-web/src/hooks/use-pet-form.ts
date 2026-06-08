@@ -149,9 +149,10 @@ const getChangedPayload = (
 
 interface UsePetFormParams {
   customSpeciesInputRef: RefObject<HTMLInputElement>;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
-export const usePetForm = ({ customSpeciesInputRef }: UsePetFormParams) => {
+export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
   const [form, setForm] = useState<PetFormState>(initialForm);
   const [originalForm, setOriginalForm] = useState<PetFormState | null>(null);
   const [errors, setErrors] = useState<PetFormErrors>({});
@@ -198,29 +199,29 @@ export const usePetForm = ({ customSpeciesInputRef }: UsePetFormParams) => {
     const nextErrors: PetFormErrors = {};
 
     if (!form.petname.trim()) {
-      nextErrors.petname = "반려동물 이름을 입력해주세요.";
+      nextErrors.petname = t("pet.nameRequired");
     }
 
     if (!form.species) {
-      nextErrors.species = "종을 선택해주세요.";
+      nextErrors.species = t("pet.speciesRequired");
     }
 
     if (form.species === "기타" && !form.customSpecies.trim()) {
-      nextErrors.customSpecies = "종 정보를 입력해주세요.";
+      nextErrors.customSpecies = t("pet.customSpeciesRequired");
     }
 
     if (!form.gender) {
-      nextErrors.gender = "성별을 선택해주세요.";
+      nextErrors.gender = t("pet.genderRequired");
     }
 
     if (!form.isNeutered) {
-      nextErrors.isNeutered = "중성화 여부를 선택해주세요.";
+      nextErrors.isNeutered = t("pet.neuteredRequired");
     }
 
     if (!form.weight.trim()) {
-      nextErrors.weight = "몸무게를 입력해주세요.";
+      nextErrors.weight = t("pet.weightRequired");
     } else if (Number.isNaN(Number(form.weight)) || Number(form.weight) <= 0) {
-      nextErrors.weight = "몸무게를 올바르게 입력해주세요.";
+      nextErrors.weight = t("pet.weightInvalid");
     }
 
     setErrors(nextErrors);

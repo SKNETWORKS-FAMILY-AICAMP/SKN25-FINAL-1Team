@@ -152,6 +152,9 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "Noto Sans KR", "Noto Sans JP", "Noto Sans SC", "sans-serif"],
+      },
       colors: {
         ...palette,
         brand: {

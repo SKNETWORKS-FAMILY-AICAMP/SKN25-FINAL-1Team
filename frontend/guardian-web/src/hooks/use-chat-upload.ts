@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 
 import { uploadChatAttachment } from "../api/chat-api";
+import { useTranslation } from "../i18n/language-context";
 
 export interface PendingAttachment {
   fileName: string;
@@ -20,6 +21,7 @@ export const useChatUpload = ({
   setErrorMessage,
   getErrorMessage,
 }: UseChatUploadParams) => {
+  const { t } = useTranslation();
   const [pendingAttachment, setPendingAttachment] =
     useState<PendingAttachment | null>(null);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
@@ -43,7 +45,7 @@ export const useChatUpload = ({
     }
 
     if (!allowedAttachmentTypes.includes(file.type)) {
-      setErrorMessage("이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.");
+      setErrorMessage(t("chatbot.uploadTypeError"));
       return;
     }
 
@@ -57,7 +59,7 @@ export const useChatUpload = ({
         !response.result?.cloudfront_url
       ) {
         setErrorMessage(
-          response.message || "첨부파일을 업로드하지 못했습니다.",
+          response.message || t("chatbot.uploadFailed"),
         );
         return;
       }
@@ -73,7 +75,7 @@ export const useChatUpload = ({
         previewUrl: URL.createObjectURL(file),
       });
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "첨부파일을 업로드하지 못했습니다."));
+      setErrorMessage(getErrorMessage(error, t("chatbot.uploadFailed")));
     } finally {
       setIsUploadingAttachment(false);
     }
