@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Clock3,
   Home,
-  Hospital,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -25,6 +24,7 @@ interface AppLayoutProps {
   children: ReactNode;
   session: AuthSession;
   activeMenu?: AppMenuId;
+  compact?: boolean;
   serviceName?: string;
   /** @deprecated 알림은 내부에서 관리됩니다. */
   notificationCount?: number;
@@ -148,6 +148,7 @@ export default function AppLayout({
   children,
   session,
   activeMenu = "home",
+  compact = false,
   serviceName = "동물병원 의료 보조 시스템",
   onLogout,
   onNavigate,
@@ -184,10 +185,17 @@ export default function AppLayout({
     () => formatDateTime(session.lastLoginAt),
     [session.lastLoginAt]
   );
+  const headerHeightClass = "h-14";
+  const topOffsetClass = "top-14";
+  const contentPaddingTopClass = "pt-14";
+  const sidebarWidthClass = "w-40";
+  const sidebarMarginClass = "ml-40";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1f2937]">
-      <header className="fixed inset-x-0 top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e5eaf2] bg-white px-6">
+    <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1f2937]">
+      <header
+        className={`fixed inset-x-0 top-0 z-30 flex ${headerHeightClass} items-center justify-between border-b border-[#e5eaf2] bg-white px-3`}
+      >
         <button
           type="button"
           onClick={() => onNavigate?.("home")}
@@ -197,9 +205,9 @@ export default function AppLayout({
           <PawLogo />
         </button>
 
-        <div className="ml-auto flex items-center gap-4">
-          <div className="hidden items-center gap-2 text-sm font-bold tabular-nums text-[#3f4960] md:flex">
-            <Clock3 className="h-5 w-5 text-[#2f6f67]" strokeWidth={2.1} />
+        <div className="ml-auto flex items-center gap-2">
+          <div className="hidden items-center gap-2 text-xs font-bold tabular-nums text-[#3f4960] md:flex">
+            <Clock3 className="h-4 w-4 text-[#2f6f67]" strokeWidth={2.1} />
             <span>{clockText}</span>
           </div>
 
@@ -213,9 +221,9 @@ export default function AppLayout({
                 if (willOpen && hasUnread) markAllRead();
               }}
               aria-label="알림"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2f6f67] transition hover:bg-[#f8f9fa] hover:text-[#2f6f67]"
+              className="relative flex h-8 w-8 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2f6f67] transition hover:bg-[#f8f9fa] hover:text-[#2f6f67]"
             >
-              <Bell className="h-5 w-5" strokeWidth={2.1} />
+              <Bell className="h-4 w-4" strokeWidth={2.1} />
               {hasUnread && (
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ef4444]" />
               )}
@@ -240,7 +248,7 @@ export default function AppLayout({
             <button
               type="button"
               onClick={() => setIsHospitalMenuOpen((isOpen) => !isOpen)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold text-[#20283a] transition hover:bg-[#f8f9fa]"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-extrabold text-[#20283a] transition hover:bg-[#f8f9fa]"
               aria-expanded={isHospitalMenuOpen}
             >
               <span>{hospitalName}</span>
@@ -269,9 +277,11 @@ export default function AppLayout({
         </div>
       </header>
 
-      <div className="flex pt-[72px]">
-        <aside className="fixed bottom-0 left-0 top-[72px] z-20 flex w-56 flex-col justify-between border-r border-[#e5eaf2] bg-white px-4 py-5">
-          <nav className="space-y-2" aria-label="주요 메뉴">
+      <div className={`flex ${contentPaddingTopClass}`}>
+        <aside
+          className={`fixed bottom-0 left-0 ${topOffsetClass} z-20 flex ${sidebarWidthClass} flex-col justify-between border-r border-[#e5eaf2] bg-white px-2.5 py-3`}
+        >
+          <nav className="space-y-1.5" aria-label="주요 메뉴">
             {navigationItems.map(({ id, label, Icon }) => {
               const isActive = id === activeMenu;
 
@@ -281,57 +291,49 @@ export default function AppLayout({
                   key={id}
                   onClick={() => onNavigate?.(id)}
                   className={[
-                    "flex h-11 w-full items-center gap-3 rounded-lg px-4 text-left text-sm font-extrabold transition",
+                    "flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-extrabold transition",
                     isActive
                       ? "bg-[#eef5f4] text-[#2f6f67]"
                       : "text-[#20283a] hover:bg-[#f8fafb] hover:text-[#2f6f67]",
                   ].join(" ")}
                 >
-                  <Icon className="h-5 w-5 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
-                  <span>{label}</span>
+                  <Icon className="h-4 w-4 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
+                  <span className="truncate">{label}</span>
                 </button>
               );
             })}
           </nav>
 
-          <section className="rounded-lg border border-[#e5eaf2] bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-2.5">
-              <Hospital className="mt-0.5 h-5 w-5 shrink-0 text-[#357b70]" strokeWidth={2.1} />
-              <div>
-                <p className="text-sm font-extrabold text-[#20283a]">
-                  {hospitalName}
-                </p>
-                <p className="mt-2 text-[11px] font-semibold leading-5 text-[#778196]">
-                  서울특별시 강남구 테헤란로 123
-                </p>
-                <p className="mt-1 text-[11px] font-semibold text-[#778196]">
-                  02-1234-5678
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 border-t border-[#edf1f6] pt-3">
-              <p className="text-xs font-bold text-[#4c5870]">수의사 계정</p>
-              <p className="mt-1 text-sm font-extrabold text-[#20283a]">
+          <section className="rounded-lg border border-[#e5eaf2] bg-white p-2.5 shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold text-[#4c5870]">수의사 계정</p>
+              <p className="mt-0.5 truncate text-xs font-extrabold text-[#20283a]">
                 {session.user.name}
               </p>
             </div>
-            <div className="mt-3 border-t border-[#edf1f6] pt-3">
-              <p className="text-xs font-bold text-[#4c5870]">마지막 로그인</p>
-              <p className="mt-1 text-sm font-extrabold tabular-nums text-[#20283a]">
+            <div className="mt-2 border-t border-[#edf1f6] pt-2">
+              <p className="text-[10px] font-bold text-[#4c5870]">마지막 로그인</p>
+              <p className="mt-0.5 break-words text-[10px] font-extrabold tabular-nums text-[#20283a]">
                 {lastLoginText}
               </p>
             </div>
             <button
               type="button"
               onClick={onLogout}
-              className="mt-4 h-10 w-full rounded-lg border border-[#dfe5ef] bg-white text-sm font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+              className="mt-2 h-8 w-full rounded-lg border border-[#dfe5ef] bg-white text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
             >
               로그아웃
             </button>
           </section>
         </aside>
 
-        <main className="ml-56 min-h-[calc(100vh-72px)] flex-1 bg-[#f8fafc] px-4 pb-8 pt-6">
+        <main
+          className={`${sidebarMarginClass} flex-1 bg-[#f8fafc] ${
+            compact
+              ? "h-[calc(100vh-56px)] overflow-hidden px-2 py-2"
+              : "h-[calc(100vh-56px)] overflow-y-auto px-4 pb-8 pt-5"
+          }`}
+        >
           {children}
         </main>
       </div>
@@ -466,7 +468,7 @@ function PawLogo() {
     <img
       src={medipawSymbol}
       alt="Medipaw"
-      className="h-12 w-auto object-contain"
+      className="h-10 w-auto object-contain"
     />
   );
 }

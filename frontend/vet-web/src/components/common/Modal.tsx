@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import { Button } from "./Button";
 
 interface ModalProps {
@@ -17,6 +18,8 @@ export function Modal({
   footer,
   maxWidthClassName = "max-w-[560px]",
 }: ModalProps) {
+  useEscapeToClose(onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div

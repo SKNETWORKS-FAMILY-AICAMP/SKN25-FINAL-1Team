@@ -1,3 +1,4 @@
+import { FileText, Sparkles } from "lucide-react";
 import type { EmrResult } from "../../types/emr";
 import { Panel } from "./EmrShared";
 
@@ -32,21 +33,22 @@ export function IntakePanel({
           type="button"
           onClick={() => onApplyIntake("all")}
           disabled={isReadOnly}
-          className="h-8 w-full rounded-lg border border-[#dfe6f1] bg-white text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf]"
+          className="h-9 w-full rounded-lg border border-[#255e57] bg-[#2f6f67] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#dfe6f1] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
         >
           사전문진 + 메모 전체 옮기기
         </button>
 
-        <div className="rounded-lg border border-[#edf1f6] p-2.5">
+        <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-extrabold text-[#20283a]">
+            <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
+              <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
               AI 요약 문진
             </p>
             <button
               type="button"
               onClick={() => onApplyIntake("summary")}
               disabled={summary.length === 0 || isReadOnly}
-              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67] disabled:text-[#a8b0bf]"
+              className="rounded-md border border-[#2f6f67] bg-[#2f6f67] px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#c7d1df] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
             >
               옮기기
             </button>
@@ -55,7 +57,7 @@ export function IntakePanel({
             <ul className="space-y-1.5 text-xs font-bold leading-5 text-[#59657a]">
               {summary.map((bullet) => (
                 <li key={bullet} className="flex gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#94a3b8]" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#357b70]" />
                   <span>{bullet}</span>
                 </li>
               ))}
@@ -67,14 +69,17 @@ export function IntakePanel({
           )}
         </div>
 
-        <div className="rounded-lg border border-[#edf1f6] bg-[#fcfdfd] p-2.5">
+        <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-extrabold text-[#20283a]">메모</p>
+            <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
+              <FileText className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+              메모
+            </p>
             <button
               type="button"
               onClick={() => onApplyIntake("memo")}
               disabled={!memo || isReadOnly}
-              className="rounded-md px-2 py-1 text-xs font-extrabold text-[#4d5874] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67] disabled:text-[#a8b0bf]"
+              className="rounded-md border border-[#2f6f67] bg-[#2f6f67] px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#c7d1df] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
             >
               옮기기
             </button>

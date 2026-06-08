@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ArrowLeft, Settings, X } from "lucide-react";
 import { updatePatient } from "../../api/patientApi";
+import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import type { PatientUpdatePayload } from "../../api/patientApi";
 import type {
   EmrHistoryRecord,
@@ -307,6 +308,8 @@ function EditPatientModal({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  useEscapeToClose(onCancel, !isSaving);
+
   const selectedSpeciesValue = speciesOptions.includes(draft.species)
     ? draft.species
     : "기타";
