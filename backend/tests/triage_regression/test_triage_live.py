@@ -49,7 +49,7 @@ def openai_client():
 
 
 def call_triage(client, pet, user_message: str) -> dict:
-    from app.prompts.triage_prompt import _build_triage_system_prompt
+    from ai.triage.prompt import _build_triage_system_prompt
     prompt = _build_triage_system_prompt(pet)
     response = client.chat.completions.create(
         model="gpt-4o-mini",

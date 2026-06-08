@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   fetchDoctorPatientDetail,
   fetchDoctorPatientList,
@@ -78,11 +78,11 @@ export function usePatientManagement(accessToken: string) {
     setCurrentPage(1);
   };
 
-  const handleOpenDetail = async (patient: PatientProfile) => {
+  const handleOpenDetailById = useCallback(async (patientId: number) => {
     try {
       const detail = await fetchDoctorPatientDetail({
         accessToken,
-        petid: patient.id,
+        petid: patientId,
       });
 
       setSelectedPatient(mapDetailToPatient(detail));
@@ -90,7 +90,11 @@ export function usePatientManagement(accessToken: string) {
     } catch (error) {
       console.error("환자 상세 조회 실패:", error);
     }
-  };
+  }, [accessToken]);
+
+  const handleOpenDetail = useCallback(async (patient: PatientProfile) => {
+    await handleOpenDetailById(patient.id);
+  }, [handleOpenDetailById]);
 
   const closeDetail = () => {
     setSelectedPatient(null);
@@ -116,6 +120,7 @@ export function usePatientManagement(accessToken: string) {
     updateSearch,
     updateSpecies,
     handleOpenDetail,
+    handleOpenDetailById,
     closeDetail,
     handleSaved,
   };

@@ -18,7 +18,6 @@ from app.crud.doctor_reservation import (
     update_reservation,
     delete_reservation,
     TimeSlotConflict,
-    DuplicatePetReservation,
 )
 
 from app.schemas.doctor_reservation import (
@@ -37,7 +36,7 @@ router = APIRouter(
 def _triage_key(triage, triage_result) -> str:
     """챗봇 문진 결과가 있으면 그 응급도를 우선 사용한다."""
     # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
-    from app.services.triage_engine import urgency_num_to_visit_type
+    from ai.triage.engine import urgency_num_to_visit_type
 
     if triage_result:
         return urgency_num_to_visit_type(triage_result.urgency_level_num)
@@ -118,11 +117,6 @@ async def add_reservation(
             time_str=request.time,
             doctor_name=request.doctor_name,
             memo=request.memo,
-        )
-    except DuplicatePetReservation:
-        raise HTTPException(
-            status_code=409,
-            detail="해당 반려동물의 예약이 이미 존재합니다."
         )
     except TimeSlotConflict:
         raise HTTPException(

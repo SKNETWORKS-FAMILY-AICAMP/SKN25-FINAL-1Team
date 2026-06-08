@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.db.session import AsyncSessionLocal, engine  # noqa: E402
-from app.services.triage_rag import (  # noqa: E402
+from ai.triage.rag import (  # noqa: E402
     expand_query_llm,
     search_similar_triage_cases,
 )

@@ -1,10 +1,10 @@
-"""Triage Agent — Modified VTL 5단계 문진 분류.
+"""Triage Agent — 라이브 문진과 완료 후 요약의 public entrypoint.
 
-참고 논문:
-- "Basic triage in dogs and cats" (생리학적 파라미터 기반)
-- "Evaluation of a veterinary triage list modified from a human five-point triage system
-   in 485 dogs and cats" (Modified VTL 5단계)
-- Wei et al. 2022 (Chain-of-Thought)
+chat.py는 이 파일의 run_triage_turn만 호출한다. 라이브 트리아지는 여기서 노출하고,
+내부 구현은 ai.triage.session의 decision-tree/RAG/image-aware runner를 사용한다.
+
+또한 LangGraph triage_complete 그래프에서는 run_triage를 호출한다. 이 함수는 완료된
+문진 대화를 받아 SOAP의 S(주관적)에 해당하는 '한 줄 평서형' 요약을 LLM으로 생성한다.
 """
 from __future__ import annotations
 
@@ -12,73 +12,65 @@ import logging
 from collections.abc import Callable
 
 from .base import call_openai
+from ai.triage.session import (
+    INITIAL_MESSAGE,
+    INITIAL_PILLS,
+    TriageTurnResult,
+    content_text,
+    photo_triage_text,
+    run_triage_turn,
+)
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "INITIAL_MESSAGE",
+    "INITIAL_PILLS",
+    "TriageTurnResult",
+    "content_text",
+    "photo_triage_text",
+    "run_triage_turn",
+    "run_triage",
+]
 
-def build_triage_prompt(pet: dict, rules: dict | None = None, emr_history: list | None = None) -> str:
-    """캐논 트리아지 프롬프트(app.prompts.triage_prompt)를 재사용한다.
 
-    실제 챗봇 흐름(chat.py)과 이 agent 경로가 동일한 단일 프롬프트를 쓰도록
-    dict 형태 pet/emr_history를 캐논 빌더가 기대하는 형식으로 어댑팅한다.
-    """
-    from datetime import date
-    from types import SimpleNamespace
+def _format_conversation(messages: list[dict]) -> str:
+    lines: list[str] = []
+    for m in (messages or [])[-14:]:
+        role = "보호자" if m.get("role") == "user" else "챗봇"
+        content = " ".join(str(m.get("content") or "").split())
+        if content:
+            lines.append(f"{role}: {content[:300]}")
+    return "\n".join(lines) or "(대화 없음)"
 
-    from app.prompts.triage_prompt import _build_triage_system_prompt
 
-    # 캐논 빌더는 birth_date.year로 나이를 계산하므로 age → birth_date로 역산
-    age = pet.get("age")
-    try:
-        birth_date = date(date.today().year - int(age), 1, 1) if age not in (None, "?", "") else None
-    except (TypeError, ValueError):
-        birth_date = None
-
-    pet_ns = SimpleNamespace(
-        petname=pet.get("name", "알 수 없음"),
-        species=pet.get("species", "dog"),
-        breed=pet.get("breed", "알 수 없음"),
-        birth_date=birth_date,
-        gender=pet.get("gender", "미상"),
-        weight_kg=pet.get("weight"),
+async def _llm_summary(messages: list[dict], collected_info: dict, pet: dict) -> str | None:
+    """문진 대화를 SOAP S 한 줄(평서형 '~이다')로 요약. 실패 시 None."""
+    animal = "고양이" if (pet.get("species") == "cat") else "강아지"
+    convo = _format_conversation(messages)
+    chief = collected_info.get("chief_complaint") or ""
+    keywords = ", ".join(collected_info.get("symptom_keywords") or [])
+    system = (
+        f"너는 동물병원 트리아지 보조야. 아래 {animal} 문진 대화를 SOAP의 S(주관적)로 요약해.\n"
+        f"주요 증상: {chief} / 키워드: {keywords}\n\n"
+        "규칙: 보호자가 말한 내용만으로 '한 문장' 요약. 반드시 '~이다/~한다/~보인다' 같은 "
+        "평서형 종결로 끝낼 것(명사 나열·존댓말 금지). 진단 단정 금지. 예: '오른쪽 뒷다리를 "
+        "절며 통증을 보인다.'\n"
+        'JSON만 출력: {"summary": "한 줄 요약"}'
     )
-
-    # emr_history(list) → 캐논이 기대하는 {"patient_context": {"emr_history": [...]}} 형태로 래핑
-    patient_context = {"patient_context": {"emr_history": emr_history}} if emr_history else None
-
-    return _build_triage_system_prompt(pet_ns, patient_context=patient_context)
-
-
-# 캐논 정의를 재노출 — 기존 import 경로(ai.agents.triage.FORCE_COMPLETE_SUFFIX) 호환 유지
-from app.prompts.triage_prompt import FORCE_COMPLETE_SUFFIX  # noqa: E402
-
-
-# urgency_level_num → 라벨. LLM 출력 방어용 단일 소스.
-# 표시 라벨은 3버킷(응급/준응급/일반)으로 통일 — num1=응급, num2~3=준응급, num4~5=일반.
-_URGENCY_LABELS = {1: "응급", 2: "준응급", 3: "준응급", 4: "일반", 5: "일반"}
-
-
-def _coerce_collected_info(info: dict | None) -> dict | None:
-    """LLM이 반환한 collected_info의 응급도 필드를 안전 범위로 보정한다.
-
-    잘못된 enum/범위 밖 숫자가 예약 흐름으로 그대로 흐르지 않도록,
-    throw 대신 보수적으로 클램프한다(불확실하면 더 긴급한 쪽으로).
-    """
-    if not isinstance(info, dict):
-        return info
-
-    raw = info.get("urgency_level_num")
     try:
-        num = int(raw)
-    except (TypeError, ValueError):
-        num = 2  # 파싱 불가 → 보수적으로 응급(2)
-    num = max(1, min(5, num))  # 1~5 범위 클램프
-
-    info["urgency_level_num"] = num
-    # 라벨이 비었거나 숫자와 불일치하면 숫자 기준으로 동기화
-    if info.get("urgency_level") not in _URGENCY_LABELS.values():
-        info["urgency_level"] = _URGENCY_LABELS[num]
-    return info
+        result = await call_openai(
+            [{"role": "user", "content": convo}],
+            system,
+            max_tokens=150,
+            agent="triage",
+        )
+        if isinstance(result, dict):
+            summary = str(result.get("summary") or "").strip()
+            return summary or None
+    except Exception as e:
+        logger.warning(f"[Triage] 요약 생성 실패: {e}")
+    return None
 
 
 async def run_triage(
@@ -87,23 +79,24 @@ async def run_triage(
     emrid: int | None,
     scheduleid: int | None,
 ) -> dict:
-    """Triage Agent 실행 — BackgroundTasks에서 호출됩니다."""
-    pet = payload.get("pet", {})
+    """triage_complete 그래프의 요약 노드.
+
+    payload: {messages: 대화, collected_info: 엔진 결과, pet: 펫정보}
+    반환: {symptom_summary, collected_info(요약 갱신)} — 응급도 등은 엔진 결과 유지.
+    """
     messages = payload.get("messages", [])
-    rules = payload.get("rules")
-    emr_history = payload.get("emr_history")
-
-    update_step("증상 키워드 추출 중...")
-    system = build_triage_prompt(pet, rules, emr_history)
-
-    update_step("응급도 분류 중...")
-    result = await call_openai(messages, system, max_tokens=2000, agent="triage")
-
-    # LLM 출력 방어: 완료된 문진의 응급도 필드를 안전 범위로 보정
-    if isinstance(result, dict) and result.get("collected_info"):
-        result["collected_info"] = _coerce_collected_info(result["collected_info"])
+    collected_info = dict(payload.get("collected_info") or {})
+    pet = payload.get("pet", {})
 
     update_step("문진 요약 생성 중...")
-    logger.info(f"[Triage] emrid={emrid} urgency={(result.get('collected_info') or {}).get('urgency_level_num')}")
+    summary = await _llm_summary(messages, collected_info, pet)
+    if summary:
+        collected_info["symptom_summary"] = summary
 
-    return {"agent": "triage", "emrid": emrid, **result}
+    logger.info(f"[Triage] emrid={emrid} summary_updated={bool(summary)}")
+    return {
+        "agent": "triage",
+        "emrid": emrid,
+        "symptom_summary": summary,
+        "collected_info": collected_info,
+    }

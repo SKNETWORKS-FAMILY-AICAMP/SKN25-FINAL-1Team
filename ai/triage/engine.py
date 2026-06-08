@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 
-from .triage_kb import load_triage_kb
+from .kb import load_triage_kb
 
 START_NODE = "Q_INIT_SYMPTOM"  # species는 펫 프로필에서 선주입 → Q_INIT_SPECIES 스킵
 

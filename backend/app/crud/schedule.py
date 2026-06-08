@@ -7,7 +7,6 @@ from app.models.schedule import Schedule
 from app.models.master import CategoryMaster
 from app.models.pet import Pet
 from app.models.doctor import Doctor
-from app.models.vet_schedule import VetSchedule
 from app.utils.timezone import to_kst, KST
 
 # 병원 휴무일: 주말 + 법정 공휴일 (2026~2027)
@@ -198,21 +197,6 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
 # 예약 취소 (soft cancel)
 async def cancel_schedule(db: AsyncSession, schedule: Schedule):
     schedule.status = "CANCELLED"
-
-    confirmed_kst = to_kst(schedule.confirmed_time)
-    end_kst = to_kst(schedule.confirmed_end_time)
-
-    result = await db.execute(
-        select(VetSchedule).where(
-            VetSchedule.doctorid == schedule.doctorid,
-            VetSchedule.date == confirmed_kst.date(),
-            VetSchedule.start_time >= confirmed_kst.time(),
-            VetSchedule.end_time <= end_kst.time()
-        )
-    )
-    for slot in result.scalars().all():
-        slot.is_available = True
-
     await db.commit()
     await db.refresh(schedule)
     return schedule
@@ -303,7 +287,11 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     for s in sched_result.scalars().all():
         ct = to_kst(s.confirmed_time)
         if ct and ct.date() == target_date:
-            booked.add(ct.strftime("%H:%M"))
+            end_dt = to_kst(s.confirmed_end_time) if s.confirmed_end_time else ct + timedelta(minutes=s.duration_min)
+            current = ct
+            while current < end_dt:
+                booked.add(current.strftime("%H:%M"))
+                current += timedelta(minutes=30)
 
     # 오늘이면 현재 시간 이전 슬롯 제외
     is_today = target_date == now_kst.date()
@@ -367,21 +355,6 @@ async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirme
         status="CONFIRMED"
     )
     db.add(schedule)
-
-    # VetSchedule 슬롯 선점
-    new_kst = to_kst(new_time) if new_time.tzinfo else new_time.replace(tzinfo=KST)
-    new_end_kst = to_kst(new_end_time) if new_end_time.tzinfo else new_end_time.replace(tzinfo=KST)
-    
-    vet_result = await db.execute(
-        select(VetSchedule).where(
-            VetSchedule.doctorid == doctorid,
-            VetSchedule.date == new_kst.date(),
-            VetSchedule.start_time >= new_kst.time(),
-            VetSchedule.end_time <= new_end_kst.time()
-        )
-    )
-    for slot in vet_result.scalars().all():
-        slot.is_available = False
 
     await db.commit()
     await db.refresh(schedule)

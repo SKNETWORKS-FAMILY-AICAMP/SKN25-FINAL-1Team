@@ -48,6 +48,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     uploadError,
     completeVisitError,
     prescriptions,
+    isLoadingAutoPresc,
     isPrescriptionPreviewOpen,
     isProfileEditOpen,
     previewImage,
@@ -348,6 +349,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                       onOpenPreview={handleOpenPrescriptionPreview}
                       previewErrorMessage={prescriptionPreviewError}
                       isReadOnly={isReadOnly}
+                      isGenerating={isLoadingAutoPresc}
                     />
                   </div>
                 </WorkspacePane>

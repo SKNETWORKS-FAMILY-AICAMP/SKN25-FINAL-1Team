@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Date, Time, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Date, Time, ForeignKey
 from app.db.base import Base
 
 class VetSchedule(Base):
@@ -9,5 +9,5 @@ class VetSchedule(Base):
     date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
-    # Runtime compatibility flag used by reservation confirm/cancel/delete flows.
-    is_available = Column(Boolean, nullable=False, default=True)
+    lunch_start = Column(Time, nullable=True)
+    lunch_end = Column(Time, nullable=True)

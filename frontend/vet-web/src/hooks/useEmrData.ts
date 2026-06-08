@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DrugSearchResult } from "../api/prescriptionApi";
 import { apiClient } from "../api/client";
+import { FORM_OPTIONS, DOSAGE_OPTIONS, FREQUENCY_OPTIONS, DURATION_OPTIONS } from "../components/emr/EditorPanels";
 import { fetchEmrQueue, fetchEmrDetail, fetchEmrReport, fetchDoctorFollowup, generateAutoPrescription, uploadEmrFile } from "../api/emrApi";
 import type { ValidationResultResponse, FollowupItem } from "../api/emrApi";
 import { updateReservationStatus } from "../api/reservationApi";
@@ -18,6 +19,19 @@ import type {
 
 const DATE_MS = 24 * 60 * 60 * 1000;
 let prescriptionClientIdSeq = 0;
+
+function snapToStringOption(value: string, options: string[]): string {
+  if (options.includes(value)) return value;
+  const startsWith = options.find((o) => o.toLowerCase().startsWith(value.toLowerCase()));
+  if (startsWith) return startsWith;
+  const contains = options.find((o) => o.toLowerCase().includes(value.toLowerCase()));
+  if (contains) return contains;
+  return options[0];
+}
+
+function snapToDurationOption(days: number, options: number[]): number {
+  return options.reduce((prev, curr) => (Math.abs(curr - days) < Math.abs(prev - days) ? curr : prev));
+}
 
 function makePrescriptionClientId() {
   prescriptionClientIdSeq += 1;
@@ -409,15 +423,15 @@ export function useEmrData() {
     setAutoPrescriptionError(null);
     setIsLoadingAutoPresc(true);
     try {
-      const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId });
+      const meds = await generateAutoPrescription({ accessToken, scheduleId: selectedScheduleId, doctorNotes: editorValue });
       setPrescriptions(
         meds.map((m) => ({
           client_id: makePrescriptionClientId(),
           drug_name: m.drug_name,
-          form: m.form,
-          dosage: m.dosage,
-          frequency: m.frequency,
-          duration_days: m.duration_days,
+          form: snapToStringOption(m.form, FORM_OPTIONS),
+          dosage: snapToStringOption(m.dosage, DOSAGE_OPTIONS),
+          frequency: snapToStringOption(m.frequency, FREQUENCY_OPTIONS),
+          duration_days: snapToDurationOption(m.duration_days, DURATION_OPTIONS),
         }))
       );
     } catch (err) {
@@ -427,7 +441,7 @@ export function useEmrData() {
     } finally {
       setIsLoadingAutoPresc(false);
     }
-  }, [selectedScheduleId, accessToken, isTodayView]);
+  }, [selectedScheduleId, accessToken, isTodayView, editorValue]);
 
   const handleAddPrescription = useCallback((drug: DrugSearchResult) => {
     if (!isTodayView) return;

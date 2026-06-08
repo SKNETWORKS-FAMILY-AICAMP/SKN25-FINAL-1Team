@@ -23,7 +23,7 @@ export function TriageBadge({ level }: { level: VisitType }) {
   const { label, className } = styles[level];
   return (
     <span
-      className={`inline-flex h-5 items-center rounded-md border px-2 text-[11px] font-extrabold ${className}`}
+      className={`inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md border px-2 text-xs font-extrabold ${className}`}
     >
       {label}
     </span>
