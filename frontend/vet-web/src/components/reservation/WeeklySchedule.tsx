@@ -3,6 +3,7 @@ import type {
   PatientsById,
   ReservationItem,
 } from "../../types/reservation";
+import { useOperatingHours } from "../../contexts/OperatingHoursContext";
 import { TriageBadge } from "../common/TriageBadge";
 import {
   TODAY,
@@ -40,6 +41,7 @@ export function WeeklySchedule({
   patientsById,
   onSelectReservation,
 }: WeeklyScheduleProps) {
+  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const [timelineBodyHeight, setTimelineBodyHeight] = useState(0);
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
@@ -56,8 +58,8 @@ export function WeeklySchedule({
     [reservations, weekDayKeys]
   );
   const timelineRange = useMemo(
-    () => getTimelineRange(weekReservations),
-    [weekReservations]
+    () => getTimelineRange(weekReservations, { startTime, endTime, lunchStart, lunchEnd }),
+    [weekReservations, startTime, endTime, lunchStart, lunchEnd]
   );
   const fallbackTimelineHeight = useMemo(
     () => getTimelineHeight(timelineRange),
@@ -88,8 +90,8 @@ export function WeeklySchedule({
     [timelineBodyHeight, timelineRange, timelineScale]
   );
   const lunchBlock = useMemo(
-    () => getLunchBlockMetrics(timelineRange, timelineScale),
-    [timelineRange, timelineScale]
+    () => getLunchBlockMetrics(timelineRange, { ...timelineScale, lunchStart, lunchEnd }),
+    [timelineRange, timelineScale, lunchStart, lunchEnd]
   );
 
   useEffect(() => {

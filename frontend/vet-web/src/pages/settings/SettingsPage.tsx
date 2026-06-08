@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -14,6 +14,7 @@ import {
   isPasswordPolicyValid,
   getPasswordPolicyStatus,
 } from "../../api/authApi";
+import { fetchOperatingHours, updateOperatingHours } from "../../api/settingsApi";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
 
@@ -62,6 +63,22 @@ export default function SettingsPage({
     lunchEnd: "13:00",
   });
   const [isOperationSaved, setIsOperationSaved] = useState(false);
+  const [operationError, setOperationError] = useState("");
+
+  useEffect(() => {
+    fetchOperatingHours(session.accessToken)
+      .then((data) => {
+        setOperationSettings({
+          openingTime: data.start_time,
+          closingTime: data.end_time,
+          lunchStart: data.lunch_start,
+          lunchEnd: data.lunch_end,
+        });
+      })
+      .catch(() => {
+        // 실패 시 기본값 유지
+      });
+  }, [session.accessToken]);
 
   const updateOperationSetting = (
     key: keyof typeof operationSettings,
@@ -69,6 +86,22 @@ export default function SettingsPage({
   ) => {
     setOperationSettings((current) => ({ ...current, [key]: value }));
     setIsOperationSaved(false);
+    setOperationError("");
+  };
+
+  const handleSaveOperationSettings = async () => {
+    try {
+      await updateOperatingHours(session.accessToken, {
+        start_time: operationSettings.openingTime,
+        end_time: operationSettings.closingTime,
+        lunch_start: operationSettings.lunchStart,
+        lunch_end: operationSettings.lunchEnd,
+      });
+      setIsOperationSaved(true);
+      setOperationError("");
+    } catch {
+      setOperationError("저장에 실패했습니다.");
+    }
   };
 
   return (
@@ -105,7 +138,7 @@ export default function SettingsPage({
                   병원 운영 시간
                 </h2>
                 <p className="mt-0.5 text-xs font-semibold text-[#8595ae]">
-                  이후 API 연결 전까지 화면에서 설정값을 먼저 확인합니다.
+                  설정한 운영 시간이 예약 가능 시간대에 반영됩니다.
                 </p>
               </div>
             </div>
@@ -164,7 +197,7 @@ export default function SettingsPage({
                 </p>
                 <button
                   type="button"
-                  onClick={() => setIsOperationSaved(true)}
+                  onClick={handleSaveOperationSettings}
                   className="flex h-9 items-center gap-2 rounded-lg bg-[#2f6f67] px-4 text-sm font-extrabold text-white transition hover:bg-[#255e57]"
                 >
                   <Save className="h-4 w-4" />
@@ -173,8 +206,13 @@ export default function SettingsPage({
               </div>
 
               {isOperationSaved && (
-                <p className="text-xs font-extrabold text-[#475569]">
-                  운영 시간 설정이 화면에 임시 저장되었습니다.
+                <p className="text-xs font-extrabold text-[#2f6f67]">
+                  운영 시간이 저장되었습니다.
+                </p>
+              )}
+              {operationError && (
+                <p className="text-xs font-extrabold text-[#dc2626]">
+                  {operationError}
                 </p>
               )}
             </div>

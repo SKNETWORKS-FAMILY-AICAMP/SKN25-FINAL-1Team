@@ -58,6 +58,7 @@ async def list_patients(
             "age": calculate_age(pet.birth_date),
             "owner_name": user.name,
             "phone": user.phone,
+            "species": pet.species or "",
             "breed": pet.breed or "",
             "last_visit_date": (
                 last_visit.date().isoformat() if last_visit else ""

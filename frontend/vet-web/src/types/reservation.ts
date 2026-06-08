@@ -8,7 +8,7 @@ export interface ReservationPatient {
   petName: string;
   guardianName: string;
   phone: string;
-  species: "강아지" | "고양이";
+  species: string;
   breed: string;
   birthDate: string;
   age: string;
