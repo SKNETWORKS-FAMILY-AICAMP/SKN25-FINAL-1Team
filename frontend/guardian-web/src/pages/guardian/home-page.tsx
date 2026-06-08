@@ -121,8 +121,6 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [reservationPet, setReservationPet] = useState<Pet | null>(null);
-  const [reservationCategory, setReservationCategory] = useState<1 | 2>(1);
-  const [categorySelectPet, setCategorySelectPet] = useState<Pet | null>(null);
 
   const hasPets = pets.length > 0;
   const refreshRequestedAt =
@@ -298,32 +296,13 @@ const HomePage = () => {
                         >
                           {t("home.detail")}
                         </Link>
-                        {categorySelectPet?.pet_id === pet.pet_id ? (
-                          <div className="flex gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => { setReservationPet(pet); setReservationCategory(2); setCategorySelectPet(null); }}
-                              className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-blue-600 px-2 text-xs font-bold text-white transition hover:bg-blue-700"
-                            >
-                              일반진료
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setReservationPet(pet); setReservationCategory(1); setCategorySelectPet(null); }}
-                              className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border border-blue-200 px-2 text-xs font-bold text-blue-600 transition hover:bg-blue-50"
-                            >
-                              정기검진
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setCategorySelectPet(pet)}
-                            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                          >
-                            {t("home.reserve")}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setReservationPet(pet)}
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          {t("home.reserve")}
+                        </button>
                         <Link
                           to={`/chatbot?petId=${pet.pet_id}`}
                           className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-bold text-white transition hover:bg-blue-700"
@@ -343,7 +322,6 @@ const HomePage = () => {
       {reservationPet ? (
         <CheckupReservationModal
           pet={reservationPet}
-          categoryCode={reservationCategory}
           onClose={() => setReservationPet(null)}
         />
       ) : null}

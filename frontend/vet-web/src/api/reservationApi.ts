@@ -37,6 +37,7 @@ export interface ReservationCreatePayload {
   time: string
   doctor_name?: string
   memo?: string
+  category_code?: number
 }
 
 export interface ReservationUpdatePayload {

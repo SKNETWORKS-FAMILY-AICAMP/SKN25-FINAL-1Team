@@ -7,7 +7,6 @@ import { useTranslation } from "../../i18n/language-context";
 
 interface CheckupReservationModalProps {
   pet: Pet;
-  categoryCode?: number;
   onClose: () => void;
 }
 
@@ -28,11 +27,11 @@ const CloseIcon = () => (
 
 const CheckupReservationModal = ({
   pet,
-  categoryCode = 1,
   onClose,
 }: CheckupReservationModalProps) => {
   const { t } = useTranslation();
-  const categoryLabel = categoryCode === 2 ? "일반진료" : "정기검진";
+  const [categoryCode, setCategoryCode] = React.useState<1 | 2 | null>(null);
+  const categoryLabel = categoryCode === 2 ? "일반진료" : categoryCode === 1 ? "정기검진" : null;
   const getPetMeta = (item: Pet) =>
     [item.breed || item.species, item.age ? t("home.yearsOld", { age: item.age }) : undefined]
       .filter(Boolean)
@@ -51,7 +50,7 @@ const CheckupReservationModal = ({
     setSelectedSlot,
     setMemo,
     reserveCheckup,
-  } = useCheckupReservation({ petId: pet.pet_id, categoryCode });
+  } = useCheckupReservation({ petId: pet.pet_id, categoryCode: categoryCode ?? 1 });
   const petDisplayName =
     completedReservation?.pet_name ?? (pet as PetWithOptionalName).name ?? pet.petname;
 
@@ -80,9 +79,11 @@ const CheckupReservationModal = ({
             <h2 className="text-lg font-extrabold text-slate-950">
               {t("schedule.instantTitle")}
             </h2>
-            <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-600">
-              {categoryLabel}
-            </span>
+            {categoryLabel && (
+              <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-600">
+                {categoryLabel}
+              </span>
+            )}
           </div>
 
           <button
@@ -143,6 +144,33 @@ const CheckupReservationModal = ({
             }}
           >
             <div className="space-y-4 px-5 py-4 sm:px-6">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCategoryCode(2)}
+                  className={[
+                    "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
+                    categoryCode === 2
+                      ? "bg-blue-600 text-white"
+                      : "border border-slate-200 text-slate-600 hover:bg-slate-50",
+                  ].join(" ")}
+                >
+                  일반진료
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryCode(1)}
+                  className={[
+                    "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
+                    categoryCode === 1
+                      ? "bg-blue-600 text-white"
+                      : "border border-slate-200 text-slate-600 hover:bg-slate-50",
+                  ].join(" ")}
+                >
+                  정기검진
+                </button>
+              </div>
+
               <div className="rounded-xl bg-slate-50 px-4 py-3">
                 <p className="truncate text-base font-extrabold text-slate-950">
                   {pet.petname}
@@ -259,7 +287,7 @@ const CheckupReservationModal = ({
               </ActionButton>
               <ActionButton
                 type="submit"
-                disabled={!selectedSlot || isSubmitting}
+                disabled={!selectedSlot || isSubmitting || categoryCode === null}
                 className="min-w-[112px]"
               >
                 {isSubmitting ? t("schedule.reserving") : t("schedule.reserve")}

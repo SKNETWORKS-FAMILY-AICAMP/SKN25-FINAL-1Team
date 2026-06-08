@@ -162,6 +162,7 @@ export default function ReservationPage({
           time: form.time,
           doctor_name: form.doctorName || undefined,
           memo: form.memo,
+          category_code: form.categoryCode ?? 1,
         });
       }
 

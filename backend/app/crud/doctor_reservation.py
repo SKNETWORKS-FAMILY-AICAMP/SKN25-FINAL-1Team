@@ -28,7 +28,7 @@ class TimeSlotConflict(Exception):
 # 수의사 대시보드 수동 예약 기본 카테고리: 정기검진(code=1)
 DEFAULT_CATEGORY_CODE = 1
 # 예약 추가 시 기본 응급도(일반, code=3)
-DEFAULT_TRIAGE_CODE = 1
+DEFAULT_TRIAGE_CODE = 5
 DEFAULT_DURATION_MIN = 30
 
 

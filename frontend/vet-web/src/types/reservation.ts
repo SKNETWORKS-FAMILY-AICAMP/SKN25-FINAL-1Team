@@ -37,6 +37,7 @@ export interface ReservationFormState {
   time: string;
   doctorName: string;
   memo: string;
+  categoryCode: number | null;
 }
 
 export type PatientsById = Record<number, ReservationPatient>;
