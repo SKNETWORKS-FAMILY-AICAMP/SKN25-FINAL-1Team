@@ -23,6 +23,7 @@ import logging
 from collections.abc import Callable
 
 from .base import call_openai_once
+from ..observability import push_scores, score_trace
 
 logger = logging.getLogger(__name__)
 
@@ -90,20 +91,32 @@ async def run_judge(
     turn_count = _count_turns(chat_history)  # 객관 지표(코드 계산)
 
     update_step("운영 품질 모니터링 중...")
-    try:
-        result = await call_openai_once(
-            "운영 품질을 평가하세요.",
-            build_judge_prompt(triage_result, chat_history),
-            max_tokens=800,
-            agent="judge",
-        )
-        if not isinstance(result, dict):
-            result = {}
-    except Exception as exc:
-        logger.warning(f"[Judge] LLM 실패 emrid={emrid}: {exc}")
-        result = {"monitoring_verdict": "NEEDS_REVIEW", "notes": "모니터링 LLM 일시 오류"}
+    # Langfuse evaluator trace 로 감싼다 → LLM 호출은 generation 으로 nested, 점수는 trace 에.
+    with score_trace("judge"):
+        try:
+            result = await call_openai_once(
+                "운영 품질을 평가하세요.",
+                build_judge_prompt(triage_result, chat_history),
+                max_tokens=800,
+                agent="judge",
+            )
+            if not isinstance(result, dict):
+                result = {}
+        except Exception as exc:
+            logger.warning(f"[Judge] LLM 실패 emrid={emrid}: {exc}")
+            result = {"monitoring_verdict": "NEEDS_REVIEW", "notes": "모니터링 LLM 일시 오류"}
 
-    result["turn_count"] = turn_count  # 객관 지표 병합
+        result["turn_count"] = turn_count  # 객관 지표 병합
+
+        # 품질 점수(0~10)·턴수·판정을 Langfuse 점수로 전송 → 대시보드에서 추세 확인.
+        quality_scores = result.get("quality_scores") or {}
+        push_scores(
+            numeric={
+                **{f"judge.{k}": v for k, v in quality_scores.items()},
+                "judge.turn_count": turn_count,
+            },
+            categorical={"judge.verdict": result.get("monitoring_verdict")},
+        )
 
     logger.info(
         "[Judge] emrid=%s verdict=%s scores=%s turns=%s",
