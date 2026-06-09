@@ -123,12 +123,6 @@ const ChangePasswordPage = () => {
 
       const response = await changeMyPassword(form);
 
-      if (response.code !== 200) {
-        setMessageType("error");
-        setMessage(response.message || t("changePassword.failed"));
-        return;
-      }
-
       setForm(initialForm);
       setFieldErrors({});
       setMessageType("success");

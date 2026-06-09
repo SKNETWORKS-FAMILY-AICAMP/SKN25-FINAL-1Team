@@ -90,12 +90,7 @@ const PetRegisterPage = () => {
           return;
         }
 
-        if (response.code !== 200) {
-          setLoadMessage(response.message || t("pet.loadError"));
-          return;
-        }
-
-        applyPetToForm(response.result);
+        applyPetToForm(response);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -209,16 +204,7 @@ const PetRegisterPage = () => {
       if (isEditMode) {
         petIdToRefresh = selectedPetId;
       } else {
-        petIdToRefresh = (response as { result?: { pet_id?: number } }).result
-          ?.pet_id;
-      }
-
-      if (!([200, 201] as number[]).includes(response.code)) {
-        setSubmitMessage(
-          response.message ||
-            (isEditMode ? t("pet.editFailed") : t("pet.registerFailed")),
-        );
-        return;
+        petIdToRefresh = (response as { pet_id?: number }).pet_id;
       }
 
       if (petIdToRefresh) {

@@ -288,136 +288,29 @@ async def update_schedule(
     return {"code": 200, "message": "예약이 변경되었습니다."}
 
 
-async def _run_post_booking_agents(
-    emrid: int,
-    scheduleid: int,
-    duration_min: int,
-    user_id: int,
-    chart_task_id: str,
-    validation_task_id: str,
-    judge_task_id: str,
-) -> None:
-    """예약 확정 직후 asyncio.create_task로 실행되는 Chart+Validation+Judge 파이프라인."""
+async def _fetch_booking_context(emrid: int) -> dict | None:
+    """DB 조회 + RAG 검색. 필수 데이터(triage/pet) 없으면 None 반환."""
     from app.db.session import AsyncSessionLocal
+    from app.crud.patient import build_patient_context
+    from app.models.chat_history import ChatHistory
 
-    logger.info(f"[PostBooking] start emrid={emrid} scheduleid={scheduleid}")
-
-    # DB에서 Triage 결과 및 Pet 정보 조회
     async with AsyncSessionLocal() as db:
-        triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
-        triage = triage_row.scalar_one_or_none()
-        guardian_row = await db.execute(select(Guardian).where(Guardian.emrid == emrid))
-        guardian = guardian_row.scalar_one_or_none()
+        triage = (await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))).scalar_one_or_none()
+        guardian = (await db.execute(select(Guardian).where(Guardian.emrid == emrid))).scalar_one_or_none()
         pet_row = await db.execute(select(Pet).where(Pet.petid == guardian.petid)) if guardian else None
         pet = pet_row.scalar_one_or_none() if pet_row else None
 
     if not triage or not pet:
-        logger.warning(f"[PostBooking] 필수 데이터 없음 emrid={emrid} triage={bool(triage)} pet={bool(pet)}")
-        for tid in (chart_task_id, validation_task_id, judge_task_id):
-            _task_store[tid] = {"status": "error", "detail": "트리아지 또는 반려동물 정보 없음"}
-        return
+        return None
 
-    age = (date_type.today().year - pet.birth_date.year) if pet.birth_date else None
-    pet_payload = {
-        "name": pet.petname,
-        "species": pet.species or "dog",
-        "breed": pet.breed or "알 수 없음",
-        "age": age,
-        "gender": pet.gender,
-        "weight": float(pet.weight_kg) if pet.weight_kg else None,
-    }
-
-    from app.crud.patient import build_patient_context
     async with AsyncSessionLocal() as db:
         patient_context_data = await build_patient_context(db, pet.petid)
 
-    # 초진/재진 판정: 과거 완료된 EMR 이력이 있으면 재진, 없으면 초진.
-    # (하드코딩 대신 실제 emr_history 유무로 계산 → chart/validation 정확도 확보)
-    emr_history = patient_context_data.get("patient_context", {}).get("emr_history") or []
-    is_initial_visit = len(emr_history) == 0
-
-    triage_info = {
-        "urgency_level": triage.urgency_level,
-        "urgency_level_num": triage.urgency_level_num,
-        "vtl_basis": triage.vtl_basis,
-        "red_flags": triage.red_flags or [],
-        "chief_complaint": triage.chief_complaint,
-        "symptom_onset": triage.symptom_onset,
-        "symptom_keywords": triage.symptom_keywords or [],
-        "suspected_diseases": triage.suspected_diseases or [],
-        "symptom_summary": triage.symptom_summary,
-        "recommended_action": triage.recommended_action,
-        "is_initial_visit": is_initial_visit,
-    }
-
-    # VTL urgency → slot_window 매핑 (Schedule Agent와 동일한 기준)
-    _URGENCY_WINDOW_MAP = {
-        1: "immediate", 2: "emergency_today", 3: "urgent_24h",
-        4: "semi_urgent_48h", 5: "routine_72h",
-    }
-    actual_slot_window = _URGENCY_WINDOW_MAP.get(
-        triage_info.get("urgency_level_num", 3), "urgent_24h"
-    )
-    schedule_slot = {
-        "estimated_duration_min": duration_min,
-        "is_initial_visit": is_initial_visit,
-        "slot_window": actual_slot_window,
-    }
-
-    # 공용 RAG 지식 레이어: 트리/freeform 무관하게 triage 결과로 유사 상담사례를 모아
-    # chart agent에 감별진단 근거로 주입한다. 실패해도 파이프라인을 막지 않는다(보조 힌트).
-    chart_rag_context: list[dict] = []
-    try:
-        from ai.triage.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
-        from ai.observability import score_rag_retrieval
-
-        rag_query = " ".join(filter(None, [
-            triage_info.get("chief_complaint") or "",
-            " ".join(triage_info.get("symptom_keywords") or []),
-            triage_info.get("symptom_summary") or "",
-        ])).strip()
-        if rag_query:
-            async with AsyncSessionLocal() as db_rag:
-                matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
-            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
-            # RAG 검색 품질 판정 → Langfuse 점수(top_similarity/usable_count/verdict)
-            score_rag_retrieval(
-                [m.similarity for m in matches], threshold=RAG_USABLE_THRESHOLD
-            )
-            logger.info(
-                "[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
-                emrid, rag_query[:60], len(chart_rag_context), len(matches),
-            )
-    except Exception as exc:
-        logger.warning(f"[PostBooking] chart RAG skipped emrid={emrid}: {exc}")
-
-    chart_payload = {
-        "pet": pet_payload,
-        "triage_result": triage_info,
-        "triage_info": triage_info,
-        "patient_context": patient_context_data,
-        "schedule_slot": schedule_slot,
-        "schedule_result": schedule_slot,
-        "rag_context": chart_rag_context,
-    }
-    validation_payload = {
-        "pet": pet_payload,
-        "triage_result": triage_info,
-        "triage_info": triage_info,
-        "patient_context": patient_context_data,
-        "schedule_slot": schedule_slot,
-        "schedule_result": schedule_slot,
-    }
-    # Fetch actual chat history for chart/judge context.
     agent_chat_history: list = []
     photo_predictions: list[dict] = []
     try:
-        from app.models.chat_history import ChatHistory
         async with AsyncSessionLocal() as db_j:
-            ch_row = await db_j.execute(
-                select(ChatHistory).where(ChatHistory.emrid == emrid)
-            )
-            ch = ch_row.scalar_one_or_none()
+            ch = (await db_j.execute(select(ChatHistory).where(ChatHistory.emrid == emrid))).scalar_one_or_none()
             if ch and ch.messages:
                 agent_chat_history = [
                     m for m in ch.messages
@@ -440,22 +333,136 @@ async def _run_post_booking_agents(
                             "details": item.get("details") or [],
                             "image_url": image_url,
                         })
-    except Exception as _exc:
-        logger.warning(f"[PostBooking] chat_history fetch failed emrid={emrid}: {_exc}")
+    except Exception as exc:
+        logger.warning(f"[PostBooking] chat_history fetch failed emrid={emrid}: {exc}")
 
+    emr_history = patient_context_data.get("patient_context", {}).get("emr_history") or []
+    is_initial_visit = len(emr_history) == 0
+
+    chart_rag_context: list[dict] = []
+    try:
+        from ai.triage.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
+        from ai.observability import score_rag_retrieval
+        rag_query = " ".join(filter(None, [
+            triage.chief_complaint or "",
+            " ".join(triage.symptom_keywords or []),
+            triage.symptom_summary or "",
+        ])).strip()
+        if rag_query:
+            async with AsyncSessionLocal() as db_rag:
+                matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
+            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
+            score_rag_retrieval([m.similarity for m in matches], threshold=RAG_USABLE_THRESHOLD)
+            logger.info("[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
+                        emrid, rag_query[:60], len(chart_rag_context), len(matches))
+    except Exception as exc:
+        logger.warning(f"[PostBooking] chart RAG skipped emrid={emrid}: {exc}")
+
+    return {
+        "triage": triage,
+        "pet": pet,
+        "patient_context_data": patient_context_data,
+        "agent_chat_history": agent_chat_history,
+        "photo_predictions": photo_predictions,
+        "chart_rag_context": chart_rag_context,
+        "is_initial_visit": is_initial_visit,
+    }
+
+
+def _build_payloads(ctx: dict, duration_min: int) -> tuple[dict, dict, dict]:
+    """컨텍스트 dict → (chart_payload, validation_payload, judge_payload) 조립. 순수 함수."""
+    triage = ctx["triage"]
+    pet = ctx["pet"]
+    patient_context_data = ctx["patient_context_data"]
+    agent_chat_history = ctx["agent_chat_history"]
+    photo_predictions = ctx["photo_predictions"]
+    chart_rag_context = ctx["chart_rag_context"]
+    is_initial_visit = ctx["is_initial_visit"]
+
+    age = (date_type.today().year - pet.birth_date.year) if pet.birth_date else None
+    pet_payload = {
+        "name": pet.petname,
+        "species": pet.species or "dog",
+        "breed": pet.breed or "알 수 없음",
+        "age": age,
+        "gender": pet.gender,
+        "weight": float(pet.weight_kg) if pet.weight_kg else None,
+    }
+
+    triage_info = {
+        "urgency_level": triage.urgency_level,
+        "urgency_level_num": triage.urgency_level_num,
+        "vtl_basis": triage.vtl_basis,
+        "red_flags": triage.red_flags or [],
+        "chief_complaint": triage.chief_complaint,
+        "symptom_onset": triage.symptom_onset,
+        "symptom_keywords": triage.symptom_keywords or [],
+        "suspected_diseases": triage.suspected_diseases or [],
+        "symptom_summary": triage.symptom_summary,
+        "recommended_action": triage.recommended_action,
+        "is_initial_visit": is_initial_visit,
+    }
     if photo_predictions:
         triage_info["photo_predictions"] = photo_predictions
 
-    chart_payload["chat_history"] = agent_chat_history
+    _URGENCY_WINDOW_MAP = {
+        1: "immediate", 2: "emergency_today", 3: "urgent_24h",
+        4: "semi_urgent_48h", 5: "routine_72h",
+    }
+    schedule_slot = {
+        "estimated_duration_min": duration_min,
+        "is_initial_visit": is_initial_visit,
+        "slot_window": _URGENCY_WINDOW_MAP.get(triage_info.get("urgency_level_num", 3), "urgent_24h"),
+    }
 
+    chart_payload = {
+        "pet": pet_payload,
+        "triage_result": triage_info,
+        "triage_info": triage_info,
+        "patient_context": patient_context_data,
+        "schedule_slot": schedule_slot,
+        "schedule_result": schedule_slot,
+        "rag_context": chart_rag_context,
+        "chat_history": agent_chat_history,
+    }
+    validation_payload = {
+        "pet": pet_payload,
+        "triage_result": triage_info,
+        "triage_info": triage_info,
+        "patient_context": patient_context_data,
+        "schedule_slot": schedule_slot,
+        "schedule_result": schedule_slot,
+    }
     judge_payload = {
         "triage_result": triage_info,
         "triage_info": triage_info,
         "chat_history": agent_chat_history,
     }
 
-    # chart → validation → (조건부)judge 오케스트레이션은 LangGraph가 담당.
-    # 노드별 task_store 갱신·save_result·예외격리·judge 샘플링은 그래프 내부에서 처리한다.
+    return chart_payload, validation_payload, judge_payload
+
+
+async def _run_post_booking_agents(
+    emrid: int,
+    scheduleid: int,
+    duration_min: int,
+    user_id: int,
+    chart_task_id: str,
+    validation_task_id: str,
+    judge_task_id: str,
+) -> None:
+    """예약 확정 직후 asyncio.create_task로 실행되는 Chart+Validation+Judge 파이프라인."""
+    logger.info(f"[PostBooking] start emrid={emrid} scheduleid={scheduleid}")
+
+    ctx = await _fetch_booking_context(emrid)
+    if ctx is None:
+        logger.warning(f"[PostBooking] 필수 데이터 없음 emrid={emrid}")
+        for tid in (chart_task_id, validation_task_id, judge_task_id):
+            _task_store[tid] = {"status": "error", "detail": "트리아지 또는 반려동물 정보 없음"}
+        return
+
+    chart_payload, validation_payload, judge_payload = _build_payloads(ctx, duration_min)
+
     from ai.graph import post_booking_graph
     await post_booking_graph.ainvoke({
         "emrid": emrid,
@@ -470,11 +477,7 @@ async def _run_post_booking_agents(
     })
     _task_store[judge_task_id] = {"status": "done", "result": None}
 
-    logger.info(
-        "[PostBooking] pipeline_state=%s emrid=%s",
-        PipelineState.COMPLETED, emrid,
-    )
-    # 내부 orchestration task_ids는 SSE로 소비되지 않으므로 파이프라인 완료 후 단기 TTL 적용
+    logger.info("[PostBooking] pipeline_state=%s emrid=%s", PipelineState.COMPLETED, emrid)
     for _tid in (chart_task_id, validation_task_id, judge_task_id):
         safe_create_task(cleanup_task_after_ttl(_tid, ttl=60), name=f"cleanup:{_tid}")
 

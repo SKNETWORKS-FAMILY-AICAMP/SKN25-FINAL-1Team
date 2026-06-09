@@ -125,11 +125,6 @@ const EditProfileModal = ({
         phone: trimmedPhone,
       });
 
-      if (response.code !== 200) {
-        setErrorMessage(response.message || t("mypage.updateFailed"));
-        return;
-      }
-
       onSaved(
         {
           name: trimmedName,
@@ -253,15 +248,10 @@ const MypagePage = () => {
           return;
         }
 
-        if (response.code !== 200) {
-          setLoadMessage(response.message || t("mypage.loadError"));
-          return;
-        }
-
-        setProfile(response.result);
+        setProfile(response);
         updateGuardianProfile({
-          name: response.result.name,
-          phone: response.result.phone,
+          name: response.name,
+          phone: response.phone,
         });
       } catch (error) {
         if (!isMounted) {
