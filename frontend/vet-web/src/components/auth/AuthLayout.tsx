@@ -5,7 +5,7 @@ import logo from "../../../../shared/assets/logo/medipaw-symbol.png";
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="bg-slate-50 text-slate-900">
-      <div className="mx-auto grid min-h-screen max-w-[1200px] grid-cols-1 px-6 py-8 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
+      <div className="mx-auto grid min-h-screen max-w-[1200px] grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
         <section className="flex flex-col">
           <div className="mb-6">
             <img src={logo} alt="MediPaw" className="w-[300px]" />
