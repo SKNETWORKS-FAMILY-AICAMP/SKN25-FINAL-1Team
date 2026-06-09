@@ -1,5 +1,5 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { fetchOperatingHours, fetchWeeklySchedule, type DaySchedule } from "../api/settingsApi";
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { fetchClosedDates, fetchOperatingHours, fetchWeeklySchedule, type DaySchedule } from "../api/settingsApi";
 import { AuthSession } from "../api/authApi";
 
 export interface DayHours {
@@ -11,6 +11,7 @@ export interface DayHours {
 
 interface OperatingHoursContextValue extends DayHours {
   weeklySchedule: DaySchedule[];
+  closedDates: string[];
 }
 
 const defaultHours: DayHours = {
@@ -23,6 +24,7 @@ const defaultHours: DayHours = {
 const OperatingHoursContext = createContext<OperatingHoursContextValue>({
   ...defaultHours,
   weeklySchedule: [],
+  closedDates: [],
 });
 
 export function OperatingHoursProvider({
@@ -35,13 +37,16 @@ export function OperatingHoursProvider({
   const [value, setValue] = useState<OperatingHoursContextValue>({
     ...defaultHours,
     weeklySchedule: [],
+    closedDates: [],
   });
 
   useEffect(() => {
-    // 주간 스케줄 로드
-    fetchWeeklySchedule(session.accessToken)
-      .then((schedule) => {
-        // 대표 시간: 첫 번째 영업 요일 기준 (기존 useOperatingHours 하위 호환)
+    const token = session.accessToken;
+    Promise.all([
+      fetchWeeklySchedule(token),
+      fetchClosedDates(token).catch(() => [] as string[]),
+    ])
+      .then(([schedule, dates]) => {
         const firstOpen = schedule.find((d) => d.is_open && d.start_time);
         const rep = firstOpen
           ? {
@@ -51,11 +56,10 @@ export function OperatingHoursProvider({
               lunchEnd: firstOpen.lunch_end ?? "13:00",
             }
           : defaultHours;
-        setValue({ ...rep, weeklySchedule: schedule });
+        setValue({ ...rep, weeklySchedule: schedule, closedDates: dates });
       })
       .catch(() => {
-        // 주간 스케줄 실패 시 기존 단일 시간으로 fallback
-        fetchOperatingHours(session.accessToken)
+        fetchOperatingHours(token)
           .then((data) =>
             setValue((prev) => ({
               ...prev,
@@ -82,15 +86,29 @@ export function useOperatingHours(): DayHours {
   return { startTime, endTime, lunchStart, lunchEnd };
 }
 
+/** WeeklySchedule용: 전체 7일 스케줄 배열 반환 */
+export function useWeeklySchedule(): DaySchedule[] {
+  return useContext(OperatingHoursContext).weeklySchedule;
+}
+
+/** 특정일 휴진 날짜 Set 반환 ("YYYY-MM-DD" 형식) */
+export function useClosedDates(): Set<string> {
+  const { closedDates } = useContext(OperatingHoursContext);
+  return useMemo(() => new Set(closedDates), [closedDates]);
+}
+
 /** DailyTimeline용: 특정 날짜의 운영시간 반환. 휴진이면 null */
 export function useOperatingHoursForDate(date: Date): DayHours | null {
-  const { weeklySchedule } = useContext(OperatingHoursContext);
+  const { weeklySchedule, closedDates } = useContext(OperatingHoursContext);
+
+  // 특정일 오버라이드 우선 확인
+  const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  if (closedDates.includes(dateKey)) return null;
 
   // JS getDay(): 0=일, 1=월 ... 6=토 → 0=월 ... 6=일 변환
   const dow = (date.getDay() + 6) % 7;
 
   if (weeklySchedule.length === 0) {
-    // 주간 스케줄 미설정: 기본값 (평일만 영업)
     return dow >= 5 ? null : defaultHours;
   }
 

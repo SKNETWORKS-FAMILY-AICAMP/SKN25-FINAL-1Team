@@ -24,7 +24,7 @@ export function IntakePanel({
   const memo = emr.triage_summary.memo;
 
   return (
-    <Panel className="flex h-full min-h-0 flex-col overflow-hidden">
+    <Panel className="flex flex-1 min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center px-4 py-2.5">
         <h2 className="text-sm font-extrabold text-[#151b28]">
           사전 문진 / 메모

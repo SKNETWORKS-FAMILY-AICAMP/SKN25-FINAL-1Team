@@ -232,7 +232,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             className="min-w-0"
           >
             <WorkspacePane title="접수 / 대기" meta={`${currentQueue.length}명`}>
-              <div className="flex h-full min-h-0 flex-col gap-1.5">
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                 <div className="min-h-[240px] flex-[1.15] overflow-hidden">
                   <QueuePanel
                     title={queueTitle}
@@ -254,7 +254,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                 </div>
 
                 {currentEmr ? (
-                  <div className="min-h-[220px] flex-1 overflow-hidden">
+                  <div className="min-h-[220px] flex-1 overflow-hidden flex flex-col">
                     <PatientInfoPanel
                       patient={currentEmr.pet_info}
                       onEdit={() => {
@@ -288,20 +288,24 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             className="min-w-0"
           >
             <WorkspacePane title="사전 문진 / 히스토리" meta={currentEmr?.pet_info.pet_name ?? "미선택"}>
-              <div className="space-y-1.5">
+              <div className="flex flex-1 flex-col gap-1.5">
                 {currentEmr ? (
                   <>
-                    <IntakePanel
-                      emr={currentEmr}
-                      visibleFiles={visibleGuardianFiles}
-                      hiddenFileCount={hiddenGuardianFileCount}
-                      onApplyIntake={handleApplyIntake}
-                      onPreviewImage={openPreviewImage}
-                      isReadOnly={isReadOnly}
-                      followupContent={followupItems.length > 0 ? <FollowupPanel items={followupItems} /> : null}
-                    />
+                    <div className="flex-[1.15] min-h-0 overflow-hidden flex flex-col">
+                      <IntakePanel
+                        emr={currentEmr}
+                        visibleFiles={visibleGuardianFiles}
+                        hiddenFileCount={hiddenGuardianFileCount}
+                        onApplyIntake={handleApplyIntake}
+                        onPreviewImage={openPreviewImage}
+                        isReadOnly={isReadOnly}
+                        followupContent={followupItems.length > 0 ? <FollowupPanel items={followupItems} /> : null}
+                      />
+                    </div>
                     {readOnlyMessage && <ReadOnlyBadge message={readOnlyMessage} />}
-                    <HistoryPanel histories={currentEmr.emr_history} />
+                    <div className="min-h-0 flex-1 flex flex-col">
+                      <HistoryPanel histories={currentEmr.emr_history} />
+                    </div>
                     {isTodayView && queueTab === "completed" && (
                       <div className="flex justify-end">
                         <button
@@ -327,33 +331,37 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
 
               <ResizablePanel defaultSize="50%" minSize="36%" maxSize="64%" className="min-w-0">
                 <WorkspacePane title="진료 / 첨부 / 처방" meta={isReadOnly ? "조회 전용" : "작성 가능"}>
-                  <div className="grid gap-1.5">
-                    <EditorPanel
-                      value={editorValue}
-                      onChange={setEditorValue}
-                      onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
-                      files={uploadedFiles}
-                      onUploadFile={handleUploadFile}
-                      onRemoveFile={handleRemoveFile}
-                      onPreviewImage={openPreviewImage}
-                      errorMessage={completeVisitError}
-                      isUploading={isUploadingFile}
-                      uploadError={uploadError}
-                      isReadOnly={isReadOnly}
-                    />
-                    <PrescriptionInputPanel
-                      prescriptions={prescriptions}
-                      onRemove={handleRemovePrescription}
-                      onUpdate={handleUpdatePrescription}
-                      onAdd={handleAddPrescription}
-                      onGenerate={handleGeneratePrescriptionClick}
-                      accessToken={session.accessToken}
-                      errorMessage={autoPrescriptionError}
-                      onOpenPreview={handleOpenPrescriptionPreview}
-                      previewErrorMessage={prescriptionPreviewError}
-                      isReadOnly={isReadOnly}
-                      isGenerating={isLoadingAutoPresc}
-                    />
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <div className="flex-[1.15] min-h-0 overflow-hidden flex flex-col">
+                      <EditorPanel
+                        value={editorValue}
+                        onChange={setEditorValue}
+                        onCompleteVisit={() => setIsCompleteConfirmOpen(true)}
+                        files={uploadedFiles}
+                        onUploadFile={handleUploadFile}
+                        onRemoveFile={handleRemoveFile}
+                        onPreviewImage={openPreviewImage}
+                        errorMessage={completeVisitError}
+                        isUploading={isUploadingFile}
+                        uploadError={uploadError}
+                        isReadOnly={isReadOnly}
+                      />
+                    </div>
+                    <div className="min-h-0 flex-1 flex flex-col">
+                      <PrescriptionInputPanel
+                        prescriptions={prescriptions}
+                        onRemove={handleRemovePrescription}
+                        onUpdate={handleUpdatePrescription}
+                        onAdd={handleAddPrescription}
+                        onGenerate={handleGeneratePrescriptionClick}
+                        accessToken={session.accessToken}
+                        errorMessage={autoPrescriptionError}
+                        onOpenPreview={handleOpenPrescriptionPreview}
+                        previewErrorMessage={prescriptionPreviewError}
+                        isReadOnly={isReadOnly}
+                        isGenerating={isLoadingAutoPresc}
+                      />
+                    </div>
                   </div>
                 </WorkspacePane>
               </ResizablePanel>
@@ -468,7 +476,7 @@ function WorkspacePane({
           </span>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 flex flex-col">
         {children}
       </div>
     </section>
