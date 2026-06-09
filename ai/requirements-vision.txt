@@ -1,0 +1,11 @@
+# 비전(CNN) 전용 의존성 — 챗봇 사진 분석(피부/안구)에만 필요.
+# chat.py 에서 lazy import 되므로, 미설치 시에도 백엔드는 정상 기동하며
+# 사진 분석 요청만 graceful 에러로 처리됨.
+#
+# CPU 전용 휠 사용: 기본 PyPI 의 torch 는 CUDA(NVIDIA) 빌드라 6~7GB.
+# CPU 서버/맥에서는 못 쓰는 용량이라 CPU 휠로 받아 ~2GB 로 줄임.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch>=2.1.0
+torchvision>=0.16.0
+timm>=0.9.12

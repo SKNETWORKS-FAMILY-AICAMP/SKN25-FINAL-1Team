@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM node:20-alpine AS builder
 
 ARG VITE_API_BASE_URL=/api
@@ -5,8 +6,9 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 WORKDIR /frontend/guardian-web
 
+# BuildKit 캐시 마운트로 npm 다운로드를 호스트에 보존 → 콜드 빌드 재다운로드 0.
 COPY frontend/guardian-web/package*.json ./
-RUN npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
 
 # shared assets는 ../../../../shared 경로로 참조되므로 구조 보존
 COPY frontend/shared/ ../shared/
