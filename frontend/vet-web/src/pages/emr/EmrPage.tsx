@@ -180,6 +180,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           hospitalName: session.user.hospitalName,
           ownerName: selectedPatient?.guardian_name ?? "",
           queuePosition,
+          licenseNumber: session.user.licenseNumber,
         })
       );
       setIsPrescriptionPreviewOpen(true);

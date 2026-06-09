@@ -29,6 +29,7 @@ export function createMockPrescriptionDocument(params: {
   hospitalName: string;
   ownerName: string;
   queuePosition: number;
+  licenseNumber?: string;
 }): PrescriptionDocumentResponse {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -61,7 +62,7 @@ export function createMockPrescriptionDocument(params: {
       },
       doctor: {
         name: params.doctorName,
-        license_number: "-",
+        license_number: params.licenseNumber ?? "-",
       },
       prescriptions: params.prescriptions.map((prescription) => {
         const productInfo = prescriptionProductInfo[prescription.drug_name] ?? {
