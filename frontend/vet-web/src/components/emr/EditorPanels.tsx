@@ -574,7 +574,20 @@ export function PrescriptionInputPanel({
                 <th className="w-[17%] px-1 py-1.5">용량</th>
                 <th className="w-[19%] px-1 py-1.5">용법</th>
                 <th className="w-[12%] px-1 py-1.5">기간</th>
-                <th className="w-[7%] px-1 py-1.5 text-center">필수</th>
+                <th
+                  className={`w-[7%] px-1 py-1.5 text-center ${!isReadOnly && prescriptions.length > 0 ? "cursor-pointer select-none hover:text-[#2f6f67]" : ""}`}
+                  onClick={() => {
+                    if (isReadOnly || prescriptions.length === 0) return;
+                    const allChecked = prescriptions.every((p) => (p.pil_seon ?? "") === "필");
+                    prescriptions.forEach((p, idx) => {
+                      const clientId = p.client_id ?? `${p.drug_name}-${idx}`;
+                      onUpdate?.(clientId, "pil_seon", allChecked ? "선" : "필");
+                    });
+                  }}
+                  title={!isReadOnly && prescriptions.length > 0 ? "전체 선택/해제" : undefined}
+                >
+                  필수
+                </th>
                 <th className="w-[6%] px-1 py-1.5 text-center">삭제</th>
               </tr>
             </thead>

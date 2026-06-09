@@ -188,33 +188,26 @@
   }
 
   .print-prescription-modal {
-    position: static;
-    display: block;
+    position: fixed;
+    inset: 0;
     padding: 0;
-    background: #ffffff;
-    height: 297mm;
-    overflow: hidden;
+    background: transparent;
+    overflow: visible;
   }
 
   .print-prescription-modal > div {
-    max-height: 297mm;
-    height: 297mm;
-    width: 210mm;
-    max-width: none;
-    overflow: hidden;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0;
-    background: #ffffff;
+    all: unset;
   }
 
   .print-prescription-modal .prescription-print-page {
-    position: absolute;
-    inset: 0 auto auto 0;
+    position: fixed;
+    top: 0;
+    left: 0;
     box-sizing: border-box;
     width: 210mm;
     height: 297mm;
     padding: 18mm 14mm 8mm;
     overflow: hidden;
+    background: #ffffff;
   }
 }

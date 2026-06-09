@@ -1,5 +1,4 @@
-import html2pdf from "html2pdf.js";
-import { Download, Printer, X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import type { PrescriptionDocumentResponse } from "../../types/emr";
 
@@ -13,33 +12,6 @@ export function PrescriptionPreviewModal({
   useEscapeToClose(onClose);
 
   const data = document.result;
-
-  const handleDownloadPdf = () => {
-    const el = window.document.querySelector(".prescription-print-page") as HTMLElement;
-    if (!el) return;
-
-    // 스크롤 컨테이너 안에 있으면 캡처가 잘리므로 body에 복제 후 캡처
-    const clone = el.cloneNode(true) as HTMLElement;
-    clone.style.position = "fixed";
-    clone.style.top = "-9999px";
-    clone.style.left = "0";
-    clone.style.zIndex = "-1";
-    window.document.body.appendChild(clone);
-
-    html2pdf()
-      .set({
-        margin: 0,
-        filename: `처방전_${data.pet.name}_${data.issued_at}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      })
-      .from(clone)
-      .save()
-      .then(() => {
-        window.document.body.removeChild(clone);
-      });
-  };
 
   const issuedDateParts = data.issued_at.match(/(\d{4})년\s*(\d{2})월\s*(\d{2})일/);
   const issuedYear = issuedDateParts?.[1] ?? "";
@@ -60,14 +32,6 @@ export function PrescriptionPreviewModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
-            >
-              <Download className="h-4 w-4" />
-              PDF 저장
-            </button>
             <button
               type="button"
               onClick={() => window.print()}
