@@ -24,6 +24,8 @@ export interface ChatSessionHistory {
   keywords: string[];
   created_at: string;
   status: string;
+  /** 경과보고(followup)가 활성(진료 시작 전)인 세션 — 목록 마커 표시용. */
+  followup_active?: boolean;
 }
 
 export interface ChatSessionsResponse {
@@ -46,6 +48,8 @@ export interface ChatSessionDetailResult {
   keywords: string[];
   is_complete: boolean;
   can_followup: boolean;
+  /** followup 대상이었으나 진료 시작 시간이 지나 경과보고가 마감된 상태. */
+  followup_closed?: boolean;
   booking_complete?: boolean;
   /** 문진 미완료 — 라이브 문진으로 이어서 진행 가능. */
   resumable_triage?: boolean;
