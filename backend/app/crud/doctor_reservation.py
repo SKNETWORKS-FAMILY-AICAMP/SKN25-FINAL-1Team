@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -31,6 +32,8 @@ class TimeSlotConflict(Exception):
 # 수의사 대시보드 수동 예약 기본 카테고리: 정기검진(code=1)
 DEFAULT_CATEGORY_CODE = 1
 DEFAULT_DURATION_MIN = 30
+# 진료완료 후 남는 시간을 자동 해제하기까지의 유예(초). 오클릭/완료 되돌림 대비 버퍼.
+COMPLETION_GRACE_SECONDS = 300
 
 
 async def _resolve_doctor(db: AsyncSession, doctor_name: str | None) -> Doctor | None:
@@ -288,3 +291,54 @@ async def delete_reservation(db: AsyncSession, schedule_id: int) -> bool:
     await db.commit()
     logger.info(f"[delete_reservation] done schedule_id={schedule_id}")
     return True
+
+
+def schedule_slot_release(schedule_id: int, grace_seconds: int = COMPLETION_GRACE_SECONDS) -> None:
+    """진료완료 직후 호출 — grace_seconds 뒤에 '실제 완료시각' 기준으로 confirmed_end_time을
+    단축해 남는 시간을 다시 예약 가능하게 만든다(예상보다 일찍 끝낸 경우만).
+
+    유예를 두는 이유: 의사가 진료완료를 오클릭하거나 곧바로 되돌릴 수 있어서,
+    그 안에 상태가 바뀌면 슬롯을 풀지 않는다. 서버 재시작 시 대기 중인 건은 유실되지만
+    그 경우 슬롯이 그대로 점유되는 '안전한 실패'라 데이터 정합성 문제는 없다.
+    """
+    from ai.tasks import safe_create_task
+
+    completion_time = datetime.now(timezone.utc)  # 완료 누른 시각 ≈ 지금
+    safe_create_task(
+        _release_slot_after_grace(schedule_id, grace_seconds, completion_time),
+        name=f"slot_release:{schedule_id}",
+    )
+
+
+async def _release_slot_after_grace(
+    schedule_id: int, grace_seconds: int, completion_time: datetime
+) -> None:
+    """grace_seconds 대기 후, 여전히 완료 상태면 종료시각을 완료시각으로 단축한다."""
+    from app.db.session import AsyncSessionLocal
+
+    await asyncio.sleep(grace_seconds)
+
+    async with AsyncSessionLocal() as db:
+        schedule = await get_schedule(db, schedule_id)  # deleted_at IS NULL 만 조회
+        if not schedule:
+            return
+        # 유예 동안 완료가 취소/되돌려졌으면 슬롯을 풀지 않는다(오클릭 안전장치).
+        if schedule.status not in ("진료완료", "COMPLETED"):
+            return
+        if not schedule.confirmed_time or not schedule.confirmed_end_time:
+            return
+
+        ct = to_kst(schedule.confirmed_time)
+        old_end = to_kst(schedule.confirmed_end_time)
+        new_end = to_kst(completion_time)
+        # 일찍 끝낸 경우에만 단축한다(시작 이후 ~ 기존 종료 이전). 종료시각을 늘리지는 않는다.
+        if not (ct < new_end < old_end):
+            return
+
+        schedule.confirmed_end_time = completion_time
+        schedule.duration_min = max(1, int((new_end - ct).total_seconds() // 60))
+        await db.commit()
+        logger.info(
+            f"[slot_release] schedule_id={schedule_id} 종료시각 단축 "
+            f"{old_end.strftime('%H:%M')}→{new_end.strftime('%H:%M')} — 남는 시간 예약 가능"
+        )

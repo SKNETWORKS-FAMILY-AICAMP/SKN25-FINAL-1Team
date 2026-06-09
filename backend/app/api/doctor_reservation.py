@@ -17,6 +17,7 @@ from app.crud.doctor_reservation import (
     create_reservation,
     update_reservation,
     delete_reservation,
+    schedule_slot_release,
     TimeSlotConflict,
 )
 
@@ -239,6 +240,11 @@ async def change_reservation_status(
             status_code=404,
             detail="예약 정보를 찾을 수 없습니다."
         )
+
+    # 진료완료 처리 시: 유예(기본 5분) 후 남는 시간 자동 해제 예약.
+    # 예상 소요시간보다 일찍 끝낸 만큼 다른 예약을 받을 수 있게 종료시각을 당긴다.
+    if request.status in ("진료완료", "COMPLETED"):
+        schedule_slot_release(schedule_id)
 
     return {
         "code": 200,
