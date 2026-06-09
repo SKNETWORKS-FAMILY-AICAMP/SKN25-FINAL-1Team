@@ -17,6 +17,8 @@ from app.models.emr import EMR
 from app.models.master import TriageMaster, CategoryMaster
 from app.models.triage_result import TriageResult
 from app.utils.timezone import to_kst
+# 충돌 검사는 schedule.py의 단일 구현(has_time_overlap)을 공유한다 — 로직 중복/드리프트 방지.
+from app.crud.schedule import has_time_overlap
 
 
 class TimeSlotConflict(Exception):
@@ -42,37 +44,6 @@ async def _resolve_doctor(db: AsyncSession, doctor_name: str | None) -> Doctor |
         result = await db.execute(select(Doctor))
         doctor = result.scalars().first()
     return doctor
-
-
-async def has_time_conflict(
-    db: AsyncSession,
-    confirmed: datetime,
-    duration_min: int = DEFAULT_DURATION_MIN,
-    exclude_schedule_id: int | None = None,
-) -> bool:
-    """새 예약(confirmed ~ confirmed+duration_min)이 기존 예약과 겹치는지 확인."""
-    target_date = confirmed.date()
-    new_end = confirmed + timedelta(minutes=duration_min)
-
-    stmt = (
-        select(Schedule)
-        .where(Schedule.confirmed_time.isnot(None))
-        .where(Schedule.deleted_at.is_(None))
-        .where(Schedule.status != "CANCELLED")
-    )
-    if exclude_schedule_id is not None:
-        stmt = stmt.where(Schedule.scheduleid != exclude_schedule_id)
-
-    result = await db.execute(stmt)
-    for s in result.scalars().all():
-        ct = to_kst(s.confirmed_time)
-        if not ct or ct.date() != target_date:
-            continue
-        et = to_kst(s.confirmed_end_time) if s.confirmed_end_time else ct + timedelta(minutes=s.duration_min)
-        if confirmed < et and new_end > ct:
-            return True
-
-    return False
 
 
 async def get_reservations(db: AsyncSession):
@@ -214,7 +185,8 @@ async def create_reservation(
         return None
 
     confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
-    if await has_time_conflict(db, confirmed, duration_min=DEFAULT_DURATION_MIN):
+    new_end = confirmed + timedelta(minutes=DEFAULT_DURATION_MIN)
+    if await has_time_overlap(db, doctor.doctorid, confirmed, new_end):
         raise TimeSlotConflict()
 
     guardian = Guardian(
@@ -263,20 +235,23 @@ async def update_reservation(
 
     guardian = await get_guardian_by_emrid(db, schedule.emrid)
 
+    # 의사 변경이 있으면 새 의사 기준으로 충돌을 검사해야 하므로 시간 검사 전에 먼저 결정한다.
+    new_doctor = await _resolve_doctor(db, doctor_name) if doctor_name else None
+    target_doctorid = new_doctor.doctorid if new_doctor else schedule.doctorid
+
     if date_str and time_str:
         confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
         duration = schedule.duration_min or DEFAULT_DURATION_MIN
-        if await has_time_conflict(db, confirmed, duration_min=duration, exclude_schedule_id=schedule_id):
+        new_end = confirmed + timedelta(minutes=duration)
+        if await has_time_overlap(db, target_doctorid, confirmed, new_end, exclude_schedule_id=schedule_id):
             raise TimeSlotConflict()
         schedule.confirmed_time = confirmed
-        schedule.confirmed_end_time = confirmed + timedelta(minutes=duration)
+        schedule.confirmed_end_time = new_end
         if guardian:
             guardian.date = confirmed.date()
 
-    if doctor_name:
-        doctor = await _resolve_doctor(db, doctor_name)
-        if doctor:
-            schedule.doctorid = doctor.doctorid
+    if new_doctor:
+        schedule.doctorid = new_doctor.doctorid
 
     if memo is not None and guardian:
         guardian.memo = memo
