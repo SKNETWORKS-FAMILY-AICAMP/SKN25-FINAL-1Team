@@ -120,5 +120,46 @@ async def preview_expanded_query(query: str) -> dict:
     return {"query": query, "expanded_query": expanded, "changed": expanded != query}
 
 
+@mcp.tool(
+    name="find_open_slots",
+    description=(
+        "응급도(urgency_level_num 1~5)에 따라 '가장 빠른' 빈 진료 슬롯을 찾는다. "
+        "급할수록(응급=1) 더 이른 날부터 스캔해 빠른 시간을 우선 추천한다. "
+        "read-only 조회만 — 실제 예약 확정은 하지 않는다(사람이 슬롯을 골라 확정). "
+        "결과 슬롯은 날짜·시간 오름차순(가장 이른 순)."
+    ),
+)
+async def find_open_slots(
+    urgency_level_num: int,
+    duration_min: int = 30,
+    limit: int = 3,
+    doctorid: int | None = None,
+) -> dict:
+    """응급도 기반 가장 빠른 빈 슬롯 조회(예약 오케스트레이션 에이전트용).
+
+    Args:
+        urgency_level_num: 트리아지 응급도 1~5 (1=응급 → 오늘부터, 4~5=일반 → 뒤로).
+        duration_min: 진료 소요시간(분). 연속 슬롯 계산 기준.
+        limit: 추천할 슬롯 수 (기본 3).
+        doctorid: 특정 의사 지정(선택). None이면 기본 의사.
+    """
+    from app.crud.schedule import find_earliest_slots
+
+    async with AsyncSessionLocal() as db:
+        slots = await find_earliest_slots(
+            db,
+            urgency_level_num=urgency_level_num,
+            duration_min=duration_min,
+            limit=limit,
+            doctorid=doctorid,
+        )
+    return {
+        "urgency_level_num": urgency_level_num,
+        "duration_min": duration_min,
+        "count": len(slots),
+        "slots": slots,
+    }
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

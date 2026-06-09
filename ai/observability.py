@@ -117,3 +117,37 @@ def push_scores(
             client.score_current_trace(name=key, value=str(value), data_type="CATEGORICAL")
         except Exception as exc:  # noqa: BLE001
             logger.debug("[Langfuse] score(%s) 실패(무시): %s", key, exc)
+
+
+def score_rag_retrieval(
+    similarities: list[float],
+    *,
+    threshold: float,
+    name: str = "rag_retrieval",
+) -> None:
+    """RAG 검색 품질을 Langfuse 점수로 '판정'해 전송한다.
+
+    유사도(코사인) 기반 결정론 판정 — LLM 미사용.
+      - rag.top_similarity : 최고 유사도(딱 맞는 사례를 찾았나)
+      - rag.usable_count   : threshold 이상 사례 수(관련 사례를 몇 개 건졌나)
+      - rag.retrieved_count: 검색된 총 사례 수
+      - rag.verdict        : HIT(관련 사례 있음) / MISS(전부 threshold 미달)
+    Langfuse 비활성이면 조용히 통과(fail-open).
+    """
+    sims = sorted(
+        (float(s) for s in similarities if isinstance(s, (int, float))),
+        reverse=True,
+    )
+    top = sims[0] if sims else 0.0
+    usable = sum(1 for s in sims if s >= threshold)
+    verdict = "HIT" if usable > 0 else "MISS"
+
+    with score_trace(name):
+        push_scores(
+            numeric={
+                "rag.top_similarity": round(top, 4),
+                "rag.usable_count": usable,
+                "rag.retrieved_count": len(sims),
+            },
+            categorical={"rag.verdict": verdict},
+        )

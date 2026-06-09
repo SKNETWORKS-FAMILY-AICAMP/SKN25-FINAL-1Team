@@ -755,10 +755,12 @@ async def resume_schedule(
 
     task_id = str(uuid.uuid4())
     _task_store[task_id] = {"status": TaskStatus.QUEUED, "step": ""}
+    # 플래그 ON이면 MCP 예약 오케스트레이션(booking), 아니면 기존 schedule.
+    schedule_agent = "booking" if settings.USE_MCP_BOOKING else "schedule"
     safe_create_task(
         _execute_agent(
             task_id,
-            "schedule",
+            schedule_agent,
             {"pet": pet_payload, "triage_result": collected_info, "patient_context": patient_context_data},
             session.emrid,
             None,

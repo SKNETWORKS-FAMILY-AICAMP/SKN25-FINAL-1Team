@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-5.4-mini"
     OPENAI_VISION_MODEL: str = "gpt-5.4-mini"
 
+    # 예약 흐름: True면 MCP 오케스트레이션 에이전트(booking)가 슬롯을 직접 찾아 제안,
+    # False(기본)면 기존 schedule 에이전트(slot_window 산출 → 프론트가 슬롯 조회).
+    USE_MCP_BOOKING: bool = False
+
     # SMTP 이메일 발송
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

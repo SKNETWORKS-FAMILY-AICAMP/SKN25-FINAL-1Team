@@ -367,7 +367,8 @@ async def _run_post_booking_agents(
     # chart agent에 감별진단 근거로 주입한다. 실패해도 파이프라인을 막지 않는다(보조 힌트).
     chart_rag_context: list[dict] = []
     try:
-        from ai.triage.rag import search_similar_triage_cases
+        from ai.triage.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
+        from ai.observability import score_rag_retrieval
 
         rag_query = " ".join(filter(None, [
             triage_info.get("chief_complaint") or "",
@@ -377,7 +378,11 @@ async def _run_post_booking_agents(
         if rag_query:
             async with AsyncSessionLocal() as db_rag:
                 matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
-            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= 0.60]
+            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
+            # RAG 검색 품질 판정 → Langfuse 점수(top_similarity/usable_count/verdict)
+            score_rag_retrieval(
+                [m.similarity for m in matches], threshold=RAG_USABLE_THRESHOLD
+            )
             logger.info(
                 "[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
                 emrid, rag_query[:60], len(chart_rag_context), len(matches),

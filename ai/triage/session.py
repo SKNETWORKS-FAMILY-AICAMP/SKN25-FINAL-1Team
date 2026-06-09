@@ -890,7 +890,17 @@ async def _freeform_reply(
     return _FREEFORM_DEFAULT_REPLY, _FREEFORM_DEFAULT_CHIPS
 
 
-async def _is_offtopic(text: str, species: str | None) -> bool:
+def _last_assistant_text(messages: list[dict]) -> str | None:
+    """직전 챗봇(assistant) 발화 — off-topic 판단의 맥락(무슨 질문에 답한 건지)으로 쓴다."""
+    for m in reversed(messages or []):
+        if m.get("role") == "assistant":
+            text = content_text(m.get("content"))
+            if text:
+                return text
+    return None
+
+
+async def _is_offtopic(text: str, species: str | None, last_question: str | None = None) -> bool:
     text = (text or "").strip()
     if not text:
         return False
@@ -898,10 +908,16 @@ async def _is_offtopic(text: str, species: str | None) -> bool:
         "너는 동물병원 '증상 상담 챗봇'의 입력 주제 필터야. 사용자 메시지가 "
         "반려동물의 건강·증상·상태·행동·복약·진료/예약과 조금이라도 관련 있으면 related, "
         "그 외면 unrelated 로 분류해. 증상이 모호하거나 짧아도 동물 건강과 관련될 여지가 있으면 related 로 둬.\n"
+        "직전 챗봇 질문이 주어지면, 사용자 답변이 그 질문에 대한 응답(짧은 긍정·부정·되묻기 포함)인지 보고 "
+        "판단해 — 질문에 답하거나 대화를 이어가는 말이면 related 로 둬.\n"
         'JSON만 출력: {"topic": "related"} 또는 {"topic": "unrelated"}'
     )
+    if last_question:
+        user_content = f"[직전 챗봇 질문] {last_question.strip()[:200]}\n[사용자 답변] {text[:500]}"
+    else:
+        user_content = text[:500]
     try:
-        result = await call_openai([{"role": "user", "content": text[:500]}], system, max_tokens=20, agent="triage_topic_guard")
+        result = await call_openai([{"role": "user", "content": user_content}], system, max_tokens=20, agent="triage_topic_guard")
         return isinstance(result, dict) and str(result.get("topic") or "").strip().lower() == "unrelated"
     except Exception as exc:
         logger.warning("[Triage] offtopic check failed: %s", exc)
@@ -1072,7 +1088,9 @@ async def run_triage_turn(
         rag_context = state.get("rag_context") or []
         state_photo_context = state.get("photo_context") or photo_context
         user_messages = session_user_messages(messages)
-        if await _is_offtopic(user_text, species):
+        # 직전 챗봇 질문을 맥락으로 넘긴다 → "ㄴㄴ 번지지는 않음" 같은 짧은 답변이
+        # 맥락 없이 off-topic 으로 오인돼 대화가 끊기던 문제 방지.
+        if await _is_offtopic(user_text, species, last_question=_last_assistant_text(messages)):
             return TriageTurnResult(reply=_OFFTOPIC_REDIRECT, quick_replies=[], meta=state)
 
         if len(user_messages) < _FREEFORM_MIN_USER_TURNS and len(user_messages) < _FREEFORM_MAX_USER_TURNS:

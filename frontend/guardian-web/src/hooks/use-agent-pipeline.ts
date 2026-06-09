@@ -244,43 +244,68 @@ export const useAgentPipeline = ({
 
       const raw = await streamAgentResult(task_id);
       if (requestId !== scheduleRequestRef.current) return;
-      const schedRes = raw as {
-        slot_window: string;
-        estimated_duration_min: number;
-        pre_visit_instructions: string[];
-        priority_reason: string;
-      } | null;
 
-      if (!schedRes?.slot_window) {
-        appendBotKey("chatbot.slotsLoadSlow", "slots-result");
-        appendCard({ kind: "slots", slots: [] }, "slots-result");
-        setPhase("slot-selection");
-        setShowDatePicker(true);
-        return;
-      }
+      let collected: { date: string; start_time: string; doctorid?: number }[] = [];
+      let durationMin = 30;
 
-      scheduleResultRef.current = raw;
+      if (raw && typeof raw === "object" && "proposed_slots" in raw) {
+        // ── MCP 예약 오케스트레이션 경로 — 백엔드(에이전트)가 MCP 툴로 슬롯을 이미 찾아줌 ──
+        const bookingRes = raw as {
+          proposed_slots?: { date: string; start_time: string; end_time?: string; doctorid?: number }[];
+          message?: string;
+        };
+        scheduleResultRef.current = raw as Record<string, unknown>;
+        if (bookingRes.message) appendBot(bookingRes.message);
+        const ps = bookingRes.proposed_slots ?? [];
+        collected = ps.map((s) => ({ date: s.date, start_time: s.start_time, doctorid: s.doctorid }));
+        // duration: 첫 슬롯 start~end 차이로 추정(없으면 30)
+        const first = ps[0];
+        if (first?.start_time && first?.end_time) {
+          const [sh, sm] = first.start_time.split(":").map(Number);
+          const [eh, em] = first.end_time.split(":").map(Number);
+          const diff = eh * 60 + em - (sh * 60 + sm);
+          if (diff > 0) durationMin = diff;
+        }
+      } else {
+        // ── 기존 schedule 경로 — slot_window 받아 프론트가 슬롯 조회 ──
+        const schedRes = raw as {
+          slot_window: string;
+          estimated_duration_min: number;
+          pre_visit_instructions: string[];
+          priority_reason: string;
+        } | null;
 
-      // Collect available slots
-      // 1차: urgency window 기준 영업일 탐색 — 추천 슬롯 3개 제시
-      const dates = getDatesForWindow(schedRes.slot_window);
-      let collected = await collectSlots(dates, 3, schedRes.estimated_duration_min);
-      if (requestId !== scheduleRequestRef.current) return;
+        if (!schedRes?.slot_window) {
+          appendBotKey("chatbot.slotsLoadSlow", "slots-result");
+          appendCard({ kind: "slots", slots: [] }, "slots-result");
+          setPhase("slot-selection");
+          setShowDatePicker(true);
+          return;
+        }
 
-      // 2차: 1차 탐색에서 슬롯을 못 찾은 경우 최대 21영업일 확장 탐색
-      if (collected.length === 0) {
-        const windowStart = WINDOW_DAYS[schedRes.slot_window]?.start ?? 1;
-        collected = await collectSlots(
-          getExtendedBusinessDates(windowStart, 21),
-          3,
-          schedRes.estimated_duration_min,
-        );
+        scheduleResultRef.current = raw;
+
+        // 1차: urgency window 기준 영업일 탐색 — 추천 슬롯 3개 제시
+        const dates = getDatesForWindow(schedRes.slot_window);
+        collected = await collectSlots(dates, 3, schedRes.estimated_duration_min);
         if (requestId !== scheduleRequestRef.current) return;
+
+        // 2차: 1차 탐색에서 슬롯을 못 찾은 경우 최대 21영업일 확장 탐색
+        if (collected.length === 0) {
+          const windowStart = WINDOW_DAYS[schedRes.slot_window]?.start ?? 1;
+          collected = await collectSlots(
+            getExtendedBusinessDates(windowStart, 21),
+            3,
+            schedRes.estimated_duration_min,
+          );
+          if (requestId !== scheduleRequestRef.current) return;
+        }
+
+        durationMin = schedRes.estimated_duration_min || 30;
       }
 
       const newSlotMap: Record<string, { date: string; time: string; doctorid: number }> = {};
       const slotOptions: SlotOption[] = [];
-      const durationMin = schedRes.estimated_duration_min || 30;
 
       for (const s of collected) {
         const time = s.start_time.slice(0, 5);

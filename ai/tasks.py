@@ -302,6 +302,21 @@ async def run_followup(payload: dict, update_step, emrid: int | None, scheduleid
     return await _run(payload, update_step, emrid, scheduleid)
 
 
+@monitor_agent("booking")
+async def run_booking(payload: dict, update_step, emrid: int | None, scheduleid: int | None) -> dict:
+    """MCP 예약 오케스트레이션 — find_open_slots(MCP)로 슬롯을 찾아 proposed_slots 반환.
+
+    기존 schedule(slot_window만 산출)의 대체 경로. settings.USE_MCP_BOOKING 플래그로 전환.
+    결과 shape: {proposed_slots, message, reasoning, tool_calls}. (확정은 사람이 함)
+    """
+    from ai.agents.booking import run_booking_orchestration
+    pet = payload.get("pet") or {}
+    triage = payload.get("triage_info") or payload.get("triage_result") or {}
+    update_step("MCP로 예약 슬롯 조율 중...")
+    result = await run_booking_orchestration(pet, triage)
+    return {"agent": "booking", "emrid": emrid, "scheduleid": scheduleid, **result}
+
+
 RUNNERS: dict[str, Any] = {
     "triage":     run_triage,
     "schedule":   run_schedule,
@@ -309,6 +324,7 @@ RUNNERS: dict[str, Any] = {
     "validation": run_validation,
     "judge":      run_judge,
     "followup":   run_followup,
+    "booking":    run_booking,
 }
 
 
