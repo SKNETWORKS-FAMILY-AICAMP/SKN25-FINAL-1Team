@@ -118,9 +118,6 @@ export const useAgentPipeline = ({
 }: UseAgentPipelineParams) => {
   const { lang, t } = useTranslation();
   const [phase, setPhase] = useState<PipelinePhase>("chatting");
-  const [internalAlertFlag, setInternalAlertFlag] = useState(false);
-  const [escalationPromptVisible, setEscalationPromptVisible] = useState(false);
-  const [guardianCareRecommendation, setGuardianCareRecommendation] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Mutable refs — no re-render needed
@@ -426,38 +423,17 @@ export const useAgentPipeline = ({
     setIsStreaming(true);
 
     try {
+      // followup은 관련 보고에는 개별 응대를 하지 않는다 — 활성화 시 1회 안내만 남기고,
+      // 이후 보고는 조용히 기록만 한다(수의사용 medical_summary는 서버에서 갱신).
+      // 단, 경과와 무관한 입력(offtopic)에만 "관련 내용을 보내달라"는 안내를 띄운다.
       const resp = await createFollowup({ emrid, message: content, images });
-      
+
       if (requestId !== lastRequestRef.current) {
         return; // Stale request, ignore
       }
 
-      const followupRes = resp.result;
-      
-      if (followupRes?.guardian_message) {
-        appendBot(followupRes.guardian_message);
-      } else {
-        appendBot(t("chatbot.followupRecorded"));
-      }
-
-      if (followupRes?.followup_recommended) {
-        setInternalAlertFlag(true);
-        setEscalationPromptVisible(true);
-        
-        const actions = followupRes.recommended_actions || [];
-        const actionLabels = actions.map((action: string) => {
-          if (action === "call_hospital") return t("chatbot.actionCallHospital");
-          if (action === "keep_schedule") return t("chatbot.actionKeepSchedule");
-          if (action === "fast_booking") return t("chatbot.actionFastBooking");
-          return action;
-        }).filter((label: string, index: number, arr: string[]) => arr.indexOf(label) === index);
-        
-        setGuardianCareRecommendation(actionLabels);
-        setQuickReplies(actionLabels);
-      } else {
-        setInternalAlertFlag(false);
-        setEscalationPromptVisible(false);
-        setGuardianCareRecommendation([]);
+      if (resp.result?.offtopic) {
+        appendBot(t("chatbot.followupOfftopic"));
       }
     } catch (err) {
       if (requestId === lastRequestRef.current) {
@@ -521,13 +497,16 @@ export const useAgentPipeline = ({
     setPhase("followup-closed");
   };
 
+  // 일반(followup 미활성) 예약 완료 세션 재진입 — 입력 대신 '상담 완료' 안내만 노출.
+  const restoreConfirmedPhase = (emrid: number) => {
+    emridRef.current = emrid;
+    setPhase("confirmed");
+  };
+
   return {
     phase,
     showDatePicker,
     setShowDatePicker,
-    internalAlertFlag,
-    escalationPromptVisible,
-    guardianCareRecommendation,
     isSlotLabel,
     getSlotLabels,
     startSchedulePhase,
@@ -537,5 +516,6 @@ export const useAgentPipeline = ({
     resetPipeline,
     restoreFollowupPhase,
     restoreFollowupClosedPhase,
+    restoreConfirmedPhase,
   };
 };

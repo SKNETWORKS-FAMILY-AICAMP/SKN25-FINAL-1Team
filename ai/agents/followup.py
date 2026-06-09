@@ -117,10 +117,13 @@ async def run_followup(
 
         if await _is_offtopic(combined_report, pet.get("species")):
             logger.info(f"[Followup] emrid={emrid} off-topic 보고 — 요약 생략")
+            # 관련 없는 입력에만 응답한다(관련 보고는 무응답). offtopic 플래그로 프론트가
+            # 안내 문구를 띄운다. guardian_message는 fallback/로깅용.
             return {
                 "agent": "followup",
                 "emrid": emrid,
-                "guardian_message": "경과와 관련된 내용을 보내주시면 도와드릴게요. 증상이나 상태 변화를 알려주세요.",
+                "offtopic": True,
+                "guardian_message": "경과 보고와 관련 없는 내용은 도와드리기 어려워요. 반려동물의 증상 변화나 상태를 알려주세요.",
                 "followup_recommended": False,
                 "recommended_actions": ["keep_schedule"],
                 "medical_summary": "",  # 무관 보고 — 누적 요약 갱신 안 함
