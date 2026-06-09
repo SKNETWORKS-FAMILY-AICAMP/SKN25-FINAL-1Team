@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMENSIONS = 1536
 
+# 유사도가 이 값 이상이면 '관련 사례(usable)'로 본다. chart 주입 필터 + RAG 품질 판정에 공용.
+RAG_USABLE_THRESHOLD = 0.60
+
 _EXPAND_SYSTEM = (
     "너는 수의 트리아지 RAG 검색용 '쿼리 확장기'야. 보호자의 짧은 한국어 증상 표현을, "
     "유사 상담사례 검색이 잘 되도록 동의어·구어/표준어 변환·관련 임상용어로 확장해. "

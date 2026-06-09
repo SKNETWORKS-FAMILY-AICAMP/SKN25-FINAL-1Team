@@ -176,7 +176,10 @@ async def _schedule_node(state: TriageCompleteState) -> dict:
             "patient_context": state.get("patient_context"),
             "existing_bookings": [],
         }
-        result = await RUNNERS["schedule"](payload, _updater(tid), emrid, None)
+        # 플래그 ON이면 MCP 예약 오케스트레이션(booking), 아니면 기존 schedule.
+        from app.core.config import settings
+        agent = "booking" if settings.USE_MCP_BOOKING else "schedule"
+        result = await RUNNERS[agent](payload, _updater(tid), emrid, None)
         _task_store[tid] = {"status": "done", "result": result}
         logger.info(f"[Graph] schedule done emrid={emrid}")
         return {"schedule_result": result}

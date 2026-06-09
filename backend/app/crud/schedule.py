@@ -445,6 +445,67 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     return available_starts
 
 
+# ── 응급도 기반 '가장 빠른 빈 슬롯' 탐색 (MCP 예약 오케스트레이션의 핵심) ──────────
+# 응급도 3버킷 → 탐색 시작 오프셋(영업일). 급할수록 이른 날부터 스캔하여
+# 응급 환자에게 가장 빠른 시간을 우선 추천한다. 일반은 뒤로 미뤄 이른 슬롯을 비워둔다.
+#   응급(RED, num1)        → 오늘부터
+#   준응급(num2~3)         → +1 영업일부터
+#   일반(num4~5)           → +2 영업일부터
+_URGENCY_START_OFFSET_DAYS = {"emergency": 0, "semi": 1, "normal": 2}
+
+
+def _urgency_bucket(urgency_level_num: int) -> str:
+    """urgency_level_num(1~5) → 3버킷. (표시 라벨 3버킷과 동일 기준)"""
+    if urgency_level_num <= 1:
+        return "emergency"   # 응급
+    if urgency_level_num <= 3:
+        return "semi"        # 준응급
+    return "normal"          # 일반
+
+
+async def find_earliest_slots(
+    db: AsyncSession,
+    *,
+    urgency_level_num: int,
+    duration_min: int,
+    limit: int = 3,
+    doctorid: int | None = None,
+    max_scan_days: int = 21,
+) -> list[dict]:
+    """응급도에 따라 시작일을 정하고, 오늘 기준 '가장 이른' 빈 슬롯을 limit개 모은다.
+
+    급할수록(응급) 이른 날부터 스캔 → 응급에 가장 빠른 시간을 우선한다.
+    read-only(조회만) — 실제 예약 확정은 confirm_schedule(락·overlap 제약)이 따로 처리한다.
+    각 슬롯은 dict: {date, start_time, end_time, doctorid, doctor_name}. 날짜·시간 오름차순.
+    """
+    try:
+        num = int(urgency_level_num)
+    except (TypeError, ValueError):
+        num = 3
+    start_offset = _URGENCY_START_OFFSET_DAYS[_urgency_bucket(num)]
+    today = datetime.now(KST).date()
+
+    collected: list[dict] = []
+    for day_index in range(start_offset, start_offset + max_scan_days):
+        if len(collected) >= limit:
+            break
+        d = today + timedelta(days=day_index)
+        # 휴무(공휴일·주말·휴진)는 get_available_slots 가 내부에서 빈 리스트로 처리하므로
+        # 별도 사전 체크 없이 호출한다(닫힌 날은 자연히 건너뛰어짐).
+        slots = await get_available_slots(db, d.isoformat(), duration_min, doctorid)
+        for s in slots:
+            collected.append({
+                "date": d.isoformat(),
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "doctorid": s.doctorid,
+                "doctor_name": s.doctor_name,
+            })
+            if len(collected) >= limit:
+                break
+    return collected
+
+
 # 챗봇 예약 확정
 async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
