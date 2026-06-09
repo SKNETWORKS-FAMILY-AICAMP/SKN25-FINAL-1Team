@@ -1,8 +1,15 @@
 # MediPaw 전체 스택
-# 사용법(가장 쉬움):  ./dev.sh   (레포 루트에서)
+# 사용법(가장 쉬움):  ./dev.sh   (레포 루트에서. 마이그레이션/시딩까지 알아서 처리)
 # 수동:
 #   1. cp backend/.env.example backend/.env  (그리고 OPENAI_API_KEY 채우기)
 #   2. docker compose -f ai/docker/docker-compose.yml up --build
+#      → db/backend/guardian/vet 만 기동(일상 개발용).
+#   3. (최초 1회) 마이그레이션+시딩:
+#      docker compose -f ai/docker/docker-compose.yml --profile setup run --rm migrate
+#      migrate/seed/seed-rag 는 profiles:["setup"] 라서 평소 up 에는 안 뜸.
+#
+# 참고: backend 이미지는 기본적으로 비전(torch) 미설치(INSTALL_VISION=false)로 가볍게 뜸.
+#       사진 분석을 테스트하려면 backend.build.args.INSTALL_VISION 을 "true" 로 바꿔 재빌드.
 
 services:
   # ── PostgreSQL ───────────────────────────────────────────────────
@@ -30,6 +37,10 @@ services:
     build:
       context: ../..
       dockerfile: ai/docker/Dockerfile.backend
+      args:
+        # dev 에서는 비전(torch) 미설치로 이미지/빌드/기동 대폭 단축(~6GB 절감).
+        # 사진 분석을 로컬에서 테스트하려면 "true" 로 바꾼 뒤 ./dev.sh 로 재빌드.
+        INSTALL_VISION: "false"
     env_file:
       - ../../backend/.env
     restart: unless-stopped
@@ -58,7 +69,9 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── DB 마이그레이션 (1회성) ──────────────────────────────────────
+  # ── DB 마이그레이션 ──────────────────────────────────────────────
+  # 매 `up` 마다 alembic upgrade head 실행(멱등) → 새 마이그레이션이 항상 반영됨.
+  # (seed/seed-rag 와 달리 profile 로 빼지 않음: 개발 중 스키마 누락 방지)
   migrate:
     build:
       context: ../..
@@ -82,7 +95,9 @@ services:
     restart: "no"
 
   # ── Drug DB 시딩 (1회성) ────────────────────────────────────────
+  # dev.sh 는 backend 컨테이너 내부 exec 로 시딩하므로 이 서비스는 자동 기동 불필요.
   seed:
+    profiles: ["setup"]
     build:
       context: ../..
       dockerfile: ai/docker/Dockerfile.backend
@@ -101,6 +116,7 @@ services:
   # 덤프(data/triage/triage_rag_export.jsonl.gz)가 있으면 비어있을 때만 적재, 이미 있으면 스킵.
   # 덤프가 없으면 에러 없이 스킵(원본 임베딩은 build_triage_pgvector_index.py로 별도 생성).
   seed-rag:
+    profiles: ["setup"]
     build:
       context: ../..
       dockerfile: ai/docker/Dockerfile.backend

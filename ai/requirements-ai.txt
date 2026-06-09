@@ -5,8 +5,8 @@
 # LangChain CallbackHandler 방식(langfuse.langchain) 사용 — v3+ 필요.
 langfuse>=3.0.0
 
-# CNN 비전 모델 (EfficientNet-B0)
-torch>=2.1.0
-torchvision>=0.16.0
-timm>=0.9.12
+# 이미지 처리 (triage/chat 등에서 사용 — 경량)
 Pillow>=10.0.0
+
+# CNN 비전 모델(torch/torchvision/timm)은 용량이 커서 ai/requirements-vision.txt 로 분리.
+# 설치 여부는 Dockerfile.backend 의 INSTALL_VISION 빌드 인자로 제어 (기본 true).

@@ -27,3 +27,7 @@
 # Runtime files should live in Docker volumes, not image layers.
 backend/uploads
 backend/logs
+
+# 압축 안 된 RAG 덤프(수백 MB). 로더/익스포터는 .jsonl.gz 만 사용하므로
+# 이미지에 구울 필요 없음. (.gz 와 vet_triage.json 등은 그대로 포함됨)
+backend/data/**/*.jsonl

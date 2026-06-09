@@ -1,17 +1,34 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# 시스템 패키지 (psycopg2 빌드용)
+# 시스템 패키지 — healthcheck 용 curl 만 필요.
+# (gcc/libpq-dev 는 옛 psycopg2 소스빌드 잔재. 지금은 psycopg2-binary 등 전부 휠이라 불필요 → apt ~80s 제거)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev curl \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 의존성 설치 (캐시 레이어)
+# BuildKit 캐시 마운트로 pip 다운로드를 호스트에 보존 → 콜드/무효화 빌드에서도 재다운로드 0.
+# (--no-cache-dir 를 제거해야 캐시 마운트가 채워짐)
 COPY backend/requirements.txt /tmp/requirements.txt
 COPY ai/requirements-ai.txt /tmp/requirements-ai.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt \
- && pip install --no-cache-dir -r /tmp/requirements-ai.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r /tmp/requirements.txt \
+ && pip install -r /tmp/requirements-ai.txt
+
+# 비전(torch/torchvision/timm) 설치 여부 — 용량이 커서 옵션화.
+#   기본 true(운영/배포 이미지는 비전 포함, 단 CPU 휠이라 ~9.6GB→~2GB).
+#   dev 에서는 docker-compose.yml 가 INSTALL_VISION=false 로 덮어써 추가 절감.
+ARG INSTALL_VISION=true
+COPY ai/requirements-vision.txt /tmp/requirements-vision.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    if [ "$INSTALL_VISION" = "true" ]; then \
+      pip install -r /tmp/requirements-vision.txt; \
+    else \
+      echo "INSTALL_VISION=false -> torch/비전 의존성 건너뜀 (사진 분석 비활성)"; \
+    fi
 
 # 소스 복사
 COPY backend/ /app/backend/
