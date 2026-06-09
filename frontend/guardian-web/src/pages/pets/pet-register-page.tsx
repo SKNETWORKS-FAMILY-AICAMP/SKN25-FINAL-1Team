@@ -17,11 +17,7 @@ import { useTranslation } from "../../i18n/language-context";
 
 const maxImageSize = 5 * 1024 * 1024;
 
-const PawIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-    <path d="M8.4 9.9c1.1 0 1.9-1.3 1.9-2.9S9.5 4.1 8.4 4.1 6.5 5.4 6.5 7s.8 2.9 1.9 2.9Zm7.2 0c1.1 0 1.9-1.3 1.9-2.9s-.8-2.9-1.9-2.9-1.9 1.3-1.9 2.9.8 2.9 1.9 2.9ZM5.4 13.2c.9-.3 1.2-1.8.7-3.2-.5-1.5-1.7-2.4-2.6-2.1-.9.3-1.2 1.8-.7 3.2.5 1.5 1.7 2.4 2.6 2.1Zm13.2 0c.9.3 2.1-.6 2.6-2.1.5-1.4.2-2.9-.7-3.2-.9-.3-2.1.6-2.6 2.1-.5 1.4-.2 2.9.7 3.2ZM12 11.3c-3.2 0-5.8 2.4-5.8 5.2 0 1.8 1.5 3.1 3.2 3.1 1 0 1.7-.4 2.6-.4s1.6.4 2.6.4c1.7 0 3.2-1.3 3.2-3.1 0-2.8-2.6-5.2-5.8-5.2Z" />
-  </svg>
-);
+// PawIcon removed as requested
 
 const PetRegisterPage = () => {
   const { t } = useTranslation();
@@ -247,32 +243,12 @@ const PetRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <GuardianNavbar />
+    <div className="min-h-screen bg-[#F8FAFC] text-[#1F2937] relative">
+      <div className="relative z-10">
+        <GuardianNavbar />
+      </div>
 
-      <main className="mx-auto w-full max-w-[1280px] px-6 py-8">
-        <section className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-            <img
-              src={pawOnlyLogo}
-              alt=""
-              aria-hidden="true"
-              className="h-8 w-8 object-contain"
-            />
-          </div>
-          <div>
-            <h1
-              className={`font-extrabold text-slate-950 ${
-                isEditMode ? "text-xl" : "text-2xl"
-              }`}
-            >
-              {isEditMode ? t("pet.detailTitle") : t("pet.registerTitle")}
-            </h1>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              {isEditMode ? t("pet.detailSubtitle") : t("pet.registerSubtitle")}
-            </p>
-          </div>
-        </section>
+      <main className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 md:py-12 relative z-10">
 
         {isLoading ? (
           <section className="mt-6 flex min-h-[420px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -295,8 +271,8 @@ const PetRegisterPage = () => {
             </button>
           </section>
         ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[340px_1fr]">
-          <aside className="space-y-6">
+        <div className="bg-white rounded-[2rem] border border-[#E5E7EB] shadow-sm p-5 sm:p-8 md:p-12 relative overflow-hidden">
+          <div className="flex flex-col items-center border-b border-[#E5E7EB] pb-8 md:pb-10 mb-8">
             <PetImageUploader
               previewUrl={previewUrl}
               isDetailMode={isDetailMode}
@@ -305,35 +281,9 @@ const PetRegisterPage = () => {
               errorMessage={errors.profileImage}
             />
 
-            <section className="relative overflow-hidden rounded-2xl bg-teal-50 p-6 ring-1 ring-teal-100">
-              <div className="flex items-center gap-2 text-teal-700">
-                <PawIcon className="h-5 w-5" />
-                <h2 className="text-lg font-extrabold">{t("pet.noticeTitle")}</h2>
-              </div>
-              <ul className="mt-6 space-y-4 pr-6 text-sm font-semibold leading-6 text-slate-700">
-                {isEditMode ? (
-                  <>
-                    <li>{t("pet.noticeEdit1")}</li>
-                    <li>{t("pet.noticeCommon")}</li>
-                  </>
-                ) : (
-                  <>
-                    <li>{t("pet.noticeNew1")}</li>
-                    <li>{t("pet.noticeCommon")}</li>
-                  </>
-                )}
-              </ul>
-              <div className="pointer-events-none mt-8 flex justify-center gap-3 text-6xl leading-none">
-                <span>🐶</span>
-                <span>🐱</span>
-              </div>
-            </section>
-          </aside>
+          </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-          >
+          <form onSubmit={handleSubmit} className="relative z-10">
             <PetForm
               form={form}
               errors={errors}
@@ -345,25 +295,25 @@ const PetRegisterPage = () => {
             />
 
             {submitMessage ? (
-              <p className="mx-6 mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+              <p className="mx-2 mt-6 rounded-2xl bg-red-50/80 px-5 py-4 text-sm font-bold text-red-600 ring-1 ring-red-100 flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
                 {submitMessage}
               </p>
             ) : null}
 
-            <footer className="mt-4 flex justify-end gap-3 border-t border-slate-100 px-6 py-5">
+            <footer className="mt-8 md:mt-10 flex justify-end gap-3 px-1 md:px-2">
               <button
                 type="button"
                 onClick={closeModal}
-                className="h-11 min-w-32 rounded-xl border border-slate-200 bg-white px-6 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50"
+                className="h-12 md:h-14 min-w-24 md:min-w-32 rounded-xl bg-[#F8FAFC] px-6 md:px-8 text-sm md:text-base font-extrabold text-[#6B7280] border border-[#E5E7EB] transition-all hover:bg-[#E5E7EB]"
               >
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || isUploadingImage}
-                className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-teal-700 px-6 text-sm font-extrabold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-teal-300"
+                className="inline-flex h-12 md:h-14 min-w-32 md:min-w-44 items-center justify-center gap-2 md:gap-3 rounded-xl bg-[#2F6F67] px-6 md:px-8 text-sm md:text-base font-extrabold text-white transition-all hover:bg-[#255E57] disabled:cursor-not-allowed disabled:bg-[#E5E7EB] disabled:text-[#6B7280]"
               >
-                <PawIcon className="h-4 w-4" />
                 {isUploadingImage
                   ? t("pet.uploadingImage")
                   : isSubmitting
@@ -375,6 +325,12 @@ const PetRegisterPage = () => {
                       : t("pet.registerSubmit")}
               </button>
             </footer>
+
+            <hr className="my-8 border-[#E5E7EB]" />
+            <div className="flex items-center justify-center gap-2 text-[#6B7280] text-sm font-semibold">
+              <span className="text-base">💡</span>
+              <p>정확한 정보는 AI 상담과 진료 예약 정확도 향상에 도움이 됩니다.</p>
+            </div>
           </form>
         </div>
         )}

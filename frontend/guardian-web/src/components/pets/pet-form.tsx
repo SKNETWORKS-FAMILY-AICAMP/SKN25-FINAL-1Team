@@ -11,22 +11,17 @@ import {
 import { useTranslation } from "../../i18n/language-context";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
-const selectClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
-const errorInputClass = "border-red-400 focus:border-red-500 focus:ring-red-100";
-const labelClass = "text-sm font-extrabold text-slate-800";
+  "h-12 w-full rounded-xl bg-[#F8FAFC] px-4 text-sm font-semibold text-[#1F2937] outline-none transition-all duration-300 placeholder:text-[#6B7280] border border-[#E5E7EB] focus:border-[#2F6F67] focus:bg-white focus:ring-4 focus:ring-[#2F6F67]/10 hover:border-[#6B7280]/30";
+const selectClass = inputClass;
+const errorInputClass = "!border-red-400 focus:!border-red-500 focus:!ring-red-100 bg-red-50/30";
+const labelClass = "text-sm font-bold text-[#1F2937] ml-1 mb-2 block";
 
 const FieldError = ({ message }: { message?: string }) =>
   message ? <p className="mt-1 text-[10px] font-semibold text-red-500">{message}</p> : null;
 
 const RequiredMark = () => <span className="ml-0.5 text-red-500">*</span>;
 
-const PawIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-    <path d="M8.4 9.9c1.1 0 1.9-1.3 1.9-2.9S9.5 4.1 8.4 4.1 6.5 5.4 6.5 7s.8 2.9 1.9 2.9Zm7.2 0c1.1 0 1.9-1.3 1.9-2.9s-.8-2.9-1.9-2.9-1.9 1.3-1.9 2.9.8 2.9 1.9 2.9ZM5.4 13.2c.9-.3 1.2-1.8.7-3.2-.5-1.5-1.7-2.4-2.6-2.1-.9.3-1.2 1.8-.7 3.2.5 1.5 1.7 2.4 2.6 2.1Zm13.2 0c.9.3 2.1-.6 2.6-2.1.5-1.4.2-2.9-.7-3.2-.9-.3-2.1.6-2.6 2.1-.5 1.4-.2 2.9.7 3.2ZM12 11.3c-3.2 0-5.8 2.4-5.8 5.2 0 1.8 1.5 3.1 3.2 3.1 1 0 1.7-.4 2.6-.4s1.6.4 2.6.4c1.7 0 3.2-1.3 3.2-3.1 0-2.8-2.6-5.2-5.8-5.2Z" />
-  </svg>
-);
+// PawIcon removed as requested
 
 const choiceTone = {
   blue: "border-blue-300 bg-blue-50 text-blue-700",
@@ -42,10 +37,10 @@ const getChoiceClass = (
   tone: keyof typeof choiceTone = "slate",
 ) =>
   [
-    "flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition",
+    "flex flex-row h-14 items-center justify-center gap-2 rounded-xl border-2 transition-all duration-300 group cursor-pointer w-full text-center outline-none relative",
     isSelected
-      ? choiceTone[tone]
-      : "border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:bg-teal-50/60",
+      ? "border-[#2F6F67] bg-[#2F6F67]/5 text-[#2F6F67]"
+      : "border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#2F6F67]/30 hover:bg-[#F8FAFC]",
   ].join(" ");
 
 const localeForLang = (lang: string) =>
@@ -100,10 +95,10 @@ const LocalizedDateInput = ({
         onClick={openPicker}
         disabled={disabled}
         className={[
-          "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-semibold outline-none transition",
+          "flex h-12 w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-left text-sm font-semibold outline-none transition-all duration-300",
           disabled
-            ? "cursor-not-allowed bg-slate-50 text-slate-400"
-            : "text-slate-900 hover:border-teal-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100",
+            ? "cursor-not-allowed bg-slate-100 text-slate-400"
+            : "text-[#1F2937] hover:border-[#6B7280]/30 focus:border-[#2F6F67] focus:bg-white focus:ring-4 focus:ring-[#2F6F67]/10",
         ].join(" ")}
       >
         <span className={value ? "text-slate-900" : "text-slate-400"}>
@@ -163,10 +158,9 @@ const PetForm = ({
 
   return (
     <>
-      <section className="p-6">
-        <div className="mb-5 flex items-center gap-2 text-teal-700">
-          <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">{t("pet.basicInfo")}</h2>
+      <section className="px-1 md:px-2 mt-4 md:mt-6">
+        <div className="mb-4 flex items-center gap-2 text-slate-900">
+          <h2 className="text-lg md:text-xl font-extrabold tracking-tight">{t("pet.basicInfo")}</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -181,7 +175,7 @@ const PetForm = ({
               onChange={handleNameChange}
               readOnly={isDetailMode}
               placeholder={t("pet.namePlaceholder")}
-              className={`${inputClass} mt-2 ${
+              className={`${inputClass} ${
                 errors.petname ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
             />
@@ -198,7 +192,7 @@ const PetForm = ({
               value={form.gender}
               disabled={isDetailMode}
               onChange={(event) => updateForm("gender", event.target.value)}
-              className={`${selectClass} mt-2 ${
+              className={`${selectClass} ${
                 errors.gender ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
             >
@@ -217,7 +211,7 @@ const PetForm = ({
               {t("pet.weightLabel")}
               <RequiredMark />
             </label>
-            <div className="relative mt-2">
+            <div className="relative">
               <input
                 id="weight"
                 type="number"
@@ -250,7 +244,7 @@ const PetForm = ({
               onChange={(event) =>
                 updateForm("isNeutered", event.target.value)
               }
-              className={`${selectClass} mt-2 ${
+              className={`${selectClass} ${
                 errors.isNeutered ? errorInputClass : ""
               } ${isDetailMode ? "bg-slate-50" : ""}`}
             >
@@ -266,62 +260,71 @@ const PetForm = ({
         </div>
       </section>
 
-      <section className="border-t border-slate-100 p-6">
-        <div className="mb-5 flex items-center gap-2 text-teal-700">
-          <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">{t("pet.speciesSection")}</h2>
-        </div>
+      <section className="px-1 md:px-2 mt-6 md:mt-8">
 
         <div>
           <label className={labelClass}>
             {t("pet.speciesLabel")}
             <RequiredMark />
           </label>
-          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             {speciesOptions.map((option) => (
-              <button
+              <div
                 key={option}
-                type="button"
-                disabled={isDetailMode}
-                onClick={() => {
-                  updateForm("species", option);
-                  if (option !== "기타") {
-                    updateForm("customSpecies", "");
-                  }
-                }}
                 className={getChoiceClass(
                   form.species === option,
                   option === "기타" ? "teal" : "slate",
                 )}
+                onClick={() => {
+                  if (isDetailMode) return;
+                  updateForm("species", option);
+                  if (option !== "기타") {
+                    updateForm("customSpecies", "");
+                  } else {
+                    setTimeout(() => customSpeciesInputRef.current?.focus(), 50);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (!isDetailMode) {
+                      updateForm("species", option);
+                    }
+                  }
+                }}
               >
-                <span>
-                  {option === "강아지"
-                    ? "🐶"
-                    : option === "고양이"
-                      ? "🐱"
-                      : "+"}
-                </span>
-                {speciesLabel(option)}
-              </button>
+                {option === "기타" && form.species === "기타" ? (
+                  <div className="flex h-full w-full items-center justify-center animate-in fade-in zoom-in duration-200">
+                    <input
+                      ref={customSpeciesInputRef}
+                      value={form.customSpecies}
+                      disabled={isDetailMode}
+                      onChange={(event) =>
+                        updateForm("customSpecies", event.target.value)
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder={t("pet.customSpeciesPlaceholder")}
+                      className={`h-full w-full bg-transparent px-2 text-center text-sm font-extrabold text-[#1F2937] outline-none placeholder:text-[#6B7280] ${
+                        errors.customSpecies ? "ring-2 ring-red-400 rounded-lg" : ""
+                      }`}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    {option !== "기타" && (
+                      <span className="text-xl transition-transform duration-300 group-hover:scale-110">
+                        {option === "강아지" ? "🐶" : "🐱"}
+                      </span>
+                    )}
+                    <span className="font-extrabold text-sm">{speciesLabel(option)}</span>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-          <FieldError message={errors.species} />
-        </div>
-
-        <div className="mt-4">
-          <input
-            ref={customSpeciesInputRef}
-            value={form.customSpecies}
-            disabled={isDetailMode || form.species !== "기타"}
-            onChange={(event) =>
-              updateForm("customSpecies", event.target.value)
-            }
-            placeholder={t("pet.customSpeciesPlaceholder")}
-            className={`${inputClass} disabled:bg-slate-50 disabled:text-slate-400 ${
-              errors.customSpecies ? errorInputClass : ""
-            }`}
-          />
-          <FieldError message={errors.customSpecies} />
+          <FieldError message={errors.species || errors.customSpecies} />
         </div>
 
         <div className="mt-4">
@@ -334,15 +337,14 @@ const PetForm = ({
             readOnly={isDetailMode}
             onChange={(event) => updateForm("breed", event.target.value)}
             placeholder={t("pet.breedPlaceholder")}
-            className={`${inputClass} mt-2 ${isDetailMode ? "bg-slate-50" : ""}`}
+            className={`${inputClass} ${isDetailMode ? "bg-slate-50" : ""}`}
           />
         </div>
       </section>
 
-      <section className="border-t border-slate-100 p-6">
-        <div className="mb-5 flex items-center gap-2 text-teal-700">
-          <PawIcon className="h-5 w-5" />
-          <h2 className="text-lg font-extrabold">{t("pet.healthInfo")}</h2>
+      <section className="px-1 md:px-2 mt-8 md:mt-10 mb-6 md:mb-8">
+        <div className="mb-4 flex items-center gap-2 text-slate-900">
+          <h2 className="text-lg md:text-xl font-extrabold tracking-tight">{t("pet.healthInfo")}</h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -420,18 +422,18 @@ const PetForm = ({
                 {t("pet.notesLabel")}
               </label>
             </div>
-            <div className="relative mt-2">
+            <div className="relative">
               <textarea
                 id="notes"
                 value={form.notes}
                 readOnly={isDetailMode}
                 onChange={handleNotesChange}
                 placeholder={t("pet.notesPlaceholder")}
-                className={`h-[88px] w-full resize-none rounded-xl border border-slate-200 px-4 py-3 pb-7 text-sm font-semibold leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 ${
-                  isDetailMode ? "bg-slate-50" : "bg-white"
+                className={`h-24 w-full resize-none rounded-xl bg-[#F8FAFC] px-4 py-3 pb-8 text-sm font-semibold leading-relaxed text-[#1F2937] outline-none transition-all duration-300 placeholder:text-[#6B7280] border border-[#E5E7EB] focus:border-[#2F6F67] focus:bg-white focus:ring-4 focus:ring-[#2F6F67]/10 hover:border-[#6B7280]/30 ${
+                  isDetailMode ? "bg-slate-100" : ""
                 }`}
               />
-              <span className="absolute bottom-3 right-4 text-xs font-bold text-slate-400">
+              <span className="absolute bottom-3 right-4 text-xs font-bold text-[#6B7280]">
                 {form.notes.length} / {maxNotesLength}
               </span>
             </div>

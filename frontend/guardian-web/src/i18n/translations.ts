@@ -376,7 +376,7 @@ const ko: TranslationTree = {
     healthInfo: "건강 정보",
     birthDate: "생년월일",
     datePlaceholder: "연도. 월. 일.",
-    birthUnknown: "날짜를 모르겠어요",
+    birthUnknown: "생일을 모르겠어요",
     lastCheckup: "마지막 정기검진",
     checkupUnknown: "검진 날짜를 모르겠어요",
     selectedDate: "선택한 날짜: {date}",
