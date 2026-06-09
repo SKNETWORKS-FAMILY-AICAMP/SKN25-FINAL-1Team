@@ -21,6 +21,8 @@ import json
 import logging
 from collections.abc import Callable
 
+from ..observability import push_scores, score_trace
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,6 +238,22 @@ async def run_validation(
         "summary": summary,
     }
     result = normalize_validation(assembled)
+
+    # Langfuse 점수 — 규칙 검증 결과를 대시보드에서 추세로 확인(LLM 미사용이라 standalone trace).
+    with score_trace("validation"):
+        push_scores(
+            numeric={
+                "validation.completeness": result["scores"].get("completeness"),
+                "validation.chart_overlap_pct": consistency.get("overlap_pct"),
+            },
+            categorical={
+                "validation.overall": overall,
+                "validation.data_completeness": completeness["status"],
+                "validation.workflow_consistency": consistency.get("status"),
+                "validation.schedule_safety": schedule_safety["status"],
+                "validation.red_flag": red_flag["status"],
+            },
+        )
 
     logger.info(
         "[Validation] emrid=%s overall=%s redflag=%s missing=%s",
