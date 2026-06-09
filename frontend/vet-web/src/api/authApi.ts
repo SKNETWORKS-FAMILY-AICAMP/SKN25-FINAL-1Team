@@ -8,6 +8,8 @@ export interface HospitalUser {
   role: "HOSPITAL_ADMIN" | "VETERINARIAN";
   isFirstLogin: boolean;
   licenseNumber?: string;
+  hospitalPhone?: string;
+  businessNumber?: string;
 }
 
 export interface AuthSession {
@@ -196,6 +198,8 @@ export async function loginDoctor(loginid: string, password: string) {
         role: responseUser?.role ?? data.data?.role ?? data.role ?? "VETERINARIAN",
         isFirstLogin: getIsFirstLogin(data, responseUser),
         licenseNumber: (data as Record<string, unknown>).license_number as string | undefined,
+        hospitalPhone: (data as Record<string, unknown>).hospital_number as string | undefined,
+        businessNumber: (data as Record<string, unknown>).business_number as string | undefined,
       },
     };
 
