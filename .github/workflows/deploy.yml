@@ -35,6 +35,10 @@ jobs:
             sudo docker compose -f docker-compose.prod.yml pull
             # 마이그레이션 + 전체 재시작
             sudo docker compose -f docker-compose.prod.yml up -d
+            # backend가 재생성되면 도커 네트워크 IP가 바뀌는데, 이미지 변화가 없는
+            # 프론트(guardian/vet)는 그대로 유지돼 nginx가 옛 backend IP를 캐시→502.
+            # 프론트를 강제 restart 해서 nginx가 backend를 다시 resolve 하도록 보장.
+            sudo docker compose -f docker-compose.prod.yml restart guardian vet
             # 안 쓰는 옛 이미지 정리(디스크 절약)
             sudo docker image prune -f
             echo "=== 배포 후 상태 ==="
@@ -54,6 +58,8 @@ jobs:
             cd ~/medipaw
             sudo docker compose -f docker-compose.prod.yml pull
             sudo docker compose -f docker-compose.prod.yml up -d
+            # 프론트 강제 restart (nginx가 옛 backend IP 캐시→502 방지)
+            sudo docker compose -f docker-compose.prod.yml restart guardian vet
             sudo docker image prune -f
             echo "=== 배포 후 상태 (재시도) ==="
             sudo docker compose -f docker-compose.prod.yml ps
