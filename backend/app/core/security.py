@@ -11,7 +11,10 @@ def hash_password(password: str) -> str:
 
 # 비밀번호 확인
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 # Access Token 생성
 def create_access_token(data: dict) -> str:
