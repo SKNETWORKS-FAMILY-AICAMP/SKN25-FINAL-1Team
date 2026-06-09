@@ -322,6 +322,8 @@ const HomePage = () => {
       {reservationPet ? (
         <CheckupReservationModal
           pet={reservationPet}
+          pets={pets}
+          onChangePet={setReservationPet}
           onClose={() => setReservationPet(null)}
         />
       ) : null}
