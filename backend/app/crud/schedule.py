@@ -369,7 +369,7 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
 
     # 법정공휴일: 무조건 휴무
     if _is_legal_holiday(target_date):
-        return []
+        return [], "해당 날짜는 휴일(법정 공휴일)로 진료가 없습니다."
 
     # 의사 확인
     if doctorid:
@@ -380,14 +380,14 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
         doctor = doc_result.scalars().first()
 
     if not doctor:
-        return []
+        return [], "예약 가능한 수의사가 없습니다."
 
     resolved_doctorid = doctor.doctorid
 
     # 운영시간 조회 (특정일 오버라이드 > 주간 템플릿 > 기본값)
     hours = await _get_hours_for_date(db, resolved_doctorid, target_date)
     if hours is None:
-        return []  # 휴진
+        return [], "해당 날짜는 병원 휴무일(휴진)입니다."
 
     op_start, op_end, lunch_start, lunch_end = hours
 
@@ -442,7 +442,12 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
                 doctor_name=doctor.doctor_name,
             ))
 
-    return available_starts
+    if not available_starts:
+        if is_today and current_hhmm >= op_end:
+            return [], "금일 진료가 마감되었습니다."
+        return [], "예약 가능한 시간이 모두 마감되었습니다."
+
+    return available_starts, ""
 
 
 # ── 응급도 기반 '가장 빠른 빈 슬롯' 탐색 (MCP 예약 오케스트레이션의 핵심) ──────────
@@ -492,7 +497,7 @@ async def find_earliest_slots(
         d = today + timedelta(days=day_index)
         # 휴무(공휴일·주말·휴진)는 get_available_slots 가 내부에서 빈 리스트로 처리하므로
         # 별도 사전 체크 없이 호출한다(닫힌 날은 자연히 건너뛰어짐).
-        slots = await get_available_slots(db, d.isoformat(), duration_min, doctorid)
+        slots, _ = await get_available_slots(db, d.isoformat(), duration_min, doctorid)
         for s in slots:
             collected.append({
                 "date": d.isoformat(),

@@ -67,6 +67,7 @@ export const useCheckupReservation = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [completedReservation, setCompletedReservation] =
     useState<CheckupReservationResult | null>(null);
+  const [slotsMessage, setSlotsMessage] = useState("");
 
   const setSelectedDate = useCallback((date: string) => {
     setSelectedDateState(date);
@@ -121,10 +122,12 @@ export const useCheckupReservation = ({
             response.message || t("schedule.slotsError"),
           );
           setAvailableSlots([]);
+          setSlotsMessage("");
           return;
         }
 
         setAvailableSlots(response.result);
+        setSlotsMessage(response.message || "");
       } catch (error) {
         if (!isMounted) {
           return;
@@ -189,6 +192,7 @@ export const useCheckupReservation = ({
     isLoadingSlots,
     isSubmitting,
     errorMessage,
+    slotsMessage,
     completedReservation,
     setSelectedDate,
     setSelectedSlot,
