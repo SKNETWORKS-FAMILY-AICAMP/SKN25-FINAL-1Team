@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import secrets
 import string
 from app.db.session import get_db
-from app.schemas.doctor import DoctorLoginRequest, DoctorTokenResponse, DoctorPasswordChangeRequest, DoctorPasswordResetRequest
-from app.crud.doctor import get_doctor_by_loginid, update_doctor_password, reset_doctor_password
+from app.schemas.doctor import DoctorLoginRequest, DoctorTokenResponse, DoctorPasswordChangeRequest, DoctorPasswordResetRequest, AccountInquiryRequest
+from app.crud.doctor import get_doctor_by_loginid, update_doctor_password, reset_doctor_password, get_doctor_by_inquiry
+from app.core.email import send_account_credentials
 from app.core.security import verify_password, create_access_token, create_refresh_token, hash_password
 from app.core.dependencies import get_current_doctor
 
@@ -75,3 +76,35 @@ async def reset_password(request: DoctorPasswordResetRequest, db: AsyncSession =
     await db.commit()
 
     return {"code": 200, "message": "임시 비밀번호가 발급되었습니다.", "result": {"temp_password": temp_password}}
+
+# 계정 문의
+@router.post("/account-inquiry")
+async def account_inquiry(request: AccountInquiryRequest, db: AsyncSession = Depends(get_db)):
+    doctor = await get_doctor_by_inquiry(db, request.hospital_name, request.business_number, request.license_number)
+
+    if not doctor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="등록된 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해주세요."
+        )
+
+    if not doctor.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="등록된 이메일이 없습니다. 관리자에게 문의해주세요."
+        )
+
+    temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + "!@#$%") for _ in range(10))
+    await update_doctor_password(db, doctor, temp_password)
+    doctor.is_initial_password = True
+    await db.commit()
+
+    send_account_credentials(
+        doctor_email=doctor.email,
+        doctor_name=doctor.doctor_name,
+        hospital_name=doctor.hospital_name,
+        loginid=doctor.loginid,
+        temp_password=temp_password,
+    )
+
+    return {"code": 200, "message": "등록된 이메일로 계정 정보를 발송했습니다."}

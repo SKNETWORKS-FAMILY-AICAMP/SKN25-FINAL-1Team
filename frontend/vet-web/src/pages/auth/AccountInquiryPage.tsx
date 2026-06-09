@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, ShieldCheck } from "lucide-react";
 import { AuthLayout } from "../../components/auth/AuthLayout";
+import { apiClient } from "../../api/client";
 
 export default function AccountInquiryPage() {
   const navigate = useNavigate();
@@ -9,25 +10,28 @@ export default function AccountInquiryPage() {
   const [bizNumber, setBizNumber] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const isValid = hospitalName.trim() && bizNumber.trim() && licenseNumber.trim();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isValid) return;
-    const subject = encodeURIComponent(`[MediPaw 계정 문의] ${hospitalName}`);
-    const body = encodeURIComponent(
-      `안녕하세요, MediPaw 고객지원팀 담당자님.\n\n` +
-      `MediPaw 시스템 계정 관련 문의 드립니다.\n\n` +
-      `─────────────────────────────\n` +
-      `■ 동물병원 이름   : ${hospitalName}\n` +
-      `■ 사업자등록번호  : ${bizNumber}\n` +
-      `■ 의사면허번호    : ${licenseNumber}\n` +
-      `─────────────────────────────\n\n` +
-      `위 정보를 확인하신 후 빠른 처리 부탁드립니다.\n\n` +
-      `감사합니다.`
-    );
-    window.location.href = `mailto:medipaw@gmail.com?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+    setIsLoading(true);
+    setError("");
+    try {
+      await apiClient.post("/doctor/auth/account-inquiry", {
+        hospital_name: hospitalName,
+        business_number: bizNumber,
+        license_number: licenseNumber,
+      });
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail ?? "문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -63,18 +67,24 @@ export default function AccountInquiryPage() {
 
         {submitted && (
           <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-bold text-blue-700">
-            이메일 앱이 열렸습니다. 내용을 확인 후 발송해주세요.
+            등록된 이메일로 계정 정보를 발송했습니다. 이메일을 확인해주세요.
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-600">
+            {error}
           </div>
         )}
 
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!isValid}
+          disabled={!isValid || isLoading || submitted}
           className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           <Mail size={18} />
-          문의하기
+          {isLoading ? "처리 중..." : "문의하기"}
         </button>
 
         <button
