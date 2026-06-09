@@ -108,12 +108,10 @@ const LoginPage = () => {
       // 실패해도 로그인 자체는 진행한다(이름은 마이페이지 진입 시 다시 보정됨).
       try {
         const profile = await getMyProfile();
-        if (profile.code === 200 && profile.result) {
-          updateGuardianProfile({
-            name: profile.result.name,
-            phone: profile.result.phone,
-          });
-        }
+        updateGuardianProfile({
+          name: profile.name,
+          phone: profile.phone,
+        });
       } catch {
         // 프로필 조회 실패는 무시 — 네비게이션을 막지 않는다.
       }
