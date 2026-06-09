@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { DashboardScheduleItem } from "../../api/dashboardApi";
-import { useOperatingHours } from "../../contexts/OperatingHoursContext";
+import { useOperatingHoursForDate } from "../../contexts/OperatingHoursContext";
 import { Panel } from "../common/Panel";
 import { TriageBadge } from "../common/TriageBadge";
 import { ClinicRoomIcon } from "./DashboardIcons";
@@ -24,13 +24,18 @@ interface DashboardSchedulePanelProps {
   holidayName?: string;
 }
 
+const DEFAULT_HOURS = { startTime: "09:00", endTime: "18:00", lunchStart: "12:00", lunchEnd: "13:00" };
+
 export function DashboardSchedulePanel({
   schedules,
   isLoading,
   errorMessage,
   holidayName,
 }: DashboardSchedulePanelProps) {
-  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
+  const today = useMemo(() => new Date(), []);
+  const todayHours = useOperatingHoursForDate(today);
+  const { startTime, endTime, lunchStart, lunchEnd } = todayHours ?? DEFAULT_HOURS;
+
   const timelineRange = useMemo(
     () => getTimelineRange(schedules, { startTime, endTime, lunchStart, lunchEnd }),
     [schedules, startTime, endTime, lunchStart, lunchEnd]
@@ -88,6 +93,12 @@ export function DashboardSchedulePanel({
             일정을 불러오는 중입니다.
           </div>
         ) : null}
+
+        {todayHours === null && !isLoading && (
+          <div className="mb-3 rounded-lg border border-[#e5eaf2] bg-[#f7f9fc] px-4 py-3 text-sm font-bold text-[#8595ae]">
+            오늘은 휴진입니다.
+          </div>
+        )}
 
         <div className="grid grid-cols-[56px_1fr] gap-2">
           <div className="relative" style={{ height: timelineHeight }}>
