@@ -29,16 +29,11 @@ export interface TodayDashboardResult {
   schedules: DashboardScheduleItem[];
 }
 
-interface TodayDashboardResponse {
-  code: number;
-  result: TodayDashboardResult;
-}
-
 export async function getTodayDashboard(
   accessToken: string,
   date: string
 ): Promise<TodayDashboardResult> {
-  const { data } = await apiClient.get<TodayDashboardResponse>(
+  const { data } = await apiClient.get<TodayDashboardResult>(
     "/dashboard/today",
     {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -46,11 +41,7 @@ export async function getTodayDashboard(
     }
   );
 
-  if (data.code !== 200) {
-    throw new Error("대시보드 조회에 실패했습니다.");
-  }
-
-  return data.result;
+  return data;
 }
 
 export function getDashboardApiErrorStatus(err: unknown) {

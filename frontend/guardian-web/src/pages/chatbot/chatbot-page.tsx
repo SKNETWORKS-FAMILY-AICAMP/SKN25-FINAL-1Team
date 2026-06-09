@@ -367,16 +367,8 @@ const ChatbotPage = () => {
         const response = await getPets();
         if (!isMounted) return;
 
-        if (response.code !== 200) {
-          setErrorMessage(
-            response.message || t("chatbot.petLoadError"),
-          );
-          setPets([]);
-          return;
-        }
-
         setPets(
-          [...response.result].sort((a, b) =>
+          [...response].sort((a, b) =>
             a.petname.localeCompare(b.petname, "ko"),
           ),
         );

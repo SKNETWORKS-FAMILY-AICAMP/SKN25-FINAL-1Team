@@ -20,15 +20,15 @@ export async function fetchAlarmList(params: {
   accessToken: string;
   page?: number;
 }): Promise<AlarmItem[]> {
-  const { data } = await apiClient.get<{
-    code: number;
-    result: { alarm_list: AlarmItem[] };
-  }>("/doctor/alarm/list", {
-    params: { page: params.page ?? 1 },
-    headers: { Authorization: `Bearer ${params.accessToken}` },
-  });
+  const { data } = await apiClient.get<{ alarm_list: AlarmItem[] }>(
+    "/doctor/alarm/list",
+    {
+      params: { page: params.page ?? 1 },
+      headers: { Authorization: `Bearer ${params.accessToken}` },
+    },
+  );
 
-  return data.result.alarm_list;
+  return data.alarm_list;
 }
 
 export async function markAllAlarmsRead(params: {

@@ -6,19 +6,12 @@ export interface MyProfile {
   created_at: string;
 }
 
-export interface MyProfileResponse {
-  code: number;
-  message?: string;
-  result: MyProfile;
-}
-
 export interface UpdateMyProfileRequest {
   name: string;
   phone: string;
 }
 
 export interface UpdateMyProfileResponse {
-  code: number;
   message: string;
 }
 
@@ -29,12 +22,11 @@ export interface ChangeMyPasswordRequest {
 }
 
 export interface ChangeMyPasswordResponse {
-  code: number;
   message: string;
 }
 
-export const getMyProfile = async (): Promise<MyProfileResponse> => {
-  const response = await apiClient.get<MyProfileResponse>("/users/me");
+export const getMyProfile = async (): Promise<MyProfile> => {
+  const response = await apiClient.get<MyProfile>("/users/me");
   return response.data;
 };
 
