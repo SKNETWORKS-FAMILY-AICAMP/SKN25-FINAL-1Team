@@ -474,6 +474,11 @@ export const useAgentPipeline = ({
 
   const getSlotLabels = () => Object.keys(slotMapRef.current);
 
+  /** 직접 날짜 선택 피커가 빈 슬롯을 조회할 때 쓸 진료 소요시간(분).
+   *  확정(handleSlotSelect)과 동일한 값을 써야 추천 슬롯과 실제 예약이 어긋나지 않는다. */
+  const getScheduleDurationMin = () =>
+    (scheduleResultRef.current?.estimated_duration_min as number) || 30;
+
   const resetPipeline = () => {
     setPhase("chatting");
     setShowDatePicker(false);
@@ -509,6 +514,7 @@ export const useAgentPipeline = ({
     setShowDatePicker,
     isSlotLabel,
     getSlotLabels,
+    getScheduleDurationMin,
     startSchedulePhase,
     handleSlotSelect,
     handleManualSlotSelect,
