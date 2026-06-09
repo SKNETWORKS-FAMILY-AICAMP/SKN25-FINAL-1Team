@@ -7,6 +7,7 @@ export interface HospitalUser {
   hospitalName: string;
   role: "HOSPITAL_ADMIN" | "VETERINARIAN";
   isFirstLogin: boolean;
+  licenseNumber?: string;
 }
 
 export interface AuthSession {
@@ -194,6 +195,7 @@ export async function loginDoctor(loginid: string, password: string) {
           "MediPaw 동물병원",
         role: responseUser?.role ?? data.data?.role ?? data.role ?? "VETERINARIAN",
         isFirstLogin: getIsFirstLogin(data, responseUser),
+        licenseNumber: (data as Record<string, unknown>).license_number as string | undefined,
       },
     };
 
