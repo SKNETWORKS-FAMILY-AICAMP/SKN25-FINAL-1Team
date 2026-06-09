@@ -49,6 +49,7 @@ const CheckupReservationModal = ({
     isLoadingSlots,
     isSubmitting,
     errorMessage,
+    slotsMessage,
     completedReservation,
     setSelectedDate,
     setSelectedSlot,
@@ -299,7 +300,7 @@ const CheckupReservationModal = ({
                     })
                   ) : (
                     <p className="col-span-3 rounded-xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500 sm:col-span-4">
-                      {t("schedule.noSlots")}
+                      {slotsMessage || t("schedule.noSlots")}
                     </p>
                   )}
                 </div>
