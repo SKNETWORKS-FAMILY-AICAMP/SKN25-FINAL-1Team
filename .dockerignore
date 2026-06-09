@@ -11,6 +11,9 @@
 # Frontend dependency/build artifacts are recreated inside Docker.
 **/node_modules
 **/dist
+# 예외: company-web은 정적 사이트라 dist를 호스트에서 빌드해 이미지로 복사한다
+# (컨테이너 내 esbuild의 QEMU 크로스빌드 크래시 회피). Dockerfile.company 참고.
+!frontend/company-web/dist
 **/.vite
 **/.turbo
 **/.next

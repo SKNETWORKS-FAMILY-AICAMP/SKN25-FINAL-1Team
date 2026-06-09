@@ -95,6 +95,14 @@ services:
     networks:
       - medipaw_net
 
+  company:
+    image: chany0812/medipaw-company:latest
+    restart: unless-stopped
+    ports:
+      - "5175:5175"
+    networks:
+      - medipaw_net
+
 volumes:
   postgres_data:
   uploads_data:
