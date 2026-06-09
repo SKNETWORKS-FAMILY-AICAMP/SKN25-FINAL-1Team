@@ -3,7 +3,7 @@ import type {
   PatientsById,
   ReservationItem,
 } from "../../types/reservation";
-import { useOperatingHours } from "../../contexts/OperatingHoursContext";
+import { useOperatingHoursForDate } from "../../contexts/OperatingHoursContext";
 import { TriageBadge } from "../common/TriageBadge";
 import {
   dayLabels,
@@ -38,7 +38,11 @@ export function DailyTimeline({
   selectedReservationId,
   onSelect,
 }: DailyTimelineProps) {
-  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
+  const hoursForDate = useOperatingHoursForDate(selectedDate);
+  const startTime = hoursForDate?.startTime ?? "09:00";
+  const endTime = hoursForDate?.endTime ?? "18:00";
+  const lunchStart = hoursForDate?.lunchStart ?? "12:00";
+  const lunchEnd = hoursForDate?.lunchEnd ?? "13:00";
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const [timelineBodyHeight, setTimelineBodyHeight] = useState(0);
 

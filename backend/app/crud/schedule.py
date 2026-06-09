@@ -28,11 +28,62 @@ _HOLIDAYS: frozenset[str] = frozenset({
 })
 
 
-def _is_clinic_closed(d: _date_type) -> bool:
-    """토요일·일요일·법정공휴일이면 True."""
-    if d.weekday() >= 5:  # 5=토, 6=일
-        return True
+def _is_legal_holiday(d: _date_type) -> bool:
+    """법정공휴일이면 True. (주말은 주간 스케줄 설정으로 제어)"""
     return d.isoformat() in _HOLIDAYS
+
+
+async def _get_hours_for_date(
+    db: AsyncSession, doctorid: int, target_date: _date_type
+) -> tuple[str, str, str, str] | None:
+    """(op_start, op_end, lunch_start, lunch_end) 반환. 휴진이면 None.
+
+    우선순위: 특정일 오버라이드 > 주간 템플릿 > 기본값(평일만 영업)
+    """
+    # 1. 특정일 오버라이드 확인
+    date_result = await db.execute(
+        select(VetSchedule).where(
+            VetSchedule.doctorid == doctorid,
+            VetSchedule.date == target_date,
+            VetSchedule.day_of_week.is_(None),
+        )
+    )
+    date_record = date_result.scalar_one_or_none()
+    if date_record is not None:
+        if not date_record.is_open:
+            return None
+        if date_record.start_time and date_record.end_time:
+            return (
+                date_record.start_time.strftime("%H:%M"),
+                date_record.end_time.strftime("%H:%M"),
+                date_record.lunch_start.strftime("%H:%M") if date_record.lunch_start else "12:00",
+                date_record.lunch_end.strftime("%H:%M") if date_record.lunch_end else "13:00",
+            )
+
+    # 2. 주간 템플릿 확인 (0=월 ... 6=일)
+    dow = target_date.weekday()
+    dow_result = await db.execute(
+        select(VetSchedule).where(
+            VetSchedule.doctorid == doctorid,
+            VetSchedule.day_of_week == dow,
+        )
+    )
+    dow_record = dow_result.scalar_one_or_none()
+    if dow_record is not None:
+        if not dow_record.is_open:
+            return None
+        if dow_record.start_time and dow_record.end_time:
+            return (
+                dow_record.start_time.strftime("%H:%M"),
+                dow_record.end_time.strftime("%H:%M"),
+                dow_record.lunch_start.strftime("%H:%M") if dow_record.lunch_start else "12:00",
+                dow_record.lunch_end.strftime("%H:%M") if dow_record.lunch_end else "13:00",
+            )
+
+    # 3. 기본값: 평일만 영업
+    if target_date.weekday() >= 5:
+        return None
+    return ("09:00", "18:00", "12:00", "13:00")
 
 
 async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None:
@@ -316,8 +367,8 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     target_date = datetime.strptime(date, "%Y-%m-%d").date()
     now_kst = datetime.now(KST)
 
-    # 주말·공휴일: 병원 휴무 — 빈 슬롯 없음
-    if _is_clinic_closed(target_date):
+    # 법정공휴일: 무조건 휴무
+    if _is_legal_holiday(target_date):
         return []
 
     # 의사 확인
@@ -333,21 +384,12 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
 
     resolved_doctorid = doctor.doctorid
 
-    # 운영시간 조회 (가장 최근 레코드, 없으면 기본값)
-    config_result = await db.execute(
-        select(VetSchedule)
-        .where(VetSchedule.doctorid == resolved_doctorid)
-        .order_by(VetSchedule.date.desc())
-        .limit(1)
-    )
-    config = config_result.scalar_one_or_none()
-    if config:
-        op_start = config.start_time.strftime("%H:%M")
-        op_end = config.end_time.strftime("%H:%M")
-        lunch_start = config.lunch_start.strftime("%H:%M") if config.lunch_start else "12:00"
-        lunch_end = config.lunch_end.strftime("%H:%M") if config.lunch_end else "13:00"
-    else:
-        op_start, op_end, lunch_start, lunch_end = "09:00", "18:00", "12:00", "13:00"
+    # 운영시간 조회 (특정일 오버라이드 > 주간 템플릿 > 기본값)
+    hours = await _get_hours_for_date(db, resolved_doctorid, target_date)
+    if hours is None:
+        return []  # 휴진
+
+    op_start, op_end, lunch_start, lunch_end = hours
 
     vet_time_slots = _generate_time_slots(op_start, op_end, lunch_start, lunch_end)
 
