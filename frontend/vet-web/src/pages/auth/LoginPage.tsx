@@ -35,7 +35,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   return (
     <AuthLayout>
-      <div className="mx-auto flex min-h-[560px] w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
+      <div className="mx-auto flex w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
         <div className="mb-10 h-[88px] text-center">
           <h2 className="text-3xl font-extrabold leading-tight text-slate-900">병원 관리자 로그인</h2>
           <p className="mt-4 text-sm font-bold text-slate-500">
