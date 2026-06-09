@@ -37,6 +37,8 @@ interface UseChatSessionsParams {
   onFollowupRestore?: (emrid: number) => void;
   /** 경과보고 마감(진료 시작 시간 경과) 세션 — 마감 안내 표시. */
   onFollowupClosed?: (emrid: number) => void;
+  /** 일반(followup 미활성) 예약 완료 세션 — '상담 완료' 안내 표시. */
+  onBookingComplete?: (emrid: number) => void;
   /** 문진 미완료 세션을 라이브 문진으로 재개(req4). */
   onResumeTriage?: (params: {
     sessionId: number;
@@ -59,6 +61,7 @@ export const useChatSessions = ({
   getProfileImage,
   onFollowupRestore,
   onFollowupClosed,
+  onBookingComplete,
   onResumeTriage,
   onResumeSchedule,
   liveSessionRef,
@@ -257,6 +260,9 @@ export const useChatSessions = ({
       } else if (detail.followup_closed && detail.emrid) {
         // 팔로우업 마감(진료 시작 시간 경과) → 입력창 대신 마감 안내.
         onFollowupClosed?.(detail.emrid);
+      } else if (detail.booking_complete && detail.emrid) {
+        // 일반 예약 완료(followup 미활성) → 입력창 대신 상담 완료 안내.
+        onBookingComplete?.(detail.emrid);
       }
     } catch (error) {
       setErrorMessage(

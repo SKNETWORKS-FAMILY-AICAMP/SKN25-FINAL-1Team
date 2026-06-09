@@ -220,6 +220,7 @@ const ChatbotPage = () => {
     getProfileImage,
     onFollowupRestore: pipeline.restoreFollowupPhase,
     onFollowupClosed: pipeline.restoreFollowupClosedPhase,
+    onBookingComplete: pipeline.restoreConfirmedPhase,
     onResumeTriage: ({ sessionId, messages: restoredMessages, quickReplies: resumedQuickReplies }) => {
       if (!selectedPet) return;
       // 라이브 문진 재개 — 세션을 살리고 입력을 활성화한다(req4).
@@ -479,24 +480,6 @@ const ChatbotPage = () => {
         </div>
         <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:min-h-0 lg:flex-1">
 
-          {/* 상태 확인 안내 배너 (followup에서 escalationPromptVisible=true 시) */}
-          {pipeline.escalationPromptVisible ? (
-            <div className="border-b border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 sm:px-7 flex justify-between items-center flex-wrap gap-2">
-              <span>{t("chatbot.escalation")}</span>
-              <div className="flex gap-2">
-                {pipeline.guardianCareRecommendation.map((actionLabel, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold transition"
-                  >
-                    {actionLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           {errorMessage ? (
             <div className="border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-600 sm:px-7">
               {errorMessage}
@@ -641,6 +624,12 @@ const ChatbotPage = () => {
                   {pipeline.phase === "followup-closed" && (
                     <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
                       {t("chatbot.followupClosed")}
+                    </div>
+                  )}
+
+                  {pipeline.phase === "confirmed" && (
+                    <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
+                      {t("chatbot.bookingComplete")}
                     </div>
                   )}
                 </>

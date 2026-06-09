@@ -248,8 +248,8 @@ async def create_followup(
             if request.images:
                 user_content = (user_content + " " if user_content else "") + f"[사진 {len(request.images)}장 첨부]"
             msgs.append({"role": "user", "content": user_content.strip()})
-            if ai_response and ai_response.get("guardian_message"):
-                msgs.append({"role": "assistant", "content": ai_response["guardian_message"]})
+            # followup은 개별 응대를 하지 않는다 — assistant 답변은 기록하지 않는다(재진입 시에도
+            # 공감성 답변이 다시 뜨지 않도록). 보호자 보고만 남기고, 분석은 수의사용 medical_summary로만.
             chat_session.messages = msgs
             flag_modified(chat_session, "messages")
             await db.commit()
@@ -262,6 +262,7 @@ async def create_followup(
 
     if ai_response:
         response_payload.update({
+            "offtopic": ai_response.get("offtopic", False),
             "followup_recommended": ai_response.get("followup_recommended", False),
             "guardian_message": ai_response.get("guardian_message", "기록되었습니다."),
             "recommended_actions": ai_response.get("recommended_actions", ["keep_schedule"]),
