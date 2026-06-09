@@ -29,6 +29,8 @@ async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(g
         refresh_token=refresh_token,
         is_initial_password=doctor.is_initial_password,
         license_number=doctor.license_number,
+        hospital_number=doctor.hospital_number,
+        business_number=doctor.business_number,
     )
 
 # 비밀번호 변경
