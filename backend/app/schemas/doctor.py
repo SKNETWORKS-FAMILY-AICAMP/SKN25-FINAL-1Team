@@ -23,5 +23,4 @@ class DoctorPasswordChangeRequest(BaseModel):
 # 비밀번호 재설정 요청
 class DoctorPasswordResetRequest(BaseModel):
     loginid: str
-    doctor_name: str
-    business_number: str
+    license_number: str

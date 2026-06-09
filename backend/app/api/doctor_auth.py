@@ -56,9 +56,9 @@ async def change_password(
     return {"code": 200, "message": "비밀번호가 변경되었습니다."}
 
 # 비밀번호 재설정
-@router.post("/password/reset")
+@router.post("/reset-password")
 async def reset_password(request: DoctorPasswordResetRequest, db: AsyncSession = Depends(get_db)):
-    doctor = await reset_doctor_password(db, request.loginid, request.doctor_name, request.business_number)
+    doctor = await reset_doctor_password(db, request.loginid, request.license_number)
 
     if not doctor:
         raise HTTPException(
