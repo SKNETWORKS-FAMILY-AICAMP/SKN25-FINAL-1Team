@@ -7,6 +7,8 @@ import { useTranslation } from "../../i18n/language-context";
 
 interface CheckupReservationModalProps {
   pet: Pet;
+  pets?: Pet[];
+  onChangePet?: (pet: Pet) => void;
   onClose: () => void;
 }
 
@@ -27,6 +29,8 @@ const CloseIcon = () => (
 
 const CheckupReservationModal = ({
   pet,
+  pets,
+  onChangePet,
   onClose,
 }: CheckupReservationModalProps) => {
   const { t } = useTranslation();
@@ -79,11 +83,6 @@ const CheckupReservationModal = ({
             <h2 className="text-lg font-extrabold text-slate-950">
               {t("schedule.instantTitle")}
             </h2>
-            {categoryLabel && (
-              <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-600">
-                {categoryLabel}
-              </span>
-            )}
           </div>
 
           <button
@@ -144,54 +143,107 @@ const CheckupReservationModal = ({
             }}
           >
             <div className="space-y-4 px-5 py-4 sm:px-6">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCategoryCode(2)}
-                  className={[
-                    "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
-                    categoryCode === 2
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-200 text-slate-600 hover:bg-slate-50",
-                  ].join(" ")}
-                >
-                  일반진료
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategoryCode(1)}
-                  className={[
-                    "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
-                    categoryCode === 1
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-200 text-slate-600 hover:bg-slate-50",
-                  ].join(" ")}
-                >
-                  정기검진
-                </button>
+              <div className="flex items-center justify-center gap-3 py-1">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 shadow-sm">
+                  <img
+                    src={pet.profile_image || `/assets/profile${(Math.abs(pet.pet_id) % 6) + 1}.png`}
+                    alt={pet.petname}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                {pets && pets.length > 1 ? (
+                  <div className="relative">
+                    <select
+                      value={pet.pet_id}
+                      onChange={(e) => {
+                        const selected = pets.find((p) => p.pet_id === Number(e.target.value));
+                        if (selected && onChangePet) onChangePet(selected);
+                      }}
+                      className="w-full appearance-none bg-transparent py-1 pr-6 text-lg font-extrabold text-slate-900 outline-none cursor-pointer"
+                    >
+                      {pets.map((p) => (
+                        <option key={p.pet_id} value={p.pet_id}>
+                          {p.petname}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-slate-400">
+                      <svg className="h-5 w-5 fill-current" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-lg font-extrabold text-slate-900">
+                    {pet.petname}
+                  </p>
+                )}
               </div>
 
-              <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="truncate text-base font-extrabold text-slate-950">
-                  {pet.petname}
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-500">
-                  {getPetMeta(pet) || t("schedule.fieldPet")}
-                </p>
+              <div className="space-y-1.5">
+                <span className="text-sm font-extrabold text-slate-900">
+                  진료 타입 <span className="text-rose-500">*</span>
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryCode(2)}
+                    className={[
+                      "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
+                      categoryCode === 2
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 text-slate-600 hover:bg-slate-50",
+                    ].join(" ")}
+                  >
+                    일반진료
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryCode(1)}
+                    className={[
+                      "inline-flex h-10 flex-1 items-center justify-center rounded-xl text-sm font-bold transition",
+                      categoryCode === 1
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 text-slate-600 hover:bg-slate-50",
+                    ].join(" ")}
+                  >
+                    정기검진
+                  </button>
+                </div>
               </div>
 
               <label className="block">
                 <span className="text-sm font-extrabold text-slate-900">
-                  {t("schedule.fieldDate")}
+                  {t("schedule.fieldDate")} <span className="text-rose-500">*</span>
                 </span>
                 <div className="mt-1.5 flex items-center rounded-xl border border-slate-200 bg-white px-4 transition focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
                   <input
+                    type="text"
+                    placeholder="날짜를 입력해주세요"
+                    maxLength={10}
+                    value={selectedDate.replace(/-/g, ".")}
+                    onChange={(event) => {
+                      const input = event.target.value.replace(/[^0-9]/g, "");
+                      let formatted = input;
+                      if (input.length > 8) {
+                        formatted = input.slice(0, 8);
+                      }
+                      if (formatted.length > 6) {
+                        formatted = `${formatted.slice(0, 4)}-${formatted.slice(4, 6)}-${formatted.slice(6)}`;
+                      } else if (formatted.length > 4) {
+                        formatted = `${formatted.slice(0, 4)}-${formatted.slice(4)}`;
+                      }
+                      setSelectedDate(formatted);
+                    }}
+                    className="h-11 flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-semibold"
+                  />
+                  <input
                     ref={dateInputRef}
                     type="date"
-                    value={selectedDate}
+                    value={selectedDate.length === 10 ? selectedDate : ""}
                     min={new Date().toISOString().slice(0, 10)}
                     onChange={(event) => setSelectedDate(event.target.value)}
-                    className="h-11 flex-1 cursor-pointer bg-transparent text-sm font-bold text-slate-900 outline-none"
+                    className="sr-only"
                   />
                   <button
                     type="button"
@@ -214,9 +266,6 @@ const CheckupReservationModal = ({
                   <h3 className="text-sm font-extrabold text-slate-900">
                     {t("schedule.availableTime")}
                   </h3>
-                  <p className="text-xs font-bold text-slate-400">
-                    {selectedDate}
-                  </p>
                 </div>
 
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -258,7 +307,7 @@ const CheckupReservationModal = ({
 
               <label className="block">
                 <span className="text-sm font-extrabold text-slate-900">
-                  {t("schedule.fieldMemo")}
+                  {t("schedule.fieldMemo")} <span className="font-semibold text-slate-400">(선택 사항)</span>
                 </span>
                 <textarea
                   value={memo}

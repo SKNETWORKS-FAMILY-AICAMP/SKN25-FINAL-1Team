@@ -81,6 +81,32 @@ export const useCheckupReservation = ({
         setIsLoadingSlots(true);
         setErrorMessage("");
 
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!datePattern.test(selectedDate)) {
+          if (isMounted) {
+            setErrorMessage("정확한 날짜를 입력해주세요.");
+            setAvailableSlots([]);
+            setIsLoadingSlots(false);
+          }
+          return;
+        }
+
+        const [year, month, day] = selectedDate.split("-").map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        if (
+          dateObj.getFullYear() !== year ||
+          dateObj.getMonth() + 1 !== month ||
+          dateObj.getDate() !== day ||
+          year < 2000 || year > 2100
+        ) {
+          if (isMounted) {
+            setErrorMessage("정확한 날짜를 입력해주세요.");
+            setAvailableSlots([]);
+            setIsLoadingSlots(false);
+          }
+          return;
+        }
+
         const response = await getAvailableScheduleSlots({
           date: selectedDate,
           duration_min: checkupDurationMin,
