@@ -98,16 +98,6 @@ async def get_guardian_by_emrid(db: AsyncSession, emrid: int) -> Guardian | None
     return result.scalar_one_or_none()
 
 
-async def get_default_category(db: AsyncSession) -> CategoryMaster | None:
-    result = await db.execute(
-        select(CategoryMaster).where(CategoryMaster.code == DEFAULT_CATEGORY_CODE)
-    )
-    category = result.scalars().first()
-    if category:
-        return category
-    result = await db.execute(select(CategoryMaster))
-    return result.scalars().first()
-
 
 async def update_reservation_status(
     db: AsyncSession,
@@ -182,8 +172,6 @@ async def create_reservation(
         select(CategoryMaster).where(CategoryMaster.code == category_code)
     )
     category = result.scalars().first()
-    if not category:
-        category = await get_default_category(db)
     if not category:
         return None
 

@@ -15,6 +15,7 @@ from app.schemas.prescription import (
     PrescriptionListResponse,
     PrescriptionResponse,
 )
+from app.schemas.common import MessageResponse
 from app.core.dependencies import get_current_doctor
 
 router = APIRouter(tags=["prescriptions"])
@@ -74,7 +75,7 @@ async def get_prescriptions(
     return PrescriptionListResponse(result=result)
 
 
-@router.delete("/prescriptions/{prescription_id}", status_code=200)
+@router.delete("/prescriptions/{prescription_id}", response_model=MessageResponse, status_code=200)
 async def remove_prescription(
     prescription_id: int,
     db: AsyncSession = Depends(get_db),
@@ -83,4 +84,4 @@ async def remove_prescription(
     deleted = await delete_prescription(db, prescription_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="처방전을 찾을 수 없습니다.")
-    return {"code": 200, "message": "처방전이 삭제되었습니다."}
+    return MessageResponse(message="처방전이 삭제되었습니다.")

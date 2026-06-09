@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, model_validator
 
 # 회원가입 요청
@@ -23,3 +24,20 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# 내 프로필 조회 응답
+class UserProfileResponse(BaseModel):
+    name: str
+    phone: str
+    created_at: str
+
+# 프로필 수정 요청
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+# 비밀번호 변경 요청
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str

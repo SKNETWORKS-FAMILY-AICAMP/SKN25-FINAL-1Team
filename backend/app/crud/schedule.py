@@ -1,4 +1,4 @@
-from sqlalchemy import select, or_, and_, case, text
+from sqlalchemy import select, or_, and_, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,35 +86,6 @@ async def _get_hours_for_date(
     return ("09:00", "18:00", "12:00", "13:00")
 
 
-async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None:
-    """동일 (의사, 시각) 슬롯에 대한 동시 예약을 직렬화한다.
-
-    select-then-insert race(빈 슬롯이라 row lock 불가)를 막기 위해
-    PostgreSQL advisory transaction lock을 사용한다. 트랜잭션 커밋/롤백 시 자동 해제된다.
-    두 요청이 같은 슬롯을 노리면 한쪽이 커밋(예약 생성)할 때까지 다른 쪽이 대기 →
-    뒤 요청의 충돌 검사가 앞 예약을 보게 되어 이중 예약이 방지된다.
-
-    키: (doctorid:int4, 분 단위 epoch:int4) — pg_advisory_xact_lock(int4, int4)
-
-    advisory lock은 PostgreSQL 전용이다. SQLite 등 다른 dialect에서는 no-op로 건너뛴다.
-    (SQLite는 쓰기를 자체 직렬화하므로 로컬/데모에선 기능적으로 안전하다.)
-    """
-    try:
-        dialect = db.bind.dialect.name
-    except Exception:
-        try:
-            dialect = db.get_bind().dialect.name
-        except Exception:
-            dialect = ""
-    if dialect != "postgresql":
-        return
-
-    slot_key = int(slot_dt.timestamp()) // 60  # 분 단위 (int4 범위 내)
-    await db.execute(
-        text("SELECT pg_advisory_xact_lock(:d, :s)"),
-        {"d": int(doctorid), "s": slot_key},
-    )
-
 
 async def has_time_overlap(
     db: AsyncSession,
@@ -123,12 +94,7 @@ async def has_time_overlap(
     new_end: datetime,
     exclude_schedule_id: int | None = None,
 ) -> bool:
-    """새 예약 구간 [new_start, new_end)이 같은 의사의 기존 활성 예약과 겹치는지 검사한다.
-
-    시작시간 정확 일치가 아닌 '구간 겹침'으로 판정하므로, 진료 소요시간이
-    30분을 넘는 예약(예: 50분)이 30분 격자에 어긋나게 놓여도 이중 예약을 막는다.
-    기존 예약의 종료시각은 confirmed_end_time(없으면 confirmed_time + duration_min)을 사용.
-    """
+    # 새 예약 구간 [new_start, new_end)이 같은 의사의 기존 활성 예약과 겹치는지 검사
     ns = to_kst(new_start)
     ne = to_kst(new_end)
     target_date = ns.date()
@@ -166,13 +132,10 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
         result = await db.execute(select(CategoryMaster))
         category = result.scalars().first()
 
-    # 예약 시간 설정 — 입력은 KST 기준, KST-aware datetime으로 만들어야 PostgreSQL이 UTC로 변환 저장
+    # 예약 시간 설정 — 입력은 KST 기준
     kst_dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
 
-    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 슬롯을 잠근다
-    await _lock_slot(db, doctorid, kst_dt)
-
-    # 슬롯 충돌 체크 — Guardian 생성 전에 먼저 확인 (race condition 방지)
+    # 슬롯 충돌 체크 — Guardian 생성 전에 먼저 확인
     # 구간 겹침으로 판정: 기존 예약의 소요시간(50분 등)을 정확히 반영해 이중 예약 방지
     if await has_time_overlap(db, doctorid, kst_dt, kst_dt + timedelta(minutes=30)):
         return None, None  # 슬롯 충돌 — 호출부에서 409 처리
@@ -199,7 +162,7 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
         status="CONFIRMED"
     )
     db.add(schedule)
-    # 동시성 race로 사전 검사를 통과한 겹침은 DB의 no_overlap_schedule 제약이 막는다.
+    # 동시성 race로 사전 검사를 통과한 겹침은 DB의 no_overlap_schedule 제약이 막음
     # 500 대신 깔끔한 충돌(None)로 변환해 호출부에서 409 처리.
     try:
         await db.commit()
@@ -218,7 +181,7 @@ async def get_schedule_by_id(db: AsyncSession, schedule_id: int):
     return result.scalar_one_or_none()
 
 
-# emrid 소유자(보호자 userid) 조회 — 소유권 검증용
+# emrid 소유자(보호자 userid) 조회 
 # 경로: guardianDB.emrid → guardianDB.petid → petDB.userid
 async def get_emrid_owner_userid(db: AsyncSession, emrid: int) -> int | None:
     result = await db.execute(
@@ -263,7 +226,7 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
         else_=0
     )
 
-    # N+1 방지: 목록에 필요한 Pet / Doctor / Category 를 한 번의 쿼리로 함께 로드한다.
+    # N+1 방지: 목록에 필요한 Pet / Doctor / Category 를 한 번의 쿼리로 함께 로드
     stmt = (
         select(Schedule, Pet, Doctor, CategoryMaster)
         .join(Guardian, Schedule.emrid == Guardian.emrid)
@@ -296,9 +259,6 @@ async def cancel_schedule(db: AsyncSession, schedule: Schedule):
 async def update_schedule_time(db: AsyncSession, schedule: Schedule, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
     new_end_time = new_time + timedelta(minutes=duration_min)
-
-    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 변경 대상 슬롯을 잠근다
-    await _lock_slot(db, schedule.doctorid, new_time)
 
     # Schedule 테이블 기반 구간 겹침 충돌 검증 (본인 예약 제외)
     if await has_time_overlap(
@@ -450,9 +410,9 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
     return available_starts, ""
 
 
-# ── 응급도 기반 '가장 빠른 빈 슬롯' 탐색 (MCP 예약 오케스트레이션의 핵심) ──────────
+# 응급도 기반 '가장 빠른 빈 슬롯' 탐색 (MCP 예약 오케스트레이션의 핵심)
 # 응급도 3버킷 → 탐색 시작 오프셋(영업일). 급할수록 이른 날부터 스캔하여
-# 응급 환자에게 가장 빠른 시간을 우선 추천한다. 일반은 뒤로 미뤄 이른 슬롯을 비워둔다.
+# 응급 환자에게 가장 빠른 시간을 우선 추천한다. 일반은 뒤로 미뤄 이른 슬롯을 비워둠
 #   응급(RED, num1)        → 오늘부터
 #   준응급(num2~3)         → +1 영업일부터
 #   일반(num4~5)           → +2 영업일부터
@@ -515,9 +475,6 @@ async def find_earliest_slots(
 async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
     new_end_time = new_time + timedelta(minutes=duration_min)
-
-    # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 슬롯을 잠근다
-    await _lock_slot(db, doctorid, new_time)
 
     # 슬롯 충돌 체크 — INSERT 전 구간 겹침 검증 (챗봇 추천 후 confirm 직전 선점 방지)
     # 소요시간(50분 등)을 반영한 구간 겹침으로 판정해 30분 격자에 어긋난 이중 예약 방지

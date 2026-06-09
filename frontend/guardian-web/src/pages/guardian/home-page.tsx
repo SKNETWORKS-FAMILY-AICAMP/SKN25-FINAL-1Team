@@ -157,18 +157,12 @@ const HomePage = () => {
           return;
         }
 
-        if (response.code !== 200) {
-          setErrorMessage(response.message || t("home.petsLoadError"));
+        if (response.length === 0) {
           setPets([]);
           return;
         }
 
-        if (response.result.length === 0) {
-          setPets([]);
-          return;
-        }
-
-        setPets(sortPetsByName(response.result));
+        setPets(sortPetsByName(response));
       } catch (error) {
         if (!isMounted) {
           return;
