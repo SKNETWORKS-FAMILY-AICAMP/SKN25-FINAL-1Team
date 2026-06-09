@@ -26,7 +26,7 @@ import { ProfileEditModal } from "../../components/emr/ProfileEditModal";
 import { QueuePanel } from "../../components/emr/QueuePanel";
 import { useEmrData } from "../../hooks/useEmrData";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
-import { createMockPrescriptionDocument } from "./emrMockData";
+import { buildPrescriptionDocument } from "./prescriptionDocumentBuilder";
 
 interface EmrPageProps {
   session: AuthSession;
@@ -95,7 +95,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
   }, [targetScheduleId, waitingQueue, completedQueue, setSelectedScheduleId]);
   const [prescriptionPreviewError, setPrescriptionPreviewError] = useState<string | null>(null);
   const [prescriptionPreviewDocument, setPrescriptionPreviewDocument] =
-    useState<ReturnType<typeof createMockPrescriptionDocument> | null>(null);
+    useState<ReturnType<typeof buildPrescriptionDocument> | null>(null);
   const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = useState(false);
   const [alertBannerMessage, setAlertBannerMessage] = useState<string | null>(null);
   const isReadOnly = !isTodayView || queueTab === "completed";
@@ -173,13 +173,14 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
         allQueue.findIndex((q) => q.schedule_id === selectedScheduleId) + 1 || 1;
 
       setPrescriptionPreviewDocument(
-        createMockPrescriptionDocument({
+        buildPrescriptionDocument({
           pet: currentEmr.pet_info,
           prescriptions,
           doctorName: session.user.name,
           hospitalName: session.user.hospitalName,
           ownerName: selectedPatient?.guardian_name ?? "",
           queuePosition,
+          licenseNumber: session.user.licenseNumber,
         })
       );
       setIsPrescriptionPreviewOpen(true);

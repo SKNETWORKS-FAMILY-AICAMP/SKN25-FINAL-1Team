@@ -92,7 +92,7 @@ export default function FirstPasswordChangePage({
 
   return (
     <AuthLayout>
-      <div className="mx-auto flex min-h-[560px] w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
+      <div className="mx-auto flex w-full max-w-[500px] flex-col rounded-lg border border-slate-200 bg-white px-10 py-10 shadow-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
             <ShieldCheck size={26} />

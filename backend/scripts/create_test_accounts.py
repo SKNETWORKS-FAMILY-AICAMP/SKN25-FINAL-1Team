@@ -96,16 +96,17 @@ async def main():
         if admin_row:
             await db.execute(text("""
                 UPDATE "doctorDB"
-                SET password = :pw, doctor_name = :dname, hospital_name = :hname,
-                    hospital_address = :haddr, hospital_number = :hnum, updated_at = now()
+                SET doctor_name = :dname, hospital_name = :hname,
+                    hospital_address = :haddr, hospital_number = :hnum,
+                    license_number = :lnum, updated_at = now()
                 WHERE loginid = :loginid
             """), {
                 "loginid": "admin",
-                "pw": hash_password("Test1234!"),
                 "dname": "관리자",
                 "hname": "MediPaw 동물병원",
                 "haddr": "서울시 강남구 테스트로 1",
                 "hnum": "02-0000-0001",
+                "lnum": "3-4070",
             })
             await db.commit()
             print("✅ admin 계정 비밀번호 갱신 완료: admin")
@@ -113,9 +114,9 @@ async def main():
             await db.execute(text("""
                 INSERT INTO "doctorDB"
                   (loginid, password, is_initial_password, doctor_name, hospital_name,
-                   hospital_address, hospital_number, business_number, created_at, updated_at)
+                   hospital_address, hospital_number, business_number, license_number, created_at, updated_at)
                 VALUES
-                  (:loginid, :pw, false, :dname, :hname, :haddr, :hnum, :bnum, now(), now())
+                  (:loginid, :pw, false, :dname, :hname, :haddr, :hnum, :bnum, :lnum, now(), now())
             """), {
                 "loginid": "admin",
                 "pw": hash_password("Test1234!"),
@@ -124,6 +125,7 @@ async def main():
                 "haddr": "서울시 강남구 테스트로 1",
                 "hnum": "02-0000-0001",
                 "bnum": "000-00-00001",
+                "lnum": "3-4070",
             })
             await db.commit()
             print("✅ admin 계정 생성: admin / Test1234!")

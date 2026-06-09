@@ -5,22 +5,19 @@ import logo from "../../../../shared/assets/logo/medipaw-symbol.png";
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="bg-slate-50 text-slate-900">
-      <div className="mx-auto grid min-h-screen max-w-[1200px] grid-cols-1 px-6 py-10 lg:grid-cols-2 lg:items-start lg:gap-16 lg:py-[88px]">
-        <section className="flex flex-col justify-start">
+      <div className="mx-auto grid min-h-screen max-w-[1200px] grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
+        <section className="flex flex-col">
           <div className="mb-6">
             <img src={logo} alt="MediPaw" className="w-[300px]" />
-            <p className="mt-3 pl-2 text-lg font-bold tracking-[0.1em] text-slate-500">
-              동물병원 의료 보조 시스템
-            </p>
           </div>
 
-          <h1 className="mb-6 text-3xl font-bold leading-tight text-slate-900">
+          <h1 className="mb-4 text-3xl font-bold leading-tight text-slate-900">
             AI 기반 스마트 병원 운영의 시작
             <br />
             MediPaw가 함께합니다.
           </h1>
 
-          <div className="space-y-4">
+          <div className="mt-6 flex flex-1 flex-col justify-between gap-3">
             <FeatureItem
               icon={<PawPrint size={24} />}
               title="AI 사전 문진 & 응급 분류"
@@ -55,15 +52,13 @@ interface FeatureItemProps {
 
 function FeatureItem({ icon, title, description }: FeatureItemProps) {
   return (
-    <div className="flex gap-4">
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+    <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2a8587] text-white">
         {icon}
-      </div>
+      </span>
       <div>
-        <h3 className="mb-1 text-base font-bold text-slate-900">{title}</h3>
-        <p className="max-w-lg text-sm font-semibold leading-6 text-slate-500">
-          {description}
-        </p>
+        <h3 className="text-base font-bold text-slate-900">{title}</h3>
+        <p className="mt-1 text-[13px] leading-snug text-slate-600">{description}</p>
       </div>
     </div>
   );

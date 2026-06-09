@@ -17,12 +17,11 @@ async def update_doctor_password(db: AsyncSession, doctor: Doctor, new_password:
     return doctor
 
 # 임시 비밀번호 발급
-async def reset_doctor_password(db: AsyncSession, loginid: str, doctor_name: str, business_number: str):
+async def reset_doctor_password(db: AsyncSession, loginid: str, license_number: str):
     result = await db.execute(
         select(Doctor).where(
             Doctor.loginid == loginid,
-            Doctor.doctor_name == doctor_name,
-            Doctor.business_number == business_number,
+            Doctor.license_number == license_number,
         )
     )
     return result.scalar_one_or_none()

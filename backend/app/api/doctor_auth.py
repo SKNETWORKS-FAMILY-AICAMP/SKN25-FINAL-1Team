@@ -27,7 +27,8 @@ async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(g
     return DoctorTokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        is_initial_password=doctor.is_initial_password
+        is_initial_password=doctor.is_initial_password,
+        license_number=doctor.license_number,
     )
 
 # 비밀번호 변경
@@ -55,9 +56,9 @@ async def change_password(
     return {"code": 200, "message": "비밀번호가 변경되었습니다."}
 
 # 비밀번호 재설정
-@router.post("/password/reset")
+@router.post("/reset-password")
 async def reset_password(request: DoctorPasswordResetRequest, db: AsyncSession = Depends(get_db)):
-    doctor = await reset_doctor_password(db, request.loginid, request.doctor_name, request.business_number)
+    doctor = await reset_doctor_password(db, request.loginid, request.license_number)
 
     if not doctor:
         raise HTTPException(

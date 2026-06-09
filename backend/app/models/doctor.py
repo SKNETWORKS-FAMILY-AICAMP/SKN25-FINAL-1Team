@@ -14,5 +14,7 @@ class Doctor(Base):
     hospital_address = Column(String, nullable=True)
     hospital_number = Column(String, nullable=True)
     business_number = Column(String, nullable=False, unique=True)
+    license_number = Column(String, nullable=True)
+    email = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
