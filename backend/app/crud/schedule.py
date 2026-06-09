@@ -65,7 +65,7 @@ async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None
     )
 
 
-async def _has_time_overlap(
+async def has_time_overlap(
     db: AsyncSession,
     doctorid: int,
     new_start: datetime,
@@ -123,7 +123,7 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
 
     # 슬롯 충돌 체크 — Guardian 생성 전에 먼저 확인 (race condition 방지)
     # 구간 겹침으로 판정: 기존 예약의 소요시간(50분 등)을 정확히 반영해 이중 예약 방지
-    if await _has_time_overlap(db, doctorid, kst_dt, kst_dt + timedelta(minutes=30)):
+    if await has_time_overlap(db, doctorid, kst_dt, kst_dt + timedelta(minutes=30)):
         return None, None  # 슬롯 충돌 — 호출부에서 409 처리
 
     # guardianDB 생성
@@ -250,7 +250,7 @@ async def update_schedule_time(db: AsyncSession, schedule: Schedule, confirmed_t
     await _lock_slot(db, schedule.doctorid, new_time)
 
     # Schedule 테이블 기반 구간 겹침 충돌 검증 (본인 예약 제외)
-    if await _has_time_overlap(
+    if await has_time_overlap(
         db, schedule.doctorid, new_time, new_end_time,
         exclude_schedule_id=schedule.scheduleid,
     ):
@@ -413,7 +413,7 @@ async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirme
 
     # 슬롯 충돌 체크 — INSERT 전 구간 겹침 검증 (챗봇 추천 후 confirm 직전 선점 방지)
     # 소요시간(50분 등)을 반영한 구간 겹침으로 판정해 30분 격자에 어긋난 이중 예약 방지
-    if await _has_time_overlap(db, doctorid, new_time, new_end_time):
+    if await has_time_overlap(db, doctorid, new_time, new_end_time):
         return None  # 슬롯 충돌 — 호출부에서 409 처리
 
     schedule = Schedule(
