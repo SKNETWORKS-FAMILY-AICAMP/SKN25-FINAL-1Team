@@ -12,6 +12,8 @@ export function buildPrescriptionDocument(params: {
   ownerName: string;
   queuePosition: number;
   licenseNumber?: string;
+  hospitalPhone?: string;
+  businessNumber?: string;
 }): PrescriptionDocumentResponse {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -33,8 +35,8 @@ export function buildPrescriptionDocument(params: {
       },
       hospital: {
         name: params.hospitalName,
-        phone: "-",
-        business_number: "-",
+        phone: params.hospitalPhone ?? "-",
+        business_number: params.businessNumber ?? "-",
         address: "",
       },
       doctor: {

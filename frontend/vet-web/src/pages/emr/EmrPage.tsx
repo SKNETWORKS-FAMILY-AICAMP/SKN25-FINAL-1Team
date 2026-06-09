@@ -181,6 +181,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           ownerName: selectedPatient?.guardian_name ?? "",
           queuePosition,
           licenseNumber: session.user.licenseNumber,
+          hospitalPhone: session.user.hospitalPhone,
+          businessNumber: session.user.businessNumber,
         })
       );
       setIsPrescriptionPreviewOpen(true);

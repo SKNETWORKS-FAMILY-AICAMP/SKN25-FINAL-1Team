@@ -13,6 +13,8 @@ class DoctorTokenResponse(BaseModel):
     token_type: str = "bearer"
     is_initial_password: bool
     license_number: Optional[str] = None
+    hospital_number: Optional[str] = None
+    business_number: Optional[str] = None
 
 # 비밀번호 변경 요청
 class DoctorPasswordChangeRequest(BaseModel):
