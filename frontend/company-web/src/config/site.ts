@@ -1,6 +1,7 @@
 export const siteConfig = {
-  guardianWebUrl: "http://localhost:5173",
-  vetWebUrl: "http://localhost:5174",
+  // 빌드 시점 환경변수로 주입(운영 EC2 URL). 미지정 시 로컬 개발용 기본값.
+  guardianWebUrl: import.meta.env.VITE_GUARDIAN_URL ?? "http://localhost:5173",
+  vetWebUrl: import.meta.env.VITE_VET_URL ?? "http://localhost:5174",
   companyEmail: "medipaw@gmail.com",
   contactHref: "mailto:medipaw@gmail.com?subject=MediPaw%20%ED%98%91%EC%97%85%20%EB%AC%B8%EC%9D%98",
 };
