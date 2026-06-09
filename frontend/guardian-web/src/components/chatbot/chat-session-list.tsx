@@ -105,9 +105,15 @@ const ChatSessionList = ({
                           <span className="block truncate text-sm font-extrabold text-slate-900">
                             {getHistoryTitle(history)}
                           </span>
-                          <span className="mt-2 block text-[10px] font-bold text-slate-400">
+                          <span className="mt-2 block whitespace-nowrap text-[10px] font-bold text-slate-400">
                             {history.created_at}
                           </span>
+                          {history.followup_active && (
+                            <span className="mt-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                              {t("chatbot.followupActiveTag")}
+                            </span>
+                          )}
                         </button>
                         <button
                           type="button"

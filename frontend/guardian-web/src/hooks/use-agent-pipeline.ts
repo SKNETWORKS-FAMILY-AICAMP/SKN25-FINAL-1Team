@@ -23,7 +23,8 @@ export type PipelinePhase =
   | "slot-selection"
   | "booking"
   | "confirmed"
-  | "followup";
+  | "followup"
+  | "followup-closed";
 
 interface AgentPet {
   name: string;
@@ -382,10 +383,10 @@ export const useAgentPipeline = ({
           appendCard({ kind: "instructions", items: instructions });
         }
 
-        const urgencyNum = triage?.urgency_level_num as number | undefined;
-        const needFollowup =
-          (triage?.need_followup as boolean) ||
-          (urgencyNum !== undefined && urgencyNum <= 2);
+        // followup 활성 기준은 백엔드 can_followup(= triage.need_followup, '동적 증상군'
+        // 단일 판정)과 일치시킨다. 예전 urgency<=2 fallback을 두면 라이브에선 켜지고
+        // 재진입(can_followup)에선 꺼져 "나갔다 들어오면 막히는" 불일치가 생긴다.
+        const needFollowup = Boolean(triage?.need_followup);
         if (needFollowup) {
           appendBot(
             t("chatbot.monitoring"),
@@ -514,6 +515,12 @@ export const useAgentPipeline = ({
     appendBotKey("chatbot.restoreFollowup", "followup-restore");
   };
 
+  // 경과보고 마감(진료 시작 시간 경과) 세션 재진입 — 입력창 대신 마감 안내만 노출.
+  const restoreFollowupClosedPhase = (emrid: number) => {
+    emridRef.current = emrid;
+    setPhase("followup-closed");
+  };
+
   return {
     phase,
     showDatePicker,
@@ -529,5 +536,6 @@ export const useAgentPipeline = ({
     handleFollowupMessage,
     resetPipeline,
     restoreFollowupPhase,
+    restoreFollowupClosedPhase,
   };
 };

@@ -35,6 +35,8 @@ interface UseChatSessionsParams {
   getErrorMessage: (error: unknown, fallbackMessage: string) => string;
   getProfileImage: (pet: Pet) => string;
   onFollowupRestore?: (emrid: number) => void;
+  /** 경과보고 마감(진료 시작 시간 경과) 세션 — 마감 안내 표시. */
+  onFollowupClosed?: (emrid: number) => void;
   /** 문진 미완료 세션을 라이브 문진으로 재개(req4). */
   onResumeTriage?: (params: {
     sessionId: number;
@@ -56,6 +58,7 @@ export const useChatSessions = ({
   getErrorMessage,
   getProfileImage,
   onFollowupRestore,
+  onFollowupClosed,
   onResumeTriage,
   onResumeSchedule,
   liveSessionRef,
@@ -251,6 +254,9 @@ export const useChatSessions = ({
       } else if (detail.can_followup && detail.emrid) {
         // 팔로우업 활성(진료 시간 전) → 경과 입력 활성화.
         onFollowupRestore?.(detail.emrid);
+      } else if (detail.followup_closed && detail.emrid) {
+        // 팔로우업 마감(진료 시작 시간 경과) → 입력창 대신 마감 안내.
+        onFollowupClosed?.(detail.emrid);
       }
     } catch (error) {
       setErrorMessage(

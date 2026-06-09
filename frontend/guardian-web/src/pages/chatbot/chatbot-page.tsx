@@ -45,13 +45,15 @@ const SYMPTOM_PILLS = [
 // SLOT_RECOMMENDING        → pipeline.phase === "slot-selection"
 // BOOKING_CONFIRMED        → pipeline.phase === "confirmed"
 // FOLLOWUP_ACTIVE          → pipeline.phase === "followup"
+// FOLLOWUP_CLOSED          → pipeline.phase === "followup-closed" (진료 시작 시간 경과)
 type ChatPhase =
   | "IDLE"
   | "SYMPTOM_COLLECTING"
   | "TRIAGE_RUNNING"
   | "SLOT_RECOMMENDING"
   | "BOOKING_CONFIRMED"
-  | "FOLLOWUP_ACTIVE";
+  | "FOLLOWUP_ACTIVE"
+  | "FOLLOWUP_CLOSED";
 
 const defaultProfileImages = [
   "/assets/profile1.png",
@@ -205,13 +207,19 @@ const ChatbotPage = () => {
     discardEmptyLiveSession,
   } = useChatSessions({
     selectedPet,
-    resetConversationState,
+    // 세션 전환 시 pipeline phase도 함께 초기화 → 이전 세션의 phase(followup 등)가
+    // 다음 세션에 잔류해 입력창/배너가 잘못 뜨는 것을 방지한다.
+    resetConversationState: () => {
+      resetConversationState();
+      pipeline.resetPipeline();
+    },
     setSession,
     setMessages,
     setErrorMessage,
     getErrorMessage,
     getProfileImage,
     onFollowupRestore: pipeline.restoreFollowupPhase,
+    onFollowupClosed: pipeline.restoreFollowupClosedPhase,
     onResumeTriage: ({ sessionId, messages: restoredMessages, quickReplies: resumedQuickReplies }) => {
       if (!selectedPet) return;
       // 라이브 문진 재개 — 세션을 살리고 입력을 활성화한다(req4).
@@ -328,6 +336,7 @@ const ChatbotPage = () => {
       case "booking": return "SLOT_RECOMMENDING";
       case "confirmed": return "BOOKING_CONFIRMED";
       case "followup": return "FOLLOWUP_ACTIVE";
+      case "followup-closed": return "FOLLOWUP_CLOSED";
       default:
         return messages.length === 0 ? "IDLE" : "SYMPTOM_COLLECTING";
     }
@@ -553,6 +562,10 @@ const ChatbotPage = () => {
                     <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
                       {t("chatbot.bookingComplete")}
                     </div>
+                  ) : chatPhase === "FOLLOWUP_CLOSED" ? (
+                    <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
+                      {t("chatbot.followupClosed")}
+                    </div>
                   ) : chatPhase === "SLOT_RECOMMENDING" ? (
                     <div className="border-t border-slate-100 px-4 py-3 text-center">
                       <span className="text-xs font-semibold text-slate-400">
@@ -623,6 +636,12 @@ const ChatbotPage = () => {
                       onSubmitMessage={handleSubmitCombined}
                       onChangeMessageInput={setMessageInput}
                     />
+                  )}
+
+                  {pipeline.phase === "followup-closed" && (
+                    <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
+                      {t("chatbot.followupClosed")}
+                    </div>
                   )}
                 </>
               ) : (

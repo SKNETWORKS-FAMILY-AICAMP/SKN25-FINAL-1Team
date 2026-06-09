@@ -556,6 +556,36 @@ async def get_chat_sessions(
     current_user=Depends(get_current_user),
 ):
     sessions = await get_chat_sessions_by_petid(db, current_user.userid, pet_id)
+
+    # 경과보고(followup)가 '활성'인 세션 표시용 — need_followup이고 진료 시작 시간 전인 emrid.
+    # 상세의 can_followup과 동일 기준. 목록에 작은 마커를 달아 보호자가 식별할 수 있게 한다.
+    from datetime import datetime, timezone
+    emrids = [s.emrid for s in sessions if s.emrid is not None]
+    followup_active_emrids: set[int] = set()
+    if emrids:
+        triage_rows = await db.execute(
+            select(TriageResult.emrid).where(
+                TriageResult.emrid.in_(emrids), TriageResult.need_followup.is_(True)
+            )
+        )
+        need_emrids = {row[0] for row in triage_rows.all()}
+        if need_emrids:
+            sched_rows = await db.execute(
+                select(Schedule).where(
+                    Schedule.emrid.in_(need_emrids),
+                    Schedule.deleted_at.is_(None),
+                    Schedule.status != "COMPLETED",
+                    Schedule.confirmed_time.isnot(None),
+                )
+            )
+            now = datetime.now(timezone.utc)
+            for sched in sched_rows.scalars().all():
+                confirmed = sched.confirmed_time
+                if confirmed.tzinfo is None:
+                    confirmed = confirmed.replace(tzinfo=timezone.utc)
+                if now <= confirmed:
+                    followup_active_emrids.add(sched.emrid)
+
     return {
         "code": 200,
         "result": [
@@ -564,6 +594,7 @@ async def get_chat_sessions(
                 "keywords": session.keywords or [],
                 "created_at": str(session.created_at.date()),
                 "status": "진료완료" if session.is_complete else "상담중",
+                "followup_active": session.emrid in followup_active_emrids,
             }
             for session in sessions
         ],
@@ -583,6 +614,7 @@ async def get_chat_session_detail(
 
     can_followup = False
     booking_complete = False
+    followup_closed = False
     emrid = session.emrid
     if emrid is not None:
         from datetime import datetime, timezone
@@ -604,6 +636,9 @@ async def get_chat_session_detail(
         can_followup = bool(need_followup and schedule and schedule.status != "COMPLETED" and appointment_not_passed)
         # 예약 확정 = 취소되지 않은 schedule에 확정 시각이 존재.
         booking_complete = bool(schedule and schedule.confirmed_time and schedule.status != "CANCELLED")
+        # 경과보고 마감 = followup 대상이었으나 진료 시작 시간이 지났거나(또는 완료) 더는 보낼 수 없는 상태.
+        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.
+        followup_closed = bool(need_followup and schedule and schedule.confirmed_time and not can_followup)
 
     messages = session.messages or []
 
@@ -651,6 +686,7 @@ async def get_chat_session_detail(
             "keywords": session.keywords or [],
             "is_complete": session.is_complete,
             "can_followup": can_followup,
+            "followup_closed": followup_closed,
             "booking_complete": booking_complete,
             "resumable_triage": resumable_triage,
             "resumable_schedule": resumable_schedule,
