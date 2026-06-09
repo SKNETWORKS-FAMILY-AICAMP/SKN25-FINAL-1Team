@@ -96,12 +96,13 @@ async def main():
         if admin_row:
             await db.execute(text("""
                 UPDATE "doctorDB"
-                SET doctor_name = :dname, hospital_name = :hname,
+                SET password = :pw, doctor_name = :dname, hospital_name = :hname,
                     hospital_address = :haddr, hospital_number = :hnum,
                     license_number = :lnum, email = :email, updated_at = now()
                 WHERE loginid = :loginid
             """), {
                 "loginid": "admin",
+                "pw": hash_password("Test1234!"),
                 "dname": "관리자",
                 "hname": "MediPaw 동물병원",
                 "haddr": "서울시 강남구 테스트로 1",
