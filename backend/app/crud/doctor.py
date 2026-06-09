@@ -16,6 +16,17 @@ async def update_doctor_password(db: AsyncSession, doctor: Doctor, new_password:
     await db.refresh(doctor)
     return doctor
 
+# 계정 문의 — 병원명 + 사업자번호 + 면허번호로 의사 조회
+async def get_doctor_by_inquiry(db: AsyncSession, hospital_name: str, business_number: str, license_number: str):
+    result = await db.execute(
+        select(Doctor).where(
+            Doctor.hospital_name == hospital_name,
+            Doctor.business_number == business_number,
+            Doctor.license_number == license_number,
+        )
+    )
+    return result.scalar_one_or_none()
+
 # 임시 비밀번호 발급
 async def reset_doctor_password(db: AsyncSession, loginid: str, license_number: str):
     result = await db.execute(

@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-5.4-mini"
     OPENAI_VISION_MODEL: str = "gpt-5.4-mini"
 
+    # SMTP 이메일 발송
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    CS_EMAIL: str = ""
+
     # 서버 설정 — 운영 안전 기본값. 로컬 개발 시 .env에서 DEBUG=true 로 오버라이드.
     DEBUG: bool = False
     # 콤마 구분 origins 문자열. docker-compose.yml 또는 .env에서 오버라이드 가능.
