@@ -22,7 +22,7 @@ export function PatientInfoPanel({
   isReadOnly?: boolean;
 }) {
   return (
-    <Panel>
+    <Panel className="flex-1">
       <div className="relative px-5 py-4">
         <div className="flex max-w-full flex-col">
           <div className="flex items-center gap-4 pr-10">
@@ -102,13 +102,13 @@ export function EmptyPatientPanel() {
 
 export function HistoryPanel({ histories }: { histories: EmrResult["emr_history"] }) {
   return (
-    <Panel>
-      <div className="border-b border-[#edf1f6] px-5 py-3">
+    <Panel className="flex flex-1 flex-col">
+      <div className="shrink-0 border-b border-[#edf1f6] px-5 py-3">
         <h2 className="text-base font-extrabold text-[#151b28]">
           과거 문진 기록
         </h2>
       </div>
-      <div className="max-h-[270px] space-y-3 overflow-y-auto px-5 py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {histories.length === 0 && (
           <div className="rounded-lg bg-[#f9fafb] px-4 py-8 text-center text-sm font-bold text-[#8a94a6]">
             과거 문진 기록이 없습니다.

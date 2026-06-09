@@ -3,7 +3,8 @@ import type {
   PatientsById,
   ReservationItem,
 } from "../../types/reservation";
-import { useOperatingHours } from "../../contexts/OperatingHoursContext";
+import { useClosedDates, useWeeklySchedule } from "../../contexts/OperatingHoursContext";
+import type { DaySchedule } from "../../api/settingsApi";
 import { TriageBadge } from "../common/TriageBadge";
 import {
   TODAY,
@@ -16,12 +17,15 @@ import {
 import {
   TIMELINE_HOUR_HEIGHT,
   type PositionedTimelineItem,
+  type TimelineRange,
   buildPositionedTimelineItems,
   getHourTicks,
   getLunchBlockMetrics,
   getScaledTimelineHeight,
   getTimelineHeight,
   getTimelineRange,
+  parseTimeToMinutes,
+  formatMinutesAsTime,
 } from "../../utils/scheduleTimelineUtils";
 
 const WEEKLY_BOTTOM_PADDING = 8;
@@ -35,13 +39,36 @@ interface WeeklyScheduleProps {
   onSelectReservation: (reservation: ReservationItem, reservationDate: Date) => void;
 }
 
+function getNonOpOverlays(
+  dayEntry: DaySchedule | undefined,
+  range: TimelineRange,
+  hourHeight: number,
+): Array<{ top: number; height: number }> {
+  const total = ((range.endMinutes - range.startMinutes) / 60) * hourHeight;
+  if (!dayEntry?.is_open || !dayEntry.start_time || !dayEntry.end_time)
+    return [{ top: 0, height: total }];
+
+  const overlays: Array<{ top: number; height: number }> = [];
+  const s = parseTimeToMinutes(dayEntry.start_time);
+  const e = parseTimeToMinutes(dayEntry.end_time);
+  if (s > range.startMinutes)
+    overlays.push({ top: 0, height: ((s - range.startMinutes) / 60) * hourHeight });
+  if (e < range.endMinutes)
+    overlays.push({
+      top: ((e - range.startMinutes) / 60) * hourHeight,
+      height: ((range.endMinutes - e) / 60) * hourHeight,
+    });
+  return overlays;
+}
+
 export function WeeklySchedule({
   selectedDate,
   reservations,
   patientsById,
   onSelectReservation,
 }: WeeklyScheduleProps) {
-  const { startTime, endTime, lunchStart, lunchEnd } = useOperatingHours();
+  const weeklySchedule = useWeeklySchedule();
+  const closedDates = useClosedDates();
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const [timelineBodyHeight, setTimelineBodyHeight] = useState(0);
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
@@ -49,6 +76,31 @@ export function WeeklySchedule({
     () => new Set(weekDays.map((day) => getDateKey(day))),
     [weekDays]
   );
+
+  const getDayEntry = (date: Date): DaySchedule | undefined => {
+    if (closedDates.has(getDateKey(date))) return undefined;
+    const dow = (date.getDay() + 6) % 7;
+    return weeklySchedule.find((d) => d.day_of_week === dow);
+  };
+
+  // 이 주의 모든 영업 요일 중 가장 이른 시작 ~ 가장 늦은 마감
+  const globalRange = useMemo((): TimelineRange => {
+    const openDays = weekDays
+      .map(getDayEntry)
+      .filter((d): d is DaySchedule => !!d?.is_open && !!d.start_time && !!d.end_time);
+    if (openDays.length === 0) return { startMinutes: 9 * 60, endMinutes: 18 * 60 };
+    return {
+      startMinutes: Math.floor(Math.min(...openDays.map((d) => parseTimeToMinutes(d.start_time!))) / 60) * 60,
+      endMinutes:   Math.ceil( Math.max(...openDays.map((d) => parseTimeToMinutes(d.end_time!)))   / 60) * 60,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekDays, weeklySchedule, closedDates]);
+
+  // 점심시간은 첫 영업 요일 기준 (공유 타임라인)
+  const firstOpenDay = weekDays.map(getDayEntry).find((d) => d?.is_open && d.start_time);
+  const lunchStart = firstOpenDay?.lunch_start ?? "12:00";
+  const lunchEnd   = firstOpenDay?.lunch_end   ?? "13:00";
+
   const weekReservations = useMemo(
     () =>
       reservations.filter(
@@ -58,8 +110,13 @@ export function WeeklySchedule({
     [reservations, weekDayKeys]
   );
   const timelineRange = useMemo(
-    () => getTimelineRange(weekReservations, { startTime, endTime, lunchStart, lunchEnd }),
-    [weekReservations, startTime, endTime, lunchStart, lunchEnd]
+    () => getTimelineRange(weekReservations, {
+      startTime: formatMinutesAsTime(globalRange.startMinutes),
+      endTime:   formatMinutesAsTime(globalRange.endMinutes),
+      lunchStart,
+      lunchEnd,
+    }),
+    [weekReservations, globalRange, lunchStart, lunchEnd]
   );
   const fallbackTimelineHeight = useMemo(
     () => getTimelineHeight(timelineRange),
@@ -179,6 +236,7 @@ export function WeeklySchedule({
                 timelineRange,
                 timelineScale
               );
+              const overlays = getNonOpOverlays(getDayEntry(day), timelineRange, weeklyHourHeight);
 
               return (
                 <div
@@ -193,6 +251,20 @@ export function WeeklySchedule({
                       key={tick.minutes}
                       className="absolute left-0 right-0 border-t border-[#edf1f6]"
                       style={{ top: tick.top }}
+                    />
+                  ))}
+
+                  {overlays.map((o, i) => (
+                    <div
+                      key={i}
+                      className="pointer-events-none absolute inset-x-0 z-[2]"
+                      style={{
+                        top: o.top,
+                        height: o.height,
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.04) 5px, rgba(0,0,0,0.04) 10px)",
+                        backgroundColor: "rgba(243,244,246,0.85)",
+                      }}
                     />
                   ))}
 
