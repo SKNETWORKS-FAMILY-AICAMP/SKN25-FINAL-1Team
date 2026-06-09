@@ -69,15 +69,22 @@ class PetDetailResponse(BaseModel):
     species: Optional[str]
     breed: Optional[str]
     gender: Optional[str]
-    is_neutered: Optional[bool]
-    birth_date: Optional[date]
-    checkup_date: Optional[date] = None
+    is_neutered: Optional[str]
+    birth_date: Optional[str]
+    is_birth_unknown: Optional[bool]
+    checkup_date: Optional[str] = None
+    is_checkup_unknown: Optional[bool] = None
     weight_kg: Optional[float]
     notes: Optional[str]
     profile_image: Optional[str]
 
     class Config:
         from_attributes = True
+
+# 등록 응답
+class PetCreateResponse(BaseModel):
+    pet_id: int
+    message: str
 
 # 수정 요청
 class PetUpdate(BaseModel):

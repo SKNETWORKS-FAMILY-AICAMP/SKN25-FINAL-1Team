@@ -68,6 +68,10 @@ class AddClosedDateResponse(BaseModel):
     reservation_count: int
 
 
+class DeleteClosedDateResponse(BaseModel):
+    success: bool
+
+
 # ── 유틸 ────────────────────────────────────────────────────────────────
 
 def _parse_time(s: str) -> time:
@@ -321,7 +325,7 @@ async def add_closed_date(
     )
 
 
-@router.delete("/closed-dates/{closed_date}")
+@router.delete("/closed-dates/{closed_date}", response_model=DeleteClosedDateResponse)
 async def remove_closed_date(
     closed_date: str,
     db: AsyncSession = Depends(get_db),
@@ -344,4 +348,4 @@ async def remove_closed_date(
     if record:
         await db.delete(record)
         await db.commit()
-    return {"success": True}
+    return DeleteClosedDateResponse(success=True)

@@ -64,7 +64,7 @@ def _reason(guardian, triage) -> str:
     return "-"
 
 
-@router.get("/today", status_code=200)
+@router.get("/today", response_model=DashboardResult, status_code=200)
 async def get_today_dashboard(
     target_date: date = Query(default_factory=date.today, alias="date"),
     db: AsyncSession = Depends(get_db),
@@ -116,7 +116,4 @@ async def get_today_dashboard(
         schedules=schedules,
     )
 
-    return {
-        "code": 200,
-        "result": result.model_dump(),
-    }
+    return result
