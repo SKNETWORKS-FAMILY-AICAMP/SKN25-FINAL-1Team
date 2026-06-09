@@ -200,11 +200,8 @@ async def remove_reservation(
         raise HTTPException(status_code=409, detail="이미 취소된 예약입니다.")
 
     try:
-        slot_restored = await delete_reservation(db, schedule_id)
-        logger.info(
-            f"[DELETE reservation] success schedule_id={schedule_id} "
-            f"slot_restored={slot_restored}"
-        )
+        await delete_reservation(db, schedule_id)
+        logger.info(f"[DELETE reservation] success schedule_id={schedule_id}")
     except Exception:
         logger.exception(
             f"[DELETE reservation] failed schedule_id={schedule_id}"
@@ -217,7 +214,6 @@ async def remove_reservation(
         "result": {
             "success": True,
             "reservation_id": schedule_id,
-            "slot_restored": True,
         },
     }
 

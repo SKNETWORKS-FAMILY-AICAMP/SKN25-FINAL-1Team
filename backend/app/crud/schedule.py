@@ -1,4 +1,5 @@
 from sqlalchemy import select, or_, and_, case, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import datetime, timedelta, timezone, date as _date_type
@@ -64,6 +65,45 @@ async def _lock_slot(db: AsyncSession, doctorid: int, slot_dt: datetime) -> None
     )
 
 
+async def _has_time_overlap(
+    db: AsyncSession,
+    doctorid: int,
+    new_start: datetime,
+    new_end: datetime,
+    exclude_schedule_id: int | None = None,
+) -> bool:
+    """새 예약 구간 [new_start, new_end)이 같은 의사의 기존 활성 예약과 겹치는지 검사한다.
+
+    시작시간 정확 일치가 아닌 '구간 겹침'으로 판정하므로, 진료 소요시간이
+    30분을 넘는 예약(예: 50분)이 30분 격자에 어긋나게 놓여도 이중 예약을 막는다.
+    기존 예약의 종료시각은 confirmed_end_time(없으면 confirmed_time + duration_min)을 사용.
+    """
+    ns = to_kst(new_start)
+    ne = to_kst(new_end)
+    target_date = ns.date()
+
+    stmt = (
+        select(Schedule).where(
+            Schedule.confirmed_time.isnot(None),
+            Schedule.deleted_at.is_(None),
+            Schedule.status != "CANCELLED",
+            Schedule.doctorid == doctorid,
+        )
+    )
+    if exclude_schedule_id is not None:
+        stmt = stmt.where(Schedule.scheduleid != exclude_schedule_id)
+
+    result = await db.execute(stmt)
+    for s in result.scalars().all():
+        ct = to_kst(s.confirmed_time)
+        if not ct or ct.date() != target_date:
+            continue
+        et = to_kst(s.confirmed_end_time) if s.confirmed_end_time else ct + timedelta(minutes=s.duration_min or 30)
+        if ns < et and ne > ct:
+            return True
+    return False
+
+
 # 정기검진 예약 생성
 async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time: str, memo: str, doctorid: int, category_code: int = 1):
 
@@ -82,15 +122,8 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
     await _lock_slot(db, doctorid, kst_dt)
 
     # 슬롯 충돌 체크 — Guardian 생성 전에 먼저 확인 (race condition 방지)
-    conflict_result = await db.execute(
-        select(Schedule).where(
-            Schedule.confirmed_time == kst_dt,
-            Schedule.doctorid == doctorid,
-            Schedule.status != "CANCELLED",
-            Schedule.deleted_at.is_(None),
-        )
-    )
-    if conflict_result.scalar_one_or_none():
+    # 구간 겹침으로 판정: 기존 예약의 소요시간(50분 등)을 정확히 반영해 이중 예약 방지
+    if await _has_time_overlap(db, doctorid, kst_dt, kst_dt + timedelta(minutes=30)):
         return None, None  # 슬롯 충돌 — 호출부에서 409 처리
 
     # guardianDB 생성
@@ -115,7 +148,13 @@ async def create_checkup_schedule(db: AsyncSession, pet_id: int, date: str, time
         status="CONFIRMED"
     )
     db.add(schedule)
-    await db.commit()
+    # 동시성 race로 사전 검사를 통과한 겹침은 DB의 no_overlap_schedule 제약이 막는다.
+    # 500 대신 깔끔한 충돌(None)로 변환해 호출부에서 409 처리.
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return None, None
     await db.refresh(schedule)
     return schedule, guardian
 
@@ -206,32 +245,26 @@ async def cancel_schedule(db: AsyncSession, schedule: Schedule):
 async def update_schedule_time(db: AsyncSession, schedule: Schedule, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
     new_end_time = new_time + timedelta(minutes=duration_min)
-    new_kst = to_kst(new_time) if new_time.tzinfo else new_time.replace(tzinfo=KST)
-    new_date = new_kst.date()
-    new_hhmm = new_kst.strftime("%H:%M")
 
     # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 변경 대상 슬롯을 잠근다
     await _lock_slot(db, schedule.doctorid, new_time)
 
-    # Schedule 테이블 기반 충돌 검증 (본인 예약 제외)
-    conflict_result = await db.execute(
-        select(Schedule).where(
-            Schedule.scheduleid != schedule.scheduleid,
-            Schedule.confirmed_time.isnot(None),
-            Schedule.deleted_at.is_(None),
-            Schedule.status != "CANCELLED",
-            Schedule.doctorid == schedule.doctorid,
-        )
-    )
-    for s in conflict_result.scalars().all():
-        ct = to_kst(s.confirmed_time)
-        if ct and ct.date() == new_date and ct.strftime("%H:%M") == new_hhmm:
-            return None  # 충돌
+    # Schedule 테이블 기반 구간 겹침 충돌 검증 (본인 예약 제외)
+    if await _has_time_overlap(
+        db, schedule.doctorid, new_time, new_end_time,
+        exclude_schedule_id=schedule.scheduleid,
+    ):
+        return None  # 충돌
 
     schedule.confirmed_time = new_time
     schedule.confirmed_end_time = new_end_time
     schedule.duration_min = duration_min
-    await db.commit()
+    # 동시성 race 대비: DB no_overlap_schedule 제약 위반을 충돌(None)로 변환
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return None
     await db.refresh(schedule)
     return schedule
 
@@ -378,16 +411,9 @@ async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirme
     # 동시 예약 직렬화 (advisory lock) — 충돌 검사 전에 슬롯을 잠근다
     await _lock_slot(db, doctorid, new_time)
 
-    # 슬롯 충돌 체크 — INSERT 전 검증 (챗봇 추천 후 confirm 직전 선점 방지)
-    conflict_result = await db.execute(
-        select(Schedule).where(
-            Schedule.confirmed_time == new_time,
-            Schedule.doctorid == doctorid,
-            Schedule.status != "CANCELLED",
-            Schedule.deleted_at.is_(None),
-        )
-    )
-    if conflict_result.scalar_one_or_none():
+    # 슬롯 충돌 체크 — INSERT 전 구간 겹침 검증 (챗봇 추천 후 confirm 직전 선점 방지)
+    # 소요시간(50분 등)을 반영한 구간 겹침으로 판정해 30분 격자에 어긋난 이중 예약 방지
+    if await _has_time_overlap(db, doctorid, new_time, new_end_time):
         return None  # 슬롯 충돌 — 호출부에서 409 처리
 
     schedule = Schedule(
@@ -400,6 +426,11 @@ async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirme
     )
     db.add(schedule)
 
-    await db.commit()
+    # 동시성 race 대비: DB no_overlap_schedule 제약 위반을 충돌(None)로 변환
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return None
     await db.refresh(schedule)
     return schedule

@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.timezone import KST
 
@@ -27,8 +28,6 @@ class TimeSlotConflict(Exception):
 
 # 수의사 대시보드 수동 예약 기본 카테고리: 정기검진(code=1)
 DEFAULT_CATEGORY_CODE = 1
-# 예약 추가 시 기본 응급도(일반, code=3)
-DEFAULT_TRIAGE_CODE = 5
 DEFAULT_DURATION_MIN = 30
 
 
@@ -136,13 +135,6 @@ async def get_default_category(db: AsyncSession) -> CategoryMaster | None:
     return result.scalars().first()
 
 
-async def get_default_triage(db: AsyncSession) -> TriageMaster | None:
-    result = await db.execute(
-        select(TriageMaster).where(TriageMaster.code == DEFAULT_TRIAGE_CODE)
-    )
-    return result.scalars().first()
-
-
 async def update_reservation_status(
     db: AsyncSession,
     schedule_id: int,
@@ -221,8 +213,6 @@ async def create_reservation(
     if not category:
         return None
 
-    triage = await get_default_triage(db)
-
     confirmed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
     if await has_time_conflict(db, confirmed, duration_min=DEFAULT_DURATION_MIN):
         raise TimeSlotConflict()
@@ -230,7 +220,9 @@ async def create_reservation(
     guardian = Guardian(
         petid=pet_id,
         category_id=category.id,
-        triage_id=triage.id if triage else None,
+        # 수의사 수동 예약은 챗봇 문진이 없어 응급도 미지정(None).
+        # 목록 화면(_triage_key)에서 triage_result/triage 둘 다 없으면 '일반(normal)'으로 표시된다.
+        triage_id=None,
         date=datetime.strptime(date_str, "%Y-%m-%d").date(),
         memo=memo,
     )
@@ -246,7 +238,12 @@ async def create_reservation(
         status="CONFIRMED",
     )
     db.add(schedule)
-    await db.commit()
+    # 동시성 race로 사전 검사를 통과한 겹침은 DB no_overlap_schedule 제약이 막는다 → 충돌로 변환
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise TimeSlotConflict()
     await db.refresh(schedule)
 
     return schedule
@@ -284,7 +281,12 @@ async def update_reservation(
     if memo is not None and guardian:
         guardian.memo = memo
 
-    await db.commit()
+    # 동시성 race 대비: DB no_overlap_schedule 제약 위반을 충돌로 변환
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise TimeSlotConflict()
     await db.refresh(schedule)
 
     return schedule

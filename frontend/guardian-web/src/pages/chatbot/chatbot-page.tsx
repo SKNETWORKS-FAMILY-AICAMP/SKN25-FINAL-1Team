@@ -549,6 +549,7 @@ const ChatbotPage = () => {
                   {pipeline.showDatePicker && (
                     <div className="absolute bottom-16 right-4 z-10">
                       <ChatDatePicker
+                        durationMin={pipeline.getScheduleDurationMin()}
                         onSelectSlot={(date, time, doctorid, label) => {
                           void pipeline.handleManualSlotSelect(date, time, doctorid, label);
                         }}
