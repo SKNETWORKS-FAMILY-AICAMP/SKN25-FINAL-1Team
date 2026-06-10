@@ -20,14 +20,14 @@ export function PrescriptionPreviewModal({
   const medicineRows = Math.max(0, 6 - data.prescriptions.length);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/55 px-4 py-6 print-prescription-modal">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-6 print-prescription-modal">
       <div className="max-h-[92vh] w-full max-w-[900px] overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex items-start justify-between border-b border-[#edf1f6] px-5 py-4 print:hidden">
+        <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4 print:hidden">
           <div>
-            <h2 className="text-lg font-extrabold text-[#151b28]">
+            <h2 className="text-lg font-extrabold text-slate-900">
               처방전 미리보기
             </h2>
-            <p className="mt-1 text-xs font-bold text-[#6b7486]">
+            <p className="mt-1 text-xs font-bold text-slate-500">
               아래는 실제 출력되는 수의사 처방전 양식입니다.
             </p>
           </div>
@@ -35,7 +35,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex h-9 items-center gap-2 rounded-lg border border-[#dfe6f1] px-3 text-sm font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
             >
               <Printer className="h-4 w-4" />
               출력
@@ -43,7 +43,7 @@ export function PrescriptionPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#f5f7f9]"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50"
               aria-label="닫기"
             >
               <X className="h-5 w-5" />
@@ -51,8 +51,8 @@ export function PrescriptionPreviewModal({
           </div>
         </div>
 
-        <div className="max-h-[calc(92vh-78px)] overflow-auto bg-[#f6f8fa] p-6">
-          <div className="prescription-print-page prescription-form mx-auto bg-white text-[#111827] shadow-sm">
+        <div className="max-h-[calc(92vh-78px)] overflow-auto bg-slate-50 p-6">
+          <div className="prescription-print-page prescription-form mx-auto bg-white text-slate-900 shadow-sm">
             <p className="form-rule-title">■ 수의사법 시행규칙 [별지 제10호서식]</p>
             <h1 className="form-title">
                 처 방 전
@@ -162,7 +162,7 @@ export function PrescriptionPreviewModal({
                   <th colSpan={2} className="shade">
                     처방 수의사
                   </th>
-                  <td colSpan={2}>성명&nbsp;&nbsp; {data.doctor.name}&nbsp;&nbsp;&nbsp;&nbsp;(서명 또는 날인)</td>
+                  <td colSpan={2}><span className="flex justify-between">성명&nbsp;&nbsp; {data.doctor.name}<span>(서명 또는 날인)</span></span></td>
                   <th>수의사 면허번호</th>
                   <td>제 {data.doctor.license_number} 호</td>
                 </tr>
@@ -241,7 +241,7 @@ export function PrescriptionPreviewModal({
                 <tr>
                   <th>판매 약사</th>
                   <th>성명</th>
-                  <td>(서명 또는 날인)</td>
+                  <td><span className="flex justify-end">(서명 또는 날인)</span></td>
                   <th>면허번호</th>
                   <td />
                 </tr>
