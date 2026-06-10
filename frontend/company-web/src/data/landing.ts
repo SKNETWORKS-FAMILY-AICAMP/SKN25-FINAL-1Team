@@ -95,9 +95,10 @@ export const dashboardMetrics = [
 ];
 
 export interface DashboardShot {
-  // 실제 서비스 화면 캡쳐(PNG)를 frontend/company-web/src/assets/screenshots/ 에 넣고
-  // import 한 뒤 src 에 연결하면 캐러셀에 그대로 노출됩니다. src 가 비어 있으면 준비 중 표시.
-  src?: string;
+  // file 이름과 똑같은 캡쳐 이미지를 frontend/company-web/src/assets/screenshots/ 에 넣으면
+  // DashboardSection 이 자동으로 찾아 캐러셀에 노출합니다(코드 수정 불필요).
+  // 파일이 없으면 해당 슬라이드는 "준비 중" placeholder 로 표시됩니다.
+  file: string;
   eyebrow: string;
   title: string;
   caption: string;
@@ -105,21 +106,25 @@ export interface DashboardShot {
 
 export const dashboardShots: DashboardShot[] = [
   {
+    file: "guardian-intake.jpg",
     eyebrow: "Guardian Web",
     title: "AI 챗봇 사전 문진",
     caption: "보호자가 일상어로 증상을 남기면 AI가 주증상·발생 시점·위험 신호로 구조화합니다.",
   },
   {
+    file: "guardian-reservation.jpg",
     eyebrow: "Guardian Web",
     title: "진료 예약 신청",
     caption: "문진 결과가 그대로 이어져 예약과 함께 병원으로 전달됩니다.",
   },
   {
+    file: "vet-dashboard.jpg",
     eyebrow: "Veterinarian Web",
     title: "오늘의 진료 대시보드",
     caption: "예약 현황과 응급 신호, 검토 알림을 한 화면에서 확인합니다.",
   },
   {
+    file: "vet-emr.jpg",
     eyebrow: "Veterinarian Web",
     title: "환자 차트 · EMR 초안",
     caption: "SOAP 형식의 EMR 초안을 수의사가 검토하고 최종 확정합니다.",
