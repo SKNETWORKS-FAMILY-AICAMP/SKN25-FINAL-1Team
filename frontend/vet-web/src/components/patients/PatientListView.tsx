@@ -31,7 +31,7 @@ export function PatientListView({
   onOpenDetail,
 }: PatientListViewProps) {
   return (
-    <div className="flex h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden">
+    <div className="flex min-w-0 flex-col">
       <div className="mb-4 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold text-[#151b28]">환자 관리</h1>
@@ -51,7 +51,7 @@ export function PatientListView({
         </label>
       </div>
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
+      <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm h-[calc(100vh-184px)]">
         <div className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-[#e5eaf2] px-4 xl:px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-[#151b28]">전체 환자</h2>

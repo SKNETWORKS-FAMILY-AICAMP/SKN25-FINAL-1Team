@@ -201,7 +201,7 @@ export default function ReservationPage({
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
-      <div className="flex h-[calc(100vh-128px)] flex-col overflow-hidden">
+      <div className="flex h-[calc(100vh-108px)] flex-col overflow-hidden">
         <TopControls
           controlLabel={controlLabel}
           compactControlLabel={compactControlLabel}
