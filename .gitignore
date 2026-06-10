@@ -49,3 +49,8 @@ backend/data/triage/*.jsonl
 backend/data/triage/*.jsonl.gz
 backend/data/triage/*.gz
 
+# Eval 하네스 산출물(측정 결과) — 코드 아닌 런타임 리포트라 비커밋
+backend/eval_*.json
+backend/tests/eval/*.json
+backend/EVAL_REPORT.md
+
