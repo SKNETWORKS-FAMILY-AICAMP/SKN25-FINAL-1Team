@@ -6,10 +6,10 @@ import { companyWebUrl } from "../../config/site";
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="mx-auto grid w-full max-w-[1200px] flex-1 grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
+      <div className="mx-auto grid w-full max-w-[1200px] flex-1 grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-16 lg:pb-8 lg:pt-10">
         <section className="flex flex-col">
           <div className="mb-6">
-            <img src={logo} alt="MediPaw" className="w-[300px]" />
+            <img src={logo} alt="MediPaw" className="w-[260px]" />
           </div>
 
           <h1 className="mb-4 text-3xl font-bold leading-tight text-slate-900">
