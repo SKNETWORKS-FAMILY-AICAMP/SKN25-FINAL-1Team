@@ -43,7 +43,9 @@ async def expand_query_llm(query: str) -> str:
         result = await call_openai(
             [{"role": "user", "content": query}],
             _EXPAND_SYSTEM,
-            max_tokens=120,
+            # gpt-5 계열(추론 모델)은 reasoning_tokens가 예산을 먼저 소모하므로
+            # 120은 JSON을 완성하기 전에 한도 초과로 실패한다. 여유를 둔다.
+            max_tokens=512,
             agent="triage_rag_expand",
         )
         expansion = ""
