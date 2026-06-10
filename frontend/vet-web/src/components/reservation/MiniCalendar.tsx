@@ -28,29 +28,29 @@ export function MiniCalendar({
   }, [selectedDate]);
 
   return (
-    <section className="rounded-lg border border-[#e5eaf2] bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 grid grid-cols-[32px_1fr_32px] items-center">
         <button
           type="button"
           onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
           aria-label="이전 달"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h2 className="text-center text-base font-extrabold text-[#151b28]">
+        <h2 className="text-center text-base font-extrabold text-slate-900">
           {formatMonthTitle(visibleMonth)}
         </h2>
         <button
           type="button"
           onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#53617c] transition hover:bg-[#f5f7f9] hover:text-[#2f6f67]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
           aria-label="다음 달"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-y-1.5 text-center text-xs font-extrabold text-[#53617c]">
+      <div className="grid grid-cols-7 gap-y-1.5 text-center text-xs font-extrabold text-slate-600">
         {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
           <span key={day}>{day}</span>
         ))}
@@ -73,14 +73,14 @@ export function MiniCalendar({
               className={[
                 "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold",
                 isToday
-                  ? "bg-[#2f6f67] text-white"
+                  ? "bg-blue-600 text-white"
                   : isSelected
-                    ? "bg-[#eef5f4] text-[#2f6f67]"
+                    ? "bg-blue-50 text-blue-600"
                     : isRed || holidayName
-                      ? "text-[#ef4444]"
+                      ? "text-red-500"
                       : isMuted
-                        ? "text-[#a4adbd]"
-                        : "text-[#20283a] hover:bg-[#eef5f4]",
+                        ? "text-slate-400"
+                        : "text-slate-800 hover:bg-blue-50",
               ].join(" ")}
             >
               {day.getDate()}

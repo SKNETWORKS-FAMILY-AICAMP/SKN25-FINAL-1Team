@@ -17,20 +17,20 @@ export const summaryToneStyle: Record<
   { wrapper: string; value: string }
 > = {
   blue: {
-    wrapper: "bg-[#f5f7f8]",
-    value: "text-[#357b70]",
+    wrapper: "bg-slate-50",
+    value: "text-blue-500",
   },
   orange: {
-    wrapper: "bg-[#faf6ed]",
-    value: "text-[#b45309]",
+    wrapper: "bg-amber-50",
+    value: "text-amber-700",
   },
   red: {
-    wrapper: "bg-[#faeded]",
-    value: "text-[#ef4444]",
+    wrapper: "bg-red-50",
+    value: "text-red-500",
   },
   green: {
-    wrapper: "bg-[#f3f5f7]",
-    value: "text-[#475569]",
+    wrapper: "bg-slate-50",
+    value: "text-slate-600",
   },
 };
 
@@ -40,27 +40,27 @@ export const visitTypeStyle: Record<
 > = {
   emergency: {
     label: "응급",
-    badge: "border-[#fee2e2] bg-[#fef2f2] text-[#ef4444]",
-    dot: "bg-[#ef4444]",
-    card: "border-[#fee2e2] bg-[#fef2f2] text-[#20283a] before:bg-[#ef4444]",
+    badge: "border-red-100 bg-red-50 text-red-500",
+    dot: "bg-red-500",
+    card: "border-red-100 bg-red-50 text-slate-800 before:bg-red-500",
   },
   semiEmergency: {
     label: "준응급",
-    badge: "border-[#fef3c7] bg-[#fffbeb] text-[#d97706]",
-    dot: "bg-[#d97706]",
-    card: "border-[#fef3c7] bg-[#fffbeb] text-[#20283a] before:bg-[#d97706]",
+    badge: "border-amber-100 bg-amber-50 text-amber-600",
+    dot: "bg-amber-600",
+    card: "border-amber-100 bg-amber-50 text-slate-800 before:bg-amber-600",
   },
   normal: {
     label: "일반",
-    badge: "border-[#dcfce7] bg-[#f0fdf4] text-[#15803d]",
-    dot: "bg-[#22c55e]",
-    card: "border-[#dcfce7] bg-[#f0fdf4] text-[#20283a] before:bg-[#22c55e]",
+    badge: "border-green-100 bg-green-50 text-green-700",
+    dot: "bg-green-500",
+    card: "border-green-100 bg-green-50 text-slate-800 before:bg-green-500",
   },
   checkup: {
     label: "검진/일반예약",
-    badge: "border-[#e2e8f0] bg-[#f9fafb] text-[#64748b]",
-    dot: "bg-[#94a3b8]",
-    card: "border-[#e2e8f0] bg-[#f9fafb] text-[#20283a] before:bg-[#94a3b8]",
+    badge: "border-slate-200 bg-slate-50 text-slate-500",
+    dot: "bg-slate-400",
+    card: "border-slate-200 bg-slate-50 text-slate-800 before:bg-slate-400",
   },
 };
 

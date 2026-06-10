@@ -18,66 +18,14 @@ export interface AuthSession {
   lastLoginAt?: string;
 }
 
-interface LoginResponse {
-  code?: number;
-  message?: string;
-  access_token?: string;
-  accessToken?: string;
-  token?: string;
-  data?: {
-    access_token?: string;
-    accessToken?: string;
-    token?: string;
-    user?: LoginResponse["user"];
-    loginid?: string;
-    id?: string;
-    name?: string;
-    hospital_name?: string;
-    hospitalName?: string;
-    role?: HospitalUser["role"];
-    is_first_login?: boolean;
-    isFirstLogin?: boolean;
-    first_login?: boolean;
-    firstLogin?: boolean;
-    password_change_required?: boolean;
-    passwordChangeRequired?: boolean;
-    must_change_password?: boolean;
-    mustChangePassword?: boolean;
-    password_changed?: boolean;
-    passwordChanged?: boolean;
-  };
-  user?: {
-    loginid?: string;
-    id?: string;
-    name?: string;
-    hospital_name?: string;
-    hospitalName?: string;
-    role?: HospitalUser["role"];
-    is_first_login?: boolean;
-    isFirstLogin?: boolean;
-    first_login?: boolean;
-    firstLogin?: boolean;
-    password_change_required?: boolean;
-    passwordChangeRequired?: boolean;
-    must_change_password?: boolean;
-    mustChangePassword?: boolean;
-    password_changed?: boolean;
-    passwordChanged?: boolean;
-  };
-  loginid?: string;
-  name?: string;
-  hospital_name?: string;
-  role?: HospitalUser["role"];
-  is_first_login?: boolean;
-  isFirstLogin?: boolean;
-  first_login?: boolean;
-  firstLogin?: boolean;
-  password_change_required?: boolean;
-  passwordChangeRequired?: boolean;
-  must_change_password?: boolean;
-  mustChangePassword?: boolean;
-  password_changed?: boolean;
-  passwordChanged?: boolean;
+interface DoctorLoginResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  is_initial_password: boolean;
+  license_number?: string;
+  hospital_number?: string;
+  business_number?: string;
 }
 
 interface PasswordChangeResponse {
@@ -154,52 +102,23 @@ export function clearSession() {
 
 export async function loginDoctor(loginid: string, password: string) {
   try {
-    const { data } = await apiClient.post<LoginResponse>("/doctor/auth/login", {
+    const { data } = await apiClient.post<DoctorLoginResponse>("/doctor/auth/login", {
       loginid,
       password,
     });
 
-    if (data.code && data.code !== 200) {
-      throw new Error(data.message ?? "로그인에 실패했습니다.");
-    }
-
-    const accessToken =
-      data.access_token ??
-      data.accessToken ??
-      data.token ??
-      data.data?.access_token ??
-      data.data?.accessToken ??
-      data.data?.token;
-
-    if (!accessToken) {
-      throw new Error("로그인 응답에서 인증 토큰을 찾을 수 없습니다.");
-    }
-
-    const responseUser = data.user ?? data.data?.user;
     const session: AuthSession = {
-      accessToken,
+      accessToken: data.access_token,
       lastLoginAt: new Date().toISOString(),
       user: {
-        id:
-          responseUser?.loginid ??
-          responseUser?.id ??
-          data.data?.loginid ??
-          data.data?.id ??
-          data.loginid ??
-          loginid,
-        name: responseUser?.name ?? data.data?.name ?? data.name ?? "수의사 관리자",
-        hospitalName:
-          responseUser?.hospital_name ??
-          responseUser?.hospitalName ??
-          data.data?.hospital_name ??
-          data.data?.hospitalName ??
-          data.hospital_name ??
-          "MediPaw 동물병원",
-        role: responseUser?.role ?? data.data?.role ?? data.role ?? "VETERINARIAN",
-        isFirstLogin: getIsFirstLogin(data, responseUser),
-        licenseNumber: (data as Record<string, unknown>).license_number as string | undefined,
-        hospitalPhone: (data as Record<string, unknown>).hospital_number as string | undefined,
-        businessNumber: (data as Record<string, unknown>).business_number as string | undefined,
+        id: loginid,
+        name: "수의사 관리자",
+        hospitalName: "MediPaw 동물병원",
+        role: "VETERINARIAN",
+        isFirstLogin: data.is_initial_password,
+        licenseNumber: data.license_number,
+        hospitalPhone: data.hospital_number,
+        businessNumber: data.business_number,
       },
     };
 
@@ -208,92 +127,10 @@ export async function loginDoctor(loginid: string, password: string) {
     }
 
     saveSession(session);
-
     return session;
   } catch (err) {
     throw new Error(getApiErrorMessage(err, "로그인 중 오류가 발생했습니다."));
   }
-}
-
-function getIsFirstLogin(
-  data: LoginResponse,
-  user?: LoginResponse["user"]
-) {
-  const explicitFirstLogin =
-    parseBoolean(user?.is_first_login) ??
-    parseBoolean(user?.isFirstLogin) ??
-    parseBoolean(user?.first_login) ??
-    parseBoolean(user?.firstLogin) ??
-    parseBoolean(data.data?.is_first_login) ??
-    parseBoolean(data.data?.isFirstLogin) ??
-    parseBoolean(data.data?.first_login) ??
-    parseBoolean(data.data?.firstLogin) ??
-    parseBoolean(data.is_first_login) ??
-    parseBoolean(data.isFirstLogin) ??
-    parseBoolean(data.first_login) ??
-    parseBoolean(data.firstLogin);
-
-  if (explicitFirstLogin !== undefined) {
-    return explicitFirstLogin;
-  }
-
-  const passwordChangeRequired =
-    parseBoolean(user?.password_change_required) ??
-    parseBoolean(user?.passwordChangeRequired) ??
-    parseBoolean(user?.must_change_password) ??
-    parseBoolean(user?.mustChangePassword) ??
-    parseBoolean(data.data?.password_change_required) ??
-    parseBoolean(data.data?.passwordChangeRequired) ??
-    parseBoolean(data.data?.must_change_password) ??
-    parseBoolean(data.data?.mustChangePassword) ??
-    parseBoolean(data.password_change_required) ??
-    parseBoolean(data.passwordChangeRequired) ??
-    parseBoolean(data.must_change_password) ??
-    parseBoolean(data.mustChangePassword);
-
-  if (passwordChangeRequired !== undefined) {
-    return passwordChangeRequired;
-  }
-
-  const passwordChanged =
-    parseBoolean(user?.password_changed) ??
-    parseBoolean(user?.passwordChanged) ??
-    parseBoolean(data.data?.password_changed) ??
-    parseBoolean(data.data?.passwordChanged) ??
-    parseBoolean(data.password_changed) ??
-    parseBoolean(data.passwordChanged);
-
-  if (passwordChanged !== undefined) {
-    return !passwordChanged;
-  }
-
-  return false;
-}
-
-function parseBoolean(value: unknown) {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "number") {
-    return value === 1;
-  }
-
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const normalizedValue = value.trim().toLowerCase();
-
-  if (["true", "1", "y", "yes"].includes(normalizedValue)) {
-    return true;
-  }
-
-  if (["false", "0", "n", "no"].includes(normalizedValue)) {
-    return false;
-  }
-
-  return undefined;
 }
 
 export async function changeFirstPassword(params: {

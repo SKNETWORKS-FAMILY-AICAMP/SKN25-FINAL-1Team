@@ -106,13 +106,13 @@ export default function DashboardPage({
       <div className="flex min-h-[calc(100vh-160px)] min-w-0 flex-col overflow-y-auto">
         <div className="mb-4 flex min-w-0 items-start gap-6">
           <div className="min-w-0 shrink-0">
-            <h1 className="text-2xl font-extrabold text-[#151b28]">
+            <h1 className="text-2xl font-extrabold text-slate-900">
               오늘의 진료 현황
             </h1>
-            <p className="mt-2 text-sm font-bold tabular-nums text-[#65718a]">
+            <p className="mt-2 text-sm font-bold tabular-nums text-slate-500">
               {formattedDate}
               {holidayName && (
-                <span className="ml-1 rounded-md bg-[#fef2f2] px-1.5 py-0.5 text-xs font-extrabold text-[#ef4444]">
+                <span className="ml-1 rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-extrabold text-red-500">
                   {holidayName}
                 </span>
               )}

@@ -28,18 +28,18 @@ export function DetailPanel({
 }: DetailPanelProps) {
   if (!reservation || !patient) {
     return (
-      <section className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-[#e5eaf2] bg-white p-6 shadow-sm">
-        <CalendarDays className="h-10 w-10 text-[#c5cedf]" />
-        <p className="text-sm font-bold text-[#778196]">예약을 선택해주세요.</p>
-        <p className="text-xs text-[#a0adc0]">왼쪽 타임라인에서 예약 항목을 클릭하세요.</p>
+      <section className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <CalendarDays className="h-10 w-10 text-slate-300" />
+        <p className="text-sm font-bold text-slate-500">예약을 선택해주세요.</p>
+        <p className="text-xs text-slate-400">왼쪽 타임라인에서 예약 항목을 클릭하세요.</p>
       </section>
     );
   }
 
   return (
-    <section className="flex h-full flex-col rounded-lg border border-[#e5eaf2] bg-white p-5 shadow-sm">
+    <section className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-base font-extrabold text-[#151b28]">예약 상세 정보</h2>
+        <h2 className="text-base font-extrabold text-slate-900">예약 상세 정보</h2>
       </div>
 
       <div className="flex items-center gap-4">
@@ -50,18 +50,18 @@ export function DetailPanel({
         />
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h3 className="truncate text-base font-extrabold text-[#1d2a57]">
+            <h3 className="truncate text-base font-extrabold text-slate-800">
               {patient.petName}
             </h3>
             <TriageBadge level={reservation.status} />
-            <span className="text-xl font-extrabold text-[#2f6f67]">
+            <span className="text-xl font-extrabold text-blue-600">
               <GenderBadge gender={patient.gender} className="text-xl" />
             </span>
           </div>
-          <p className="mt-2 text-xs font-bold text-[#53617c]">
+          <p className="mt-2 text-xs font-bold text-slate-600">
             {patient.breed} ㅣ {patient.age} ㅣ {patient.weight}
           </p>
-          <p className="mt-2 text-sm font-extrabold text-[#1d2a57]">
+          <p className="mt-2 text-sm font-extrabold text-slate-800">
             {patient.phone}
           </p>
         </div>
@@ -70,7 +70,7 @@ export function DetailPanel({
       <button
         type="button"
         onClick={onOpenPatientDetail}
-        className="mt-5 flex h-10 items-center justify-center gap-2 rounded-lg border border-[#2f6f67] bg-[#eef5f4] text-sm font-extrabold text-[#2f6f67] transition hover:bg-[#d5e7e4]"
+        className="mt-5 flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-50 text-sm font-extrabold text-blue-600 transition hover:bg-blue-100"
       >
         <UserRound className="h-4 w-4" />
         환자 상세정보
@@ -90,7 +90,7 @@ export function DetailPanel({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#2f6f67] text-sm font-extrabold text-[#2f6f67]"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-blue-600 text-sm font-extrabold text-blue-600"
         >
           <Pencil className="h-4 w-4" />
           수정
@@ -98,7 +98,7 @@ export function DetailPanel({
         <button
           type="button"
           onClick={onCancel}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#ef4444] text-sm font-extrabold text-[#ef4444]"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-red-500 text-sm font-extrabold text-red-500"
         >
           <Trash2 className="h-4 w-4" />
           삭제
@@ -110,9 +110,9 @@ export function DetailPanel({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[96px_1fr] gap-3 border-b border-[#edf1f6] pb-3">
-      <dt className="font-extrabold text-[#53617c]">{label}</dt>
-      <dd className="font-extrabold text-[#1d2a57]">{value}</dd>
+    <div className="grid grid-cols-[96px_1fr] gap-3 border-b border-slate-100 pb-3">
+      <dt className="font-extrabold text-slate-600">{label}</dt>
+      <dd className="font-extrabold text-slate-800">{value}</dd>
     </div>
   );
 }

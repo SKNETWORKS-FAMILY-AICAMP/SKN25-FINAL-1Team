@@ -25,8 +25,8 @@ export function Modal({
       <div
         className={`flex max-h-[88vh] w-full flex-col rounded-lg bg-white shadow-2xl ${maxWidthClassName}`}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[#e5eaf2] px-6 py-4">
-          <h2 className="text-lg font-extrabold text-[#151b28]">{title}</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h2 className="text-lg font-extrabold text-slate-900">{title}</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -38,7 +38,7 @@ export function Modal({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && (
-          <div className="flex shrink-0 justify-end gap-3 border-t border-[#e5eaf2] px-6 py-4">
+          <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4">
             {footer}
           </div>
         )}

@@ -103,7 +103,7 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#dfe6f1] bg-white px-4 text-sm font-extrabold text-[#344055] transition hover:border-[#9ec1c2] hover:text-[#2f6f67]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
           환자 관리로 돌아가기
@@ -111,18 +111,18 @@ export function PatientDetailView({
         <button
           type="button"
           onClick={openEdit}
-          className="flex h-10 items-center gap-2 rounded-lg border border-[#bdd6d6] bg-white px-4 text-sm font-extrabold text-[#2f6f67] transition hover:bg-[#eef5f4]"
+          className="flex h-10 items-center gap-2 rounded-lg border border-blue-100 bg-white px-4 text-sm font-extrabold text-blue-600 transition hover:bg-blue-50"
         >
           <Settings className="h-4 w-4" />
           수정
         </button>
       </div>
 
-      <h1 className="mb-4 text-2xl font-extrabold text-[#151b28]">
-        {localPatient.petName} <span className="text-[#40506d]">({localPatient.breed})</span>
+      <h1 className="mb-4 text-2xl font-extrabold text-slate-900">
+        {localPatient.petName} <span className="text-slate-700">({localPatient.breed})</span>
       </h1>
 
-      <section className="grid min-w-0 grid-cols-1 gap-5 rounded-lg border border-[#e5eaf2] bg-white p-5 shadow-sm xl:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)] xl:p-6 2xl:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)]">
+      <section className="grid min-w-0 grid-cols-1 gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm xl:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)] xl:p-6 2xl:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)]">
         <img
           src={localPatient.imageUrl}
           alt={`${localPatient.petName} 프로필`}
@@ -149,14 +149,14 @@ export function PatientDetailView({
         />
       </section>
 
-      <section className="mt-4 min-w-0 flex-1 rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-        <div className="border-b border-[#e5eaf2] px-6 py-4">
-          <h2 className="text-lg font-extrabold text-[#151b28]">EMR 진료 기록</h2>
+      <section className="mt-4 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-6 py-4">
+          <h2 className="text-lg font-extrabold text-slate-900">EMR 진료 기록</h2>
         </div>
         {history.length === 0 ? (
           <EmptyState text="등록된 진료 기록이 없습니다." />
         ) : (
-          <div className="divide-y divide-[#edf1f6]">
+          <div className="divide-y divide-slate-100">
             {history
               .slice()
               .sort((left, right) => right.date.localeCompare(left.date))
@@ -175,8 +175,8 @@ function InfoGrid({ rows }: { rows: Array<[string, string]> }) {
     <dl className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm xl:grid-cols-[112px_minmax(0,1fr)] 2xl:grid-cols-[120px_minmax(0,1fr)]">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
-          <dt className="font-extrabold text-[#52607a]">{label}</dt>
-          <dd className="min-w-0 break-words font-bold leading-6 text-[#1d2a57]">{value}</dd>
+          <dt className="font-extrabold text-slate-600">{label}</dt>
+          <dd className="min-w-0 break-words font-bold leading-6 text-slate-800">{value}</dd>
         </div>
       ))}
     </dl>
@@ -186,8 +186,8 @@ function InfoGrid({ rows }: { rows: Array<[string, string]> }) {
 function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
   const typeMeta =
     record.type === "treatment"
-      ? { label: "진료", className: "bg-[#f4f6f8] text-[#357b70]" }
-      : { label: "예방", className: "bg-[#eef7f2] text-[#16a34a]" };
+      ? { label: "진료", className: "bg-slate-50 text-blue-500" }
+      : { label: "예방", className: "bg-green-50 text-green-600" };
 
   const soapRows = [
     ["S", "주관적", record.soap.subjective],
@@ -206,53 +206,53 @@ function EmrHistoryRow({ record }: { record: EmrHistoryRecord }) {
     <article className="grid min-w-0 grid-cols-1 gap-5 px-4 py-5 xl:grid-cols-[140px_minmax(0,1fr)] xl:px-5 2xl:grid-cols-[150px_minmax(0,1fr)_minmax(0,0.9fr)] 2xl:gap-6 2xl:px-6">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-extrabold tabular-nums text-[#1d2a57]">
+          <p className="text-sm font-extrabold tabular-nums text-slate-800">
             {record.date}
           </p>
           <span className={`rounded-md px-2.5 py-1 text-xs font-extrabold ${typeMeta.className}`}>
             {typeMeta.label}
           </span>
         </div>
-        <p className="mt-3 text-sm font-bold text-[#52607a]">{record.doctorName}</p>
+        <p className="mt-3 text-sm font-bold text-slate-600">{record.doctorName}</p>
       </div>
 
       <div>
         {record.title && record.title !== "의사 작성 메모" && (
-          <h3 className="text-lg font-extrabold text-[#151b28]">{record.title}</h3>
+          <h3 className="text-lg font-extrabold text-slate-900">{record.title}</h3>
         )}
         {onlyMemo ? (
-          <p className="whitespace-pre-line break-words text-sm font-bold leading-6 text-[#344055]">
+          <p className="whitespace-pre-line break-words text-sm font-bold leading-6 text-slate-700">
             {record.soap.subjective}
           </p>
         ) : (
           <dl className="mt-3 space-y-2 text-sm">
             {soapRows.map(([key, label, value]) => (
               <div key={key} className="grid min-w-0 grid-cols-[22px_54px_minmax(0,1fr)] gap-2 xl:grid-cols-[26px_58px_minmax(0,1fr)]">
-                <dt className="font-extrabold text-[#1d2a57]">{key}</dt>
-                <dd className="font-extrabold text-[#52607a]">({label})</dd>
-                <dd className="min-w-0 whitespace-pre-line break-words font-bold leading-6 text-[#344055]">{value}</dd>
+                <dt className="font-extrabold text-slate-800">{key}</dt>
+                <dd className="font-extrabold text-slate-600">({label})</dd>
+                <dd className="min-w-0 whitespace-pre-line break-words font-bold leading-6 text-slate-700">{value}</dd>
               </div>
             ))}
           </dl>
         )}
       </div>
 
-      <div className="min-w-0 border-t border-[#edf1f6] pt-5 xl:col-start-2 xl:border-l-0 xl:border-t xl:pl-0 2xl:col-start-auto 2xl:border-l 2xl:border-t-0 2xl:pl-6 2xl:pt-0">
-        <p className="text-xs font-extrabold text-[#7a8599]">
+      <div className="min-w-0 border-t border-slate-100 pt-5 xl:col-start-2 xl:border-l-0 xl:border-t xl:pl-0 2xl:col-start-auto 2xl:border-l 2xl:border-t-0 2xl:pl-6 2xl:pt-0">
+        <p className="text-xs font-extrabold text-slate-500">
           {record.type === "prevention" ? "처방/처치" : "처방 내역"}
         </p>
         {record.prescriptions.length === 0 ? (
-          <p className="mt-4 text-sm font-bold text-[#7a8599]">처방 내역 없음</p>
+          <p className="mt-4 text-sm font-bold text-slate-500">처방 내역 없음</p>
         ) : (
           <ol className="mt-4 space-y-3">
             {record.prescriptions.map((line, index) => (
               <li
                 key={`${record.id}-${line.name}`}
-                className="grid min-w-0 grid-cols-[24px_minmax(0,1fr)_minmax(58px,72px)_minmax(48px,60px)] gap-2 text-sm font-bold text-[#344055] xl:gap-3"
+                className="grid min-w-0 grid-cols-[24px_minmax(0,1fr)_minmax(58px,72px)_minmax(48px,60px)] gap-2 text-sm font-bold text-slate-700 xl:gap-3"
               >
                 <span>{index + 1}.</span>
                 <span className="min-w-0 break-words">{line.name}</span>
-                <span className="min-w-0 break-words text-[#1d2a57]">{line.method}</span>
+                <span className="min-w-0 break-words text-slate-800">{line.method}</span>
                 <span className="min-w-0 break-words">{line.duration}</span>
               </li>
             ))}
@@ -274,18 +274,18 @@ function FormField({
 }) {
   return (
     <div className={className}>
-      <label className="mb-1.5 block text-xs font-extrabold text-[#52607a]">{label}</label>
+      <label className="mb-1.5 block text-xs font-extrabold text-slate-600">{label}</label>
       {children}
     </div>
   );
 }
 
 const inputCls =
-  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef5f4]";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-200 focus:ring-2 focus:ring-blue-50";
 const selectCls =
-  "h-10 w-full rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef5f4]";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-200 focus:ring-2 focus:ring-blue-50";
 const textareaCls =
-  "w-full rounded-lg border border-[#dfe6f1] bg-white px-3 py-2 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#9ec1c2] focus:ring-2 focus:ring-[#eef5f4] resize-none";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-200 focus:ring-2 focus:ring-blue-50 resize-none";
 
 function normalizeWeightInput(value: string) {
   const withoutUnit = value.replace(/kg/gi, "");
@@ -319,12 +319,12 @@ function EditPatientModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[88vh] w-full max-w-[680px] flex-col rounded-lg bg-white shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-[#e5eaf2] px-6 py-4">
-          <h2 className="text-lg font-extrabold text-[#151b28]">환자 정보 수정</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h2 className="text-lg font-extrabold text-slate-900">환자 정보 수정</h2>
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f3f5f7] hover:text-[#344055]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
           </button>
@@ -332,7 +332,7 @@ function EditPatientModal({
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           <section>
-            <p className="mb-4 text-xs font-extrabold uppercase tracking-widest text-[#8595ae]">
+            <p className="mb-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">
               반려동물 정보
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -414,7 +414,7 @@ function EditPatientModal({
                       onChange("weight", normalizeWeightInput(e.target.value))
                     }
                   />
-                  <span className="shrink-0 text-sm font-extrabold text-[#52607a]">
+                  <span className="shrink-0 text-sm font-extrabold text-slate-600">
                     kg
                   </span>
                 </div>
@@ -430,17 +430,17 @@ function EditPatientModal({
             </FormField>
           </section>
 
-          <div className="rounded-lg border border-[#ebdcb4] bg-[#fffbeb] px-4 py-3 text-xs font-bold text-[#7f6421]">
+          <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
             EMR 진료 기록은 수정할 수 없습니다.
           </div>
         </div>
 
-        <div className="flex shrink-0 justify-end gap-3 border-t border-[#e5eaf2] px-6 py-4">
+        <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4">
           <button
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f3f5f7] disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-lg border border-slate-200 px-5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             취소
           </button>
@@ -448,7 +448,7 @@ function EditPatientModal({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="h-10 rounded-lg bg-[#2f6f67] px-5 text-sm font-extrabold text-white transition hover:bg-[#255e57] disabled:cursor-wait disabled:opacity-60"
+            className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-extrabold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
           >
             {isSaving ? "저장 중..." : "저장"}
           </button>
