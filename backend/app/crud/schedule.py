@@ -196,18 +196,20 @@ async def get_emrid_owner_userid(db: AsyncSession, emrid: int) -> int | None:
 async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size: int, filter: str = "all"):
     offset = (page - 1) * size
 
+    now = datetime.now(timezone.utc)
+
     conditions = [Pet.userid == userid]
 
     if filter == "upcoming":
         conditions.append(Schedule.status == "CONFIRMED")
-        conditions.append(Schedule.confirmed_time > datetime.now(timezone.utc))
+        conditions.append(Schedule.confirmed_time > now)
         conditions.append(Schedule.deleted_at.is_(None))
     elif filter == "past":
         conditions.append(Schedule.deleted_at.is_(None))
         conditions.append(
             or_(
                 Schedule.status == "COMPLETED",
-                and_(Schedule.status == "CONFIRMED", Schedule.confirmed_time <= datetime.now(timezone.utc))
+                and_(Schedule.status == "CONFIRMED", Schedule.confirmed_time <= now)
             )
         )
     elif filter == "cancelled":
@@ -217,14 +219,25 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
     else:
         pass  # "all": CONFIRMED + COMPLETED + CANCELLED + soft-deleted 전부 포함
 
-    cancelled_last = case(
-        (or_(
+    # 탭별 정렬 방향: 미래(다가오는 예약)는 임박순(ASC), 과거(지난 상담)는 최신순(DESC)
+    if filter == "upcoming":
+        # 가장 가까운 예약이 맨 위
+        order_clause = [Schedule.confirmed_time.asc()]
+    elif filter in ("past", "cancelled"):
+        # 가장 최근에 한 상담/취소가 맨 위
+        order_clause = [Schedule.confirmed_time.desc()]
+    else:
+        # "all": 다가오는 예약(임박순) 묶음을 위로, 지난/완료/취소(최신순) 묶음을 아래로
+        past_cond = or_(
+            Schedule.status == "COMPLETED",
             Schedule.status == "CANCELLED",
             Schedule.deleted_at.isnot(None),
-            and_(Schedule.status == "CONFIRMED", Schedule.confirmed_time <= datetime.now(timezone.utc))
-        ), 1),
-        else_=0
-    )
+            and_(Schedule.status == "CONFIRMED", Schedule.confirmed_time <= now),
+        )
+        is_past = case((past_cond, 1), else_=0)
+        upcoming_sort = case((past_cond, None), else_=Schedule.confirmed_time)  # 미래 묶음만 값
+        past_sort = case((past_cond, Schedule.confirmed_time))                  # 과거 묶음만 값
+        order_clause = [is_past.asc(), upcoming_sort.asc(), past_sort.desc()]
 
     # N+1 방지: 목록에 필요한 Pet / Doctor / Category 를 한 번의 쿼리로 함께 로드
     stmt = (
@@ -234,7 +247,7 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
         .outerjoin(Doctor, Schedule.doctorid == Doctor.doctorid)
         .outerjoin(CategoryMaster, Guardian.category_id == CategoryMaster.id)
         .where(*conditions)
-        .order_by(cancelled_last.asc(), Schedule.confirmed_time.asc())
+        .order_by(*order_clause)
         .offset(offset).limit(size + 1)
     )
     result = await db.execute(stmt)
