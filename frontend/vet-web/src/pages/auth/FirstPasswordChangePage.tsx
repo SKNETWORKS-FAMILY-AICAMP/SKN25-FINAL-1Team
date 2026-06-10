@@ -191,11 +191,6 @@ export default function FirstPasswordChangePage({
           </button>
         </div>
       </div>
-
-      <div className="mx-auto mt-5 flex h-14 w-full max-w-[500px] items-center justify-center gap-3 rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
-        <ShieldCheck size={18} />
-        계정 관련 문의는 담당 관리자에게 문의해주세요.
-      </div>
     </AuthLayout>
   );
 }
