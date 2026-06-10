@@ -10,6 +10,8 @@
 3. 예약 동시성 — *race 타임라인*과 3중 방어
 4. Validation 4종 — *실제 계산식*과 예제
 5. 자동 처방 — *환각(없는 약) 차단* 메커니즘
+6. MCP booking — *tool-use 루프*와 슬롯 안전장치
+7. LangGraph — *상태전이*와 그래프 배선(병렬/조건부)
 + 부록: Shadow Triage 필드 필터 / need_followup 게이트
 
 ---
@@ -258,6 +260,125 @@ return False, None
 
 ---
 
+## 6. MCP booking 에이전트 — tool-use 루프 (이 프로젝트의 MCP 핵심)
+
+파일: [ai/agents/booking.py](ai/agents/booking.py) + [ai/mcp_client.py](ai/mcp_client.py) + [backend/scripts/mcp_rag_server.py](backend/scripts/mcp_rag_server.py).
+**요지**: 백엔드가 슬롯 함수를 직접 부르지 않고, **MCP 프로토콜(stdio)** 로 MCP 서버의 툴을 호출한다. 이게 "MCP 기반 자동화" 요건을 *실제로* 충족하는 부분.
+
+### 6-1. tool-use 루프 본체 ([booking.py:89](ai/agents/booking.py#L89))
+```python
+tool_schemas = [s for s in await list_tool_schemas()
+                if s["function"]["name"] in _AGENT_TOOLS]   # find_open_slots, search_triage_cases
+for _ in range(_MAX_TOOL_ROUNDS):                            # 최대 4라운드
+    response = await client.chat.completions.create(
+        model=model, messages=messages, tools=tool_schemas,
+        tool_choice="auto", max_completion_tokens=600)
+    msg = response.choices[0].message
+
+    if not msg.tool_calls:                                   # 더 부를 툴 없음 → 최종 답변(JSON 파싱)
+        return {"agent":"booking", "proposed_slots":proposed_slots,
+                "message":parsed["message"], "tool_calls":tool_calls_log}
+
+    for tc in msg.tool_calls:                                # LLM이 요청한 툴을 MCP로 실제 호출
+        if tc.function.name == "find_open_slots":
+            args["limit"] = _SLOT_COUNT                       # ★ 슬롯 개수는 LLM 재량 박탈 → 항상 3개
+        result = await call_tool(name, args)                 # ← MCP 프로토콜 호출(아래 6-2)
+        if name == "find_open_slots":
+            proposed_slots = result.get("slots") or proposed_slots   # ★ DB 결과만 보존
+        messages.append({"role":"tool", "tool_call_id":tc.id, "content":json.dumps(result)})
+```
+**안전장치 3가지**(발표 방어용):
+- **슬롯은 LLM이 지어내지 못한다** — `proposed_slots`는 `find_open_slots` 툴 결과(실제 DB)만 담음.
+- **개수 고정** — LLM이 limit을 바꿔 보내도 코드가 `_SLOT_COUNT=3`으로 덮어씀.
+- **확정 안 함** — booking은 *제안*만. 실제 예약 확정(락·overlap)은 사람이 슬롯 골라 `confirm_schedule`.
+
+### 6-2. MCP 한 번 호출 = 서브프로세스 1회 ([mcp_client.py:76](ai/mcp_client.py#L76))
+```python
+async def call_tool(name, arguments):
+    async with mcp_session() as session:          # stdio_client로 mcp_rag_server.py 서브프로세스 spawn
+        result = await session.call_tool(name, arguments or {})   # initialize→call
+    return _parse_tool_result(result)             # CallToolResult.content[].text(JSON) → dict
+```
+- 전송: **stdio** — 백엔드와 같은 venv 파이썬(`sys.executable`)으로 `mcp_rag_server.py`를 띄워 붙음.
+- **콜드스타트 비용**: 호출마다 서브프로세스를 새로 띄움 → 데모/저빈도엔 OK, 고빈도는 영속세션/HTTP로 전환 후보(코드 주석에도 명시).
+- 서버 쪽 `find_open_slots`([mcp_rag_server.py:132](backend/scripts/mcp_rag_server.py#L132))는 결국 [crud/schedule.py:find_earliest_slots](backend/app/crud/schedule.py#L444)를 호출 → **MCP를 통해도 동일한 DB 슬롯 로직**.
+
+### 6-3. 한 케이스 라운드 흐름 (worked example)
+```
+R1: LLM → tool_calls=[find_open_slots(urgency=1, duration=40)]   (응급이라 duration 40)
+     code → limit=3 강제 → MCP 호출 → {slots:[3개]}  → proposed_slots 채움
+R2: LLM(슬롯 받음) → tool_calls 없음 → {"message":"가장 빠른 시간 3개 찾았어요..."} 종료
+```
+→ 보통 1~2라운드. 4라운드 초과 시 확보한 슬롯이라도 반환([booking.py:143](ai/agents/booking.py#L143)).
+
+---
+
+## 7. LangGraph 오케스트레이션 — 상태전이와 그래프 배선
+
+파일: [ai/graph.py](ai/graph.py) + 러너/상태 [ai/tasks.py](ai/tasks.py).
+
+### 7-1. 전체 파이프라인 상태머신 (`PipelineState`, [tasks.py:44](ai/tasks.py#L44))
+```
+TRIAGE_STARTED → TRIAGE_COMPLETED → SCHEDULE_PENDING → SCHEDULE_CONFIRMED
+   → CHART_GENERATING ─┐
+   → VALIDATION_RUNNING ┴→ COMPLETED | FAILED | PARTIAL
+```
+- **DB 저장 없는 런타임 상태머신** — 운영자가 로그의 `pipeline_state` 키로 현재 단계 추적(마이그레이션 불필요).
+
+### 7-2. 그래프 B = post_booking (조건부 분기) ([graph.py:109](ai/graph.py#L109))
+```python
+g.set_entry_point("chart")
+g.add_edge("chart", "validation")
+g.add_conditional_edges("validation", _after_validation, {"judge":"judge", "skip":END})
+g.add_edge("judge", END)
+
+def _after_validation(state):                      # judge는 비용 위해 1/5만
+    emrid = state.get("emrid")
+    return "judge" if (emrid is not None and emrid % JUDGE_SAMPLE_RATE == 0) else "skip"
+```
+- 각 노드(`_chart_node`/`_validation_node`)는 ① `_task_store[tid]` 갱신(SSE용) ② `save_result(...)` DB 저장 ③ **예외 격리**(try/except로 다음 단계 안 막음).
+- validation 노드는 chart 결과를 주입받음(`payload["chart_result"] = state["chart_result"]`) → B(문진-차트 일치도)가 차트를 비교 가능.
+- judge 노드는 **DB 저장 없이 audit log만**(`[JudgeAudit]`).
+
+### 7-3. 그래프 A = triage_complete (병렬) ([graph.py:192](ai/graph.py#L192))
+```python
+g.add_edge(START, "triage_summary")    # ┐ 둘 다 START에서 fan-out
+g.add_edge(START, "schedule")          # ┘ → 병렬 실행
+g.add_edge("triage_summary", END)
+g.add_edge("schedule", END)
+```
+- **왜 병렬?** triage요약(DB/수의사용)과 schedule(슬롯 계산)은 서로 입력 의존이 없음 → 동시에 돌려 **보호자 슬롯 표시 지연을 0으로**.
+- schedule 노드는 플래그로 분기: `agent = "booking" if settings.USE_MCP_BOOKING else "schedule"` ([graph.py:181](ai/graph.py#L181)).
+
+### 7-4. 모든 에이전트 호출은 `monitor_agent`로 감싸짐 ([tasks.py:183](ai/tasks.py#L183))
+```python
+@monitor_agent("chart")
+async def run_chart(payload, update_step, emrid, scheduleid): ...
+```
+- 데코레이터가 매 실행마다 **latency_ms·success·failure_reason·pet_id·request_id**를 구조화 로그로 남김:
+  `logger.info("[AGENT_MONITOR] %s", json.dumps(log_data))`. → 에이전트별 성능/실패율 추적.
+- `RUNNERS` dict([tasks.py:320](ai/tasks.py#L320))가 7개 러너를 이름→함수로 매핑 → 그래프 노드·`/api/agent/run`이 공유.
+
+### 7-5. 진행상황은 in-memory task_store + SSE로 ([tasks.py:76](ai/tasks.py#L76))
+```python
+_task_store: dict[str, dict] = {}          # task_id → {status, step|result|detail}
+_TASK_TTL_SEC = 300                         # SSE 미접속 시 5분 후 자동 정리
+```
+- 노드가 `_task_store[tid] = {"status":"running","step":"..."}` 갱신 → 프론트가 `GET /api/agent/sse/{task_id}`로 1초 폴링 스트리밍([router.py:97](ai/router.py#L97)).
+- 완료/에러 시 `cleanup_task_after_ttl`로 TTL 정리, `safe_create_task`가 예외·취소를 자동 상태기록.
+- **한계(주석에도 명시)**: 인메모리 dict라 **단일 uvicorn 프로세스 전제**. Gunicorn 멀티워커면 Redis로 교체 필요.
+
+### 7-6. save_result 라우팅 ([tasks.py:333](ai/tasks.py#L333))
+```
+chart      → reportDB(ai_draft_json) + doctor_alarmDB
+validation → validation_resultDB
+triage     → triage_resultDB
+followup   → 로그만 (followupDB는 보호자 사진/메시지 전용)
+judge      → (저장 안 함, audit log만)
+```
+
+---
+
 ## 질문 → 코드 한 줄 답
 
 | 날카로운 질문 | 코드 근거 |
@@ -269,3 +390,8 @@ return False, None
 | "LLM이 가짜 약 쓰면?" | 자동처방: drugsDB 후보 + 허용 enum만 |
 | "보호자가 응급도 봐?" | `_GUARDIAN_SAFE_FIELDS` — 응급도 라벨 차단 |
 | "문진 중 LLM 죽으면?" | pill 선택 5단 폴백(휴리스틱/자유텍스트) |
+| "MCP 진짜 써? 슬롯 지어내는 거 아냐?" | `call_tool`(stdio 서브프로세스) + `proposed_slots=result["slots"]`(DB만) |
+| "judge는 왜 가끔만 돌아?" | `_after_validation`: `emrid % JUDGE_SAMPLE_RATE == 0` |
+| "요약이랑 슬롯 왜 동시에?" | 그래프 A: `START→{triage_summary, schedule}` 병렬(의존 없음) |
+| "에이전트 느린 거 어떻게 알아?" | `monitor_agent` → `[AGENT_MONITOR]` latency_ms 로그 |
+| "서버 재시작하면 진행상황은?" | `_task_store` 인메모리 → 유실(멀티워커는 Redis 필요) |
