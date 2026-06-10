@@ -11,6 +11,7 @@
 import json
 import re
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
@@ -50,11 +51,19 @@ router = APIRouter(prefix="/doctor/emr", tags=["doctor-emr"])
 @router.get("/queue", status_code=200)
 async def emr_queue(
     target_date: date = Query(default_factory=date.today, alias="date"),
+    doctor_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
     """오늘의 진료 대기/완료 큐를 반환한다."""
-    waiting, completed = await get_emr_queue(db, current_doctor.doctorid, target_date)
+    if doctor_id is not None:
+        target = await db.get(Doctor, doctor_id)
+        if target is None or target.hospital_name != current_doctor.hospital_name:
+            raise HTTPException(status_code=403, detail="해당 수의사에 대한 접근 권한이 없습니다.")
+        effective_id = doctor_id
+    else:
+        effective_id = current_doctor.doctorid
+    waiting, completed = await get_emr_queue(db, effective_id, target_date)
     return {
         "code": 200,
         "result": {

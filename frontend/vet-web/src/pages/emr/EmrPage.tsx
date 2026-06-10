@@ -82,6 +82,9 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
     handleResetToWaiting,
     openPreviewImage,
     handlePetInfoSaved,
+    doctors,
+    selectedDoctorId,
+    setSelectedDoctorId,
   } = useEmrData();
 
   const location = useLocation();
@@ -223,7 +226,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
 
         <ResizableGroup
           orientation="horizontal"
-          className="h-full min-h-0 overflow-hidden rounded-md border border-[#cfd8e6] bg-[#dbe3ee]"
+          className="h-full min-h-0 overflow-hidden rounded-md border border-slate-300 bg-slate-200"
         >
           <ResizablePanel
             defaultSize="22%"
@@ -233,7 +236,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           >
             <WorkspacePane title="접수 / 대기" meta={`${currentQueue.length}명`}>
               <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-                <div className="min-h-[240px] flex-[1.15] overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-hidden">
                   <QueuePanel
                     title={queueTitle}
                     activeTab={queueTab}
@@ -250,11 +253,14 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                     onChangeDate={handleChangeDate}
                     onMoveDate={handleMoveDate}
                     onGoToday={handleGoToday}
+                    doctors={doctors}
+                    selectedDoctorId={selectedDoctorId}
+                    onSelectDoctor={setSelectedDoctorId}
                   />
                 </div>
 
                 {currentEmr ? (
-                  <div className="min-h-[220px] flex-1 overflow-hidden flex flex-col">
+                  <div className="shrink-0 overflow-hidden flex flex-col">
                     <PatientInfoPanel
                       patient={currentEmr.pet_info}
                       onEdit={() => {
@@ -311,7 +317,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                         <button
                           type="button"
                           onClick={handleResetToWaiting}
-                          className="h-8 rounded-md border border-[#dfe6f1] bg-white px-3 text-xs font-extrabold text-[#59657a] hover:border-[#357b70] hover:text-[#2f6f67]"
+                          className="h-8 rounded-md border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-600 hover:border-blue-500 hover:text-blue-600"
                         >
                           진료 대기로 되돌리기
                         </button>
@@ -407,29 +413,29 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
             }
           >
             <div className="space-y-4">
-              <div className="rounded-lg bg-[#f8fafc] px-4 py-3">
-                <p className="text-sm font-extrabold text-[#151b28]">
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-sm font-extrabold text-slate-900">
                   {currentEmr.pet_info.pet_name}의 오늘 진료를 완료 처리합니다.
                 </p>
-                <p className="mt-1 text-xs font-bold text-[#697386]">
+                <p className="mt-1 text-xs font-bold text-slate-500">
                   완료 후 환자는 진료 완료 탭으로 이동합니다.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border border-[#e8edf4] px-4 py-3">
-                  <p className="text-xs font-bold text-[#8a94a6]">처방 항목</p>
-                  <p className="mt-1 text-lg font-extrabold text-[#151b28]">
+                <div className="rounded-lg border border-slate-200 px-4 py-3">
+                  <p className="text-xs font-bold text-slate-400">처방 항목</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">
                     {prescriptions.length}개
                   </p>
                 </div>
-                <div className="rounded-lg border border-[#e8edf4] px-4 py-3">
-                  <p className="text-xs font-bold text-[#8a94a6]">첨부 파일</p>
-                  <p className="mt-1 text-lg font-extrabold text-[#151b28]">
+                <div className="rounded-lg border border-slate-200 px-4 py-3">
+                  <p className="text-xs font-bold text-slate-400">첨부 파일</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">
                     {uploadedFiles.length}개
                   </p>
                 </div>
               </div>
-              <p className="text-xs font-bold leading-5 text-[#8a94a6]">
+              <p className="text-xs font-bold leading-5 text-slate-400">
                 처방전과 첨부 파일은 현재 입력된 내용 기준으로 함께 저장됩니다.
               </p>
             </div>
@@ -467,11 +473,11 @@ function WorkspacePane({
   children: ReactNode;
 }) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f7fb]">
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-[#cfd8e6] bg-[#eaf0f7] px-2.5">
-        <h2 className="truncate text-[12px] font-extrabold text-[#1f2937]">{title}</h2>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50">
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-slate-300 bg-slate-100 px-2.5">
+        <h2 className="truncate text-[12px] font-extrabold text-slate-800">{title}</h2>
         {meta && (
-          <span className="ml-2 shrink-0 rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-extrabold text-[#64748b]">
+          <span className="ml-2 shrink-0 rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-500">
             {meta}
           </span>
         )}
@@ -491,7 +497,7 @@ function SplitHandle({ hidden = false }: { hidden?: boolean }) {
         "group relative w-1 shrink-0 outline-none transition",
         hidden
           ? "pointer-events-none bg-transparent"
-          : "bg-[#c7d2e1] hover:bg-[#7aa7cc] focus-visible:bg-[#3b82f6] data-[resize-handle-active]:bg-[#3b82f6]",
+          : "bg-slate-300 hover:bg-sky-300 focus-visible:bg-sky-500 data-[resize-handle-active]:bg-sky-500",
       ].join(" ")}
     >
       {!hidden && (
@@ -503,9 +509,9 @@ function SplitHandle({ hidden = false }: { hidden?: boolean }) {
 
 function CompactNotice({ title, message }: { title: string; message: string }) {
   return (
-    <div className="rounded-lg border border-[#e1e8f2] bg-white px-3 py-4 text-center shadow-sm">
-      <p className="text-xs font-extrabold text-[#20283a]">{title}</p>
-      <p className="mt-1 text-[11px] font-bold leading-4 text-[#8a94a6]">{message}</p>
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-4 text-center shadow-sm">
+      <p className="text-xs font-extrabold text-slate-800">{title}</p>
+      <p className="mt-1 text-[11px] font-bold leading-4 text-slate-400">{message}</p>
     </div>
   );
 }
@@ -541,14 +547,14 @@ function FollowupPanel({ items }: { items: FollowupItem[] }) {
   if (!latest) return null;
 
   return (
-    <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5">
+    <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
-          <ClipboardList className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+        <p className="flex items-center gap-1.5 text-sm font-extrabold text-slate-800">
+          <ClipboardList className="h-4 w-4 text-blue-500" strokeWidth={2.2} />
           경과 보고
         </p>
       </div>
-      <p className="text-xs font-bold leading-5 text-[#59657a]">
+      <p className="text-xs font-bold leading-5 text-slate-600">
         {latest.ai_summary ?? "경과 요약을 생성 중입니다."}
       </p>
     </div>
@@ -557,8 +563,8 @@ function FollowupPanel({ items }: { items: FollowupItem[] }) {
 
 function ReadOnlyBadge({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-[#dfe6f1] bg-[#f8fafc] px-4 py-3 text-sm font-extrabold text-[#59657a]">
-      <TriangleAlert className="h-4 w-4 text-[#64748b]" strokeWidth={2.2} />
+    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-extrabold text-slate-600">
+      <TriangleAlert className="h-4 w-4 text-slate-500" strokeWidth={2.2} />
       {message}
     </div>
   );
