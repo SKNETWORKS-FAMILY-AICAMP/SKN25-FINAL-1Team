@@ -25,10 +25,20 @@ export default function Header() {
           >
             협업 문의
           </a>
-          <a href={siteConfig.guardianWebUrl} className="hidden sm:inline-flex mp-btn-secondary">
+          <a
+            href={siteConfig.guardianWebUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex mp-btn-secondary"
+          >
             보호자 웹 보기
           </a>
-          <a href={siteConfig.vetWebUrl} className="mp-btn-primary">
+          <a
+            href={siteConfig.vetWebUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mp-btn-primary"
+          >
             수의사 웹 보기
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>

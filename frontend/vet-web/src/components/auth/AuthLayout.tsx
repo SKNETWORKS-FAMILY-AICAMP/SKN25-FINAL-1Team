@@ -1,11 +1,12 @@
 import React from "react";
 import { CalendarDays, FileText, PawPrint } from "lucide-react";
 import logo from "../../../../shared/assets/logo/medipaw-symbol.png";
+import { companyWebUrl } from "../../config/site";
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="bg-slate-50 text-slate-900">
-      <div className="mx-auto grid min-h-screen max-w-[1200px] grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
+    <main className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <div className="mx-auto grid w-full max-w-[1200px] flex-1 grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:items-start lg:gap-16 lg:pb-10 lg:pt-20">
         <section className="flex flex-col">
           <div className="mb-6">
             <img src={logo} alt="MediPaw" className="w-[300px]" />
@@ -40,6 +41,18 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           {children}
         </section>
       </div>
+
+      <footer className="mx-auto flex w-full max-w-[1200px] flex-col gap-2 border-t border-slate-200 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <a
+          href={companyWebUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-[#2a8587] transition hover:text-[#206668]"
+        >
+          MediPaw 홈페이지
+        </a>
+        <p>© 2026 MediPaw. All rights reserved.</p>
+      </footer>
     </main>
   );
 }

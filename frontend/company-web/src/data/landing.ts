@@ -27,14 +27,14 @@ export interface ModuleCard {
 }
 
 export const marqueeItems = [
-  "AI 문진",
+  "AI 사전 문진",
   "Red Flag 표시",
   "예약 우선순위",
-  "SOAP 초안",
-  "Follow-up",
+  "SOAP 차트 초안",
+  "Follow-up 기록",
   "병원 대시보드",
-  "보호자 상담",
-  "진료 흐름 자동화",
+  "문진–차트 연결",
+  "진료 준비 정리",
 ];
 
 export const workflowSteps: IconTextItem[] = [
@@ -94,8 +94,34 @@ export const dashboardMetrics = [
   { label: "검토 알림", value: "2건", Icon: HeartPulse },
 ];
 
-export const safetyPrinciples = [
-  ["초안", "SOAP 기록은 바로 확정되지 않고 수의사가 수정할 수 있는 초안으로 제공됩니다."],
-  ["표시", "Red Flag는 진단명이 아니라 검토가 필요한 신호로만 표시됩니다."],
-  ["검토", "문진 원문, 이미지, 요약 근거를 함께 보여줘 독립적인 검토가 가능하게 합니다."],
+export interface DashboardShot {
+  // 실제 서비스 화면 캡쳐(PNG)를 frontend/company-web/src/assets/screenshots/ 에 넣고
+  // import 한 뒤 src 에 연결하면 캐러셀에 그대로 노출됩니다. src 가 비어 있으면 준비 중 표시.
+  src?: string;
+  eyebrow: string;
+  title: string;
+  caption: string;
+}
+
+export const dashboardShots: DashboardShot[] = [
+  {
+    eyebrow: "Guardian Web",
+    title: "AI 챗봇 사전 문진",
+    caption: "보호자가 일상어로 증상을 남기면 AI가 주증상·발생 시점·위험 신호로 구조화합니다.",
+  },
+  {
+    eyebrow: "Guardian Web",
+    title: "진료 예약 신청",
+    caption: "문진 결과가 그대로 이어져 예약과 함께 병원으로 전달됩니다.",
+  },
+  {
+    eyebrow: "Veterinarian Web",
+    title: "오늘의 진료 대시보드",
+    caption: "예약 현황과 응급 신호, 검토 알림을 한 화면에서 확인합니다.",
+  },
+  {
+    eyebrow: "Veterinarian Web",
+    title: "환자 차트 · EMR 초안",
+    caption: "SOAP 형식의 EMR 초안을 수의사가 검토하고 최종 확정합니다.",
+  },
 ];

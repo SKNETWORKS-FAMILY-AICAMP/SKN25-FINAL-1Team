@@ -52,6 +52,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=/api
+            VITE_COMPANY_URL=http://3.37.22.158:5175
           tags: |
             ${{ env.IMAGE_PREFIX }}/medipaw-guardian:latest
             ${{ env.IMAGE_PREFIX }}/medipaw-guardian:${{ github.sha }}
@@ -68,6 +69,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=/api
+            VITE_COMPANY_URL=http://3.37.22.158:5175
           tags: |
             ${{ env.IMAGE_PREFIX }}/medipaw-vet:latest
             ${{ env.IMAGE_PREFIX }}/medipaw-vet:${{ github.sha }}

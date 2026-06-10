@@ -19,7 +19,7 @@ export default function ContactSection() {
             MediPaw와 함께 시작하세요
           </h2>
           <p className="mx-auto mt-3 max-w-2xl break-keep text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-            보호자든 동물병원이든, 데모를 신청하고 MediPaw의 혁신을 경험해보세요.
+            보호자든 동물병원이든, 데모를 신청하고 MediPaw를 직접 살펴보세요.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function ContactSection() {
             </div>
           )}
 
-          <button type="submit" className="mt-5 flex h-11 w-full items-center justify-center rounded-2xl bg-sky-600 px-6 text-base font-black text-white transition hover:bg-sky-700">
+          <button type="submit" className="mt-5 flex h-11 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-base font-black text-white transition hover:bg-blue-700">
             문의 신청하기
           </button>
 

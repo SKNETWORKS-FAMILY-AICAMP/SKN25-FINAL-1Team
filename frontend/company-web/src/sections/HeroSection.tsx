@@ -13,11 +13,12 @@ export default function HeroSection() {
             동물병원 전용 AI 업무 보조 플랫폼
           </div>
           <h1 className="mt-6 text-5xl font-black leading-[1.08] text-slate-950 sm:text-6xl lg:text-6xl xl:text-7xl">
-            <span className="block">반려동물의 골든타임,</span>
-            <span className="mt-2 block text-blue-700">AI가 먼저 정리합니다.</span>
+            <span className="block">보호자 문진부터 진료 준비까지,</span>
+            <span className="mt-2 block text-blue-700">AI가 미리 정리합니다.</span>
           </h1>
           <p className="mt-6 max-w-3xl text-lg font-semibold leading-8 text-slate-600">
-            보호자 문진부터 예약, EMR 초안까지 연결해 수의사가 더 빠르게 판단하도록 돕는 동물병원 업무 보조 플랫폼.
+            보호자 문진부터 예약, EMR 초안까지 한 흐름으로 이어
+            <br className="hidden lg:block" /> 수의사가 진료에 더 집중하도록 돕는 동물병원 업무 보조 플랫폼입니다.
           </p>
 
           <div className="mt-9">

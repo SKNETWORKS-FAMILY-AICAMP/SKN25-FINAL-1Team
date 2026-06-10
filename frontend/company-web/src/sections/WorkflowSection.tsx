@@ -8,7 +8,12 @@ export default function WorkflowSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="Workflow"
-          title="문진이 사라지지 않고, 진료 기록으로 이어집니다."
+          title={
+            <>
+              문진이 사라지지 않고,
+              <br className="hidden sm:block" /> 진료 기록으로 이어집니다.
+            </>
+          }
           description="보호자가 남긴 정보가 병원 대시보드와 EMR 초안까지 연결되도록 설계했습니다."
         />
 
