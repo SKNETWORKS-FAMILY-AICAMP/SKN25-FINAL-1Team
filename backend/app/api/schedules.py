@@ -27,6 +27,14 @@ router = APIRouter(prefix="/schedules", tags=["schedules"])
 KST = timezone(timedelta(hours=9))
 
 
+async def _verify_emrid_owner(db: AsyncSession, emrid: int, current_user_id: int) -> None:
+    owner_id = await get_emrid_owner_userid(db, emrid)
+    if owner_id is None:
+        raise HTTPException(status_code=404, detail="문진 정보를 찾을 수 없습니다.")
+    if owner_id != current_user_id:
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+
+
 
 # 정기검진 예약
 @router.post("/checkup", status_code=201)
@@ -240,9 +248,7 @@ async def delete_schedule(
         raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
 
     # 소유권 검증: 본인 예약만 취소 가능
-    owner_id = await get_emrid_owner_userid(db, schedule.emrid)
-    if owner_id != current_user.userid:
-        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
+    await _verify_emrid_owner(db, schedule.emrid, current_user.userid)
 
     if schedule.status == "COMPLETED":
         raise HTTPException(status_code=400, detail="이미 완료된 예약은 취소할 수 없습니다.")
@@ -270,9 +276,7 @@ async def update_schedule(
         raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
 
     # 소유권 검증: 본인 예약만 변경 가능
-    owner_id = await get_emrid_owner_userid(db, schedule.emrid)
-    if owner_id != current_user.userid:
-        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
+    await _verify_emrid_owner(db, schedule.emrid, current_user.userid)
 
     if schedule.status in ["COMPLETED", "CANCELLED"]:
         raise HTTPException(status_code=400, detail="변경할 수 없는 예약입니다.")
@@ -490,11 +494,7 @@ async def confirm_schedule_api(
     current_user = Depends(get_current_user)
 ):
     # 소유권 검증: 본인 반려동물의 문진(emrid)에 대해서만 예약 확정 가능
-    owner_id = await get_emrid_owner_userid(db, request.emrid)
-    if owner_id is None:
-        raise HTTPException(status_code=404, detail="문진 정보를 찾을 수 없습니다.")
-    if owner_id != current_user.userid:
-        raise HTTPException(status_code=403, detail="예약 확정 권한이 없습니다.")
+    await _verify_emrid_owner(db, request.emrid, current_user.userid)
 
     schedule = await confirm_schedule(
         db=db,

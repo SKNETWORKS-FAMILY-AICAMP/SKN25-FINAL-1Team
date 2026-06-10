@@ -209,8 +209,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # RequestIDMiddleware를 나중에 add_middleware (가장 바깥에 위치 → 가장 먼저 실행)

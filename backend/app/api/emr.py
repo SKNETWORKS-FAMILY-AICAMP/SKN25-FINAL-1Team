@@ -23,6 +23,7 @@ from sqlalchemy import or_
 
 from app.core.config import settings
 from app.core.dependencies import get_current_doctor
+from app.utils.file_validation import validate_file
 from app.db.session import get_db
 from app.models.doctor import Doctor
 from app.models.drug import Drug
@@ -93,7 +94,7 @@ async def emr_report(
     """AI Chart 에이전트가 생성한 SOAP 초안을 반환한다."""
     report = await get_report_by_schedule(db, schedule_id)
     if report is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -120,7 +121,7 @@ async def emr_triage(
     """보호자 문진 AI 트리아지 결과를 반환한다."""
     triage = await get_triage_by_schedule(db, schedule_id)
     if triage is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="트리아지 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -155,7 +156,7 @@ async def emr_validation(
     """Validation + Judge 에이전트 결과를 반환한다."""
     validation = await get_validation_by_schedule(db, schedule_id)
     if validation is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="검증 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -398,17 +399,9 @@ async def upload_emr_file(
     file: UploadFile = File(...),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
-    allowed_types = ["image/jpeg", "image/png", "application/pdf", "video/mp4"]
     content_type = file.content_type or "application/octet-stream"
-    if content_type not in allowed_types:
-        raise HTTPException(
-            status_code=400,
-            detail="이미지(JPG, PNG), PDF 또는 영상(MP4) 파일만 업로드 가능합니다.",
-        )
-
     body = await file.read()
-    if len(body) > 50 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="파일 크기는 50MB 이하만 업로드 가능합니다.")
+    validate_file(content_type, len(body), ["image/jpeg", "image/png", "application/pdf", "video/mp4"], 50 * 1024 * 1024)
 
     from botocore.exceptions import NoCredentialsError
 

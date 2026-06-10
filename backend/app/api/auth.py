@@ -18,7 +18,7 @@ import string
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # 회원가입
-@router.post("/signup", status_code=200)
+@router.post("/signup", status_code=201)
 async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
     # loginid 중복 확인

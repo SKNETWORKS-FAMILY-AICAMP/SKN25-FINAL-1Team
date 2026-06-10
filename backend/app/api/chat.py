@@ -19,6 +19,7 @@ from app.crud.chat import (
     create_triage_guardian, update_session_emrid, update_guardian_category,
 )
 from app.core.dependencies import get_current_user
+from app.utils.file_validation import validate_file
 from app.core.config import settings
 from app.models.pet import Pet
 from app.models.triage_result import TriageResult
@@ -431,12 +432,7 @@ async def get_presigned_url(
     file_size: int = Query(...),
     current_user=Depends(get_current_user),
 ):
-    allowed_types = ["image/jpeg", "image/png", "video/mp4"]
-    if content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.")
-
-    if file_size > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
+    validate_file(content_type, file_size, ["image/jpeg", "image/png", "video/mp4"], 5 * 1024 * 1024)
 
     from botocore.exceptions import NoCredentialsError
 
@@ -454,14 +450,9 @@ async def upload_chat_file(
     file: UploadFile = File(...),
     current_user=Depends(get_current_user),
 ):
-    allowed_types = ["image/jpeg", "image/png", "video/mp4"]
     content_type = file.content_type or "application/octet-stream"
-    if content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 또는 영상(MP4) 파일만 업로드 가능합니다.")
-
     body = await file.read()
-    if len(body) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
+    validate_file(content_type, len(body), ["image/jpeg", "image/png", "video/mp4"], 5 * 1024 * 1024)
 
     from botocore.exceptions import NoCredentialsError
 

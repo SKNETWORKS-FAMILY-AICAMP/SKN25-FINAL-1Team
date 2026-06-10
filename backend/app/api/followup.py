@@ -6,6 +6,7 @@ from typing import List, Optional
 import logging
 from app.db.session import get_db
 from app.core.dependencies import get_current_user
+from app.utils.file_validation import validate_file
 from app.models.followup import Followup
 from app.models.guardian import Guardian
 
@@ -315,12 +316,7 @@ async def get_presigned_url(
     file_size: int = Query(...),
     current_user = Depends(get_current_user)
 ):
-    allowed_types = ["image/jpeg", "image/png"]
-    if content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="이미지(JPG, PNG) 파일만 업로드 가능합니다.")
-
-    if file_size > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="파일 크기는 5MB 이하만 업로드 가능합니다.")
+    validate_file(content_type, file_size, ["image/jpeg", "image/png"], 5 * 1024 * 1024)
 
     from botocore.exceptions import NoCredentialsError
 
