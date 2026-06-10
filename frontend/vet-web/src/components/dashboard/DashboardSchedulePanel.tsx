@@ -63,19 +63,19 @@ export function DashboardSchedulePanel({
 
   return (
     <Panel>
-      <div className="flex items-center gap-4 border-b border-[#edf1f6] px-5 py-3">
-        <h2 className="text-lg font-extrabold tracking-normal text-[#151b28]">
+      <div className="flex items-center gap-4 border-b border-slate-100 px-5 py-3">
+        <h2 className="text-lg font-extrabold tracking-normal text-slate-900">
           오늘의 일정
         </h2>
         {holidayName && (
-          <span className="rounded-md bg-[#fef2f2] px-2 py-1 text-xs font-extrabold text-[#ef4444]">
+          <span className="rounded-md bg-red-50 px-2 py-1 text-xs font-extrabold text-red-500">
             {holidayName}
           </span>
         )}
-        <div className="hidden items-center gap-2 text-sm font-extrabold text-[#4d5874] lg:flex">
+        <div className="hidden items-center gap-2 text-sm font-extrabold text-slate-600 lg:flex">
           <ClinicRoomIcon />
           <span>진료실 1</span>
-          <span className="text-xs font-bold text-[#758197]">
+          <span className="text-xs font-bold text-slate-500">
             수의사: 김보호
           </span>
         </div>
@@ -83,19 +83,19 @@ export function DashboardSchedulePanel({
 
       <div className="px-5 py-3">
         {errorMessage ? (
-          <div className="mb-3 rounded-lg border border-[#f5dfdf] bg-[#fef2f2] px-4 py-3 text-sm font-bold text-[#dc2626]">
+          <div className="mb-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
             {errorMessage}
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="mb-3 rounded-lg border border-[#edf1f6] bg-[#f9fafb] px-4 py-3 text-sm font-bold text-[#657188]">
+          <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
             일정을 불러오는 중입니다.
           </div>
         ) : null}
 
         {todayHours === null && !isLoading && (
-          <div className="mb-3 rounded-lg border border-[#e5eaf2] bg-[#f7f9fc] px-4 py-3 text-sm font-bold text-[#8595ae]">
+          <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-400">
             오늘은 휴진입니다.
           </div>
         )}
@@ -105,7 +105,7 @@ export function DashboardSchedulePanel({
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
-                className="absolute left-0 text-xs font-extrabold tabular-nums text-[#556179]"
+                className="absolute left-0 text-xs font-extrabold tabular-nums text-slate-600"
                 style={{ top: tick.top }}
               >
                 {tick.label}
@@ -114,19 +114,19 @@ export function DashboardSchedulePanel({
           </div>
 
           <div
-            className="relative overflow-hidden rounded-lg border border-[#edf1f6] bg-white"
+            className="relative overflow-hidden rounded-lg border border-slate-100 bg-white"
             style={{ height: timelineHeight }}
           >
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
-                className="absolute left-0 right-0 border-t border-[#edf1f6]"
+                className="absolute left-0 right-0 border-t border-slate-100"
                 style={{ top: tick.top }}
               />
             ))}
 
             <div
-              className="absolute inset-x-0 flex items-center bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
+              className="absolute inset-x-0 flex items-center bg-slate-100 px-3 text-xs font-extrabold text-slate-600"
               style={{
                 top: lunchBlock.top,
                 height: lunchBlock.height,
@@ -170,11 +170,11 @@ function ScheduleRow({
           "grid-cols-[92px_minmax(100px,1fr)]",
         ].join(" ")}
       >
-        <p className="text-xs font-extrabold tabular-nums text-[#556179]">
+        <p className="text-xs font-extrabold tabular-nums text-slate-600">
           {timeLabel}
         </p>
         <div className="min-w-0">
-          <p className="truncate text-sm font-extrabold text-[#222b3c]">
+          <p className="truncate text-sm font-extrabold text-slate-800">
             {item.patientName} ({item.species})
           </p>
         </div>

@@ -31,12 +31,12 @@ export function MonthlyCalendar({
 
   return (
     <div className="flex h-full flex-col">
-      <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-        <div className="grid shrink-0 grid-cols-7 border-b border-[#e5eaf2]">
+      <section className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="grid shrink-0 grid-cols-7 border-b border-slate-200">
           {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
             <div
               key={day}
-              className="flex h-10 items-center justify-center border-r border-[#e5eaf2] text-sm font-extrabold text-[#1d2a57] last:border-r-0"
+              className="flex h-10 items-center justify-center border-r border-slate-200 text-sm font-extrabold text-slate-800 last:border-r-0"
             >
               {day}
             </div>
@@ -57,8 +57,8 @@ export function MonthlyCalendar({
                 type="button"
                 onClick={() => onSelectDate(day)}
                 className={[
-                  "h-full border-r border-b border-[#edf1f6] p-4 text-left transition hover:bg-[#fbfcfc]",
-                  isToday ? "border-[#2f6f67] ring-1 ring-[#2f6f67]" : "",
+                  "h-full border-r border-b border-slate-100 p-4 text-left transition hover:bg-slate-50",
+                  isToday ? "border-blue-600 ring-1 ring-blue-600" : "",
                 ].join(" ")}
               >
                 <div className="flex items-center gap-3">
@@ -66,23 +66,23 @@ export function MonthlyCalendar({
                     className={[
                       "text-base font-extrabold",
                       !isCurrentMonth
-                        ? "text-[#b8c0cf]"
+                        ? "text-slate-300"
                         : isSunday || holidayName
-                          ? "text-[#ef4444]"
+                          ? "text-red-500"
                           : isSaturday
-                            ? "text-[#2f6f67]"
-                            : "text-[#1d2a57]",
+                            ? "text-blue-600"
+                            : "text-slate-800",
                     ].join(" ")}
                   >
                     {day.getDate()}
                   </span>
                   {holidayName && (
-                    <span className="text-xs font-extrabold text-[#ef4444]">
+                    <span className="text-xs font-extrabold text-red-500">
                       {holidayName}
                     </span>
                   )}
                   {isToday && (
-                    <span className="ml-auto rounded-full bg-[#2f6f67] px-2 py-0.5 text-xs font-extrabold text-white">
+                    <span className="ml-auto rounded-full bg-blue-600 px-2 py-0.5 text-xs font-extrabold text-white">
                       오늘
                     </span>
                   )}
@@ -91,8 +91,8 @@ export function MonthlyCalendar({
                   className={[
                     "mt-4 inline-flex rounded-lg px-3 py-1.5 text-sm font-extrabold",
                     isCurrentMonth
-                      ? "bg-[#f6f8fb] text-[#1d2a57]"
-                      : "bg-[#f7f8fa] text-[#a4adbd]",
+                      ? "bg-slate-50 text-slate-800"
+                      : "bg-slate-50 text-slate-400",
                   ].join(" ")}
                 >
                   총 {countByDate[getDateKey(day)] ?? 0}건

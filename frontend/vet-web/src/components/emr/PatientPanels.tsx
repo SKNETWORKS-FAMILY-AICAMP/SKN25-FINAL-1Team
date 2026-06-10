@@ -38,23 +38,23 @@ export function PatientInfoPanel({
               }}
             />
             <div className="flex min-w-0 items-center gap-3">
-              <h1 className="text-2xl font-extrabold text-[#151b28]">
+              <h1 className="text-2xl font-extrabold text-slate-900">
                 {patient.pet_name}
               </h1>
-              <span className="text-2xl font-extrabold text-[#ef4444]">
+              <span className="text-2xl font-extrabold text-red-500">
                 <GenderBadge gender={patient.gender} className="text-2xl" />
               </span>
             </div>
           </div>
           <div className="mt-3 text-left">
-            <p className="mt-2 text-sm font-extrabold text-[#4d5874]">
+            <p className="mt-2 text-sm font-extrabold text-slate-600">
               {patient.species} | {toGenderLabel(patient.gender)} | {patient.weight_kg}kg |{" "}
               {patient.birth_date ? `${patient.age}살(${patient.birth_date})` : "생일 미상"}
             </p>
-            <p className="mt-3 text-sm font-extrabold text-[#4d5874]">
+            <p className="mt-3 text-sm font-extrabold text-slate-600">
               최근 내원일: {patient.last_visit}
             </p>
-            <p className="mt-1 text-sm font-extrabold text-[#4d5874]">
+            <p className="mt-1 text-sm font-extrabold text-slate-600">
               마지막 정기검진일: {patient.checkup_date || "검진 이력 없음"}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -68,7 +68,7 @@ export function PatientInfoPanel({
           onClick={onEdit}
           aria-label="환자 정보 편집"
           disabled={isReadOnly}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-[#4d5874] transition hover:bg-[#eef5f4] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:text-slate-300"
         >
           <Edit3 className="h-5 w-5" />
         </button>
@@ -79,7 +79,7 @@ export function PatientInfoPanel({
 
 function InfoTag({ label }: { label: string }) {
   return (
-    <span className="rounded-md bg-[#f5f7f9] px-2.5 py-1 text-xs font-extrabold text-[#59657a]">
+    <span className="rounded-md bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-600">
       {label}
     </span>
   );
@@ -89,10 +89,10 @@ export function EmptyPatientPanel() {
   return (
     <Panel>
       <div className="px-5 py-12 text-center">
-        <p className="text-base font-extrabold text-[#151b28]">
+        <p className="text-base font-extrabold text-slate-900">
           대기 중인 환자가 없습니다.
         </p>
-        <p className="mt-2 text-sm font-bold text-[#8a94a6]">
+        <p className="mt-2 text-sm font-bold text-slate-400">
           대기열에서 환자를 선택하면 EMR 정보가 표시됩니다.
         </p>
       </div>
@@ -103,14 +103,14 @@ export function EmptyPatientPanel() {
 export function HistoryPanel({ histories }: { histories: EmrResult["emr_history"] }) {
   return (
     <Panel className="flex flex-1 flex-col">
-      <div className="shrink-0 border-b border-[#edf1f6] px-5 py-3">
-        <h2 className="text-base font-extrabold text-[#151b28]">
+      <div className="shrink-0 border-b border-slate-100 px-4 py-2.5">
+        <h2 className="text-base font-extrabold text-slate-900">
           과거 문진 기록
         </h2>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {histories.length === 0 && (
-          <div className="rounded-lg bg-[#f9fafb] px-4 py-8 text-center text-sm font-bold text-[#8a94a6]">
+          <div className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-400">
             과거 문진 기록이 없습니다.
           </div>
         )}
@@ -131,29 +131,29 @@ function HistoryItem({ history }: { history: EmrResult["emr_history"][number] })
   const visible = expanded ? history.prescriptions : history.prescriptions.slice(0, 2);
 
   return (
-    <article className="grid grid-cols-1 gap-3 rounded-lg border border-[#e8edf4] p-3 2xl:grid-cols-[96px_minmax(0,1fr)]">
+    <article className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 p-3 2xl:grid-cols-[96px_minmax(0,1fr)]">
       <div>
-        <p className="text-xs font-extrabold tabular-nums text-[#4d5874]">{history.date}</p>
-        <p className="mt-2 text-xs font-bold text-[#8a94a6]">{history.doctor_name}</p>
+        <p className="text-xs font-extrabold tabular-nums text-slate-600">{history.date}</p>
+        <p className="mt-2 text-xs font-bold text-slate-400">{history.doctor_name}</p>
       </div>
-      <p className="min-w-0 whitespace-pre-line text-xs font-bold leading-5 text-[#4d5874]">
+      <p className="min-w-0 whitespace-pre-line text-xs font-bold leading-5 text-slate-600">
         {displayMemo}
       </p>
-      <div className="rounded-lg bg-[#f9fafb] p-3 2xl:col-span-2">
+      <div className="rounded-lg bg-slate-50 p-3 2xl:col-span-2">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-extrabold text-[#2f6f67]">처방전</p>
+          <p className="text-xs font-extrabold text-blue-600">처방전</p>
           {history.prescriptions.length > 2 && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs font-extrabold text-[#59657a] hover:text-[#2f6f67]"
+              className="text-xs font-extrabold text-slate-600 hover:text-blue-600"
             >
               {expanded ? "접기" : "펼치기"}
             </button>
           )}
         </div>
-        <div className="overflow-hidden rounded-md border border-[#e8edf4]">
-          <div className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#e8edf4] bg-[#f3f5f7] px-2 py-1.5 text-[10px] font-extrabold text-[#8a94a6]">
+        <div className="overflow-hidden rounded-md border border-slate-200">
+          <div className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] font-extrabold text-slate-400">
             <span>약제명</span>
             <span>용량</span>
             <span>형태</span>
@@ -162,7 +162,7 @@ function HistoryItem({ history }: { history: EmrResult["emr_history"][number] })
           {visible.map((prescription) => (
             <div
               key={`${history.emr_id}-${prescription.drug_name}`}
-              className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-[#f0f3f8] px-2 py-1.5 text-xs font-bold text-[#4d5874] last:border-b-0"
+              className="grid grid-cols-[1fr_1fr_60px_40px] gap-1 border-b border-slate-100 px-2 py-1.5 text-xs font-bold text-slate-600 last:border-b-0"
             >
               <span className="truncate font-extrabold">{prescription.drug_name}</span>
               <span className="break-all">{prescription.dosage?.replace(/체중\s*[\d.]+kg\s*기준\s*/g, "")}</span>

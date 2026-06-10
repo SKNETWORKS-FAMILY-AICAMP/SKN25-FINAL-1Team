@@ -4,7 +4,7 @@ import secrets
 import string
 from app.db.session import get_db
 from app.schemas.doctor import DoctorLoginRequest, DoctorTokenResponse, DoctorPasswordChangeRequest, DoctorPasswordResetRequest, AccountInquiryRequest
-from app.crud.doctor import get_doctor_by_loginid, update_doctor_password, reset_doctor_password, get_doctor_by_inquiry
+from app.crud.doctor import get_doctor_by_loginid, update_doctor_password, reset_doctor_password, get_doctor_by_inquiry, get_doctors_by_hospital
 from app.core.email import send_account_credentials
 from app.core.security import verify_password, create_access_token, create_refresh_token, hash_password
 from app.core.dependencies import get_current_doctor
@@ -108,3 +108,18 @@ async def account_inquiry(request: AccountInquiryRequest, db: AsyncSession = Dep
     )
 
     return {"code": 200, "message": "등록된 이메일로 계정 정보를 발송했습니다."}
+
+# 같은 병원 소속 수의사 목록
+@router.get("/hospital/doctors", status_code=200)
+async def list_hospital_doctors(
+    db: AsyncSession = Depends(get_db),
+    current_doctor = Depends(get_current_doctor),
+):
+    doctors = await get_doctors_by_hospital(db, current_doctor.hospital_name)
+    return {
+        "code": 200,
+        "result": [
+            {"doctorid": d.doctorid, "doctor_name": d.doctor_name, "loginid": d.loginid}
+            for d in doctors
+        ],
+    }

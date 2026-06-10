@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
+import type { DoctorInfo } from "../../api/emrApi";
 import type { QueuePatient, QueueTab } from "../../types/emr";
 import { Panel, StatusBadge } from "./EmrShared";
 
@@ -18,6 +19,9 @@ export function QueuePanel({
   onChangeDate,
   onMoveDate,
   onGoToday,
+  doctors,
+  selectedDoctorId,
+  onSelectDoctor,
 }: {
   title: string;
   activeTab: QueueTab;
@@ -34,34 +38,49 @@ export function QueuePanel({
   onChangeDate: (dateValue: string) => void;
   onMoveDate: (days: number) => void;
   onGoToday: () => void;
+  doctors: DoctorInfo[];
+  selectedDoctorId: number | undefined;
+  onSelectDoctor: (id: number | undefined) => void;
 }) {
   return (
     <Panel className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* 헤더 - 고정 */}
       <div className="shrink-0 px-4 py-2.5">
-        <div className="flex items-center justify-between">
+        {/* 제목 + 수의사 드롭다운 */}
+        <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="text-sm font-extrabold text-[#151b28]">{title}</h2>
-            <p className="mt-0.5 text-xs font-bold text-[#8a94a6]">
+            <h2 className="text-sm font-extrabold text-slate-900">{title}</h2>
+            <p className="mt-0.5 text-xs font-bold text-slate-400">
               갱신 {lastRefreshText}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onRefresh}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#eef5f4] px-2.5 text-[11px] font-extrabold text-[#2f6f67] transition hover:bg-[#d5e7e4]"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            대기열 새로고침
-          </button>
+          {doctors.length > 0 && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-400">수의사</span>
+              <select
+                value={selectedDoctorId ?? ""}
+                onChange={(e) =>
+                  onSelectDoctor(e.target.value ? Number(e.target.value) : undefined)
+                }
+                className="h-7 w-auto rounded-lg border border-slate-200 bg-white px-2 text-xs font-extrabold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-50"
+              >
+                {doctors.map((d) => (
+                  <option key={d.doctorid} value={d.doctorid}>
+                    {d.doctor_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="mt-2 grid grid-cols-[32px_minmax(0,1fr)_32px_48px] gap-1.5">
+        {/* 날짜 네비 + 새로고침 */}
+        <div className="mt-2 grid grid-cols-[32px_minmax(0,1fr)_32px_48px_32px] gap-1.5">
           <button
             type="button"
             onClick={() => onMoveDate(-1)}
             aria-label="이전 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+            className="flex h-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -70,9 +89,9 @@ export function QueuePanel({
               type="date"
               value={selectedDate}
               onChange={(event) => onChangeDate(event.target.value)}
-              className="h-8 w-full min-w-0 rounded-lg border border-[#dfe6f1] px-2 text-xs font-extrabold text-transparent outline-none focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4]"
+              className="h-8 w-full min-w-0 rounded-lg border border-slate-200 px-2 text-xs font-extrabold text-transparent outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 [&::-webkit-calendar-picker-indicator]:hidden"
             />
-            <span className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-center text-xs font-extrabold tabular-nums text-[#4d5874]">
+            <span className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-center text-xs font-extrabold tabular-nums text-slate-600">
               {formatQueueDateLabel(selectedDate)}
             </span>
           </div>
@@ -80,7 +99,7 @@ export function QueuePanel({
             type="button"
             onClick={() => onMoveDate(1)}
             aria-label="다음 날짜"
-            className="flex h-8 items-center justify-center rounded-lg border border-[#dfe6f1] text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+            className="flex h-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -88,15 +107,23 @@ export function QueuePanel({
             type="button"
             onClick={onGoToday}
             disabled={isTodayView}
-            className="h-8 rounded-lg border border-[#dfe6f1] text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#a8b0bf]"
+            className="h-8 rounded-lg border border-slate-200 text-xs font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
           >
             오늘
+          </button>
+          <button
+            type="button"
+            onClick={onRefresh}
+            aria-label="대기열 새로고침"
+            className="flex h-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition hover:bg-blue-100"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* 탭 - 고정 */}
-      <div className="grid shrink-0 grid-cols-2 border-y border-[#edf1f6] bg-[#f9fbfe] p-1">
+      <div className="grid shrink-0 grid-cols-2 border-y border-slate-100 bg-slate-50 p-1">
         <QueueTabButton
           active={activeTab === "waiting"}
           label={`진료 대기 ${waitingCount}`}
@@ -112,25 +139,25 @@ export function QueuePanel({
       {/* 환자 목록 - 패널 내부 스크롤 */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <table className="w-full table-fixed text-left">
-          <tbody className="divide-y divide-[#edf1f6]">
+          <tbody className="divide-y divide-slate-100">
             {queue.map((patient) => (
               <tr
                 key={patient.schedule_id}
                 onClick={() => onSelectPatient(patient.schedule_id)}
-                className={`cursor-pointer text-xs text-[#5e6879] ${
+                className={`cursor-pointer text-xs text-slate-500 ${
                   patient.schedule_id === selectedScheduleId
-                    ? "bg-[#f3f8ff]"
-                    : "hover:bg-[#fafcff]"
+                    ? "bg-slate-50"
+                    : "hover:bg-slate-50"
                 }`}
               >
                 <td className="w-[86px] px-6 py-2 font-extrabold tabular-nums">
                   {patient.time}
                 </td>
                 <td className="px-4 py-2">
-                  <p className="font-extrabold text-[#20283a]">
+                  <p className="font-extrabold text-slate-800">
                     {patient.pet_name}
                   </p>
-                  <p className="mt-0.5 truncate font-bold text-[#8a94a6]">
+                  <p className="mt-0.5 truncate font-bold text-slate-400">
                     {patient.guardian_name} · {patient.species}
                   </p>
                 </td>
@@ -164,7 +191,7 @@ function QueueTabButton({
       type="button"
       onClick={onClick}
       className={`h-8 rounded-md text-sm font-extrabold transition ${
-        active ? "bg-white text-[#2f6f67] shadow-sm" : "text-[#697386]"
+        active ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
       }`}
     >
       {label}

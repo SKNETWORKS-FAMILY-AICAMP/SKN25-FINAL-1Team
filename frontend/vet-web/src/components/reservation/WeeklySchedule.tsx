@@ -171,9 +171,9 @@ export function WeeklySchedule({
 
   return (
     <div className="h-full min-w-0">
-      <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-        <div className="grid shrink-0 grid-cols-[62px_repeat(7,minmax(0,1fr))] border-b border-[#e5eaf2]">
-          <div className="border-r border-[#e5eaf2] bg-white" />
+      <section className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="grid shrink-0 grid-cols-[62px_repeat(7,minmax(0,1fr))] border-b border-slate-200">
+          <div className="border-r border-slate-200 bg-white" />
           {weekDays.map((day, index) => {
             const isToday = isSameDate(day, TODAY);
             const isSunday = day.getDay() === 0;
@@ -182,15 +182,15 @@ export function WeeklySchedule({
               <div
                 key={day.toISOString()}
                 className={[
-                  "flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 border-r border-[#e5eaf2] px-1 text-center font-extrabold last:border-r-0",
-                  isToday ? "bg-[#f9fbfc]" : "bg-white",
-                  isSunday ? "text-[#ef4444]" : "text-[#1d2a57]",
+                  "flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 border-r border-slate-200 px-1 text-center font-extrabold last:border-r-0",
+                  isToday ? "bg-slate-50" : "bg-white",
+                  isSunday ? "text-red-500" : "text-slate-800",
                 ].join(" ")}
               >
                 <span
                   className={[
                     "text-[11px] leading-none",
-                    isToday ? "text-[#2f6f67]" : "text-[#7a8498]",
+                    isToday ? "text-blue-600" : "text-slate-500",
                   ].join(" ")}
                 >
                   {weekDayLabels[index]}
@@ -212,11 +212,11 @@ export function WeeklySchedule({
                 timelineBodyHeight > 0 ? timelineHeight : fallbackTimelineHeight,
             }}
           >
-            <div className="relative border-r border-[#e5eaf2]">
+            <div className="relative border-r border-slate-200">
               {hourTicks.map((tick) => (
                 <div
                   key={tick.minutes}
-                  className="absolute left-0 right-0 border-t border-[#edf1f6] px-2 pt-1 text-[11px] font-extrabold text-[#1d2a57]"
+                  className="absolute left-0 right-0 border-t border-slate-100 px-2 pt-1 text-[11px] font-extrabold text-slate-800"
                   style={{ top: tick.top }}
                 >
                   {tick.label}
@@ -242,14 +242,14 @@ export function WeeklySchedule({
                 <div
                   key={day.toISOString()}
                   className={[
-                    "relative min-w-0 border-r border-[#edf1f6] last:border-r-0",
-                    isToday ? "bg-[#fbfcfc]" : "bg-white",
+                    "relative min-w-0 border-r border-slate-100 last:border-r-0",
+                    isToday ? "bg-slate-50" : "bg-white",
                   ].join(" ")}
                 >
                   {hourTicks.map((tick) => (
                     <div
                       key={tick.minutes}
-                      className="absolute left-0 right-0 border-t border-[#edf1f6]"
+                      className="absolute left-0 right-0 border-t border-slate-100"
                       style={{ top: tick.top }}
                     />
                   ))}
@@ -282,7 +282,7 @@ export function WeeklySchedule({
             })}
 
             <div
-              className="pointer-events-none absolute right-0 z-[1] flex items-center justify-center bg-[#f1f3f7] text-xs font-extrabold text-[#53617c]"
+              className="pointer-events-none absolute right-0 z-[1] flex items-center justify-center bg-slate-100 text-xs font-extrabold text-slate-600"
               style={{
                 left: 62,
                 top: lunchBlock.top,
@@ -334,10 +334,10 @@ function WeeklyReservationCard({
       {compact ? (
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-between gap-1.5">
           <div className="min-w-0">
-            <p className="min-w-0 truncate text-[10px] font-extrabold leading-tight tabular-nums text-[#40506a]">
+            <p className="min-w-0 truncate text-[10px] font-extrabold leading-tight tabular-nums text-slate-700">
               {shortTimeLabel}
             </p>
-            <p className="mt-0.5 truncate text-xs font-extrabold leading-tight text-[#20283a]">
+            <p className="mt-0.5 truncate text-xs font-extrabold leading-tight text-slate-800">
               {patient ? patient.petName : item.visitReason}
             </p>
           </div>
@@ -347,19 +347,19 @@ function WeeklyReservationCard({
         </div>
       ) : (
         <>
-          <p className="truncate text-[10px] font-extrabold leading-tight tabular-nums text-[#40506a]">
+          <p className="truncate text-[10px] font-extrabold leading-tight tabular-nums text-slate-700">
             {shortTimeLabel}
           </p>
-          <p className="mt-0.5 truncate text-xs font-extrabold leading-tight text-[#20283a]">
+          <p className="mt-0.5 truncate text-xs font-extrabold leading-tight text-slate-800">
             {patient ? patient.petName : item.visitReason}
             {patient ? (
-              <span className="ml-1 text-[10px] font-bold text-[#647086]">
+              <span className="ml-1 text-[10px] font-bold text-slate-500">
                 {patient.guardianName}
               </span>
             ) : null}
           </p>
           <div className="mt-0.5 flex h-5 min-w-0 items-center justify-between gap-1 overflow-hidden">
-            <p className="min-w-0 truncate text-[10px] font-bold leading-tight text-[#647086]">
+            <p className="min-w-0 truncate text-[10px] font-bold leading-tight text-slate-500">
               {item.visitReason}
             </p>
             <span className="shrink-0">
