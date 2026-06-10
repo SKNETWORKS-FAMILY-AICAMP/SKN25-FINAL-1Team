@@ -8,8 +8,18 @@ export default function ServiceSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="Service Modules"
-          title="보호자 경험과 병원 업무를 하나의 흐름으로 연결합니다."
-          description="MediPaw는 병원 CRM을 과장하지 않습니다. 실제 진료 전후에 필요한 정보 수집, 예약, 차트 초안, 검토 흐름에 집중합니다."
+          title={
+            <>
+              보호자 경험과 병원 업무를
+              <br className="hidden sm:block" /> 하나의 흐름으로 연결합니다.
+            </>
+          }
+          description={
+            <>
+              MediPaw는 거창한 병원 CRM을 표방하지 않습니다.
+              <br className="hidden lg:block" /> 진료 전후에 꼭 필요한 정보 수집, 예약, 차트 초안, 검토 흐름에 집중합니다.
+            </>
+          }
         />
 
         <div className="mt-12 grid gap-5 lg:grid-cols-3">

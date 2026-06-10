@@ -7,6 +7,7 @@ import { findGuardianId } from "../../api/auth-api";
 import { useTranslation } from "../../i18n/language-context";
 import AuthLanguageSelector from "../../components/auth-language-selector";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
+import { companyWebUrl } from "../../config/site";
 
 interface FindIdFormState {
   name: string;
@@ -234,7 +235,17 @@ const FindIdPage = () => {
 
       <footer className="mx-auto flex w-full max-w-6xl flex-col gap-2 border-t border-blue-100 px-4 py-4 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p>{t("auth.footerContact")}</p>
-        <p>{t("auth.footerCopyright")}</p>
+        <div className="flex items-center gap-4">
+          <a
+            href={companyWebUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-blue-600 transition hover:text-blue-700"
+          >
+            {t("auth.footerHome")}
+          </a>
+          <p>{t("auth.footerCopyright")}</p>
+        </div>
       </footer>
     </div>
   );

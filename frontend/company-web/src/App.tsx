@@ -4,7 +4,6 @@ import ContactSection from "./sections/ContactSection";
 import DashboardSection from "./sections/DashboardSection";
 import HeroSection from "./sections/HeroSection";
 import MarqueeSection from "./sections/MarqueeSection";
-import SafetySection from "./sections/SafetySection";
 import ServiceSection from "./sections/ServiceSection";
 import TeamSection from "./sections/TeamSection";
 import WorkflowSection from "./sections/WorkflowSection";
@@ -19,7 +18,6 @@ function App() {
         <ServiceSection />
         <WorkflowSection />
         <DashboardSection />
-        <SafetySection />
         <TeamSection />
         <ContactSection />
       </main>

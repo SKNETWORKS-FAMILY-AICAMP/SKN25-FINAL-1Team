@@ -4,6 +4,7 @@
 #          ./dev.sh fast     (재빌드 없이 전체 스택 빠르게 실행: 평소 재시작용)
 #          ./dev.sh guardian (보호자 앱만 다시 빌드/재시작: guardian 프론트 수정 뒤)
 #          ./dev.sh vet      (수의사 앱만 다시 빌드/재시작: vet 프론트 수정 뒤)
+#          ./dev.sh company  (회사 소개 사이트만 다시 빌드/재시작: company 프론트 수정 뒤)
 #          ./dev.sh down     (전부 끄기)
 #          ./dev.sh reset    (DB 볼륨까지 삭제하고 새로 시작)
 #
@@ -28,9 +29,10 @@ MediPaw dev runner
 Usage:
   ./dev.sh          전체 빌드 후 실행. 처음 켤 때, Dockerfile/requirements/package 변경 뒤 사용.
   ./dev.sh fast     재빌드 없이 전체 스택 실행. Docker 껐다 켠 뒤 평소 확인할 때 사용.
-                   대상: DB + backend + guardian(5173) + vet(5174)
+                   대상: DB + backend + guardian(5173) + vet(5174) + company(5175)
   ./dev.sh guardian 보호자 앱만 다시 빌드/재시작. guardian 프론트 수정 뒤 사용.
   ./dev.sh vet      수의사 앱만 다시 빌드/재시작. vet 프론트 수정 뒤 사용.
+  ./dev.sh company  회사 소개 사이트만 다시 빌드/재시작. company 프론트 수정 뒤 사용.
   ./dev.sh down     컨테이너 종료. DB 데이터는 유지.
   ./dev.sh reset    컨테이너와 DB 볼륨 삭제. 계정/예약/seed 데이터도 삭제됨.
 
@@ -39,6 +41,7 @@ Rule of thumb:
   - 코드/의존성 크게 바뀐 뒤: ./dev.sh
   - 보호자 화면만 바꾼 뒤: ./dev.sh guardian
   - 수의사 화면만 바꾼 뒤: ./dev.sh vet
+  - 회사 소개 화면만 바꾼 뒤: ./dev.sh company
 EOF
     exit 0
     ;;
@@ -70,6 +73,17 @@ EOF
 EOF
     exit 0
     ;;
+  company)
+    echo "▶ 회사 소개 사이트만 빌드 & 재시작"
+    $COMPOSE build company
+    $COMPOSE up -d company
+    cat <<EOF
+
+✅ 회사 소개 사이트 재시작 완료!
+  회사 소개 : http://localhost:5175
+EOF
+    exit 0
+    ;;
 esac
 
 # ── 1) backend/.env 준비 ──────────────────────────────────
@@ -84,8 +98,8 @@ if ! grep -q '^OPENAI_API_KEY=.\+' backend/.env 2>/dev/null; then
 fi
 
 # ── 2) 포트 충돌(도커 아닌 stray 프로세스) 정리 ─────────────
-echo "▶ 포트 5173/5174/8000 점검 (stray vite/uvicorn 정리)"
-for port in 5173 5174 8000; do
+echo "▶ 포트 5173/5174/5175/8000 점검 (stray vite/uvicorn 정리)"
+for port in 5173 5174 5175 8000; do
   for pid in $(lsof -nP -iTCP:$port -sTCP:LISTEN -t 2>/dev/null); do
     cmd=$(ps -p "$pid" -o comm= 2>/dev/null)
     case "$cmd" in
@@ -118,11 +132,13 @@ if [ "$RUN_SETUP" = false ]; then
 ✅ 빠른 실행 완료!
   보호자 앱 : http://localhost:5173   (guardian_test / Test1234!)
   수의사 앱 : http://localhost:5174   (admin / Test1234!)
+  회사 소개 : http://localhost:5175
   API 문서  : http://localhost:8000/docs
 
   전체 재빌드:  ./dev.sh
   보호자만:    ./dev.sh guardian
   수의사만:    ./dev.sh vet
+  회사 소개만:  ./dev.sh company
   끄기:        ./dev.sh down
 EOF
   exit 0
@@ -156,6 +172,7 @@ cat <<EOF
 ✅ 준비 끝!
   보호자 앱 : http://localhost:5173   (guardian_test / Test1234!)
   수의사 앱 : http://localhost:5174   (admin / Test1234!)
+  회사 소개 : http://localhost:5175
   API 문서  : http://localhost:8000/docs
 
   끄기:        ./dev.sh down
