@@ -1,5 +1,6 @@
+import re
 from typing import Optional
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, field_validator
 
 # 회원가입 요청
 class UserCreate(BaseModel):
@@ -41,3 +42,16 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
     new_password_confirm: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("비밀번호는 8자 이상이어야 합니다.")
+        if not re.search(r"[A-Za-z]", v):
+            raise ValueError("비밀번호에 영문자가 포함되어야 합니다.")
+        if not re.search(r"\d", v):
+            raise ValueError("비밀번호에 숫자가 포함되어야 합니다.")
+        if not re.search(r"[^A-Za-z\d]", v):
+            raise ValueError("비밀번호에 특수문자가 포함되어야 합니다.")
+        return v
