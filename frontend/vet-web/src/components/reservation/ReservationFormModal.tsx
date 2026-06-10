@@ -24,25 +24,28 @@ import {
   getMonthGrid,
   isSameDate,
 } from "../../utils/reservationUtils";
+import {
+  type DayHours,
+  useOperatingHoursForDate,
+} from "../../contexts/OperatingHoursContext";
+import {
+  formatMinutesAsTime,
+  parseTimeToMinutes,
+} from "../../utils/scheduleTimelineUtils";
 
-// 예약 가능한 시작 시간(30분 단위, 점심 12:00~13:00 제외)
-const TIME_OPTIONS = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-  "17:00",
-];
+function generateTimeOptions(hours: DayHours): string[] {
+  const startMin = parseTimeToMinutes(hours.startTime);
+  const endMin = parseTimeToMinutes(hours.endTime);
+  const lunchStartMin = parseTimeToMinutes(hours.lunchStart);
+  const lunchEndMin = parseTimeToMinutes(hours.lunchEnd);
+
+  const options: string[] = [];
+  for (let min = startMin; min <= endMin - 30; min += 30) {
+    if (min >= lunchStartMin && min < lunchEndMin) continue;
+    options.push(formatMinutesAsTime(min));
+  }
+  return options;
+}
 
 interface ReservationFormModalProps {
   mode: "add" | "edit";
@@ -81,6 +84,7 @@ export function ReservationFormModal({
     mode === "edit" ? patient ?? null : null
   );
   const [reservationDate, setReservationDate] = useState(selectedDate);
+  const dayHours = useOperatingHoursForDate(reservationDate);
   const [form, setForm] = useState<ReservationFormState>({
     date: formatDateWithWeekday(selectedDate),
     dateKey: getDateKey(selectedDate),
@@ -89,6 +93,11 @@ export function ReservationFormModal({
     memo: reservation?.memo ?? "",
     categoryCode: null,
   });
+
+  const timeOptions = useMemo(
+    () => (dayHours ? generateTimeOptions(dayHours) : []),
+    [dayHours]
+  );
 
   const filteredPatients = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -130,12 +139,12 @@ export function ReservationFormModal({
     const now = new Date();
     const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    return TIME_OPTIONS.filter((time) => {
+    return timeOptions.filter((time) => {
       if (bookedTimes.has(time)) return false;
       if (isToday && time <= currentHHMM) return false;
       return true;
     });
-  }, [bookedTimes, form.dateKey]);
+  }, [timeOptions, bookedTimes, form.dateKey]);
 
   // 날짜를 바꿔 현재 선택한 시간이 예약 불가해지면 가능한 첫 시간으로 보정
   useEffect(() => {
