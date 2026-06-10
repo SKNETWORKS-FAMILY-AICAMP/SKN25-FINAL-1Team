@@ -22,6 +22,7 @@ interface DashboardSchedulePanelProps {
   isLoading: boolean;
   errorMessage: string;
   holidayName?: string;
+  doctorName?: string;
 }
 
 const DEFAULT_HOURS = { startTime: "09:00", endTime: "18:00", lunchStart: "12:00", lunchEnd: "13:00" };
@@ -31,6 +32,7 @@ export function DashboardSchedulePanel({
   isLoading,
   errorMessage,
   holidayName,
+  doctorName,
 }: DashboardSchedulePanelProps) {
   const today = useMemo(() => new Date(), []);
   const todayHours = useOperatingHoursForDate(today);
@@ -76,7 +78,7 @@ export function DashboardSchedulePanel({
           <ClinicRoomIcon />
           <span>진료실 1</span>
           <span className="text-xs font-bold text-slate-500">
-            수의사: 김보호
+            수의사: {doctorName ?? "-"}
           </span>
         </div>
       </div>

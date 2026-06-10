@@ -49,7 +49,7 @@ export default function ReservationPage({
     reservations,
     patientsById,
     patientOptions,
-    doctorOptions,
+    doctors,
     isLoading,
     loadReservations,
     resolvePatientOption,
@@ -291,7 +291,7 @@ export default function ReservationPage({
           reservations={reservations}
           patient={modalMode === "edit" ? selectedPatient : undefined}
           patientOptions={patientOptions}
-          doctorOptions={doctorOptions}
+          doctors={doctors}
           onClose={() => setModalMode(null)}
           onResolvePatient={
             modalMode === "add" ? resolvePatientOption : undefined
