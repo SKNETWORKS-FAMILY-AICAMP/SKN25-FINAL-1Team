@@ -162,14 +162,17 @@ def main() -> None:
     rag = _load("eval_rag_retrieval.json")
     if rag:
         lines += [
-            "## 5. RAG 검색 품질 — Recall@k / MRR (사람 라벨, LLM-free 채점)",
+            "## 5. RAG 검색 품질 — Hit@k / Precision@k / MRR (사람 라벨, LLM-free 채점)",
             "",
-            f"- 골든셋 {rag['n_queries']}쿼리(증상→기대 진료과), top-{rag['top_k']} 검색",
-            f"- **Recall@{rag['top_k']}: {rag['recall_at_k']*100:.1f}%** "
-            f"(기대 진료과가 top-{rag['top_k']}에 포함된 비율)",
-            f"- **MRR: {rag['mrr']:.3f}** (기대 진료과 첫 등장 순위의 역수 평균)",
+            f"- 골든셋 {rag['n_queries']}쿼리(증상 질문 → 그 증상어), top-{rag['top_k']} 검색",
+            f"- **Hit@{rag['top_k']}: {rag['hit_at_k']*100:.1f}%** "
+            f"(같은 증상 사례가 top-{rag['top_k']}에 1개+ 포함)",
+            f"- **Precision@{rag['top_k']}: {rag['precision_at_k']*100:.1f}%** "
+            f"(top-{rag['top_k']} 중 같은 증상 사례 비율)",
+            f"- **MRR: {rag['mrr']:.3f}** (첫 관련 사례 순위의 역수 평균)",
             "",
-            "  → 정답(진료과)은 사람이 라벨, 채점은 문자열 매칭 — 검색이 관련 사례를 끌어오는지 객관 측정.",
+            "  → 관련성=‘검색 사례가 같은 증상을 다루는가’(진료과 아님 — 소형 동물병원은 과 구분 없음).",
+            "    정답은 사람이 라벨, 채점은 문자열 매칭(LLM 미사용).",
             "",
         ]
     elif live:
