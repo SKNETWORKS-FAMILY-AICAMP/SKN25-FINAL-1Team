@@ -93,7 +93,7 @@ async def emr_report(
     """AI Chart 에이전트가 생성한 SOAP 초안을 반환한다."""
     report = await get_report_by_schedule(db, schedule_id)
     if report is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -120,7 +120,7 @@ async def emr_triage(
     """보호자 문진 AI 트리아지 결과를 반환한다."""
     triage = await get_triage_by_schedule(db, schedule_id)
     if triage is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="트리아지 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -155,7 +155,7 @@ async def emr_validation(
     """Validation + Judge 에이전트 결과를 반환한다."""
     validation = await get_validation_by_schedule(db, schedule_id)
     if validation is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="검증 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
