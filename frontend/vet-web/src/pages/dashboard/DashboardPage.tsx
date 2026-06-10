@@ -126,6 +126,7 @@ export default function DashboardPage({
             isLoading={isLoading}
             errorMessage={errorMessage}
             holidayName={holidayName}
+            doctorName={session.user.name}
           />
         </div>
       </div>

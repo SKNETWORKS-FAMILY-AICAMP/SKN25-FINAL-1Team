@@ -5,6 +5,8 @@ import {
   getPatientApiErrorMessage,
 } from "../api/patientApi";
 import { getReservations } from "../api/reservationApi";
+import { fetchHospitalDoctors } from "../api/emrApi";
+import type { DoctorInfo } from "../api/emrApi";
 import type {
   ApiReservation,
   PatientsById,
@@ -22,6 +24,7 @@ export function useReservationData(accessToken: string) {
   const [patientsById, setPatientsById] = useState<PatientsById>({});
   const [patientOptionsById, setPatientOptionsById] = useState<PatientsById>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
 
   const loadReservations = useCallback(async () => {
     setIsLoading(true);
@@ -108,6 +111,9 @@ export function useReservationData(accessToken: string) {
     if (!accessToken) return;
     loadReservations();
     loadPatientOptions();
+    fetchHospitalDoctors(accessToken)
+      .then(setDoctors)
+      .catch((err) => console.error("[Reservation] doctor fetch failed:", err));
   }, [accessToken, loadPatientOptions, loadReservations]);
 
   const patientOptions = useMemo(
@@ -118,21 +124,11 @@ export function useReservationData(accessToken: string) {
     [patientOptionsById, patientsById]
   );
 
-  const doctorOptions = useMemo(() => {
-    const names = new Set<string>();
-    reservations.forEach((reservation) => {
-      if (reservation.doctorName) {
-        names.add(reservation.doctorName);
-      }
-    });
-    return Array.from(names);
-  }, [reservations]);
-
   return {
     reservations,
     patientsById,
     patientOptions,
-    doctorOptions,
+    doctors,
     isLoading,
     loadReservations,
     resolvePatientOption,

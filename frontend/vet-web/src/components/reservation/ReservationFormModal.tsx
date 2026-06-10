@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
+import type { DoctorInfo } from "../../api/emrApi";
 import type {
   ReservationFormState,
   ReservationItem,
@@ -50,7 +51,7 @@ interface ReservationFormModalProps {
   reservations: ReservationItem[];
   patient?: ReservationPatient;
   patientOptions: ReservationPatient[];
-  doctorOptions: string[];
+  doctors: DoctorInfo[];
   onClose: () => void;
   onResolvePatient?: (patient: ReservationPatient) => Promise<ReservationPatient>;
   onSave: (patient: ReservationPatient, form: ReservationFormState) => void;
@@ -63,7 +64,7 @@ export function ReservationFormModal({
   reservations,
   patient,
   patientOptions,
-  doctorOptions,
+  doctors,
   onClose,
   onResolvePatient,
   onSave,
@@ -84,7 +85,7 @@ export function ReservationFormModal({
     date: formatDateWithWeekday(selectedDate),
     dateKey: getDateKey(selectedDate),
     time: reservation?.start ?? "17:00",
-    doctorName: reservation?.doctorName ?? doctorOptions[0] ?? "",
+    doctorName: reservation?.doctorName ?? doctors[0]?.doctor_name ?? "",
     memo: reservation?.memo ?? "",
     categoryCode: null,
   });
@@ -359,7 +360,7 @@ export function ReservationFormModal({
               <SelectField
                 label="담당 수의사"
                 value={form.doctorName}
-                options={doctorOptions}
+                options={doctors.map((d) => d.doctor_name)}
                 onChange={(value) =>
                   setForm((current) => ({ ...current, doctorName: value }))
                 }
