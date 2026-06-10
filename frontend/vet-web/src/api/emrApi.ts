@@ -13,6 +13,12 @@ export interface EmrQueueResponse {
   };
 }
 
+export interface DoctorInfo {
+  doctorid: number;
+  doctor_name: string;
+  loginid: string;
+}
+
 export interface EmrDetailResponse {
   code: number;
   result: EmrResult;
@@ -83,11 +89,23 @@ export interface FollowupItem {
 export async function fetchEmrQueue(params: {
   accessToken: string;
   date?: string;
+  doctorId?: number;
 }): Promise<{ waiting: QueuePatient[]; completed: QueuePatient[] }> {
   const { data } = await apiClient.get<EmrQueueResponse>("/doctor/emr/queue", {
     headers: { Authorization: `Bearer ${params.accessToken}` },
-    params: params.date ? { date: params.date } : undefined,
+    params: {
+      ...(params.date ? { date: params.date } : {}),
+      ...(params.doctorId !== undefined ? { doctor_id: params.doctorId } : {}),
+    },
   });
+  return data.result;
+}
+
+export async function fetchHospitalDoctors(accessToken: string): Promise<DoctorInfo[]> {
+  const { data } = await apiClient.get<{ code: number; result: DoctorInfo[] }>(
+    "/doctor/auth/hospital/doctors",
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
   return data.result;
 }
 

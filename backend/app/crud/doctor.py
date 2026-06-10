@@ -36,3 +36,10 @@ async def reset_doctor_password(db: AsyncSession, loginid: str, license_number: 
         )
     )
     return result.scalar_one_or_none()
+
+# 같은 병원 소속 수의사 목록 조회
+async def get_doctors_by_hospital(db: AsyncSession, hospital_name: str) -> list[Doctor]:
+    result = await db.execute(
+        select(Doctor).where(Doctor.hospital_name == hospital_name).order_by(Doctor.doctorid)
+    )
+    return list(result.scalars().all())

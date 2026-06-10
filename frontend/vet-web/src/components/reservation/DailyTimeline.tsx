@@ -95,12 +95,12 @@ export function DailyTimeline({
   }, []);
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e5eaf2] bg-white p-3 shadow-sm">
+    <section className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
       <div className="mb-1.5 shrink-0 text-center">
-        <p className="text-sm font-extrabold text-[#151b28]">
+        <p className="text-sm font-extrabold text-slate-900">
           {dayLabels[selectedDate.getDay()]}요일
         </p>
-        <p className="text-xs font-bold text-[#53617c]">
+        <p className="text-xs font-bold text-slate-600">
           {selectedDate.getMonth() + 1}/{selectedDate.getDate()}
         </p>
       </div>
@@ -117,7 +117,7 @@ export function DailyTimeline({
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
-                className="absolute left-0 text-xs font-extrabold tabular-nums text-[#556179]"
+                className="absolute left-0 text-xs font-extrabold tabular-nums text-slate-600"
                 style={{ top: tick.top }}
               >
                 {tick.label}
@@ -125,17 +125,17 @@ export function DailyTimeline({
             ))}
           </div>
 
-          <div className="relative overflow-hidden rounded-lg border border-[#edf1f6] bg-white">
+          <div className="relative overflow-hidden rounded-lg border border-slate-100 bg-white">
             {hourTicks.map((tick) => (
               <div
                 key={tick.minutes}
-                className="absolute left-0 right-0 border-t border-[#edf1f6]"
+                className="absolute left-0 right-0 border-t border-slate-100"
                 style={{ top: tick.top }}
               />
             ))}
 
             <div
-              className="absolute inset-x-0 flex items-center gap-5 bg-[#f1f3f7] px-3 text-xs font-extrabold text-[#53617c]"
+              className="absolute inset-x-0 flex items-center gap-5 bg-slate-100 px-3 text-xs font-extrabold text-slate-600"
               style={{
                 top: lunchBlock.top,
                 height: lunchBlock.height,
@@ -184,8 +184,8 @@ function ReservationCard({
         `absolute z-10 flex items-center overflow-hidden rounded-lg border pl-4 pr-3 text-left transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1.5 before:rounded-l-lg ${weeklyCardClass[item.status]}`,
         compact ? "gap-2 py-1.5" : "gap-2.5 py-2",
         isSelected
-          ? "z-20 border-[#2f6f67] bg-[#eef5f4] shadow-[0_0_0_1px_#7fb1a8]"
-          : "shadow-sm hover:border-[#aecfc9]",
+          ? "z-20 border-blue-600 bg-blue-50 shadow-[0_0_0_1px_#7fb1a8]"
+          : "shadow-sm hover:border-blue-200",
       ].join(" ")}
       style={{
         top,
@@ -202,10 +202,10 @@ function ReservationCard({
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-extrabold tabular-nums text-[#556179]">
+        <p className="text-xs font-extrabold tabular-nums text-slate-600">
           {timeLabel}
         </p>
-        <p className="truncate text-sm font-extrabold text-[#222b3c]">
+        <p className="truncate text-sm font-extrabold text-slate-800">
           {patient
             ? `${patient.petName} (${patient.guardianName})`
             : item.visitReason}

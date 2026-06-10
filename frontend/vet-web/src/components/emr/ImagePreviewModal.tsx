@@ -11,17 +11,17 @@ export function ImagePreviewModal({
   useEscapeToClose(onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
       <div className="w-full max-w-[760px] rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-[#edf1f6] px-5 py-4">
-          <h2 className="text-base font-extrabold text-[#151b28]">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 className="text-base font-extrabold text-slate-900">
             {image.label}
           </h2>
           <button type="button" onClick={onClose} aria-label="닫기">
-            <X className="h-5 w-5 text-[#59657a]" />
+            <X className="h-5 w-5 text-slate-600" />
           </button>
         </div>
-        <div className="bg-[#0f172a] p-4">
+        <div className="bg-slate-950 p-4">
           <img
             src={image.url}
             alt={image.label}

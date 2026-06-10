@@ -11,7 +11,7 @@ export function Panel({
 }) {
   return (
     <section
-      className={`rounded-md border border-[#d9e2ee] bg-white shadow-sm ${className}`}
+      className={`rounded-md border border-slate-200 bg-white shadow-sm ${className}`}
     >
       {children}
     </section>

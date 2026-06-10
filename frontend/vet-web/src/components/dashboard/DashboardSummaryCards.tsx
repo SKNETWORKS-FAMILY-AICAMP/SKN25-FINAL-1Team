@@ -27,7 +27,7 @@ function SummaryCard({ summary }: { summary: SummaryViewModel }) {
       <p className={`text-2xl font-extrabold leading-none tabular-nums ${tone.value}`}>
         {summary.value}
       </p>
-      <p className="mt-2 text-xs font-extrabold text-[#717b8d]">
+      <p className="mt-2 text-xs font-extrabold text-slate-500">
         {summary.label}
       </p>
     </article>

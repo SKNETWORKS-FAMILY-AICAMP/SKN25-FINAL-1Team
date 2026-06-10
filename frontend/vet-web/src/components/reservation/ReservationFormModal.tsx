@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
+import type { DoctorInfo } from "../../api/emrApi";
 import type {
   ReservationFormState,
   ReservationItem,
@@ -50,7 +51,7 @@ interface ReservationFormModalProps {
   reservations: ReservationItem[];
   patient?: ReservationPatient;
   patientOptions: ReservationPatient[];
-  doctorOptions: string[];
+  doctors: DoctorInfo[];
   onClose: () => void;
   onResolvePatient?: (patient: ReservationPatient) => Promise<ReservationPatient>;
   onSave: (patient: ReservationPatient, form: ReservationFormState) => void;
@@ -63,7 +64,7 @@ export function ReservationFormModal({
   reservations,
   patient,
   patientOptions,
-  doctorOptions,
+  doctors,
   onClose,
   onResolvePatient,
   onSave,
@@ -84,7 +85,7 @@ export function ReservationFormModal({
     date: formatDateWithWeekday(selectedDate),
     dateKey: getDateKey(selectedDate),
     time: reservation?.start ?? "17:00",
-    doctorName: reservation?.doctorName ?? doctorOptions[0] ?? "",
+    doctorName: reservation?.doctorName ?? doctors[0]?.doctor_name ?? "",
     memo: reservation?.memo ?? "",
     categoryCode: null,
   });
@@ -170,16 +171,16 @@ export function ReservationFormModal({
   const canSaveReservation = selectedPatient !== null && form.categoryCode !== null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/55 px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-3">
       <div className="flex max-h-[94vh] w-full max-w-[560px] flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-[#edf1f6] px-5 py-3">
-          <h2 className="text-base font-extrabold text-[#151b28]">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
+          <h2 className="text-base font-extrabold text-slate-900">
             예약 {mode === "add" ? "추가" : "수정"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4d5874] hover:bg-[#f5f7f9]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50"
             aria-label="닫기"
           >
             <X className="h-5 w-5" />
@@ -189,10 +190,10 @@ export function ReservationFormModal({
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {mode === "add" && (
             <div className="relative">
-              <label className="mb-1.5 block text-xs font-extrabold text-[#1d2a57]">
+              <label className="mb-1.5 block text-xs font-extrabold text-slate-800">
                 환자 검색
               </label>
-              <div className="flex h-9 items-center rounded-lg border border-[#dfe6f1] px-3 focus-within:border-[#2f6f67]">
+              <div className="flex h-9 items-center rounded-lg border border-slate-200 px-3 focus-within:border-blue-600">
                 <input
                   value={searchText}
                   onFocus={() => setIsSearchFocused(true)}
@@ -240,15 +241,15 @@ export function ReservationFormModal({
                       ? `${patientListboxId}-${activePatientIndex}`
                       : undefined
                   }
-                  className="min-w-0 flex-1 bg-transparent text-xs font-bold text-[#1d2a57] outline-none placeholder:text-[#a4adbd]"
+                  className="min-w-0 flex-1 bg-transparent text-xs font-bold text-slate-800 outline-none placeholder:text-slate-400"
                 />
-                <ChevronDown className="h-4 w-4 text-[#53617c]" />
+                <ChevronDown className="h-4 w-4 text-slate-600" />
               </div>
               {shouldShowSearchResults && (
                 <div
                   id={patientListboxId}
                   role="listbox"
-                  className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-[#edf1f6] bg-white shadow-lg"
+                  className="absolute left-0 right-0 top-[62px] z-10 max-h-64 overflow-y-auto rounded-lg border border-slate-100 bg-white shadow-lg"
                 >
                   {filteredPatients.length > 0 ? (
                     filteredPatients.map((item, index) => (
@@ -261,25 +262,25 @@ export function ReservationFormModal({
                         onMouseEnter={() => setActivePatientIndex(index)}
                         onClick={() => void handleSelectPatient(item)}
                         className={[
-                          "flex w-full items-center justify-between border-b border-[#f2f4f8] px-4 py-2.5 text-left last:border-b-0",
-                          index === activePatientIndex ? "bg-[#eef5f4]" : "hover:bg-[#f8fafb]",
+                          "flex w-full items-center justify-between border-b border-slate-50 px-4 py-2.5 text-left last:border-b-0",
+                          index === activePatientIndex ? "bg-blue-50" : "hover:bg-slate-50",
                         ].join(" ")}
                       >
                         <span>
-                          <span className="block text-sm font-extrabold text-[#1d2a57]">
+                          <span className="block text-sm font-extrabold text-slate-800">
                             {item.petName} ({item.guardianName})
                           </span>
-                          <span className="mt-1 block text-xs font-bold text-[#8a94a6]">
+                          <span className="mt-1 block text-xs font-bold text-slate-400">
                             {item.phone}
                           </span>
                         </span>
-                        <span className="text-xs font-extrabold text-[#8a94a6]">
+                        <span className="text-xs font-extrabold text-slate-400">
                           {item.species}
                         </span>
                       </button>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-sm font-bold text-[#8a94a6]">
+                    <div className="px-4 py-3 text-sm font-bold text-slate-400">
                       검색 결과가 없습니다.
                     </div>
                   )}
@@ -289,7 +290,7 @@ export function ReservationFormModal({
           )}
 
           <section>
-            <h3 className="mb-2 text-sm font-extrabold text-[#1d2a57]">
+            <h3 className="mb-2 text-sm font-extrabold text-slate-800">
               정보 확인
             </h3>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -316,8 +317,8 @@ export function ReservationFormModal({
             </div>
           </section>
 
-          <section className="border-t border-[#edf1f6] pt-3">
-            <h3 className="mb-2 text-sm font-extrabold text-[#1d2a57]">
+          <section className="border-t border-slate-100 pt-3">
+            <h3 className="mb-2 text-sm font-extrabold text-slate-800">
               예약 정보
             </h3>
             <div className="mb-3 flex gap-2">
@@ -329,8 +330,8 @@ export function ReservationFormModal({
                   className={[
                     "flex-1 h-9 rounded-lg text-xs font-extrabold transition",
                     form.categoryCode === code
-                      ? "bg-[#2f6f67] text-white"
-                      : "border border-[#dfe6f1] text-[#1d2a57] hover:bg-[#eef5f4]",
+                      ? "bg-blue-600 text-white"
+                      : "border border-slate-200 text-slate-800 hover:bg-blue-50",
                   ].join(" ")}
                 >
                   {code === 2 ? "일반진료" : "정기검진"}
@@ -359,13 +360,13 @@ export function ReservationFormModal({
               <SelectField
                 label="담당 수의사"
                 value={form.doctorName}
-                options={doctorOptions}
+                options={doctors.map((d) => d.doctor_name)}
                 onChange={(value) =>
                   setForm((current) => ({ ...current, doctorName: value }))
                 }
               />
             </div>
-            <label className="mt-3 block text-xs font-extrabold text-[#1d2a57]">
+            <label className="mt-3 block text-xs font-extrabold text-slate-800">
               <span className="mb-1 block">메모</span>
               <span className="relative">
                 <textarea
@@ -374,9 +375,9 @@ export function ReservationFormModal({
                   onChange={(event) =>
                     setForm((current) => ({ ...current, memo: event.target.value }))
                   }
-                  className="h-20 w-full resize-none rounded-lg border border-[#dfe6f1] px-3 py-2 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2f6f67]"
+                  className="h-20 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"
                 />
-                <span className="absolute bottom-3 right-3 text-xs font-extrabold text-[#8a94a6]">
+                <span className="absolute bottom-3 right-3 text-xs font-extrabold text-slate-400">
                   {form.memo.length} / 200
                 </span>
               </span>
@@ -388,7 +389,7 @@ export function ReservationFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 rounded-lg border border-[#bdd6d6] text-sm font-extrabold text-[#1d2a57]"
+            className="h-10 rounded-lg border border-blue-100 text-sm font-extrabold text-slate-800"
           >
             취소
           </button>
@@ -400,7 +401,7 @@ export function ReservationFormModal({
                 onSave(selectedPatient, form);
               }
             }}
-            className="h-10 rounded-lg bg-[#2f6f67] text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#b8c0cf]"
+            className="h-10 rounded-lg bg-blue-600 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             예약 저장
           </button>
@@ -412,12 +413,12 @@ export function ReservationFormModal({
 
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
-    <label className="block min-w-0 text-xs font-extrabold text-[#1d2a57]">
+    <label className="block min-w-0 text-xs font-extrabold text-slate-800">
       <span className="mb-1 block">{label}</span>
       <input
         readOnly
         value={value}
-        className="h-8 w-full min-w-0 rounded-lg border border-[#edf1f6] bg-[#f9fafb] px-3 text-xs font-bold text-[#53617c] outline-none"
+        className="h-8 w-full min-w-0 rounded-lg border border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-600 outline-none"
       />
     </label>
   );
@@ -459,19 +460,19 @@ function DatePickerField({
   };
 
   return (
-    <label className="block min-w-0 text-xs font-extrabold text-[#1d2a57]">
+    <label className="block min-w-0 text-xs font-extrabold text-slate-800">
       <span className="mb-1 block">{label}</span>
-      <span className="flex h-8 min-w-0 items-center rounded-lg border border-[#dfe6f1] px-3">
+      <span className="flex h-8 min-w-0 items-center rounded-lg border border-slate-200 px-3">
         <input
           readOnly
           value={formatDateWithWeekday(selectedDate)}
-          className="min-w-0 flex-1 cursor-default bg-transparent text-xs font-bold text-[#1d2a57] outline-none"
+          className="min-w-0 flex-1 cursor-default bg-transparent text-xs font-bold text-slate-800 outline-none"
         />
         <button
           ref={calendarButtonRef}
           type="button"
           onClick={toggleCalendar}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[#53617c] hover:bg-[#eef5f4] hover:text-[#2f6f67]"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-slate-600 hover:bg-blue-50 hover:text-blue-600"
           aria-label="예약 날짜 선택"
         >
           <CalendarDays className="h-4 w-4" />
@@ -480,7 +481,7 @@ function DatePickerField({
 
       {isOpen && (
         <div
-          className="fixed z-[70] w-[244px] rounded-lg border border-[#dfe6f1] bg-white p-3 shadow-xl"
+          className="fixed z-[70] w-[244px] rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
           style={{
             left: popoverPosition.left,
             top: popoverPosition.top,
@@ -490,25 +491,25 @@ function DatePickerField({
             <button
               type="button"
               onClick={() => setVisibleMonth((date) => addMonths(date, -1))}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f5f7f9]"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-50"
               aria-label="이전 달"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-extrabold text-[#1d2a57]">
+            <span className="text-sm font-extrabold text-slate-800">
               {formatMonthTitle(visibleMonth)}
             </span>
             <button
               type="button"
               onClick={() => setVisibleMonth((date) => addMonths(date, 1))}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#53617c] hover:bg-[#f5f7f9]"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-50"
               aria-label="다음 달"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-extrabold text-[#8a94a6]">
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-extrabold text-slate-400">
             {dayLabels.map((day) => (
               <span key={day}>{day}</span>
             ))}
@@ -535,18 +536,18 @@ function DatePickerField({
                   className={[
                     "flex h-7 items-center justify-center rounded-md text-xs font-extrabold transition",
                     isPast
-                      ? "cursor-not-allowed text-[#d1d5db] line-through"
+                      ? "cursor-not-allowed text-slate-300 line-through"
                       : isSelected
-                        ? "bg-[#2f6f67] text-white"
+                        ? "bg-blue-600 text-white"
                         : isToday
-                          ? "border border-[#2f6f67] text-[#2f6f67]"
+                          ? "border border-blue-600 text-blue-600"
                           : !isCurrentMonth
-                            ? "text-[#c0c7d4]"
+                            ? "text-slate-300"
                             : isHoliday || isSunday
-                              ? "text-[#ef4444] hover:bg-[#fef2f2]"
+                              ? "text-red-500 hover:bg-red-50"
                               : isSaturday
-                                ? "text-[#2f6f67] hover:bg-[#eef5f4]"
-                                : "text-[#20283a] hover:bg-[#f5f7f9]",
+                                ? "text-blue-600 hover:bg-blue-50"
+                                : "text-slate-800 hover:bg-slate-50",
                   ].join(" ")}
                 >
                   {day.getDate()}
@@ -572,13 +573,13 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block min-w-0 text-xs font-extrabold text-[#1d2a57]">
+    <label className="block min-w-0 text-xs font-extrabold text-slate-800">
       <span className="mb-1 block">{label}</span>
       <span className="relative block min-w-0">
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-8 w-full appearance-none rounded-lg border border-[#dfe6f1] bg-white px-3 pr-8 text-xs font-bold text-[#1d2a57] outline-none focus:border-[#2f6f67]"
+          className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-8 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"
         >
           <option value="">선택</option>
           {options.map((option) => (
@@ -587,7 +588,7 @@ function SelectField({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2.5 top-2 h-4 w-4 text-[#53617c]" />
+        <ChevronDown className="pointer-events-none absolute right-2.5 top-2 h-4 w-4 text-slate-600" />
       </span>
     </label>
   );

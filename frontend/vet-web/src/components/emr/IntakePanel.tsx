@@ -26,7 +26,7 @@ export function IntakePanel({
   return (
     <Panel className="flex flex-1 min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center px-4 py-2.5">
-        <h2 className="text-sm font-extrabold text-[#151b28]">
+        <h2 className="text-base font-extrabold text-slate-900">
           사전 문진 / 메모
         </h2>
       </div>
@@ -36,58 +36,58 @@ export function IntakePanel({
           type="button"
           onClick={() => onApplyIntake("all")}
           disabled={isReadOnly}
-          className="h-9 w-full rounded-lg border border-[#255e57] bg-[#2f6f67] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#dfe6f1] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
+          className="h-9 w-full rounded-lg border border-blue-700 bg-blue-600 text-xs font-extrabold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
         >
           사전문진 + 메모 전체 옮기기
         </button>
 
-        <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5 shadow-sm">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
-              <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+            <p className="flex items-center gap-1.5 text-sm font-extrabold text-slate-800">
+              <Sparkles className="h-4 w-4 text-blue-500" strokeWidth={2.2} />
               AI 요약 문진
             </p>
             <button
               type="button"
               onClick={() => onApplyIntake("summary")}
               disabled={summary.length === 0 || isReadOnly}
-              className="rounded-md border border-[#2f6f67] bg-[#2f6f67] px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#c7d1df] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
+              className="rounded-md border border-blue-600 bg-blue-600 px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
             >
               옮기기
             </button>
           </div>
           {summary.length > 0 ? (
-            <ul className="space-y-1.5 text-xs font-bold leading-5 text-[#59657a]">
+            <ul className="space-y-1.5 text-xs font-bold leading-5 text-slate-600">
               {summary.map((bullet) => (
                 <li key={bullet} className="flex gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#357b70]" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
                   <span>{bullet}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-xs font-bold text-[#8a94a6]">
+            <p className="text-xs font-bold text-slate-400">
               예약 사전문진 내용이 없습니다.
             </p>
           )}
         </div>
 
-        <div className="rounded-lg border border-[#aecfc9] bg-[#eef5f4] p-2.5">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#20283a]">
-              <FileText className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+            <p className="flex items-center gap-1.5 text-sm font-extrabold text-slate-800">
+              <FileText className="h-4 w-4 text-blue-500" strokeWidth={2.2} />
               메모
             </p>
             <button
               type="button"
               onClick={() => onApplyIntake("memo")}
               disabled={!memo || isReadOnly}
-              className="rounded-md border border-[#2f6f67] bg-[#2f6f67] px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:border-[#c7d1df] disabled:bg-[#f1f4f8] disabled:text-[#a8b0bf] disabled:shadow-none"
+              className="rounded-md border border-blue-600 bg-blue-600 px-2 py-1 text-xs font-extrabold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
             >
               옮기기
             </button>
           </div>
-          <p className="text-xs font-bold leading-5 text-[#59657a]">
+          <p className="text-xs font-bold leading-5 text-slate-600">
             {memo ?? "수의사 메모가 없습니다."}
           </p>
         </div>
@@ -96,13 +96,13 @@ export function IntakePanel({
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <p className="text-xs font-extrabold text-[#20283a]">
+            <p className="text-xs font-extrabold text-slate-800">
               첨부 파일
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {visibleFiles.length === 0 && (
-              <div className="w-full rounded-lg bg-[#f9fafb] px-3 py-3 text-center text-xs font-bold text-[#8a94a6]">
+              <div className="w-full rounded-lg bg-slate-50 px-3 py-3 text-center text-xs font-bold text-slate-400">
                 보호자 첨부 파일 없음
               </div>
             )}
@@ -111,7 +111,7 @@ export function IntakePanel({
                 type="button"
                 key={fileUrl}
                 onClick={() => onPreviewImage(fileUrl, `보호자 첨부 ${index + 1}`)}
-                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#edf1f6]"
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100"
               >
                 <img
                   src={fileUrl}
@@ -119,7 +119,7 @@ export function IntakePanel({
                   className="h-full w-full object-cover"
                 />
                 {index === 3 && hiddenFileCount > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#1f2937]/55 text-sm font-extrabold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-800/55 text-sm font-extrabold text-white">
                     +{hiddenFileCount}
                   </div>
                 )}

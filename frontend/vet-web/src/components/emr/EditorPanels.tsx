@@ -75,7 +75,7 @@ function EditableComboBox({
     setHasTyped(false);
   };
 
-  if (isReadOnly) return <span className="text-xs text-[#4d5874]">{value || "-"}</span>;
+  if (isReadOnly) return <span className="text-xs text-slate-600">{value || "-"}</span>;
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -124,12 +124,12 @@ function EditableComboBox({
             ? `${listboxId}-${activeIndex}`
             : undefined
         }
-        className="h-7 w-full min-w-0 rounded border border-[#dfe6f1] bg-white px-1.5 pr-6 text-xs font-bold outline-none transition placeholder:text-[#697386] focus:border-[#357b70] focus:ring-1 focus:ring-[#eef5f4]"
+        className="h-7 w-full min-w-0 rounded border border-slate-200 bg-white px-1.5 pr-6 text-xs font-bold outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-50"
       />
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[#64748b]"
+        className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-slate-500"
         aria-label={`${placeholder} 옵션 열기`}
       >
         <ChevronDown className="h-3.5 w-3.5" />
@@ -138,7 +138,7 @@ function EditableComboBox({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-36 overflow-y-auto rounded-md border border-[#dfe6f1] bg-white py-1 shadow-lg"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-36 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg"
         >
           {filteredOptions.length > 0 ? (
             filteredOptions.map((option, index) => (
@@ -153,15 +153,15 @@ function EditableComboBox({
                 className={[
                   "block w-full truncate px-2 py-1.5 text-left text-xs font-bold",
                   index === activeIndex
-                    ? "bg-[#eef5f4] text-[#2f6f67]"
-                    : "text-[#4d5874] hover:bg-[#eef5f4] hover:text-[#2f6f67]",
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:bg-blue-50 hover:text-blue-600",
                 ].join(" ")}
               >
                 {option}
               </button>
             ))
           ) : (
-            <div className="px-2 py-1.5 text-xs font-bold text-[#8a94a6]">
+            <div className="px-2 py-1.5 text-xs font-bold text-slate-400">
               직접 입력 중
             </div>
           )}
@@ -182,7 +182,7 @@ function DurationComboBox({
 }) {
   const durationValue = value ? `${value}일` : "";
 
-  if (isReadOnly) return <span className="text-xs text-[#4d5874]">{value}일</span>;
+  if (isReadOnly) return <span className="text-xs text-slate-600">{value}일</span>;
 
   return (
     <EditableComboBox
@@ -224,15 +224,15 @@ export function EditorPanel({
 }) {
   return (
     <Panel className="flex flex-1 flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-[#edf1f6] px-4 py-2">
-        <h2 className="text-sm font-extrabold text-[#151b28]">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-2.5">
+        <h2 className="text-base font-extrabold text-slate-900">
           현재 진료 내용 입력
         </h2>
         <button
           type="button"
           onClick={onCompleteVisit}
           disabled={isReadOnly}
-          className="h-8 rounded-md bg-[#2f6f67] px-3 text-xs font-extrabold text-white transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:bg-[#c7d1df]"
+          className="h-8 rounded-md bg-blue-600 px-3 text-xs font-extrabold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           진료 완료
         </button>
@@ -243,13 +243,13 @@ export function EditorPanel({
           onChange={(event) => onChange(event.target.value)}
           placeholder="진료 내용을 입력하세요..."
           readOnly={isReadOnly}
-          className="min-h-[120px] flex-1 w-full resize-none rounded-md border border-[#dfe6f1] px-3 py-2.5 text-xs font-bold leading-5 text-[#20283a] outline-none transition placeholder:text-[#a8b0bf] focus:border-[#357b70] focus:ring-2 focus:ring-[#eef5f4] read-only:bg-[#f9fafb] read-only:text-[#697386] read-only:focus:border-[#dfe6f1] read-only:focus:ring-0"
+          className="min-h-[120px] flex-1 w-full resize-none rounded-md border border-slate-200 px-3 py-2.5 text-xs font-bold leading-5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-50 read-only:bg-slate-50 read-only:text-slate-500 read-only:focus:border-slate-200 read-only:focus:ring-0"
         />
         {errorMessage && (
           <p className="text-xs font-bold text-red-500">{errorMessage}</p>
         )}
-        <div className="border-t border-[#edf1f6] pt-3">
-          <h3 className="mb-2 text-sm font-extrabold text-[#151b28]">사진 등록</h3>
+        <div className="border-t border-slate-100 pt-3">
+          <h3 className="mb-2 text-sm font-extrabold text-slate-900">사진 등록</h3>
           <PhotoUploadFields
             files={files}
             onUploadFile={onUploadFile}
@@ -304,7 +304,7 @@ function PhotoUploadFields({
         {files.map((file) => (
           <div
             key={file.id}
-            className="relative h-16 w-16 overflow-hidden rounded-md bg-[#edf1f6]"
+            className="relative h-16 w-16 overflow-hidden rounded-md bg-slate-100"
           >
             <button
               type="button"
@@ -322,7 +322,7 @@ function PhotoUploadFields({
               onClick={() => onRemoveFile(file.id)}
               aria-label="첨부 삭제"
               disabled={isReadOnly}
-              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#111827]/70 text-white disabled:hidden"
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900/70 text-white disabled:hidden"
             >
               <X className="h-3 w-3" />
             </button>
@@ -341,13 +341,13 @@ function PhotoUploadFields({
           event.preventDefault();
           handleFilesSelected(event.dataTransfer.files);
         }}
-        className="grid min-h-12 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-md border border-dashed border-[#cfd8e6] px-3 py-2 text-left text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:border-[#e5eaf2] disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
+        className="grid min-h-12 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-md border border-dashed border-slate-300 px-3 py-2 text-left text-xs font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
       >
         <FileUp className="row-span-2 h-4 w-4 shrink-0" />
         <span className="min-w-0 break-keep leading-4">
           {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
         </span>
-        <span className="min-w-0 break-keep text-[11px] font-bold leading-4 text-[#8a94a6]">
+        <span className="min-w-0 break-keep text-[11px] font-bold leading-4 text-slate-400">
           JPG, PNG, PDF, MP4 · 최대 50MB
         </span>
       </button>
@@ -361,8 +361,8 @@ function PhotoUploadFields({
 export function PhotoUploadPanel(props: PhotoUploadFieldsProps) {
   return (
     <Panel>
-      <div className="border-b border-[#edf1f6] px-4 py-2">
-        <h2 className="text-sm font-extrabold text-[#151b28]">사진 등록</h2>
+      <div className="border-b border-slate-100 px-4 py-2.5">
+        <h2 className="text-base font-extrabold text-slate-900">사진 등록</h2>
       </div>
       <div className="px-4 py-3">
         <PhotoUploadFields {...props} />
@@ -456,18 +456,18 @@ export function PrescriptionInputPanel({
 
   return (
     <Panel className="flex flex-1 flex-col">
-      <div className="shrink-0 flex items-center justify-between gap-2 border-b border-[#edf1f6] px-3 py-2">
-        <h2 className="shrink-0 text-sm font-extrabold text-[#151b28]">처방전</h2>
+      <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
+        <h2 className="shrink-0 text-base font-extrabold text-slate-900">처방전</h2>
         <div className="flex min-w-0 items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={onGenerate}
             disabled={isReadOnly || isGenerating}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-[#dfe6f1] bg-white px-3.5 text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67] disabled:cursor-not-allowed disabled:bg-[#f9fafb] disabled:text-[#a8b0bf]"
+            className="flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3.5 text-xs font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
           >
             {isGenerating ? (
               <>
-                <svg className="h-4 w-4 animate-spin text-[#357b70]" viewBox="0 0 24 24" fill="none">
+                <svg className="h-4 w-4 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
@@ -475,7 +475,7 @@ export function PrescriptionInputPanel({
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 text-[#357b70]" strokeWidth={2.2} />
+                <Sparkles className="h-4 w-4 text-blue-500" strokeWidth={2.2} />
                 처방전 자동 생성
               </>
             )}
@@ -483,7 +483,7 @@ export function PrescriptionInputPanel({
           <button
             type="button"
             onClick={onOpenPreview}
-            className="h-9 rounded-md border border-[#dfe6f1] bg-white px-3.5 text-xs font-extrabold text-[#4d5874] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+            className="h-9 rounded-md border border-slate-200 bg-white px-3.5 text-xs font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
           >
             미리보기
           </button>
@@ -531,14 +531,14 @@ export function PrescriptionInputPanel({
                 ? `${drugListboxId}-${activeResultIndex}`
                 : undefined
             }
-            className="h-8 w-full rounded-md border border-[#357b70] px-2.5 pr-8 text-xs font-bold outline-none ring-2 ring-[#eef5f4] read-only:border-[#dfe6f1] read-only:bg-[#f9fafb] read-only:text-[#8a94a6] read-only:ring-0"
+            className="h-8 w-full rounded-md border border-blue-500 px-2.5 pr-8 text-xs font-bold outline-none ring-2 ring-blue-50 read-only:border-slate-200 read-only:bg-slate-50 read-only:text-slate-400 read-only:ring-0"
           />
-          <Search className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#357b70]" />
+          <Search className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-500" />
           {isOpen && (
             <ul
               id={drugListboxId}
               role="listbox"
-              className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[#dfe6f1] bg-white shadow-lg"
+              className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
             >
               {results.map((drug, index) => (
                 <li key={drug.drugid} role="presentation">
@@ -551,12 +551,12 @@ export function PrescriptionInputPanel({
                     onClick={() => handleSelect(drug)}
                     className={[
                       "w-full px-4 py-2 text-left text-sm",
-                      index === activeResultIndex ? "bg-[#eef5f4]" : "hover:bg-[#eef5f4]",
+                      index === activeResultIndex ? "bg-blue-50" : "hover:bg-blue-50",
                     ].join(" ")}
                   >
-                    <span className="font-extrabold text-[#20283a]">{drug.name}</span>
+                    <span className="font-extrabold text-slate-800">{drug.name}</span>
                     {drug.ingredient_kr && (
-                      <span className="ml-2 text-xs text-[#8a94a6]">{drug.ingredient_kr}</span>
+                      <span className="ml-2 text-xs text-slate-400">{drug.ingredient_kr}</span>
                     )}
                   </button>
                 </li>
@@ -565,9 +565,9 @@ export function PrescriptionInputPanel({
           )}
         </div>
 
-        <div className="relative overflow-visible rounded-md border border-[#e8edf4]">
+        <div className="relative overflow-visible rounded-md border border-slate-200">
           <table className="w-full table-fixed text-left">
-            <thead className="bg-[#f8fafb] text-[11px] font-extrabold text-[#697386]">
+            <thead className="bg-slate-50 text-[11px] font-extrabold text-slate-500">
               <tr>
                 <th className="w-[24%] px-2 py-1.5">약제명</th>
                 <th className="w-[15%] px-1 py-1.5">형태</th>
@@ -575,7 +575,7 @@ export function PrescriptionInputPanel({
                 <th className="w-[19%] px-1 py-1.5">용법</th>
                 <th className="w-[12%] px-1 py-1.5">기간</th>
                 <th
-                  className={`w-[7%] px-1 py-1.5 text-center ${!isReadOnly && prescriptions.length > 0 ? "cursor-pointer select-none hover:text-[#2f6f67]" : ""}`}
+                  className={`w-[7%] px-1 py-1.5 text-center ${!isReadOnly && prescriptions.length > 0 ? "cursor-pointer select-none hover:text-blue-600" : ""}`}
                   onClick={() => {
                     if (isReadOnly || prescriptions.length === 0) return;
                     const allChecked = prescriptions.every((p) => (p.pil_seon ?? "") === "필");
@@ -596,7 +596,7 @@ export function PrescriptionInputPanel({
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-3 py-6 text-center text-xs font-bold text-[#8a94a6]"
+                    className="px-3 py-6 text-center text-xs font-bold text-slate-400"
                   >
                     검색을 통해 약을 추가해주세요.
                   </td>
@@ -608,9 +608,9 @@ export function PrescriptionInputPanel({
                   return (
                   <tr
                     key={clientId}
-                    className="border-t border-[#edf1f6] text-xs font-bold text-[#4d5874]"
+                    className="border-t border-slate-100 text-xs font-bold text-slate-600"
                   >
-                    <td className="px-2 py-1.5 align-top font-extrabold text-[#20283a]">
+                    <td className="px-2 py-1.5 align-top font-extrabold text-slate-800">
                       <span className="block min-w-0 truncate" title={prescription.drug_name}>
                         {prescription.drug_name}
                       </span>
@@ -651,7 +651,7 @@ export function PrescriptionInputPanel({
                     </td>
                     <td className="px-1 py-1.5 text-center align-middle">
                       {isReadOnly ? (
-                        <span className="text-xs text-[#4d5874]">{pilSeon || "선"}</span>
+                        <span className="text-xs text-slate-600">{pilSeon || "선"}</span>
                       ) : (
                         <input
                           type="checkbox"
@@ -660,7 +660,7 @@ export function PrescriptionInputPanel({
                             onUpdate?.(clientId, "pil_seon", pilSeon === "필" ? "선" : "필")
                           }
                           aria-label={`${prescription.drug_name} 필수 여부`}
-                          className="h-4 w-4 cursor-pointer accent-[#2f6f67]"
+                          className="h-4 w-4 cursor-pointer accent-blue-600"
                         />
                       )}
                     </td>
@@ -670,7 +670,7 @@ export function PrescriptionInputPanel({
                         onClick={() => onRemove(clientId)}
                         disabled={isReadOnly}
                         aria-label={`${prescription.drug_name} 삭제`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded text-[#ef4444] hover:bg-red-50 disabled:cursor-not-allowed disabled:text-[#c7d1df]"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

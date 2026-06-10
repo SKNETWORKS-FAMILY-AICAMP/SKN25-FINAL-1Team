@@ -11,6 +11,7 @@
 import json
 import re
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
@@ -23,6 +24,7 @@ from sqlalchemy import or_
 
 from app.core.config import settings
 from app.core.dependencies import get_current_doctor
+from app.utils.file_validation import validate_file
 from app.db.session import get_db
 from app.models.doctor import Doctor
 from app.models.drug import Drug
@@ -49,11 +51,19 @@ router = APIRouter(prefix="/doctor/emr", tags=["doctor-emr"])
 @router.get("/queue", status_code=200)
 async def emr_queue(
     target_date: date = Query(default_factory=date.today, alias="date"),
+    doctor_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
     """오늘의 진료 대기/완료 큐를 반환한다."""
-    waiting, completed = await get_emr_queue(db, current_doctor.doctorid, target_date)
+    if doctor_id is not None:
+        target = await db.get(Doctor, doctor_id)
+        if target is None or target.hospital_name != current_doctor.hospital_name:
+            raise HTTPException(status_code=403, detail="해당 수의사에 대한 접근 권한이 없습니다.")
+        effective_id = doctor_id
+    else:
+        effective_id = current_doctor.doctorid
+    waiting, completed = await get_emr_queue(db, effective_id, target_date)
     return {
         "code": 200,
         "result": {
@@ -93,7 +103,7 @@ async def emr_report(
     """AI Chart 에이전트가 생성한 SOAP 초안을 반환한다."""
     report = await get_report_by_schedule(db, schedule_id)
     if report is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -120,7 +130,7 @@ async def emr_triage(
     """보호자 문진 AI 트리아지 결과를 반환한다."""
     triage = await get_triage_by_schedule(db, schedule_id)
     if triage is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="트리아지 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -155,7 +165,7 @@ async def emr_validation(
     """Validation + Judge 에이전트 결과를 반환한다."""
     validation = await get_validation_by_schedule(db, schedule_id)
     if validation is None:
-        return {"code": 200, "result": None}
+        raise HTTPException(status_code=404, detail="검증 결과를 찾을 수 없습니다.")
     return {
         "code": 200,
         "result": {
@@ -398,17 +408,9 @@ async def upload_emr_file(
     file: UploadFile = File(...),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
-    allowed_types = ["image/jpeg", "image/png", "application/pdf", "video/mp4"]
     content_type = file.content_type or "application/octet-stream"
-    if content_type not in allowed_types:
-        raise HTTPException(
-            status_code=400,
-            detail="이미지(JPG, PNG), PDF 또는 영상(MP4) 파일만 업로드 가능합니다.",
-        )
-
     body = await file.read()
-    if len(body) > 50 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="파일 크기는 50MB 이하만 업로드 가능합니다.")
+    validate_file(content_type, len(body), ["image/jpeg", "image/png", "application/pdf", "video/mp4"], 50 * 1024 * 1024)
 
     from botocore.exceptions import NoCredentialsError
 

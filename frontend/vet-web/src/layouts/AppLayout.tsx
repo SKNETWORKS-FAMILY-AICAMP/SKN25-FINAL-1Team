@@ -58,46 +58,46 @@ const alarmTypeMeta: Record<
   reservation_confirmed: {
     label: "예약 확정",
     Icon: CalendarCheck,
-    bgCls: "bg-[#eef5f4]",
-    iconCls: "text-[#2f6f67]",
-    labelCls: "text-[#255e57]",
+    bgCls: "bg-blue-50",
+    iconCls: "text-blue-600",
+    labelCls: "text-blue-700",
   },
   reservation_cancelled: {
     label: "예약 취소",
     Icon: CalendarX,
-    bgCls: "bg-[#fef2f2]",
-    iconCls: "text-[#ef4444]",
-    labelCls: "text-[#dc2626]",
+    bgCls: "bg-red-50",
+    iconCls: "text-red-500",
+    labelCls: "text-red-600",
   },
   reservation_updated: {
     label: "예약 수정",
     Icon: CalendarClock,
-    bgCls: "bg-[#fffbeb]",
-    iconCls: "text-[#f59e0b]",
-    labelCls: "text-[#b45309]",
+    bgCls: "bg-amber-50",
+    iconCls: "text-amber-500",
+    labelCls: "text-amber-700",
   },
   chart_ready: {
     label: "차트 준비",
     Icon: ClipboardList,
-    bgCls: "bg-[#eef5f4]",
-    iconCls: "text-[#2f6f67]",
-    labelCls: "text-[#255e57]",
+    bgCls: "bg-blue-50",
+    iconCls: "text-blue-600",
+    labelCls: "text-blue-700",
   },
   followup_received: {
     label: "경과 보고",
     Icon: ClipboardList,
-    bgCls: "bg-[#f9fafb]",
-    iconCls: "text-[#64748b]",
-    labelCls: "text-[#475569]",
+    bgCls: "bg-slate-50",
+    iconCls: "text-slate-500",
+    labelCls: "text-slate-600",
   },
 };
 
 const fallbackAlarmTypeMeta = {
   label: "알림",
   Icon: Bell,
-  bgCls: "bg-[#f8fafb]",
-  iconCls: "text-[#6b7895]",
-  labelCls: "text-[#59657a]",
+  bgCls: "bg-slate-50",
+  iconCls: "text-slate-500",
+  labelCls: "text-slate-600",
 };
 
 const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
@@ -193,9 +193,9 @@ export default function AppLayout({
   const sidebarMarginClass = "ml-40";
 
   return (
-    <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1f2937]">
+    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800">
       <header
-        className={`fixed inset-x-0 top-0 z-30 flex ${headerHeightClass} items-center justify-between border-b border-[#e5eaf2] bg-white px-3`}
+        className={`fixed inset-x-0 top-0 z-30 flex ${headerHeightClass} items-center justify-between border-b border-slate-200 bg-white px-3`}
       >
         <button
           type="button"
@@ -207,8 +207,8 @@ export default function AppLayout({
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden items-center gap-2 text-xs font-bold tabular-nums text-[#3f4960] md:flex">
-            <Clock3 className="h-4 w-4 text-[#2f6f67]" strokeWidth={2.1} />
+          <div className="hidden items-center gap-2 text-xs font-bold tabular-nums text-slate-700 md:flex">
+            <Clock3 className="h-4 w-4 text-blue-600" strokeWidth={2.1} />
             <span>{clockText}</span>
           </div>
 
@@ -222,16 +222,16 @@ export default function AppLayout({
                 if (willOpen && hasUnread) markAllRead();
               }}
               aria-label="알림"
-              className="relative flex h-8 w-8 items-center justify-center rounded-lg border-l border-r border-[#eef1f6] text-[#2f6f67] transition hover:bg-[#f8f9fa] hover:text-[#2f6f67]"
+              className="relative flex h-8 w-8 items-center justify-center rounded-lg border-l border-r border-slate-100 text-blue-600 transition hover:bg-slate-50 hover:text-blue-600"
             >
               <Bell className="h-4 w-4" strokeWidth={2.1} />
               {hasUnread && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ef4444]" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
               )}
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[380px] overflow-hidden rounded-lg border border-[#e5eaf2] bg-white shadow-xl">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[380px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
                 <NotificationPanel
                   alarms={alarms}
                   isMarkingRead={isMarkingRead}
@@ -249,26 +249,26 @@ export default function AppLayout({
             <button
               type="button"
               onClick={() => setIsHospitalMenuOpen((isOpen) => !isOpen)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-extrabold text-[#20283a] transition hover:bg-[#f8f9fa]"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-extrabold text-slate-800 transition hover:bg-slate-50"
               aria-expanded={isHospitalMenuOpen}
             >
               <span>{hospitalName}</span>
-              <ChevronDown className="h-4 w-4 text-[#6b7895]" strokeWidth={2.2} />
+              <ChevronDown className="h-4 w-4 text-slate-500" strokeWidth={2.2} />
             </button>
 
             {isHospitalMenuOpen && (
-              <div className="absolute right-0 top-12 w-48 rounded-lg border border-[#dfe5ef] bg-white py-2 shadow-lg">
+              <div className="absolute right-0 top-12 w-48 rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
                 <button
                   type="button"
                   onClick={() => { onNavigate?.("settings"); setIsHospitalMenuOpen(false); }}
-                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f6f8f9]"
+                  className="block w-full px-4 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
                 >
                   병원 설정
                 </button>
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="block w-full px-4 py-2 text-left text-sm font-bold text-[#344055] hover:bg-[#f6f8f9]"
+                  className="block w-full px-4 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
                 >
                   로그아웃
                 </button>
@@ -280,7 +280,7 @@ export default function AppLayout({
 
       <div className={`flex ${contentPaddingTopClass}`}>
         <aside
-          className={`fixed bottom-0 left-0 ${topOffsetClass} z-20 flex ${sidebarWidthClass} flex-col justify-between border-r border-[#e5eaf2] bg-white px-2.5 py-3`}
+          className={`fixed bottom-0 left-0 ${topOffsetClass} z-20 flex ${sidebarWidthClass} flex-col justify-between border-r border-slate-200 bg-white px-2.5 py-3`}
         >
           <nav className="space-y-1.5" aria-label="주요 메뉴">
             {navigationItems.map(({ id, label, Icon }) => {
@@ -294,34 +294,34 @@ export default function AppLayout({
                   className={[
                     "flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-extrabold transition",
                     isActive
-                      ? "bg-[#eef5f4] text-[#2f6f67]"
-                      : "text-[#20283a] hover:bg-[#f8fafb] hover:text-[#2f6f67]",
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-800 hover:bg-slate-50 hover:text-blue-600",
                   ].join(" ")}
                 >
-                  <Icon className="h-4 w-4 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
+                  <Icon className="h-4 w-4 shrink-0 text-blue-600" strokeWidth={2.2} />
                   <span className="truncate">{label}</span>
                 </button>
               );
             })}
           </nav>
 
-          <section className="rounded-lg border border-[#e5eaf2] bg-white p-2.5 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
             <div>
-              <p className="text-[10px] font-bold text-[#4c5870]">수의사 계정</p>
-              <p className="mt-0.5 truncate text-xs font-extrabold text-[#20283a]">
+              <p className="text-[10px] font-bold text-slate-600">수의사 계정</p>
+              <p className="mt-0.5 truncate text-xs font-extrabold text-slate-800">
                 {session.user.name}
               </p>
             </div>
-            <div className="mt-2 border-t border-[#edf1f6] pt-2">
-              <p className="text-[10px] font-bold text-[#4c5870]">마지막 로그인</p>
-              <p className="mt-0.5 break-words text-[10px] font-extrabold tabular-nums text-[#20283a]">
+            <div className="mt-2 border-t border-slate-100 pt-2">
+              <p className="text-[10px] font-bold text-slate-600">마지막 로그인</p>
+              <p className="mt-0.5 break-words text-[10px] font-extrabold tabular-nums text-slate-800">
                 {lastLoginText}
               </p>
             </div>
             <button
               type="button"
               onClick={onLogout}
-              className="mt-2 h-8 w-full rounded-lg border border-[#dfe5ef] bg-white text-xs font-extrabold text-[#59657a] transition hover:border-[#357b70] hover:text-[#2f6f67]"
+              className="mt-2 h-8 w-full rounded-lg border border-slate-200 bg-white text-xs font-extrabold text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
             >
               로그아웃
             </button>
@@ -329,7 +329,7 @@ export default function AppLayout({
         </aside>
 
         <main
-          className={`${sidebarMarginClass} flex-1 bg-[#f8fafc] ${
+          className={`${sidebarMarginClass} flex-1 bg-slate-50 ${
             compact
               ? "h-[calc(100vh-56px)] overflow-hidden px-2 py-2"
               : "h-[calc(100vh-56px)] overflow-y-auto px-4 pb-8 pt-5"
@@ -366,14 +366,14 @@ function NotificationPanel({
   return (
     <div className="flex max-h-[520px] flex-col">
       {/* 헤더 */}
-      <div className="flex shrink-0 items-center justify-between border-b border-[#e5eaf2] px-4 py-3">
-        <h3 className="text-sm font-extrabold text-[#151b28]">알림</h3>
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+        <h3 className="text-sm font-extrabold text-slate-900">알림</h3>
         {hasUnread && (
           <button
             type="button"
             onClick={onMarkAllRead}
             disabled={isMarkingRead}
-            className="flex items-center gap-1 text-xs font-bold text-[#2f6f67] transition hover:text-[#255e57] disabled:opacity-50"
+            className="flex items-center gap-1 text-xs font-bold text-blue-600 transition hover:text-blue-700 disabled:opacity-50"
           >
             <CheckCheck className="h-3.5 w-3.5" />
             모두 읽음
@@ -382,10 +382,10 @@ function NotificationPanel({
       </div>
 
       {/* 목록 */}
-      <ul className="flex-1 overflow-y-auto divide-y divide-[#f0f3f8]">
+      <ul className="flex-1 overflow-y-auto divide-y divide-slate-100">
         {alarms.length === 0 ? (
-          <li className="flex flex-col items-center justify-center gap-3 py-14 text-sm font-bold text-[#8595ae]">
-            <Bell className="h-9 w-9 text-[#c5cfe0]" strokeWidth={1.8} />
+          <li className="flex flex-col items-center justify-center gap-3 py-14 text-sm font-bold text-slate-400">
+            <Bell className="h-9 w-9 text-slate-300" strokeWidth={1.8} />
             알림이 없습니다.
           </li>
         ) : (
@@ -435,7 +435,7 @@ function AlarmRow({
   return (
     <li
       onClick={handleClick}
-      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition hover:bg-[#f9fbfc] ${
+      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition hover:bg-slate-50 ${
         isVisited ? "opacity-60" : ""
       }`}
     >
@@ -450,17 +450,17 @@ function AlarmRow({
           <span className={`text-[11px] font-extrabold ${meta.labelCls}`}>
             {meta.label}
           </span>
-          <span className="shrink-0 text-[10px] font-semibold text-[#b0b9cc]">
+          <span className="shrink-0 text-[10px] font-semibold text-slate-300">
             {formatAlarmTime(alarm.created_at)}
           </span>
         </div>
-        <p className="mt-1 text-sm font-semibold leading-5 text-[#1d2a57]">
+        <p className="mt-1 text-sm font-semibold leading-5 text-slate-800">
           {alarm.contents}
         </p>
       </div>
 
       {!alarm.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#2f6f67]" />
+        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
       )}
     </li>
   );

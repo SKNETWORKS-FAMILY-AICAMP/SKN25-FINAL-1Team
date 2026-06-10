@@ -192,8 +192,8 @@ export default function SettingsPage({
       <div className="flex min-w-0 flex-col h-full">
         <div className="mb-4 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-extrabold text-[#151b28]">설정</h1>
-            <p className="mt-2 text-sm font-bold text-[#65718a]">
+            <h1 className="text-2xl font-extrabold text-slate-900">설정</h1>
+            <p className="mt-2 text-sm font-bold text-slate-500">
               병원 운영 환경 및 계정 보안을 관리합니다.
             </p>
           </div>
@@ -205,28 +205,28 @@ export default function SettingsPage({
           <div className="flex flex-col gap-4">
 
             {/* 요일별 운영 시간 */}
-            <section className="rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-              <div className="flex items-center gap-2 border-b border-[#e5eaf2] bg-[#eef5f4] px-4 py-2.5">
-                <Clock3 className="h-4 w-4 shrink-0 text-[#2f6f67]" strokeWidth={2.2} />
-                <h2 className="text-sm font-extrabold text-[#151b28]">요일별 운영 시간</h2>
+            <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-slate-200 bg-blue-50 px-4 py-2.5">
+                <Clock3 className="h-4 w-4 shrink-0 text-blue-600" strokeWidth={2.2} />
+                <h2 className="text-sm font-extrabold text-slate-900">요일별 운영 시간</h2>
               </div>
               <div className="px-4 py-2.5 space-y-0.5">
-                <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-0.5 border-b border-[#e5eaf2]">
-                  <span className="w-[6.25rem] shrink-0 text-xs font-extrabold text-[#2f6f67]">일괄 적용</span>
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-0.5 border-b border-slate-200">
+                  <span className="w-[6.25rem] shrink-0 text-xs font-extrabold text-blue-600">일괄 적용</span>
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <InlineTimeSelect value={bulkTimes.start_time} onChange={(v) => setBulkTimes((p) => ({ ...p, start_time: v }))} />
-                    <span className="text-xs text-[#8595ae]">~</span>
+                    <span className="text-xs text-slate-400">~</span>
                     <InlineTimeSelect value={bulkTimes.end_time} onChange={(v) => setBulkTimes((p) => ({ ...p, end_time: v }))} />
-                    <span className="mx-1 text-xs text-[#c5cfe0]">|</span>
-                    <span className="text-xs font-bold text-[#8595ae]">점심</span>
+                    <span className="mx-1 text-xs text-slate-300">|</span>
+                    <span className="text-xs font-bold text-slate-400">점심</span>
                     <InlineTimeSelect value={bulkTimes.lunch_start} onChange={(v) => setBulkTimes((p) => ({ ...p, lunch_start: v }))} />
-                    <span className="text-xs text-[#8595ae]">~</span>
+                    <span className="text-xs text-slate-400">~</span>
                     <InlineTimeSelect value={bulkTimes.lunch_end} onChange={(v) => setBulkTimes((p) => ({ ...p, lunch_end: v }))} />
                   </div>
                   <button
                     type="button"
                     onClick={applyBulkTimes}
-                    className="h-7 shrink-0 rounded-lg bg-[#2f6f67] px-2.5 text-xs font-extrabold text-white transition hover:bg-[#255e57]"
+                    className="h-7 shrink-0 rounded-lg bg-blue-600 px-2.5 text-xs font-extrabold text-white transition hover:bg-blue-700"
                   >
                     전체 적용
                   </button>
@@ -242,15 +242,15 @@ export default function SettingsPage({
                 ))}
                 <div className="flex items-center justify-end gap-3 pt-1">
                   {isWeeklySaved && (
-                    <p className="text-xs font-extrabold text-[#2f6f67]">저장되었습니다.</p>
+                    <p className="text-xs font-extrabold text-blue-600">저장되었습니다.</p>
                   )}
                   {weeklyError && (
-                    <p className="text-xs font-extrabold text-[#dc2626]">{weeklyError}</p>
+                    <p className="text-xs font-extrabold text-red-600">{weeklyError}</p>
                   )}
                   <button
                     type="button"
                     onClick={handleSaveWeekly}
-                    className="flex h-8 items-center gap-1.5 rounded-lg bg-[#2f6f67] px-3 text-xs font-extrabold text-white transition hover:bg-[#255e57]"
+                    className="flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-extrabold text-white transition hover:bg-blue-700"
                   >
                     <Save className="h-3.5 w-3.5" />
                     저장
@@ -260,10 +260,10 @@ export default function SettingsPage({
             </section>
 
             {/* 특정일 휴진 */}
-            <section className="flex flex-col flex-1 rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-              <div className="flex items-center gap-2 border-b border-[#e5eaf2] bg-[#eef5f4] px-4 py-2.5">
-                <CalendarX className="h-4 w-4 text-[#2f6f67]" strokeWidth={2.2} />
-                <h2 className="text-sm font-extrabold text-[#151b28]">특정일 휴진</h2>
+            <section className="flex flex-col flex-1 rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-slate-200 bg-blue-50 px-4 py-2.5">
+                <CalendarX className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
+                <h2 className="text-sm font-extrabold text-slate-900">특정일 휴진</h2>
               </div>
               <div className="flex flex-col flex-1 overflow-hidden px-4 py-3 gap-3">
                 <div className="shrink-0 flex items-center gap-2">
@@ -275,20 +275,20 @@ export default function SettingsPage({
                       setClosedDateWarning("");
                       setClosedDateError("");
                     }}
-                    className="h-9 rounded-lg border border-[#dfe6f1] bg-white px-3 text-sm font-bold text-[#1d2a57] outline-none transition focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4]"
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
                   />
                   <button
                     type="button"
                     onClick={handleAddClosedDate}
                     disabled={!newClosedDate}
-                    className="flex h-9 items-center gap-1.5 rounded-lg bg-[#2f6f67] px-3 text-xs font-extrabold text-white transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:bg-[#aecfc9]"
+                    className="flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-extrabold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-200"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     휴진 등록
                   </button>
                 </div>
                 {closedDateSuccess && (
-                  <p className="shrink-0 text-xs font-extrabold text-[#2f6f67]">{closedDateSuccess}</p>
+                  <p className="shrink-0 text-xs font-extrabold text-blue-600">{closedDateSuccess}</p>
                 )}
                 {closedDateWarning && (
                   <div className="shrink-0 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
@@ -297,17 +297,17 @@ export default function SettingsPage({
                   </div>
                 )}
                 {closedDateError && (
-                  <p className="shrink-0 text-xs font-extrabold text-[#dc2626]">{closedDateError}</p>
+                  <p className="shrink-0 text-xs font-extrabold text-red-600">{closedDateError}</p>
                 )}
                 {closedDates.length > 0 ? (
                   <ul className="flex-1 overflow-y-auto space-y-1.5">
                     {closedDates.map((d) => (
-                      <li key={d} className="flex items-center justify-between rounded-lg bg-[#f7f9fc] px-3 py-2">
-                        <span className="text-sm font-bold text-[#1d2a57]">{d}</span>
+                      <li key={d} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                        <span className="text-sm font-bold text-slate-800">{d}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveClosedDate(d)}
-                          className="flex items-center gap-1 text-xs font-bold text-[#8595ae] transition hover:text-[#dc2626]"
+                          className="flex items-center gap-1 text-xs font-bold text-slate-400 transition hover:text-red-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           해제
@@ -316,7 +316,7 @@ export default function SettingsPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs font-semibold text-[#b0b9cc]">등록된 휴진일이 없습니다.</p>
+                  <p className="text-xs font-semibold text-slate-300">등록된 휴진일이 없습니다.</p>
                 )}
               </div>
             </section>
@@ -324,21 +324,21 @@ export default function SettingsPage({
           </div>
 
           {/* ── 오른쪽: 계정 및 보안 ── */}
-          <section className="self-start rounded-lg border border-[#e5eaf2] bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-[#e5eaf2] bg-[#eef5f4] px-4 py-2.5">
-              <LockKeyhole className="h-4 w-4 text-[#2f6f67]" strokeWidth={2.2} />
-              <h2 className="text-sm font-extrabold text-[#151b28]">계정 및 보안</h2>
+          <section className="self-start rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-200 bg-blue-50 px-4 py-2.5">
+              <LockKeyhole className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
+              <h2 className="text-sm font-extrabold text-slate-900">계정 및 보안</h2>
             </div>
             <div className="px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-extrabold text-[#1d2a57]">관리자 비밀번호 변경</p>
-                  <p className="mt-0.5 text-xs font-semibold text-[#8595ae]">계정 보안을 위해 정기적으로 비밀번호를 변경해주세요.</p>
+                  <p className="text-sm font-extrabold text-slate-800">관리자 비밀번호 변경</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-400">계정 보안을 위해 정기적으로 비밀번호를 변경해주세요.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
-                  className="h-9 rounded-lg border border-[#aecfc9] bg-white px-4 text-sm font-extrabold text-[#2f6f67] transition hover:bg-[#eef5f4] whitespace-nowrap"
+                  className="h-9 rounded-lg border border-blue-200 bg-white px-4 text-sm font-extrabold text-blue-600 transition hover:bg-blue-50 whitespace-nowrap"
                 >
                   비밀번호 변경
                 </button>
@@ -366,8 +366,8 @@ function DayRow({
   onUpdate: (patch: Partial<DaySchedule>) => void;
 }) {
   return (
-    <div className={`flex h-11 items-center gap-3 rounded-lg px-3 ${day.is_open ? "bg-white" : "bg-[#f7f9fc]"}`}>
-      <span className="w-6 text-center text-sm font-extrabold text-[#344055]">
+    <div className={`flex h-11 items-center gap-3 rounded-lg px-3 ${day.is_open ? "bg-white" : "bg-slate-50"}`}>
+      <span className="w-6 text-center text-sm font-extrabold text-slate-700">
         {label}
       </span>
 
@@ -377,8 +377,8 @@ function DayRow({
           const wantsOpen = e.target.value === "open";
           if (wantsOpen !== day.is_open) onToggle();
         }}
-        className={`h-7 w-16 shrink-0 rounded-lg border border-[#dfe6f1] bg-white px-1 text-xs font-extrabold outline-none transition focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4] ${
-          day.is_open ? "text-[#2f6f67]" : "text-[#8595ae]"
+        className={`h-7 w-16 shrink-0 rounded-lg border border-slate-200 bg-white px-1 text-xs font-extrabold outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-50 ${
+          day.is_open ? "text-blue-600" : "text-slate-400"
         }`}
       >
         <option value="open">영업</option>
@@ -391,25 +391,25 @@ function DayRow({
             value={day.start_time ?? "09:00"}
             onChange={(v) => onUpdate({ start_time: v })}
           />
-          <span className="text-xs text-[#8595ae]">~</span>
+          <span className="text-xs text-slate-400">~</span>
           <InlineTimeSelect
             value={day.end_time ?? "18:00"}
             onChange={(v) => onUpdate({ end_time: v })}
           />
-          <span className="mx-1 text-xs text-[#c5cfe0]">|</span>
-          <span className="text-xs font-bold text-[#8595ae]">점심</span>
+          <span className="mx-1 text-xs text-slate-300">|</span>
+          <span className="text-xs font-bold text-slate-400">점심</span>
           <InlineTimeSelect
             value={day.lunch_start ?? "12:00"}
             onChange={(v) => onUpdate({ lunch_start: v })}
           />
-          <span className="text-xs text-[#8595ae]">~</span>
+          <span className="text-xs text-slate-400">~</span>
           <InlineTimeSelect
             value={day.lunch_end ?? "13:00"}
             onChange={(v) => onUpdate({ lunch_end: v })}
           />
         </div>
       ) : (
-        <span className="text-xs font-semibold text-[#b0b9cc]">휴진일</span>
+        <span className="text-xs font-semibold text-slate-300">휴진일</span>
       )}
     </div>
   );
@@ -426,7 +426,7 @@ function InlineTimeSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-8 rounded-lg border border-[#dfe6f1] bg-white px-2 text-xs font-extrabold text-[#1d2a57] outline-none transition focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4]"
+      className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-extrabold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
     >
       {timeOptions.map((t) => (
         <option key={t} value={t}>{t}</option>
@@ -513,17 +513,17 @@ function PasswordChangeModal({
         className="w-full max-w-[480px] rounded-lg bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[#e5eaf2] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 className="text-lg font-extrabold text-[#151b28]">비밀번호 변경</h2>
-            <p className="mt-0.5 text-xs font-semibold text-[#8595ae]">
+            <h2 className="text-lg font-extrabold text-slate-900">비밀번호 변경</h2>
+            <p className="mt-0.5 text-xs font-semibold text-slate-400">
               다시 사용하신 비밀번호를 입력해주세요.
             </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8595ae] transition hover:bg-[#f0f4fa] hover:text-[#344055]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
           </button>
@@ -532,11 +532,11 @@ function PasswordChangeModal({
         <div className="px-6 py-5 space-y-4">
           {success ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eef5f4]">
-                <CheckCircle2 className="h-8 w-8 text-[#2f6f67]" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                <CheckCircle2 className="h-8 w-8 text-blue-600" />
               </div>
-              <p className="text-base font-extrabold text-[#1d2a57]">비밀번호가 변경되었습니다.</p>
-              <p className="text-sm font-semibold text-[#8595ae]">잠시 후 자동으로 닫힙니다.</p>
+              <p className="text-base font-extrabold text-slate-800">비밀번호가 변경되었습니다.</p>
+              <p className="text-sm font-semibold text-slate-400">잠시 후 자동으로 닫힙니다.</p>
             </div>
           ) : (
             <>
@@ -545,13 +545,13 @@ function PasswordChangeModal({
               <PasswordInputField label="새 비밀번호 확인" value={confirmPassword} onChange={setConfirmPassword} placeholder="새 비밀번호 재입력" />
 
               {newPassword.length > 0 && (
-                <ul className="rounded-lg bg-[#f8fafd] px-4 py-3 space-y-1.5">
+                <ul className="rounded-lg bg-slate-50 px-4 py-3 space-y-1.5">
                   {policyStatus.map((p) => (
                     <li key={p.label} className="flex items-center gap-2 text-xs font-semibold">
                       <CheckCircle2
-                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-[#2f6f67]" : "text-[#c5cfe0]"}`}
+                        className={`h-3.5 w-3.5 shrink-0 ${p.isValid ? "text-blue-600" : "text-slate-300"}`}
                       />
-                      <span className={p.isValid ? "text-[#4d5874]" : "text-[#b0b9cc]"}>{p.label}</span>
+                      <span className={p.isValid ? "text-slate-600" : "text-slate-300"}>{p.label}</span>
                     </li>
                   ))}
                 </ul>
@@ -568,11 +568,11 @@ function PasswordChangeModal({
         </div>
 
         {!success && (
-          <div className="flex justify-end gap-3 border-t border-[#e5eaf2] px-6 py-4">
+          <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
             <button
               type="button"
               onClick={handleClose}
-              className="h-10 rounded-lg border border-[#dfe6f1] px-5 text-sm font-extrabold text-[#52607a] transition hover:bg-[#f0f4fa]"
+              className="h-10 rounded-lg border border-slate-200 px-5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-100"
             >
               취소
             </button>
@@ -580,7 +580,7 @@ function PasswordChangeModal({
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="h-10 rounded-lg bg-[#2f6f67] px-5 text-sm font-extrabold text-white transition hover:bg-[#255e57] disabled:cursor-not-allowed disabled:bg-[#aecfc9]"
+              className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-extrabold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-200"
             >
               {isLoading ? "변경 중..." : "변경하기"}
             </button>
@@ -604,15 +604,15 @@ function PasswordInputField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-extrabold text-[#52607a]">{label}</label>
+      <label className="mb-1.5 block text-xs font-extrabold text-slate-600">{label}</label>
       <div className="relative">
-        <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa5b8]" />
+        <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="password"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-12 w-full rounded-lg border border-[#dfe6f1] bg-white pl-10 pr-4 text-sm font-bold text-[#1d2a57] outline-none transition placeholder:text-[#c5cfe0] focus:border-[#7fb1a8] focus:ring-2 focus:ring-[#eef5f4]"
+          className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
         />
       </div>
     </div>

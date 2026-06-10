@@ -66,7 +66,7 @@ interface FeatureItemProps {
 function FeatureItem({ icon, title, description }: FeatureItemProps) {
   return (
     <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4">
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2a8587] text-white">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
         {icon}
       </span>
       <div>
