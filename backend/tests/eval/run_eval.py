@@ -50,7 +50,9 @@ def main() -> None:
             from app.core.config import settings
             if not settings.OPENAI_API_KEY:
                 raise RuntimeError("OPENAI_API_KEY 가 비어 있음 (backend/.env 확인)")
-            from tests.eval import test_latency_cost, test_llm_variance, test_multilingual
+            from tests.eval import (
+                test_latency_cost, test_llm_variance, test_multilingual, test_rag_retrieval,
+            )
 
             # 측정을 '하나의' 이벤트 루프에서 실행한다.
             # (asyncio.run 을 여러 번 호출하면 openai async client 정리 시점에
@@ -58,15 +60,18 @@ def main() -> None:
             async def _live():
                 return (await test_llm_variance._run(),
                         await test_latency_cost._run(),
-                        await test_multilingual._run_live())
+                        await test_multilingual._run_live(),
+                        await test_rag_retrieval._run())
 
-            var, lat, ml = asyncio.run(_live())
+            var, lat, ml, rag = asyncio.run(_live())
             (_BACKEND / "eval_llm_variance.json").write_text(
                 json.dumps(var, ensure_ascii=False, indent=2), encoding="utf-8")
             (_BACKEND / "eval_latency_cost.json").write_text(
                 json.dumps(lat, ensure_ascii=False, indent=2), encoding="utf-8")
             (_BACKEND / "eval_multilingual.json").write_text(
                 json.dumps(ml, ensure_ascii=False, indent=2), encoding="utf-8")
+            (_BACKEND / "eval_rag_retrieval.json").write_text(
+                json.dumps(rag, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as exc:  # noqa: BLE001
             print(f"\n[LIVE 측정 생략] {type(exc).__name__}: {exc}")
             print("  → LIVE 평가는 백엔드 의존성(openai 등)+OPENAI_API_KEY 가 필요합니다.")
@@ -109,20 +114,24 @@ def main() -> None:
         ]
     lat = _load("eval_latency_cost.json")
     if lat:
-        lines += ["## 3. 지연 / 비용 (LIVE 실측)", ""]
+        lines += ["## 3. 지연 / 비용 (LIVE 실측, 반복 측정 분포)", ""]
         for x in lat["logs"]:
             if x.get("step") == "llm_chart_draft":
+                la, it, ot = x["latency_sec"], x["input_tokens"], x["output_tokens"]
+                co = x.get("cost_per_1000_usd")
                 lines.append(
-                    f"- LLM 차트초안: {x['latency_sec']}s, "
-                    f"in {x['input_tokens']} / out {x['output_tokens']} tok, "
-                    f"**$ {x['cost_per_1000_usd']}/1000건** ({x['model']})")
+                    f"- LLM 차트초안 ({x.get('repeat')}회): 지연 **중앙값 {la['median']}s** "
+                    f"(p95 {la['p95']}s), 토큰 in {int(it['median'])}/out {int(ot['median'])}, "
+                    f"비용 **중앙값 $ {co['median'] if co else 'N/A'}/1000건** (p95 ${co['p95'] if co else 'N/A'}) "
+                    f"({x['model']})")
             elif x.get("step") == "rag_search":
                 if "skipped" in x:
-                    lines.append(f"- RAG 검색: (DB 미가동으로 생략)")
+                    lines.append("- RAG 검색: (코퍼스 미적재로 생략)")
                 else:
+                    la = x["latency_sec"]
                     lines.append(
-                        f"- RAG 검색: {x['latency_sec']}s, 결과 {x['results']}건, "
-                        f"top유사도 {x.get('top_similarity')}")
+                        f"- RAG 검색 ({x.get('repeat')}회): 지연 **중앙값 {la['median']}s** "
+                        f"(p95 {la['p95']}s), 결과 {x['results']}건, top유사도 {x.get('top_similarity')}")
         lines.append("")
     if not live:
         lines += ["## 2~3. LIVE 측정", "",
@@ -148,6 +157,24 @@ def main() -> None:
         ]
     else:
         lines += ["- B·C(보존율·표시 커버리지)는 `RUN_LIVE_EVAL=1` 로 실측 추가.", ""]
+
+    # ── 5. RAG 검색 품질 ─────────────────────────────────────────
+    rag = _load("eval_rag_retrieval.json")
+    if rag:
+        lines += [
+            "## 5. RAG 검색 품질 — Recall@k / MRR (사람 라벨, LLM-free 채점)",
+            "",
+            f"- 골든셋 {rag['n_queries']}쿼리(증상→기대 진료과), top-{rag['top_k']} 검색",
+            f"- **Recall@{rag['top_k']}: {rag['recall_at_k']*100:.1f}%** "
+            f"(기대 진료과가 top-{rag['top_k']}에 포함된 비율)",
+            f"- **MRR: {rag['mrr']:.3f}** (기대 진료과 첫 등장 순위의 역수 평균)",
+            "",
+            "  → 정답(진료과)은 사람이 라벨, 채점은 문자열 매칭 — 검색이 관련 사례를 끌어오는지 객관 측정.",
+            "",
+        ]
+    elif live:
+        lines += ["## 5. RAG 검색 품질", "",
+                  "- 코퍼스 미적재로 생략. `load_triage_rag.py` 적재 후 측정됨.", ""]
 
     (_BACKEND / "EVAL_REPORT.md").write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))

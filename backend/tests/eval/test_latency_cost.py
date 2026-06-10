@@ -49,8 +49,30 @@ def _cost_per_1000(model: str, in_tok: int, out_tok: int) -> float | None:
     return round(one * 1000, 4)
 
 
+# 반복 횟수(단발 측정의 run간 변동을 통계로 흡수). 환경변수로 조정.
+_LLM_REPEAT = int(os.environ.get("EVAL_LLM_REPEAT", "20"))
+_RAG_REPEAT = int(os.environ.get("EVAL_RAG_REPEAT", "20"))
+
+
+def _stats(xs: list[float]) -> dict:
+    """median / p95 / min / max / mean(소수4) — 단발값 대신 분포로 보고."""
+    if not xs:
+        return {}
+    s = sorted(xs)
+    n = len(s)
+    p95 = s[min(n - 1, int(round(0.95 * (n - 1))))]
+    return {
+        "n": n,
+        "median": round(s[n // 2], 4),
+        "p95": round(p95, 4),
+        "min": round(s[0], 4),
+        "max": round(s[-1], 4),
+        "mean": round(sum(s) / n, 4),
+    }
+
+
 async def _measure_llm() -> dict:
-    """차트 초안 수준의 실제 LLM 호출 1회 — 지연 + 실제 토큰 사용량."""
+    """차트 초안 수준 LLM 호출을 _LLM_REPEAT회 반복 → 지연/비용 분포(중앙값·p95)."""
     from openai import AsyncOpenAI
 
     from app.core.config import settings
@@ -61,35 +83,53 @@ async def _measure_llm() -> dict:
         "다음 문진을 SOAP 차트 초안으로 구조화하라(JSON). "
         "강아지, 3세, 어제부터 구토 3회·설사·식욕저하, 발현 1일 전."
     )
-    start = time.perf_counter()
-    resp = await client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_completion_tokens=400,
-        response_format={"type": "json_object"},
-    )
-    latency = round(time.perf_counter() - start, 4)
-    u = resp.usage
+
+    lats: list[float] = []
+    in_toks: list[int] = []
+    out_toks: list[int] = []
+    costs: list[float] = []
+    for _ in range(_LLM_REPEAT):
+        start = time.perf_counter()
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_completion_tokens=400,
+            response_format={"type": "json_object"},
+        )
+        lats.append(time.perf_counter() - start)
+        u = resp.usage
+        in_toks.append(u.prompt_tokens)
+        out_toks.append(u.completion_tokens)
+        c = _cost_per_1000(model, u.prompt_tokens, u.completion_tokens)
+        if c is not None:
+            costs.append(c)
+
     return {
-        "step": "llm_chart_draft", "model": model, "latency_sec": latency,
-        "input_tokens": u.prompt_tokens, "output_tokens": u.completion_tokens,
-        "cost_per_1000_usd": _cost_per_1000(model, u.prompt_tokens, u.completion_tokens),
+        "step": "llm_chart_draft", "model": model, "repeat": _LLM_REPEAT,
+        "latency_sec": _stats(lats),
+        "input_tokens": _stats([float(x) for x in in_toks]),
+        "output_tokens": _stats([float(x) for x in out_toks]),
+        "cost_per_1000_usd": _stats(costs) if costs else None,
     }
 
 
 async def _measure_rag() -> dict | None:
-    """RAG 검색(임베딩+pgvector) 실제 지연. DB 없으면 None."""
+    """RAG 검색(임베딩+pgvector)을 _RAG_REPEAT회 반복 → 지연 분포. DB 없으면 skipped."""
     try:
         from app.db.session import AsyncSessionLocal
         from ai.triage.rag import search_similar_triage_cases
 
-        start = time.perf_counter()
-        async with AsyncSessionLocal() as db:
-            matches = await search_similar_triage_cases(db, "구토하고 설사해요", top_k=3, expand_query=False)
-        return {"step": "rag_search", "latency_sec": round(time.perf_counter() - start, 4),
-                "results": len(matches),
-                "top_similarity": round(matches[0].similarity, 4) if matches else None}
+        lats: list[float] = []
+        last = []
+        for _ in range(_RAG_REPEAT):
+            start = time.perf_counter()
+            async with AsyncSessionLocal() as db:
+                last = await search_similar_triage_cases(db, "구토하고 설사해요", top_k=3, expand_query=False)
+            lats.append(time.perf_counter() - start)
+        return {"step": "rag_search", "repeat": _RAG_REPEAT, "latency_sec": _stats(lats),
+                "results": len(last),
+                "top_similarity": round(last[0].similarity, 4) if last else None}
     except Exception as exc:  # noqa: BLE001 — DB 미가동 등은 측정 생략
         return {"step": "rag_search", "skipped": str(exc)[:120]}
 
@@ -109,7 +149,7 @@ def test_latency_and_cost_measured():
     report = asyncio.run(_run())
     _OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     llm = next((x for x in report["logs"] if x["step"] == "llm_chart_draft"), None)
-    assert llm and llm["latency_sec"] > 0 and llm["input_tokens"] > 0
+    assert llm and llm["latency_sec"]["median"] > 0 and llm["input_tokens"]["median"] > 0
 
 
 if __name__ == "__main__":

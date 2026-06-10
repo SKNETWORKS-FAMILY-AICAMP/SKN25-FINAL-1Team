@@ -24,6 +24,8 @@ from ._walker import enumerate_paths, walk
 
 # 반복 실행 횟수(결정론 측정용). 순수 함수라 커도 빠름.
 _REPEAT = 100
+# 섹션당 열거할 경로 수(표본 확대). 순수 함수라 커도 빠름 → 사실상 전수에 가깝게.
+_MAX_PER_SECTION = 50
 _OUT = Path(__file__).resolve().parents[2] / "eval_determinism.json"
 
 
@@ -33,7 +35,7 @@ def _engine_urgency(answers, section, species, gender):
 
 
 def _eval_all() -> dict:
-    cases = enumerate_paths(max_per_section=4)
+    cases = enumerate_paths(max_per_section=_MAX_PER_SECTION)
     rows = []
     match = 0
     for c in cases:
@@ -72,7 +74,7 @@ def _measure_determinism(cases) -> dict:
 
 def run_and_dump() -> dict:
     spec = _eval_all()
-    cases = enumerate_paths(max_per_section=4)
+    cases = enumerate_paths(max_per_section=_MAX_PER_SECTION)
     det = _measure_determinism(cases)
     report = {"spec_consistency": spec, "determinism": det}
     _OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -90,7 +92,7 @@ def test_engine_matches_spec_reference():
 
 def test_engine_is_deterministic():
     """동일 입력 {_REPEAT}회 반복 시 출력이 100% 동일해야 한다(variance=0)."""
-    cases = enumerate_paths(max_per_section=4)
+    cases = enumerate_paths(max_per_section=_MAX_PER_SECTION)
     det = _measure_determinism(cases)
     assert det["unstable_cases"] == 0, det
     assert det["variance_rate"] == 0.0

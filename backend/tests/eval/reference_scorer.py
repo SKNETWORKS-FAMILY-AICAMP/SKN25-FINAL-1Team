@@ -38,12 +38,14 @@ def score(answers: list[dict], species: str | None, section: str | None,
     # ── step 2: urgency_score 합산 ───────────────────────────────
     total = sum(int(p["urgency_score"]) for p in answers if p.get("urgency_score") is not None)
 
-    # ── step 3: timing modifier (is_timing pill의 urgency_modifier) ──
-    timing_mod = next(
-        (int(p.get("urgency_modifier", 0)) for p in answers if p.get("is_timing")),
-        0,
-    )
-    total += timing_mod
+    # ── step 3: timing modifier ──
+    # [차등 테스트가 잡은 명세-데이터 불일치]
+    # scoring_engine 명세 step3 문구는 "is_timing == true 인 pill의 urgency_modifier"라고
+    # 적혀 있으나, 실제 vet_triage.json 의 타이밍 pill(abrupt/rapid/acute/recent)은
+    # is_timing 플래그 없이 urgency_modifier 만 갖는다. 엔진(engine.py)은 답변 pill의
+    # urgency_modifier 를 (is_timing 무관하게) 그대로 더한다. → 데이터·구현 기준에 맞춰
+    # urgency_modifier 가 있는 pill을 모두 합산한다(타이밍 pill만 이 값을 가지므로 동치).
+    total += sum(int(p.get("urgency_modifier") or 0) for p in answers)
 
     # ── step 4: 종 보정 ──────────────────────────────────────────
     if sp == "cat" and section in _CAT_PLUS1_SECTIONS:
