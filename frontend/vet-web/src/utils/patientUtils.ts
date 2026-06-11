@@ -21,7 +21,7 @@ export function mapListItemToPatient(
   return {
     id: item.petid,
     petName: item.petname,
-    species: "강아지",
+    species: item.species,
     breed: item.breed,
     age: item.age,
     guardianName: item.owner_name,
