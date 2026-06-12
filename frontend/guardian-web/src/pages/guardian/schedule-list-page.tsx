@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getSchedules } from "../../api/schedule-api";
@@ -63,14 +63,6 @@ const ScheduleListPage = () => {
   );
   const [cancelTarget, setCancelTarget] = useState<ScheduleListItem | null>(
     null,
-  );
-
-  const visibleSchedules = useMemo(
-    () =>
-      schedules.filter(
-        (schedule) => normalizeScheduleStatus(schedule.status) !== "PENDING",
-      ),
-    [schedules],
   );
 
   const loadSchedules = async ({
@@ -141,10 +133,9 @@ const ScheduleListPage = () => {
       return;
     }
 
+    // 리스트를 비우지 않는다 — 새 데이터 도착 전까지 이전 탭 결과를 유지해
+    // 풀 스켈레톤 깜빡임을 막는다. page/hasNext는 loadSchedules가 응답으로 갱신.
     setSelectedFilter(filter);
-    setPage(1);
-    setHasNext(false);
-    setSchedules([]);
   };
 
   const handleLoadMore = () => {
@@ -195,9 +186,9 @@ const ScheduleListPage = () => {
             </div>
           ) : null}
 
-          {isLoading ? (
+          {isLoading && schedules.length === 0 ? (
             <ScheduleSkeleton />
-          ) : visibleSchedules.length === 0 ? (
+          ) : schedules.length === 0 ? (
             <div className="flex min-h-[360px] items-center justify-center py-16 text-center">
               <div>
                 <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
@@ -229,16 +220,31 @@ const ScheduleListPage = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {visibleSchedules.map((schedule) => (
-                <ScheduleCard
-                  key={schedule.schedule_id}
-                  schedule={schedule}
-                  selectedFilter={selectedFilter}
-                  onOpenChange={setChangeTarget}
-                  onOpenCancel={setCancelTarget}
-                />
-              ))}
+            // 탭 전환 재요청 중에는 이전 리스트를 유지하되 살짝 흐리게 + 스피너 표시.
+            <div className="relative">
+              <div
+                className={
+                  isLoading
+                    ? "pointer-events-none space-y-4 opacity-40 transition-opacity"
+                    : "space-y-4 transition-opacity"
+                }
+              >
+                {schedules.map((schedule) => (
+                  <ScheduleCard
+                    key={schedule.schedule_id}
+                    schedule={schedule}
+                    selectedFilter={selectedFilter}
+                    onOpenChange={setChangeTarget}
+                    onOpenCancel={setCancelTarget}
+                  />
+                ))}
+              </div>
+
+              {isLoading ? (
+                <div className="absolute inset-0 flex items-start justify-center pt-24">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                </div>
+              ) : null}
             </div>
           )}
 

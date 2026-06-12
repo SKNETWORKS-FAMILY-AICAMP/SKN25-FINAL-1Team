@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { PawPrint } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -84,4 +85,4 @@ const PetSelector = ({
   );
 };
 
-export default PetSelector;
+export default memo(PetSelector);

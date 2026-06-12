@@ -9,7 +9,6 @@ import {
   getPet,
   updatePet,
 } from "../../api/pets-api";
-import GuardianNavbar from "../../components/guardian-navbar";
 import PetForm from "../../components/pets/pet-form";
 import PetImageUploader from "../../components/pets/pet-image-uploader";
 import { usePetForm } from "../../hooks/use-pet-form";
@@ -229,12 +228,7 @@ const PetRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#1F2937] relative">
-      <div className="relative z-10">
-        <GuardianNavbar />
-      </div>
-
-      <main className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 md:py-12 relative z-10">
+    <main className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 md:py-12 relative z-10">
 
         {isLoading ? (
           <section className="mt-6 flex min-h-[420px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -321,7 +315,6 @@ const PetRegisterPage = () => {
         </div>
         )}
       </main>
-    </div>
   );
 };
 

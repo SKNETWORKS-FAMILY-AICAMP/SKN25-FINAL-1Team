@@ -4,10 +4,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 import { isAxiosError } from "axios";
-import { useSearchParams } from "react-router-dom";
+import { useNavigationType, useSearchParams } from "react-router-dom";
 import {
   deleteChatSessionKeepalive,
   resumeSchedule,
@@ -21,10 +20,14 @@ import ChatInputBox from "../../components/chatbot/chat-input-box";
 import ChatMessageList from "../../components/chatbot/chat-message-list";
 import ChatSessionList from "../../components/chatbot/chat-session-list";
 import PetSelector from "../../components/chatbot/pet-selector";
-import GuardianNavbar from "../../components/guardian-navbar";
 import { useAgentPipeline } from "../../hooks/use-agent-pipeline";
 import { useChatConversation } from "../../hooks/use-chat-conversation";
-import { useChatSessions } from "../../hooks/use-chat-sessions";
+import {
+  useChatSessions,
+  readActiveChatSession,
+  writeActiveChatSession,
+  clearActiveChatSession,
+} from "../../hooks/use-chat-sessions";
 import { useChatUpload } from "../../hooks/use-chat-upload";
 import { useTranslation } from "../../i18n/language-context";
 import { translateKnownText } from "../../i18n/known-text";
@@ -119,15 +122,41 @@ const TrashIcon = () => (
   </svg>
 );
 
+// 메모된 자식에 넘기는 안정 콜백/상수 — identity가 매 렌더 바뀌면 React.memo가
+// 무력화되므로 고정한다.
+const EMPTY_QUICK_REPLIES: string[] = [];
+const noop = () => {};
+
+// 본문이 매 렌더 바뀌더라도 identity는 고정인 콜백을 만든다(useEffectEvent 패턴).
+const useStableCallback = <Args extends unknown[], Return>(
+  fn: (...args: Args) => Return,
+) => {
+  const ref = useRef(fn);
+  ref.current = fn;
+  return useCallback((...args: Args) => ref.current(...args), []);
+};
+
 const ChatbotPage = () => {
   const { lang, t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams] = useSearchParams();
   const selectedPetIdFromQuery = Number(searchParams.get("petId"));
+  // 새로고침/직접진입은 "POP", 네비바 Link 클릭 재진입은 "PUSH".
+  // POP일 때만 이전 챗봇 상태(펫/세션)를 복원한다.
+  const navigationType = useNavigationType();
+  const allowRefreshRestore = navigationType === "POP";
   const [pets, setPets] = useState<Pet[]>([]);
-  const [selectedPetId, setSelectedPetId] = useState<number | null>(
-    Number.isFinite(selectedPetIdFromQuery) ? selectedPetIdFromQuery : null,
-  );
+  // 펫 선택은 초기 렌더에서 동기 복원해 "펫 미선택" 화면 깜빡임을 없앤다.
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(() => {
+    if (Number.isFinite(selectedPetIdFromQuery) && selectedPetIdFromQuery > 0) {
+      return selectedPetIdFromQuery;
+    }
+    if (allowRefreshRestore) {
+      const stored = readActiveChatSession();
+      if (stored) return stored.petId;
+    }
+    return null;
+  });
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   // 보호자가 한마디도 안 한 빈 세션 추적 — 이탈 시 삭제(req1).
@@ -161,8 +190,6 @@ const ChatbotPage = () => {
     setSession,
     messages,
     setMessages,
-    messageInput,
-    setMessageInput,
     quickReplies,
     setQuickReplies,
     isStreaming,
@@ -207,6 +234,7 @@ const ChatbotPage = () => {
     discardEmptyLiveSession,
   } = useChatSessions({
     selectedPet,
+    allowRefreshRestore,
     // 세션 전환 시 pipeline phase도 함께 초기화 → 이전 세션의 phase(followup 등)가
     // 다음 세션에 잔류해 입력창/배너가 잘못 뜨는 것을 방지한다.
     resetConversationState: () => {
@@ -386,10 +414,22 @@ const ChatbotPage = () => {
     return () => { isMounted = false; };
   }, [t]);
 
+  // 네비바 Link로 챗봇에 재진입(PUSH)한 경우엔 이전 선택 잔상을 지운다 → 새 화면.
+  // (이후 F5(POP) 시에도 깨끗한 진입 화면을 유지)
+  useEffect(() => {
+    if (!allowRefreshRestore) {
+      clearActiveChatSession();
+    }
+    // 마운트 시 1회만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSelectPet = (petId: number) => {
     if (petId === selectedPetId) return;
     setSelectedPetId(petId);
     resetSessionStateForPetChange();
+    // 펫 선택 상태를 저장 → 새로고침 시 이 펫이 복원된다(세션은 아직 없음).
+    writeActiveChatSession(petId, null);
   };
 
   // 통합 메시지 전송 핸들러 — phase에 따라 분기
@@ -405,7 +445,6 @@ const ChatbotPage = () => {
         { id: Date.now(), role: "user" as const, content: trimmed },
       ]);
       setQuickReplies([]);
-      setMessageInput("");
       if (pipeline.isSlotLabel(trimmed) && selectedPet) {
         await pipeline.handleSlotSelect(trimmed, selectedPet.pet_id);
       } else {
@@ -438,7 +477,6 @@ const ChatbotPage = () => {
         },
       ]);
       setQuickReplies([]);
-      setMessageInput("");
       clearPendingAttachment();
       await pipeline.handleFollowupMessage(trimmed, images);
       return;
@@ -450,16 +488,20 @@ const ChatbotPage = () => {
     await handleSendMessage(trimmed);
   };
 
-  const handleSubmitCombined = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void handleSendCombined(messageInput);
-  };
+  // 메모된 자식들에 넘길 안정 콜백 — latest-ref로 identity를 고정해 React.memo 유지.
+  const stableSelectPet = useStableCallback(handleSelectPet);
+  const stableSendCombined = useStableCallback((content: string) => {
+    void handleSendCombined(content);
+  });
+  const stableOpenDatePicker = useStableCallback(() => {
+    pipeline.setShowDatePicker(true);
+  });
+  const stableCreateSession = useStableCallback(handleCreateSession);
+  const stableSelectHistory = useStableCallback(handleSelectHistory);
+  const stableDeleteHistory = useStableCallback(handleDeleteHistory);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <GuardianNavbar />
-
-      <main className="mx-auto flex w-full max-w-[1200px] flex-col px-6 pt-10 pb-6 lg:h-[calc(100vh-4rem)] lg:min-h-0">
+    <main className="mx-auto flex w-full max-w-[1200px] flex-col px-6 pt-10 pb-6 lg:h-[calc(100vh-4rem)] lg:min-h-0">
         <div className="mb-6 shrink-0 flex items-end justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
@@ -483,19 +525,21 @@ const ChatbotPage = () => {
               pets={pets}
               selectedPetId={selectedPetId}
               isLoadingPets={isLoadingPets}
-              onSelectPet={handleSelectPet}
+              onSelectPet={stableSelectPet}
               getProfileImage={getProfileImage}
             />
 
             <ChatSessionList
               selectedPet={selectedPet}
+              selectedPetId={selectedPetId}
+              isLoadingPets={isLoadingPets}
               chatHistories={chatHistories}
               selectedHistoryId={selectedHistoryId}
               isLoadingHistories={isLoadingHistories}
               creatingPetId={creatingPetId}
-              onCreateSession={handleCreateSession}
-              onSelectHistory={handleSelectHistory}
-              onDeleteHistory={handleDeleteHistory}
+              onCreateSession={stableCreateSession}
+              onSelectHistory={stableSelectHistory}
+              onDeleteHistory={stableDeleteHistory}
               getHistoryTitle={getHistoryTitle}
             />
 
@@ -514,10 +558,8 @@ const ChatbotPage = () => {
                     messages={messages}
                     quickReplies={quickReplies}
                     isStreaming={isStreaming}
-                    onSendMessage={(content) => {
-                      void handleSendCombined(content);
-                    }}
-                    onOpenDatePicker={() => pipeline.setShowDatePicker(true)}
+                    onSendMessage={stableSendCombined}
+                    onOpenDatePicker={stableOpenDatePicker}
                   />
 
                   {/* 직접 날짜 선택 피커 — 팝업으로 띄움 */}
@@ -552,13 +594,11 @@ const ChatbotPage = () => {
                     <ChatInputBox
                       fileInputRef={fileInputRef}
                       pendingAttachment={pendingAttachment}
-                      messageInput={messageInput}
                       isStreaming={isStreaming || chatPhase === "TRIAGE_RUNNING"}
                       isUploadingAttachment={isUploadingAttachment}
                       onClearPendingAttachment={clearPendingAttachment}
                       onSelectAttachment={handleSelectAttachment}
-                      onSubmitMessage={handleSubmitCombined}
-                      onChangeMessageInput={setMessageInput}
+                      onSubmitMessage={stableSendCombined}
                     />
                   )}
                 </>
@@ -593,10 +633,10 @@ const ChatbotPage = () => {
                   ) : (
                     <ChatMessageList
                       messages={messages}
-                      quickReplies={[]}
+                      quickReplies={EMPTY_QUICK_REPLIES}
                       isStreaming={isStreaming}
-                      onSendMessage={() => {}}
-                      onOpenDatePicker={() => {}}
+                      onSendMessage={noop}
+                      onOpenDatePicker={noop}
                     />
                   )}
 
@@ -604,13 +644,11 @@ const ChatbotPage = () => {
                     <ChatInputBox
                       fileInputRef={fileInputRef}
                       pendingAttachment={pendingAttachment}
-                      messageInput={messageInput}
                       isStreaming={isStreaming}
                       isUploadingAttachment={isUploadingAttachment}
                       onClearPendingAttachment={clearPendingAttachment}
                       onSelectAttachment={handleSelectAttachment}
-                      onSubmitMessage={handleSubmitCombined}
-                      onChangeMessageInput={setMessageInput}
+                      onSubmitMessage={stableSendCombined}
                     />
                   )}
 
@@ -625,6 +663,22 @@ const ChatbotPage = () => {
                       {t("chatbot.bookingComplete")}
                     </div>
                   )}
+                </>
+              ) : creatingPetId !== null ||
+                (selectedPetId !== null && isLoadingPets) ||
+                (selectedPet && isLoadingHistories) ||
+                isLoadingHistoryMessages ? (
+                // 새 상담 생성/펫·히스토리·세션상세 로드 대기 중 —
+                // 빈 진입 화면 깜빡임 대신 로딩 표시(상담기록 복원 중간 단계 포함).
+                <>
+                  <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-5 sm:px-7">
+                    <h2 className="truncate text-[15px] font-bold text-slate-900">
+                      {t("chatbot.title")}
+                    </h2>
+                  </div>
+                  <div className="flex flex-1 items-center justify-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                  </div>
                 </>
               ) : (
                 <>
@@ -652,7 +706,6 @@ const ChatbotPage = () => {
           </div>
         </section>
       </main>
-    </div>
   );
 };
 
