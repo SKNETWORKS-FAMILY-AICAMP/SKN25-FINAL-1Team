@@ -138,8 +138,8 @@ const FindPasswordPage = () => {
         <AuthLanguageSelector />
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-        <section className="space-y-14">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
+        <section className="flex flex-col justify-between lg:h-[34rem]">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
               {t("auth.findPassword.title")}
@@ -151,21 +151,23 @@ const FindPasswordPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <Lightbulb className="h-6 w-6" aria-hidden />
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">{t("auth.infoTitle")}</h2>
-              <ul className="mt-1 space-y-0.5 whitespace-pre-line text-sm leading-snug text-slate-600">
-                <li>{t("auth.findPassword.infoLine1")}</li>
-                <li>{t("auth.findPassword.infoLine2")}</li>
-              </ul>
+          <div className="mt-6 lg:mt-0 lg:h-[332px]">
+            <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <Lightbulb className="h-6 w-6" aria-hidden />
+              </span>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">{t("auth.infoTitle")}</h2>
+                <ul className="mt-1 space-y-0.5 whitespace-pre-line text-sm leading-snug text-slate-600">
+                  <li>{t("auth.findPassword.infoLine1")}</li>
+                  <li>{t("auth.findPassword.infoLine2")}</li>
+                </ul>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:h-[34rem]">
+        <section className="flex flex-col rounded-3xl border border-blue-100 bg-white p-6 sm:p-8 lg:p-10 lg:h-[34rem]">
           <div className="mb-4 text-center">
             <h2 className="text-2xl font-bold text-slate-950">{t("auth.findPassword.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">

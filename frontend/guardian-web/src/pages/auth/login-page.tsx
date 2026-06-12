@@ -24,8 +24,8 @@ interface LoginErrorResponse {
 
 const serviceItems = [
   { icon: MessageCircleMore, titleKey: "auth.serviceChatTitle", descKey: "auth.serviceChatDesc" },
-  { icon: CalendarDays, titleKey: "auth.serviceBookTitle", descKey: "auth.serviceBookDesc" },
-  { icon: ClipboardCheck, titleKey: "auth.serviceFlowTitle", descKey: "auth.serviceFlowDesc" },
+  { icon: ClipboardCheck, titleKey: "auth.serviceBookTitle", descKey: "auth.serviceBookDesc" },
+  { icon: CalendarDays, titleKey: "auth.serviceFlowTitle", descKey: "auth.serviceFlowDesc" },
   { icon: HeartPulse, titleKey: "auth.serviceRecordTitle", descKey: "auth.serviceRecordDesc" },
 ];
 
@@ -142,7 +142,7 @@ const LoginPage = () => {
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 pb-10 pt-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
-        <section className="flex flex-col">
+        <section className="flex flex-col justify-between">
           <div>
             <h1 className="text-4xl font-bold leading-tight text-slate-950">
               {t("auth.heroTitleLine1")}
@@ -154,13 +154,13 @@ const LoginPage = () => {
             </p>
           </div>
 
-          <div className="mt-10 flex flex-1 flex-col justify-between gap-3">
+          <div className="mt-6 flex flex-col gap-3">
             {serviceItems.map((item) => (
               <article
                 key={item.titleKey}
-                className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 p-4"
+                className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-white/80 px-4 py-3"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2a8587] text-white">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
                   <item.icon className="h-6 w-6" />
                 </span>
                 <div>
@@ -174,15 +174,15 @@ const LoginPage = () => {
           </div>
         </section>
 
-        <section className="flex flex-col justify-center rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 lg:min-h-[34rem]">
-          <div className="mb-4 text-center">
+        <section className="flex flex-col rounded-3xl border border-blue-100 bg-white p-6 lg:p-8 lg:h-[34rem]">
+          <div className="mb-8 text-center">
             <h2 className="text-2xl font-bold text-slate-950">{t("auth.login.title")}</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
               {t("auth.login.subtitle")}
             </p>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-3" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-bold text-slate-800" htmlFor="loginid">
                 {t("auth.idLabel")}
@@ -260,26 +260,32 @@ const LoginPage = () => {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-            >
-              {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
-            </button>
+            <div className="flex flex-col gap-4">
+              <div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-12 w-full rounded-xl bg-blue-600 text-[15px] font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
+                </button>
+              </div>
 
-            <div className="flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs font-bold text-slate-400">{t("auth.login.or")}</span>
-              <div className="h-px flex-1 bg-slate-200" />
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-bold text-slate-400">{t("auth.login.or")}</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <div>
+                <Link
+                  to="/signup"
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-blue-500 text-[15px] font-bold text-blue-600 transition hover:bg-blue-50"
+                >
+                  {t("auth.login.signupCta")}
+                </Link>
+              </div>
             </div>
-
-            <Link
-              to="/signup"
-              className="flex h-11 w-full items-center justify-center rounded-xl border border-blue-500 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
-            >
-              {t("auth.login.signupCta")}
-            </Link>
           </form>
         </section>
       </main>
