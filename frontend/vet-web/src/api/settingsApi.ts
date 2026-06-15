@@ -62,6 +62,30 @@ export async function updateWeeklySchedule(
   return data.schedule;
 }
 
+export async function fetchVetWeeklySchedule(
+  accessToken: string,
+  doctorid: number
+): Promise<DaySchedule[]> {
+  const { data } = await apiClient.get<{ schedule: DaySchedule[] }>(
+    `/doctor/settings/weekly-schedule?doctorid=${doctorid}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return data.schedule;
+}
+
+export async function updateVetWeeklySchedule(
+  accessToken: string,
+  doctorid: number,
+  schedule: DaySchedule[]
+): Promise<DaySchedule[]> {
+  const { data } = await apiClient.put<{ schedule: DaySchedule[] }>(
+    `/doctor/settings/weekly-schedule?doctorid=${doctorid}`,
+    { schedule },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return data.schedule;
+}
+
 export async function fetchClosedDates(accessToken: string): Promise<string[]> {
   const { data } = await apiClient.get<{ dates: string[] }>(
     "/doctor/settings/closed-dates",
