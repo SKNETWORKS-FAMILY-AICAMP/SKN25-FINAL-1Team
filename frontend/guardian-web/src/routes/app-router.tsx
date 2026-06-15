@@ -6,6 +6,7 @@ import SignupPage from "../pages/auth/signup-page";
 import ChatbotPage from "../pages/chatbot/chatbot-page";
 import ChangePasswordPage from "../pages/guardian/change-password-page";
 import HomePage from "../pages/guardian/home-page";
+import HospitalsPage from "../pages/guardian/hospitals-page";
 import MypagePage from "../pages/guardian/mypage-page";
 import ScheduleListPage from "../pages/guardian/schedule-list-page";
 import PetRegisterPage from "../pages/pets/pet-register-page";
@@ -24,6 +25,7 @@ const AppRouter = () => {
         <Route element={<ProtectedRoute />}>
           <Route element={<GuardianShell />}>
             <Route path="/home" element={<HomePage />} />
+            <Route path="/hospitals" element={<HospitalsPage />} />
             <Route path="/reservations" element={<ScheduleListPage />} />
             <Route path="/chatbot" element={<ChatbotPage />} />
             <Route path="/mypage" element={<MypagePage />} />

@@ -17,8 +17,30 @@ export const DEFAULT_LANGUAGE: Language = "ko";
 export type TranslationTree = { [key: string]: string | TranslationTree };
 
 const ko: TranslationTree = {
+  hospitalsPage: {
+    title: "병원",
+    description: "다니는 동물병원을 선택하고 원장님을 확인하세요.",
+    selectLabel: "병원 선택",
+    selectPlaceholder: "병원을 선택하세요",
+    noHospitals: "아직 등록된 병원이 없습니다.",
+    emptyTitle: "다니는 병원을 선택해 주세요",
+    emptyDescription: "위에서 병원을 선택하면 병원 소개와 원장님 정보를 볼 수 있어요.",
+    introTitle: "병원 소개",
+    introEmpty: "등록된 병원 소개가 없습니다.",
+    doctorsTitle: "원장 소개",
+    doctorsCount: "원장 {count}명",
+    doctorsEmpty: "등록된 원장 정보가 아직 없습니다.",
+    doctorBioEmpty: "소개글이 아직 등록되지 않았습니다.",
+    infoHours: "진료시간",
+    infoDirections: "오시는 길",
+    infoContact: "연락처",
+    infoEmpty: "정보 없음",
+    featuresTitle: "병원 특징",
+    doctorAreasTitle: "전문 분야",
+  },
   nav: {
     home: "홈",
+    hospitals: "병원",
     chatbot: "챗봇 상담",
     reservations: "예약 내역",
     mypage: "마이페이지",
@@ -450,8 +472,30 @@ const ko: TranslationTree = {
 };
 
 const en: TranslationTree = {
+  hospitalsPage: {
+    title: "Hospitals",
+    description: "Choose your animal hospital and meet its veterinarians.",
+    selectLabel: "Select hospital",
+    selectPlaceholder: "Select a hospital",
+    noHospitals: "No hospitals are registered yet.",
+    emptyTitle: "Choose your hospital",
+    emptyDescription: "Select a hospital above to see its introduction and veterinarians.",
+    introTitle: "About the hospital",
+    introEmpty: "No hospital introduction has been registered.",
+    doctorsTitle: "Veterinarians",
+    doctorsCount: "{count} veterinarian(s)",
+    doctorsEmpty: "No veterinarian information has been registered yet.",
+    doctorBioEmpty: "No introduction has been registered yet.",
+    infoHours: "Hours",
+    infoDirections: "Location",
+    infoContact: "Contact",
+    infoEmpty: "Not provided",
+    featuresTitle: "Highlights",
+    doctorAreasTitle: "Areas of expertise",
+  },
   nav: {
     home: "Home",
+    hospitals: "Hospitals",
     chatbot: "Chat Consult",
     reservations: "Reservations",
     mypage: "My Page",
@@ -883,8 +927,30 @@ const en: TranslationTree = {
 };
 
 const ja: TranslationTree = {
+  hospitalsPage: {
+    title: "病院",
+    description: "かかりつけの動物病院を選び、獣医師を確認しましょう。",
+    selectLabel: "病院を選択",
+    selectPlaceholder: "病院を選択してください",
+    noHospitals: "登録された病院がまだありません。",
+    emptyTitle: "通っている病院を選んでください",
+    emptyDescription: "上で病院を選ぶと、病院紹介と獣医師の情報を確認できます。",
+    introTitle: "病院紹介",
+    introEmpty: "登録された病院紹介がありません。",
+    doctorsTitle: "獣医師紹介",
+    doctorsCount: "獣医師{count}名",
+    doctorsEmpty: "登録された獣医師情報がまだありません。",
+    doctorBioEmpty: "紹介文がまだ登録されていません。",
+    infoHours: "診療時間",
+    infoDirections: "アクセス",
+    infoContact: "連絡先",
+    infoEmpty: "情報なし",
+    featuresTitle: "病院の特長",
+    doctorAreasTitle: "専門分野",
+  },
   nav: {
     home: "ホーム",
+    hospitals: "病院",
     chatbot: "チャット相談",
     reservations: "予約履歴",
     mypage: "マイページ",
@@ -1316,8 +1382,30 @@ const ja: TranslationTree = {
 };
 
 const zh: TranslationTree = {
+  hospitalsPage: {
+    title: "医院",
+    description: "选择您就诊的动物医院并了解院长。",
+    selectLabel: "选择医院",
+    selectPlaceholder: "请选择医院",
+    noHospitals: "尚未注册任何医院。",
+    emptyTitle: "请选择您就诊的医院",
+    emptyDescription: "在上方选择医院后，即可查看医院介绍和院长信息。",
+    introTitle: "医院介绍",
+    introEmpty: "尚未注册医院介绍。",
+    doctorsTitle: "院长介绍",
+    doctorsCount: "{count} 名院长",
+    doctorsEmpty: "尚未注册院长信息。",
+    doctorBioEmpty: "尚未登记介绍。",
+    infoHours: "门诊时间",
+    infoDirections: "地址",
+    infoContact: "联系方式",
+    infoEmpty: "暂无信息",
+    featuresTitle: "医院特色",
+    doctorAreasTitle: "专业领域",
+  },
   nav: {
     home: "首页",
+    hospitals: "医院",
     chatbot: "聊天咨询",
     reservations: "预约记录",
     mypage: "我的页面",

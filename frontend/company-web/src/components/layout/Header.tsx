@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 import { navItems, siteConfig } from "../../config/site";
 
@@ -19,12 +20,12 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a
-            href="#contact"
-            className="hidden h-11 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 xl:inline-flex"
+          <Link
+            to="/apply"
+            className="hidden h-11 items-center rounded-full border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition hover:bg-blue-100 sm:inline-flex"
           >
-            협업 문의
-          </a>
+            동물병원 입점 신청
+          </Link>
           <a
             href={siteConfig.guardianWebUrl}
             target="_blank"
