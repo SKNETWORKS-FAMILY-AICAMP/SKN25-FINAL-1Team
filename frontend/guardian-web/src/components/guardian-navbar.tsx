@@ -8,6 +8,7 @@ import medipawSymbol from "../../../shared/assets/logo/medipaw-symbol.png";
 
 const navItems = [
   { labelKey: "nav.home", to: "/home" },
+  { labelKey: "nav.hospitals", to: "/hospitals" },
   { labelKey: "nav.chatbot", to: "/chatbot" },
   { labelKey: "nav.reservations", to: "/reservations" },
   { labelKey: "nav.mypage", to: "/mypage" },
