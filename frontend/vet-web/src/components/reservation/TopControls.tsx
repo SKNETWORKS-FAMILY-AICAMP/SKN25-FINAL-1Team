@@ -6,6 +6,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { DoctorInfo } from "../../api/emrApi";
 import type { ReservationViewMode } from "../../types/reservation";
 import { TODAY } from "../../utils/reservationUtils";
 import { MiniCalendar } from "./MiniCalendar";
@@ -31,8 +32,11 @@ interface TopControlsProps {
   selectedDate: Date;
   viewMode: ReservationViewMode;
   isLoading: boolean;
+  doctors: DoctorInfo[];
+  selectedDoctorId: number | null;
   onSelectDate: (date: Date) => void;
   onChangeViewMode: (mode: ReservationViewMode) => void;
+  onChangeDoctorId: (doctorid: number | null) => void;
   onAdd: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -46,8 +50,11 @@ export function TopControls({
   selectedDate,
   viewMode,
   isLoading,
+  doctors,
+  selectedDoctorId,
   onSelectDate,
   onChangeViewMode,
+  onChangeDoctorId,
   onAdd,
   onPrev,
   onNext,
@@ -219,6 +226,22 @@ export function TopControls({
       </div>
 
       <div className="flex items-center justify-end gap-3">
+        {doctors.length > 0 && (
+          <select
+            value={selectedDoctorId ?? ""}
+            onChange={(e) =>
+              onChangeDoctorId(e.target.value === "" ? null : Number(e.target.value))
+            }
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">전체 수의사</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.doctorid} value={doctor.doctorid}>
+                {doctor.doctor_name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           onClick={onRefresh}

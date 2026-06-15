@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import datetime, timedelta, timezone, date as _date_type
 from app.models.guardian import Guardian
+from app.models.hospital import Hospital
 from app.models.schedule import Schedule
 from app.models.master import CategoryMaster
 from app.models.pet import Pet
@@ -239,12 +240,13 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
         past_sort = case((past_cond, Schedule.confirmed_time))                  # 과거 묶음만 값
         order_clause = [is_past.asc(), upcoming_sort.asc(), past_sort.desc()]
 
-    # N+1 방지: 목록에 필요한 Pet / Doctor / Category 를 한 번의 쿼리로 함께 로드
+    # N+1 방지: 목록에 필요한 Pet / Doctor / Hospital / Category 를 한 번의 쿼리로 함께 로드
     stmt = (
-        select(Schedule, Pet, Doctor, CategoryMaster)
+        select(Schedule, Pet, Doctor, CategoryMaster, Hospital)
         .join(Guardian, Schedule.emrid == Guardian.emrid)
         .join(Pet, Guardian.petid == Pet.petid)
         .outerjoin(Doctor, Schedule.doctorid == Doctor.doctorid)
+        .outerjoin(Hospital, Doctor.hospitalid == Hospital.hospitalid)
         .outerjoin(CategoryMaster, Guardian.category_id == CategoryMaster.id)
         .where(*conditions)
         .order_by(*order_clause)

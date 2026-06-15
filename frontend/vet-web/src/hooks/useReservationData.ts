@@ -26,10 +26,10 @@ export function useReservationData(accessToken: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
 
-  const loadReservations = useCallback(async () => {
+  const loadReservations = useCallback(async (doctorid?: number) => {
     setIsLoading(true);
     try {
-      const data = await getReservations();
+      const data = await getReservations(doctorid);
       const items: ApiReservation[] = data?.result ?? [];
       const mapped = mapApiReservations(items);
       setReservations(mapped.reservations);

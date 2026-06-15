@@ -60,6 +60,12 @@ export default function ReservationPage({
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<ReservationStatus | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
+
+  const handleChangeDoctorId = (doctorid: number | null) => {
+    setSelectedDoctorId(doctorid);
+    loadReservations(doctorid ?? undefined);
+  };
 
   const dayKey = getDateKey(selectedDate);
   const dayReservations = useMemo(
@@ -208,13 +214,16 @@ export default function ReservationPage({
           selectedDate={selectedDate}
           viewMode={viewMode}
           isLoading={isLoading}
+          doctors={doctors}
+          selectedDoctorId={selectedDoctorId}
           onSelectDate={setSelectedDate}
           onChangeViewMode={setViewMode}
+          onChangeDoctorId={handleChangeDoctorId}
           onAdd={() => setModalMode("add")}
           onPrev={handlePrev}
           onNext={handleNext}
           onToday={() => setSelectedDate(TODAY)}
-          onRefresh={loadReservations}
+          onRefresh={() => loadReservations(selectedDoctorId ?? undefined)}
         />
 
         {viewMode === "day" && (
