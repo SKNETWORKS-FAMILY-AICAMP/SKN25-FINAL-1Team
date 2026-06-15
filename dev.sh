@@ -124,6 +124,16 @@ for i in $(seq 1 60); do
   echo -n "."; sleep 2
 done
 
+# ── 4.5) DB 마이그레이션 + 운영자 계정 ─────────────────────
+echo "▶ DB 마이그레이션 적용"
+if ! $COMPOSE run --rm migrate; then
+  echo "  ❌ 마이그레이션 실패. 로그를 확인해 주세요."
+  exit 1
+fi
+
+echo "▶ 운영자 계정 확인/생성"
+$COMPOSE exec -T backend bash -c "cd /app/backend && python scripts/seed_admin.py" 2>/dev/null || true
+
 # ── 5) 약 데이터 seed (drugsDB 비어있을 때만 — 중복 방지) ───
 if [ "$RUN_SETUP" = false ]; then
   echo "▶ seed/RAG/테스트 계정 확인 건너뜀 (fast 모드)"

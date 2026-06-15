@@ -20,6 +20,7 @@ import ChatInputBox from "../../components/chatbot/chat-input-box";
 import ChatMessageList from "../../components/chatbot/chat-message-list";
 import ChatSessionList from "../../components/chatbot/chat-session-list";
 import PetSelector from "../../components/chatbot/pet-selector";
+import { useMyHospitals } from "../../hooks/use-my-hospitals";
 import { useAgentPipeline } from "../../hooks/use-agent-pipeline";
 import { useChatConversation } from "../../hooks/use-chat-conversation";
 import {
@@ -159,6 +160,24 @@ const ChatbotPage = () => {
   });
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  // 선택 병원 — 병원탭/예약 모달과 동일 키로 공유. 내 병원 목록은 API(백엔드 미가동 시 mock 폴백).
+  const { hospitals: myHospitals } = useMyHospitals();
+  const [selectedHospitalId, setSelectedHospitalId] = useState<number | null>(() => {
+    const stored = Number(window.localStorage.getItem("medipaw.guardian.hospitalid"));
+    return stored > 0 ? stored : null;
+  });
+  useEffect(() => {
+    if (myHospitals.length === 0) return;
+    setSelectedHospitalId((prev) =>
+      prev != null && myHospitals.some((h) => h.hospitalid === prev)
+        ? prev
+        : myHospitals[0].hospitalid,
+    );
+  }, [myHospitals]);
+  const handleSelectHospital = (id: number) => {
+    setSelectedHospitalId(id);
+    window.localStorage.setItem("medipaw.guardian.hospitalid", String(id));
+  };
   // 보호자가 한마디도 안 한 빈 세션 추적 — 이탈 시 삭제(req1).
   const liveSessionRef = useRef<LiveSessionInfo | null>(null);
 
@@ -211,6 +230,7 @@ const ChatbotPage = () => {
     setMessages,
     setQuickReplies,
     setIsStreaming,
+    hospitalId: selectedHospitalId,
   });
 
   const selectedPet = useMemo(
@@ -552,6 +572,24 @@ const ChatbotPage = () => {
                         {t("chatbot.newChatTitle", { date: todayChatTitle })}
                       </h2>
                     </div>
+                    {myHospitals.length > 0 ? (
+                      <label className="flex shrink-0 items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-400">
+                          {t("chatbot.hospitalLabel")}
+                        </span>
+                        <select
+                          value={selectedHospitalId ?? ""}
+                          onChange={(event) => handleSelectHospital(Number(event.target.value))}
+                          className="h-9 max-w-[170px] rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-400"
+                        >
+                          {myHospitals.map((hospital) => (
+                            <option key={hospital.hospitalid} value={hospital.hospitalid}>
+                              {hospital.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
 
                   <ChatMessageList
@@ -567,6 +605,7 @@ const ChatbotPage = () => {
                     <div className="absolute bottom-16 right-4 z-10">
                       <ChatDatePicker
                         durationMin={pipeline.getScheduleDurationMin()}
+                        hospitalId={selectedHospitalId}
                         onSelectSlot={(date, time, doctorid, label) => {
                           void pipeline.handleManualSlotSelect(date, time, doctorid, label);
                         }}

@@ -1,9 +1,15 @@
 import React, { useRef } from "react";
 
 import type { Pet } from "../../api/pets-api";
+import { MOCK_HOSPITALS, type HospitalDoctor } from "../../api/hospital-mock";
+import { getHospitalDetail } from "../../api/hospital-api";
+import { useMyHospitals } from "../../hooks/use-my-hospitals";
 import ActionButton from "../common/action-button";
 import { useCheckupReservation } from "../../hooks/use-checkup-reservation";
 import { useTranslation } from "../../i18n/language-context";
+
+// 보호자가 병원탭에서 마지막에 고른 병원과 동기화 (hospitals-page 와 동일 키).
+const SELECTED_HOSPITAL_KEY = "medipaw.guardian.hospitalid";
 
 interface CheckupReservationModalProps {
   pet: Pet;
@@ -36,6 +42,48 @@ const CheckupReservationModal = ({
   const { t } = useTranslation();
   const [categoryCode, setCategoryCode] = React.useState<1 | 2 | null>(null);
   const categoryLabel = categoryCode === 2 ? "일반진료" : categoryCode === 1 ? "정기검진" : null;
+
+  // 병원 → 원장 선택. 내 병원 목록은 API(백엔드 미가동 시 mock 폴백), 원장은 병원 상세에서.
+  const { hospitals } = useMyHospitals();
+  const [selectedHospitalId, setSelectedHospitalId] = React.useState<number | null>(() => {
+    const stored = Number(window.localStorage.getItem(SELECTED_HOSPITAL_KEY));
+    return stored > 0 ? stored : null;
+  });
+  const [doctors, setDoctors] = React.useState<HospitalDoctor[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = React.useState<number | null>(null);
+
+  // 병원 목록 로드 후 선택값 보정(없거나 목록에 없으면 첫 병원)
+  React.useEffect(() => {
+    if (hospitals.length === 0) return;
+    setSelectedHospitalId((prev) =>
+      prev != null && hospitals.some((h) => h.hospitalid === prev)
+        ? prev
+        : hospitals[0].hospitalid,
+    );
+  }, [hospitals]);
+
+  // 선택 병원의 원장 목록 (실패 시 mock 폴백)
+  React.useEffect(() => {
+    if (selectedHospitalId == null) {
+      setDoctors([]);
+      return;
+    }
+    let mounted = true;
+    getHospitalDetail(selectedHospitalId)
+      .then((d) => {
+        if (mounted) setDoctors(d.doctors ?? []);
+      })
+      .catch(() => {
+        if (mounted) {
+          setDoctors(
+            MOCK_HOSPITALS.find((h) => h.hospitalid === selectedHospitalId)?.doctors ?? [],
+          );
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [selectedHospitalId]);
   const getPetMeta = (item: Pet) =>
     [item.breed || item.species, item.age ? t("home.yearsOld", { age: item.age }) : undefined]
       .filter(Boolean)
@@ -55,7 +103,24 @@ const CheckupReservationModal = ({
     setSelectedSlot,
     setMemo,
     reserveCheckup,
-  } = useCheckupReservation({ petId: pet.pet_id, categoryCode: categoryCode ?? 1 });
+  } = useCheckupReservation({
+    petId: pet.pet_id,
+    categoryCode: categoryCode ?? 1,
+    hospitalId: selectedHospitalId ?? undefined,
+    doctorId: selectedDoctorId ?? undefined,
+  });
+
+  const handleSelectHospital = (id: number) => {
+    setSelectedHospitalId(id);
+    window.localStorage.setItem(SELECTED_HOSPITAL_KEY, String(id));
+    setSelectedDoctorId(null);
+    setSelectedSlot(null);
+  };
+
+  const handleSelectDoctor = (id: number) => {
+    setSelectedDoctorId(id);
+    setSelectedSlot(null);
+  };
   const petDisplayName =
     completedReservation?.pet_name ?? (pet as PetWithOptionalName).name ?? pet.petname;
 
@@ -213,6 +278,69 @@ const CheckupReservationModal = ({
                 </div>
               </div>
 
+              {/* 병원 선택 */}
+              <div className="space-y-1.5">
+                <span className="text-sm font-extrabold text-slate-900">
+                  {t("schedule.fieldHospital")} <span className="text-rose-500">*</span>
+                </span>
+                <div className="relative">
+                  <select
+                    value={selectedHospitalId ?? ""}
+                    onChange={(event) => handleSelectHospital(Number(event.target.value))}
+                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  >
+                    {hospitals.map((hospital) => (
+                      <option key={hospital.hospitalid} value={hospital.hospitalid}>
+                        {hospital.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                    <svg className="h-5 w-5 fill-current" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* 원장 선택 */}
+              <div className="space-y-1.5">
+                <span className="text-sm font-extrabold text-slate-900">
+                  {t("schedule.fieldDoctor")} <span className="text-rose-500">*</span>
+                </span>
+                {doctors.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {doctors.map((doctor) => {
+                      const isSelected = selectedDoctorId === doctor.doctorid;
+                      return (
+                        <button
+                          key={doctor.doctorid}
+                          type="button"
+                          onClick={() => handleSelectDoctor(doctor.doctorid)}
+                          className={[
+                            "flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-center transition",
+                            isSelected
+                              ? "border-blue-600 bg-blue-50"
+                              : "border-slate-200 hover:bg-slate-50",
+                          ].join(" ")}
+                        >
+                          <span className="text-sm font-bold text-slate-900">{doctor.name}</span>
+                          {doctor.specialty ? (
+                            <span className="text-xs font-semibold text-slate-500">
+                              {doctor.specialty}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
+                    {t("schedule.noDoctors")}
+                  </p>
+                )}
+              </div>
+
               <label className="block">
                 <span className="text-sm font-extrabold text-slate-900">
                   {t("schedule.fieldDate")} <span className="text-rose-500">*</span>
@@ -337,7 +465,12 @@ const CheckupReservationModal = ({
               </ActionButton>
               <ActionButton
                 type="submit"
-                disabled={!selectedSlot || isSubmitting || categoryCode === null}
+                disabled={
+                  !selectedSlot ||
+                  isSubmitting ||
+                  categoryCode === null ||
+                  selectedDoctorId === null
+                }
                 className="min-w-[112px]"
               >
                 {isSubmitting ? t("schedule.reserving") : t("schedule.reserve")}

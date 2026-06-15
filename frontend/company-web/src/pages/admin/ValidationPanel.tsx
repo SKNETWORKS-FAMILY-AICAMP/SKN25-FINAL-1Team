@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   MOCK_VALIDATION,
   type CheckStatus,
   type ValidationRecord,
 } from "./monitoring-mock";
+import { getValidationResults } from "../../onboarding/api";
 
 const CHECK_ITEMS = ["데이터 완전성", "문진-차트 일치도", "예약 안전성", "응급신호 정합성"];
 
@@ -29,8 +30,36 @@ function statusOf(rec: ValidationRecord, item: string): CheckStatus {
 
 export default function ValidationPanel() {
   const [attentionOnly, setAttentionOnly] = useState(false);
-  const all = MOCK_VALIDATION;
+  const [records, setRecords] = useState<ValidationRecord[]>(MOCK_VALIDATION);
+  const [usingDemo, setUsingDemo] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const all = records;
   const rows = attentionOnly ? all.filter((r) => r.overall === "ATTENTION") : all;
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    getValidationResults(false)
+      .then((list) => {
+        if (!mounted) return;
+        if (list.length > 0) {
+          setRecords(list);
+          setUsingDemo(false);
+        } else {
+          setRecords(MOCK_VALIDATION);
+          setUsingDemo(true);
+        }
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setRecords(MOCK_VALIDATION);
+        setUsingDemo(true);
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const attention = all.filter((r) => r.overall === "ATTENTION").length;
@@ -51,7 +80,8 @@ export default function ValidationPanel() {
         AI 산출물의 결정론적 4종 점검 (완전성·문진차트일치·예약안전·응급정합성). 판정이 아니라 검토 신호입니다.
       </p>
       <p className="mt-2 inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-        데모 데이터 · 실제로는 validation_resultDB 연동
+        {usingDemo ? "데모 데이터 · validation_resultDB 결과가 없으면 표시" : "실시간 데이터 · validation_resultDB 연동"}
+        {loading ? " · 불러오는 중" : ""}
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3">

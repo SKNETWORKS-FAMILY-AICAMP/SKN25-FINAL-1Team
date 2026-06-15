@@ -14,6 +14,8 @@ export type ApplicationStatus = "접수" | "검토중" | "승인발행" | "반�
 /** 업로드 파일 (mock: 이름 + 이미지 미리보기 dataURL). 실제론 S3 URL 로 교체. */
 export interface UploadedFile {
   name: string;
+  /** 실제 업로드에 사용할 브라우저 File. localStorage mock 에는 저장되지 않는다. */
+  file?: File;
   /** 이미지일 때만 미리보기용 dataURL (서류 PDF 등은 비움) */
   dataUrl?: string;
 }

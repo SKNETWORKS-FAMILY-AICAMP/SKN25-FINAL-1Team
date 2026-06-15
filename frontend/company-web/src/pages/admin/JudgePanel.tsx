@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { MOCK_JUDGE, type JudgeRecord } from "./monitoring-mock";
+import { getJudgeResults } from "../../onboarding/api";
 
 /* ── 점수 축 레이블 ── */
 const SCORE_KEYS: { key: keyof JudgeRecord["scores"]; label: string }[] = [
@@ -43,8 +44,36 @@ function avgScore(records: JudgeRecord[], key: keyof JudgeRecord["scores"]): num
 
 export default function JudgePanel() {
   const [reviewOnly, setReviewOnly] = useState(false);
-  const all = MOCK_JUDGE;
+  const [records, setRecords] = useState<JudgeRecord[]>(MOCK_JUDGE);
+  const [usingDemo, setUsingDemo] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const all = records;
   const rows = reviewOnly ? all.filter((r) => r.verdict === "NEEDS_REVIEW") : all;
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    getJudgeResults(false)
+      .then((list) => {
+        if (!mounted) return;
+        if (list.length > 0) {
+          setRecords(list);
+          setUsingDemo(false);
+        } else {
+          setRecords(MOCK_JUDGE);
+          setUsingDemo(true);
+        }
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setRecords(MOCK_JUDGE);
+        setUsingDemo(true);
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const needsReview = all.filter((r) => r.verdict === "NEEDS_REVIEW").length;
@@ -70,7 +99,8 @@ export default function JudgePanel() {
         LLM 운영 품질 모니터링 — 4축 점수(완전성·질문효율·응답일관성·구조화품질). 문제 세션을 조기 감지합니다.
       </p>
       <p className="mt-2 inline-block rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
-        데모 데이터 · 실제로는 judge audit log 연동
+        {usingDemo ? "데모 데이터 · judge 결과가 없으면 표시" : "실시간 데이터 · judge 결과 연동"}
+        {loading ? " · 불러오는 중" : ""}
       </p>
 
       {/* ── 통계 카드 ── */}

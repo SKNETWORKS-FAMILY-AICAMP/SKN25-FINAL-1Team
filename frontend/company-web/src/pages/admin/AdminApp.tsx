@@ -8,8 +8,7 @@ import ApplicationsList from "./ApplicationsList";
 import ApplicationDetail from "./ApplicationDetail";
 import ValidationPanel from "./ValidationPanel";
 import JudgePanel from "./JudgePanel";
-
-const ADMIN_KEY = "medipaw.admin.authed";
+import { clearAdminToken, isAdminAuthed } from "../../onboarding/api";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -59,25 +58,16 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
 }
 
 export default function AdminApp() {
-  const [authed, setAuthed] = useState(
-    () => window.localStorage.getItem(ADMIN_KEY) === "1",
-  );
+  const [authed, setAuthed] = useState(() => isAdminAuthed());
 
   if (!authed) {
-    return (
-      <AdminLogin
-        onLogin={() => {
-          window.localStorage.setItem(ADMIN_KEY, "1");
-          setAuthed(true);
-        }}
-      />
-    );
+    return <AdminLogin onLogin={() => setAuthed(true)} />;
   }
 
   return (
     <AdminShell
       onLogout={() => {
-        window.localStorage.removeItem(ADMIN_KEY);
+        clearAdminToken();
         setAuthed(false);
       }}
     />

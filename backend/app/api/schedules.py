@@ -158,10 +158,11 @@ async def get_available(
     date: str = Query(...),
     duration_min: int = Query(...),
     doctorid: int = Query(None),
+    hospitalid: int = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    slots, reason = await get_available_slots(db, date, duration_min, doctorid)
+    slots, reason = await get_available_slots(db, date, duration_min, doctorid, hospitalid)
 
     return {
         "code": 200,

@@ -46,11 +46,16 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) => {
 interface UseCheckupReservationParams {
   petId: number;
   categoryCode?: number;
+  // 다중 병원·원장: 선택된 병원/원장. doctorid 가 있으면 해당 원장의 슬롯만 조회·예약.
+  hospitalId?: number;
+  doctorId?: number;
 }
 
 export const useCheckupReservation = ({
   petId,
   categoryCode = 1,
+  hospitalId,
+  doctorId,
 }: UseCheckupReservationParams) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDateState] = useState(() =>
@@ -111,6 +116,7 @@ export const useCheckupReservation = ({
         const response = await getAvailableScheduleSlots({
           date: selectedDate,
           duration_min: checkupDurationMin,
+          doctorid: doctorId,
         });
 
         if (!isMounted) {
@@ -149,7 +155,8 @@ export const useCheckupReservation = ({
     return () => {
       isMounted = false;
     };
-  }, [selectedDate]);
+    // 날짜 또는 원장이 바뀌면 슬롯을 다시 조회한다.
+  }, [selectedDate, doctorId]);
 
   const reserveCheckup = async () => {
     if (!selectedSlot) {
@@ -167,6 +174,8 @@ export const useCheckupReservation = ({
         time: selectedSlot.start_time,
         memo,
         category_code: categoryCode,
+        hospitalid: hospitalId,
+        doctorid: doctorId,
       });
 
       if (response.code !== 200 || !response.result) {

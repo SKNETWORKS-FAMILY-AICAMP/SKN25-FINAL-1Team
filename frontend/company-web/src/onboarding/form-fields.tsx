@@ -162,10 +162,10 @@ export function FileField({
   const handlePick = (f: File) => {
     if (image && f.type.startsWith("image/")) {
       const reader = new FileReader();
-      reader.onload = () => onChange({ name: f.name, dataUrl: String(reader.result) });
+      reader.onload = () => onChange({ name: f.name, file: f, dataUrl: String(reader.result) });
       reader.readAsDataURL(f);
     } else {
-      onChange({ name: f.name });
+      onChange({ name: f.name, file: f });
     }
   };
 

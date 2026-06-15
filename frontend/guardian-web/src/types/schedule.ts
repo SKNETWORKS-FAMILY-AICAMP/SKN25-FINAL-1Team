@@ -57,6 +57,9 @@ export interface CheckupReservationPayload {
   time: string;
   memo: string;
   category_code?: number;
+  // 다중 병원·원장: 보호자가 선택한 병원/원장. (백엔드 연동 시 사용)
+  hospitalid?: number;
+  doctorid?: number;
 }
 
 export interface CheckupReservationResult {
@@ -101,6 +104,7 @@ export interface ConfirmSchedulePayload {
   doctorid: number;
   confirmed_time: string;
   duration_min: number;
+  hospitalid?: number;
 }
 
 export interface ConfirmScheduleResponse {

@@ -19,6 +19,8 @@ export interface SlotOption {
   date?: string; // "2026-06-09"
   time?: string; // "09:00"
   durationMin?: number;
+  doctorid?: number; // 슬롯 담당 원장 (백엔드 슬롯에 포함됨)
+  doctorName?: string; // 원장 이름 (표시·그룹핑용)
   monthDay?: string; // legacy fallback: "5월 20일"
   weekday?: string; // legacy fallback: "월"
   timeText?: string; // legacy fallback: "오후 4:00"

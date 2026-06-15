@@ -10,6 +10,7 @@ import {
 import ActionButton from "../../components/common/action-button";
 import PageHeader from "../../components/common/page-header";
 import SectionCard from "../../components/common/section-card";
+import MyHospitalsSection from "../../components/guardian/my-hospitals-section";
 import GuardianLayout from "../../layouts/guardian-layout";
 import { useAuthStore } from "../../stores/auth-store";
 import { useTranslation } from "../../i18n/language-context";
@@ -380,6 +381,8 @@ const MypagePage = () => {
             </div>
           </SectionCard>
         ) : null}
+
+      <MyHospitalsSection />
 
       {isEditOpen && profile ? (
         <EditProfileModal
