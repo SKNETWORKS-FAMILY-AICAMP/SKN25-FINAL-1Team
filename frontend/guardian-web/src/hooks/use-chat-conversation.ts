@@ -1,7 +1,6 @@
 import {
   useState,
   type Dispatch,
-  type FormEvent,
   type SetStateAction,
 } from "react";
 
@@ -86,7 +85,6 @@ export const useChatConversation = ({
   const { t, lang } = useTranslation();
   const [session, setSession] = useState<ChatSessionResult | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [messageInput, setMessageInput] = useState("");
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -94,7 +92,6 @@ export const useChatConversation = ({
     setSession(null);
     setMessages([]);
     setQuickReplies([]);
-    setMessageInput("");
     clearPendingAttachment();
     setIsStreaming(false);
   };
@@ -197,7 +194,6 @@ export const useChatConversation = ({
         content: "",
       },
     ]);
-    setMessageInput("");
     setPendingAttachment(null);
     setQuickReplies([]);
     setIsStreaming(true);
@@ -235,24 +231,16 @@ export const useChatConversation = ({
     }
   };
 
-  const handleSubmitMessage = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    handleSendMessage(messageInput);
-  };
-
   return {
     session,
     setSession,
     messages,
     setMessages,
-    messageInput,
-    setMessageInput,
     quickReplies,
     setQuickReplies,
     isStreaming,
     setIsStreaming,
     resetConversationState,
     handleSendMessage,
-    handleSubmitMessage,
   };
 };

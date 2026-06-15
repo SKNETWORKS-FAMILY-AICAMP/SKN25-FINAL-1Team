@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
 import type { ChatCard, ChatMessage } from "../../hooks/use-chat-conversation";
 import { useTranslation } from "../../i18n/language-context";
@@ -302,4 +302,4 @@ const ChatMessageList = ({
   );
 };
 
-export default ChatMessageList;
+export default memo(ChatMessageList);

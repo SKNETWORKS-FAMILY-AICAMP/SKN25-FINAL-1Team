@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent, RefObject } from "react";
+import { memo, useState, type ChangeEvent, type FormEvent, type RefObject } from "react";
 
 import type { PendingAttachment } from "../../hooks/use-chat-upload";
 import { useTranslation } from "../../i18n/language-context";
@@ -31,27 +31,32 @@ const SendIcon = () => (
 interface ChatInputBoxProps {
   fileInputRef: RefObject<HTMLInputElement>;
   pendingAttachment: PendingAttachment | null;
-  messageInput: string;
   isStreaming: boolean;
   isUploadingAttachment: boolean;
   onClearPendingAttachment: () => void;
   onSelectAttachment: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSubmitMessage: (event: FormEvent<HTMLFormElement>) => void;
-  onChangeMessageInput: (value: string) => void;
+  onSubmitMessage: (value: string) => void;
 }
 
 const ChatInputBox = ({
   fileInputRef,
   pendingAttachment,
-  messageInput,
   isStreaming,
   isUploadingAttachment,
   onClearPendingAttachment,
   onSelectAttachment,
   onSubmitMessage,
-  onChangeMessageInput,
 }: ChatInputBoxProps) => {
   const { t } = useTranslation();
+  // 입력 텍스트는 이 컴포넌트에서만 관리한다 — 타이핑이 페이지(메시지 리스트 등)를
+  // 재렌더하지 않도록 국소화. 제출은 onSubmitMessage로 값을 올리고 스스로 비운다.
+  const [messageInput, setMessageInput] = useState("");
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmitMessage(messageInput);
+    setMessageInput("");
+  };
 
   return (
     <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
@@ -93,7 +98,7 @@ const ChatInputBox = ({
         </div>
       ) : null}
       <form
-        onSubmit={onSubmitMessage}
+        onSubmit={handleSubmit}
         className="flex h-14 items-center gap-2 rounded-2xl bg-slate-50 p-1.5 ring-1 ring-slate-100"
       >
         <input
@@ -115,7 +120,7 @@ const ChatInputBox = ({
         <input
           type="text"
           value={messageInput}
-          onChange={(event) => onChangeMessageInput(event.target.value)}
+          onChange={(event) => setMessageInput(event.target.value)}
           disabled={isStreaming || isUploadingAttachment}
           placeholder={t("chatbot.inputPlaceholder")}
           className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400 disabled:text-slate-400"
@@ -144,4 +149,4 @@ const ChatInputBox = ({
   );
 };
 
-export default ChatInputBox;
+export default memo(ChatInputBox);

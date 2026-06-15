@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type { ChatSessionHistory } from "../../api/chat-api";
 import type { Pet } from "../../api/pets-api";
 import { useTranslation } from "../../i18n/language-context";
@@ -16,6 +18,8 @@ const HistoryIcon = () => (
 
 interface ChatSessionListProps {
   selectedPet?: Pet;
+  selectedPetId: number | null;
+  isLoadingPets: boolean;
   chatHistories: ChatSessionHistory[];
   selectedHistoryId: number | null;
   isLoadingHistories: boolean;
@@ -28,6 +32,8 @@ interface ChatSessionListProps {
 
 const ChatSessionList = ({
   selectedPet,
+  selectedPetId,
+  isLoadingPets,
   chatHistories,
   selectedHistoryId,
   isLoadingHistories,
@@ -48,7 +54,7 @@ const ChatSessionList = ({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {!selectedPet ? (
+        {!selectedPet && !(selectedPetId !== null && isLoadingPets) ? (
           <div className="flex flex-1 flex-col items-center px-4 pt-[150px] text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <HistoryIcon />
@@ -66,7 +72,7 @@ const ChatSessionList = ({
               <button
                 type="button"
                 onClick={onCreateSession}
-                disabled={creatingPetId !== null}
+                disabled={creatingPetId !== null || !selectedPet}
                 className="flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-blue-300"
               >
                 {creatingPetId ? t("chatbot.creating") : t("chatbot.newChat")}
@@ -74,7 +80,7 @@ const ChatSessionList = ({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-              {isLoadingHistories ? (
+              {isLoadingHistories || (selectedPetId !== null && isLoadingPets) ? (
                 <div className="mt-8 flex justify-center">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
                 </div>
@@ -136,4 +142,4 @@ const ChatSessionList = ({
   );
 };
 
-export default ChatSessionList;
+export default memo(ChatSessionList);

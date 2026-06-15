@@ -9,6 +9,7 @@ import HomePage from "../pages/guardian/home-page";
 import MypagePage from "../pages/guardian/mypage-page";
 import ScheduleListPage from "../pages/guardian/schedule-list-page";
 import PetRegisterPage from "../pages/pets/pet-register-page";
+import GuardianShell from "../layouts/guardian-shell";
 import ProtectedRoute from "./protected-route";
 
 const AppRouter = () => {
@@ -21,13 +22,15 @@ const AppRouter = () => {
         <Route path="/find-id" element={<FindIdPage />} />
         <Route path="/find-password" element={<FindPasswordPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/reservations" element={<ScheduleListPage />} />
-          <Route path="/chatbot" element={<ChatbotPage />} />
-          <Route path="/mypage" element={<MypagePage />} />
-          <Route path="/mypage/password" element={<ChangePasswordPage />} />
-          <Route path="/pets/register" element={<PetRegisterPage />} />
-          <Route path="/pets/:petId" element={<PetRegisterPage />} />
+          <Route element={<GuardianShell />}>
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/reservations" element={<ScheduleListPage />} />
+            <Route path="/chatbot" element={<ChatbotPage />} />
+            <Route path="/mypage" element={<MypagePage />} />
+            <Route path="/mypage/password" element={<ChangePasswordPage />} />
+            <Route path="/pets/register" element={<PetRegisterPage />} />
+            <Route path="/pets/:petId" element={<PetRegisterPage />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
