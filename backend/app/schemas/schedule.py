@@ -28,6 +28,7 @@ class ConfirmScheduleRequest(BaseModel):
 # 예약 변경 요청
 class UpdateScheduleRequest(BaseModel):
     confirmed_time: str
+    duration_min: int
 
 # 예약 응답
 class ScheduleResponse(BaseModel):

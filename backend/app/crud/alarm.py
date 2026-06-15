@@ -4,20 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.alarm import DoctorAlarm
 
 
-async def get_alarms(db: AsyncSession, doctor_id: int, limit: int = 50):
+async def get_alarms(db: AsyncSession, doctor_ids: list[int], limit: int = 50):
     result = await db.execute(
         select(DoctorAlarm)
-        .where(DoctorAlarm.doctorid == doctor_id)
+        .where(DoctorAlarm.doctorid.in_(doctor_ids))
         .order_by(DoctorAlarm.created_at.desc())
         .limit(limit)
     )
     return result.scalars().all()
 
 
-async def mark_all_read(db: AsyncSession, doctor_id: int) -> int:
+async def mark_all_read(db: AsyncSession, doctor_ids: list[int]) -> int:
     result = await db.execute(
         update(DoctorAlarm)
-        .where(DoctorAlarm.doctorid == doctor_id, DoctorAlarm.is_read.is_(False))
+        .where(DoctorAlarm.doctorid.in_(doctor_ids), DoctorAlarm.is_read.is_(False))
         .values(is_read=True)
         .returning(DoctorAlarm.alarmid)
     )

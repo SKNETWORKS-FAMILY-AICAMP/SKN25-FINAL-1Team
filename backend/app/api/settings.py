@@ -1,13 +1,14 @@
 from datetime import date, time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_doctor
+from app.core.dependencies import get_current_hospital
 from app.db.session import get_db
+from app.crud.doctor import get_first_doctor
 from app.models.doctor import Doctor
 from app.models.schedule import Schedule
 from app.models.vet_schedule import VetSchedule
@@ -83,18 +84,29 @@ def _fmt(t: Optional[time]) -> Optional[str]:
     return t.strftime("%H:%M") if t else None
 
 
+async def _resolve_doctorid(db: AsyncSession, hospitalid: int, doctorid: Optional[int]) -> int:
+    """doctorid 파라미터가 없으면 병원의 첫 번째 의사를 기본값으로 사용"""
+    if doctorid is not None:
+        return doctorid
+    first = await get_first_doctor(db, hospitalid)
+    if first is None:
+        raise HTTPException(status_code=404, detail="등록된 수의사가 없습니다.")
+    return first.doctorid
+
+
 # ── 기존 운영시간 (하위 호환) ────────────────────────────────────────────
 
 @router.get("/operating-hours", response_model=OperatingHoursResponse)
 async def get_operating_hours(
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
-    # 주간 템플릿 중 첫 번째 영업 요일 기준 반환
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
     result = await db.execute(
         select(VetSchedule)
         .where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.day_of_week.isnot(None),
             VetSchedule.is_open == True,
         )
@@ -109,11 +121,10 @@ async def get_operating_hours(
             lunch_start=record.lunch_start.strftime("%H:%M") if record.lunch_start else "12:00",
             lunch_end=record.lunch_end.strftime("%H:%M") if record.lunch_end else "13:00",
         )
-    # 주간 템플릿 없으면 date 기반 레코드 fallback
     result2 = await db.execute(
         select(VetSchedule)
         .where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.date.isnot(None),
             VetSchedule.start_time.isnot(None),
         )
@@ -134,14 +145,15 @@ async def get_operating_hours(
 @router.put("/operating-hours", response_model=OperatingHoursResponse)
 async def update_operating_hours(
     body: OperatingHoursRequest,
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
-    # 월~금 주간 템플릿에 동일 시간 적용
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
     for dow in range(5):
         result = await db.execute(
             select(VetSchedule).where(
-                VetSchedule.doctorid == current_doctor.doctorid,
+                VetSchedule.doctorid == did,
                 VetSchedule.day_of_week == dow,
             )
         )
@@ -154,7 +166,7 @@ async def update_operating_hours(
             record.lunch_end = _parse_time(body.lunch_end)
         else:
             db.add(VetSchedule(
-                doctorid=current_doctor.doctorid,
+                doctorid=did,
                 day_of_week=dow,
                 is_open=True,
                 start_time=_parse_time(body.start_time),
@@ -170,24 +182,25 @@ async def update_operating_hours(
 
 @router.get("/weekly-schedule", response_model=WeeklyScheduleResponse)
 async def get_weekly_schedule(
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
     result = await db.execute(
         select(VetSchedule)
         .where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.day_of_week.isnot(None),
         )
         .order_by(VetSchedule.day_of_week)
     )
     records = result.scalars().all()
 
-    # 신규 계정: 주간 템플릿 없으면 기본값 7행 자동 생성
     if not records:
         for d in _DEFAULT_WEEK:
             db.add(VetSchedule(
-                doctorid=current_doctor.doctorid,
+                doctorid=did,
                 day_of_week=d["day_of_week"],
                 is_open=d["is_open"],
                 start_time=_parse_time(d["start_time"]) if d["start_time"] else None,
@@ -222,13 +235,15 @@ async def get_weekly_schedule(
 @router.put("/weekly-schedule", response_model=WeeklyScheduleResponse)
 async def update_weekly_schedule(
     body: WeeklyScheduleResponse,
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
     for day in body.schedule:
         result = await db.execute(
             select(VetSchedule).where(
-                VetSchedule.doctorid == current_doctor.doctorid,
+                VetSchedule.doctorid == did,
                 VetSchedule.day_of_week == day.day_of_week,
             )
         )
@@ -246,7 +261,7 @@ async def update_weekly_schedule(
             record.lunch_end = le
         else:
             db.add(VetSchedule(
-                doctorid=current_doctor.doctorid,
+                doctorid=did,
                 day_of_week=day.day_of_week,
                 is_open=day.is_open,
                 start_time=st,
@@ -256,19 +271,21 @@ async def update_weekly_schedule(
             ))
 
     await db.commit()
-    return await get_weekly_schedule(db=db, current_doctor=current_doctor)
+    return await get_weekly_schedule(doctorid=doctorid, db=db, current_hospital=current_hospital)
 
 
 # ── 특정일 휴진 ──────────────────────────────────────────────────────────
 
 @router.get("/closed-dates", response_model=ClosedDatesResponse)
 async def get_closed_dates(
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
     result = await db.execute(
         select(VetSchedule).where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.date.isnot(None),
             VetSchedule.is_open == False,
         ).order_by(VetSchedule.date)
@@ -280,17 +297,20 @@ async def get_closed_dates(
 @router.post("/closed-dates", response_model=AddClosedDateResponse)
 async def add_closed_date(
     body: AddClosedDateRequest,
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     try:
         target_date = date.fromisoformat(body.date)
     except ValueError:
         raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다 (YYYY-MM-DD).")
 
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
+
     count_result = await db.execute(
         select(func.count(Schedule.scheduleid)).where(
-            Schedule.doctorid == current_doctor.doctorid,
+            Schedule.doctorid == did,
             Schedule.status == "CONFIRMED",
             Schedule.deleted_at.is_(None),
             func.date(Schedule.confirmed_time) == target_date,
@@ -300,7 +320,7 @@ async def add_closed_date(
 
     result = await db.execute(
         select(VetSchedule).where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.date == target_date,
             VetSchedule.day_of_week.is_(None),
         )
@@ -312,7 +332,7 @@ async def add_closed_date(
         record.end_time = None
     else:
         db.add(VetSchedule(
-            doctorid=current_doctor.doctorid,
+            doctorid=did,
             date=target_date,
             is_open=False,
         ))
@@ -328,17 +348,20 @@ async def add_closed_date(
 @router.delete("/closed-dates/{closed_date}", response_model=DeleteClosedDateResponse)
 async def remove_closed_date(
     closed_date: str,
+    doctorid: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     try:
         target_date = date.fromisoformat(closed_date)
     except ValueError:
         raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다 (YYYY-MM-DD).")
 
+    did = await _resolve_doctorid(db, current_hospital.hospitalid, doctorid)
+
     result = await db.execute(
         select(VetSchedule).where(
-            VetSchedule.doctorid == current_doctor.doctorid,
+            VetSchedule.doctorid == did,
             VetSchedule.date == target_date,
             VetSchedule.is_open == False,
             VetSchedule.day_of_week.is_(None),

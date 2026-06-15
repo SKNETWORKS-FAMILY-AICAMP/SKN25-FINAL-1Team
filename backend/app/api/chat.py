@@ -628,7 +628,7 @@ async def get_chat_session_detail(
         # 예약 확정 = 취소되지 않은 schedule에 확정 시각이 존재.
         booking_complete = bool(schedule and schedule.confirmed_time and schedule.status != "CANCELLED")
         # 경과보고 마감 = followup 대상이었으나 진료 시작 시간이 지났거나(또는 완료) 더는 보낼 수 없는 상태.
-        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.
+        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.  
         followup_closed = bool(need_followup and schedule and schedule.confirmed_time and not can_followup)
 
     messages = session.messages or []

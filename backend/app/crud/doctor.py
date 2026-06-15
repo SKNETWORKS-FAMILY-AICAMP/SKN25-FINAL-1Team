@@ -1,45 +1,39 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.doctor import Doctor
-from app.core.security import hash_password
 
-# loginid로 수의사 조회
-async def get_doctor_by_loginid(db: AsyncSession, loginid: str):
-    result = await db.execute(select(Doctor).where(Doctor.loginid == loginid))
-    return result.scalar_one_or_none()
 
-# 비밀번호 변경
-async def update_doctor_password(db: AsyncSession, doctor: Doctor, new_password: str):
-    doctor.password = hash_password(new_password)
-    doctor.is_initial_password = False
-    await db.commit()
-    await db.refresh(doctor)
-    return doctor
-
-# 계정 문의 — 병원명 + 사업자번호 + 면허번호로 의사 조회
-async def get_doctor_by_inquiry(db: AsyncSession, hospital_name: str, business_number: str, license_number: str):
+async def get_doctors_by_hospital(db: AsyncSession, hospitalid: int) -> list[Doctor]:
     result = await db.execute(
-        select(Doctor).where(
-            Doctor.hospital_name == hospital_name,
-            Doctor.business_number == business_number,
-            Doctor.license_number == license_number,
-        )
-    )
-    return result.scalar_one_or_none()
-
-# 임시 비밀번호 발급
-async def reset_doctor_password(db: AsyncSession, loginid: str, license_number: str):
-    result = await db.execute(
-        select(Doctor).where(
-            Doctor.loginid == loginid,
-            Doctor.license_number == license_number,
-        )
-    )
-    return result.scalar_one_or_none()
-
-# 같은 병원 소속 수의사 목록 조회
-async def get_doctors_by_hospital(db: AsyncSession, hospital_name: str) -> list[Doctor]:
-    result = await db.execute(
-        select(Doctor).where(Doctor.hospital_name == hospital_name).order_by(Doctor.doctorid)
+        select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
     )
     return list(result.scalars().all())
+
+
+async def get_doctor_by_id(db: AsyncSession, doctorid: int):
+    return await db.get(Doctor, doctorid)
+
+
+async def get_doctor_by_license(db: AsyncSession, hospitalid: int, license_number: str):
+    """계정 문의/비밀번호 재설정 시 병원 내 면허번호로 의사 조회"""
+    result = await db.execute(
+        select(Doctor).where(
+            Doctor.hospitalid == hospitalid,
+            Doctor.license_number == license_number,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_first_doctor(db: AsyncSession, hospitalid: int):
+    """병원의 첫 번째 의사 반환 (기본값 fallback용)"""
+    result = await db.execute(
+        select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid).limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_doctor_ids_by_hospital(db: AsyncSession, hospitalid: int) -> list[int]:
+    """병원 소속 전체 doctorid 목록 반환"""
+    doctors = await get_doctors_by_hospital(db, hospitalid)
+    return [d.doctorid for d in doctors]

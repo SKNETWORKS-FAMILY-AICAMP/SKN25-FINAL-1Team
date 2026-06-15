@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_doctor
+from app.core.dependencies import get_current_hospital
 from app.db.session import get_db
-from app.models.doctor import Doctor
 from app.crud.alarm import get_alarms, mark_all_read
+from app.crud.doctor import get_doctor_ids_by_hospital
 from app.schemas.alarm import AlarmItem, AlarmListResponse
 from app.schemas.common import MessageResponse
 
@@ -15,9 +15,10 @@ router = APIRouter(prefix="/doctor/alarm", tags=["doctor-alarm"])
 async def alarm_list(
     page: int = 1,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
-    alarms = await get_alarms(db, current_doctor.doctorid)
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    alarms = await get_alarms(db, doctor_ids)
     return AlarmListResponse(
         alarm_list=[
             AlarmItem(
@@ -36,7 +37,8 @@ async def alarm_list(
 @router.patch("/read-all", response_model=MessageResponse, status_code=200)
 async def alarm_read_all(
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
-    count = await mark_all_read(db, current_doctor.doctorid)
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    count = await mark_all_read(db, doctor_ids)
     return MessageResponse(message=f"{count}건의 알람을 읽음 처리했습니다.")

@@ -3,10 +3,10 @@ from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_doctor
+from app.core.dependencies import get_current_hospital
 from app.db.session import get_db
-from app.crud.dashboard import get_doctor_day_schedules
-from app.models.doctor import Doctor
+from app.crud.dashboard import get_hospital_day_schedules
+from app.crud.doctor import get_doctor_ids_by_hospital
 from app.utils.timezone import to_kst
 from app.schemas.dashboard import (
     DashboardResult,
@@ -14,11 +14,7 @@ from app.schemas.dashboard import (
     DashboardSummary,
 )
 
-# 라우터 설정
-router = APIRouter(
-    prefix="/dashboard",
-    tags=["dashboard"]
-)
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 COMPLETED_STATUSES = {"진료완료", "COMPLETED"}
 WAITING_STATUSES = {"예약대기", "대기", "예약확정", "CONFIRMED", "PENDING"}
@@ -46,7 +42,6 @@ def _hhmm(dt: datetime | None) -> str:
 
 
 def _visit_type(urgency_num: int | None) -> str:
-    # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
     from ai.triage.engine import urgency_num_to_visit_type
     return urgency_num_to_visit_type(urgency_num)
 
@@ -68,14 +63,13 @@ def _reason(guardian, triage) -> str:
 async def get_today_dashboard(
     target_date: date = Query(default_factory=date.today, alias="date"),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     start = datetime.combine(target_date, time.min)
     end = start + timedelta(days=1)
 
-    rows = await get_doctor_day_schedules(
-        db, current_doctor.doctorid, start, end
-    )
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    rows = await get_hospital_day_schedules(db, doctor_ids, start, end)
 
     schedules: list[DashboardScheduleItem] = []
     emergency_count = 0
@@ -106,7 +100,7 @@ async def get_today_dashboard(
             status=schedule.status,
         ))
 
-    result = DashboardResult(
+    return DashboardResult(
         summaries=DashboardSummary(
             total=len(schedules),
             waiting=waiting_count,
@@ -115,5 +109,3 @@ async def get_today_dashboard(
         ),
         schedules=schedules,
     )
-
-    return result

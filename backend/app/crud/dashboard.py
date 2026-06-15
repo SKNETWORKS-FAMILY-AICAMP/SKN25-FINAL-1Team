@@ -16,12 +16,7 @@ async def get_doctor_day_schedules(
     start: datetime,
     end: datetime,
 ):
-    """특정 수의사의 하루치 예약을 조인 조회한다.
-
-    소프트 삭제된 예약/진료기록(deleted_at)과 취소된 예약(status=CANCELLED)은 제외한다.
-    (취소는 status만 바꾸고 deleted_at은 건드리지 않으므로 별도 필터가 필요하다 —
-     예약관리 목록과 동일 기준으로 맞춰 '오늘의 진료현황'에서도 취소건이 사라지게 한다.)
-    """
+    """특정 수의사의 하루치 예약을 조인 조회한다."""
     kst_start = start.replace(tzinfo=KST)
     kst_end = end.replace(tzinfo=KST)
 
@@ -31,6 +26,32 @@ async def get_doctor_day_schedules(
         .join(Pet, Guardian.petid == Pet.petid)
         .outerjoin(TriageResult, Guardian.emrid == TriageResult.emrid)
         .where(Schedule.doctorid == doctor_id)
+        .where(Schedule.confirmed_time >= kst_start)
+        .where(Schedule.confirmed_time < kst_end)
+        .where(Schedule.deleted_at.is_(None))
+        .where(Schedule.status != "CANCELLED")
+        .where(Guardian.deleted_at.is_(None))
+        .order_by(Schedule.confirmed_time.asc())
+    )
+    return result.all()
+
+
+async def get_hospital_day_schedules(
+    db: AsyncSession,
+    doctor_ids: list[int],
+    start: datetime,
+    end: datetime,
+):
+    """병원 소속 전체 수의사의 하루치 예약을 통합 조회한다."""
+    kst_start = start.replace(tzinfo=KST)
+    kst_end = end.replace(tzinfo=KST)
+
+    result = await db.execute(
+        select(Schedule, Guardian, Pet, TriageResult)
+        .join(Guardian, Schedule.emrid == Guardian.emrid)
+        .join(Pet, Guardian.petid == Pet.petid)
+        .outerjoin(TriageResult, Guardian.emrid == TriageResult.emrid)
+        .where(Schedule.doctorid.in_(doctor_ids))
         .where(Schedule.confirmed_time >= kst_start)
         .where(Schedule.confirmed_time < kst_end)
         .where(Schedule.deleted_at.is_(None))

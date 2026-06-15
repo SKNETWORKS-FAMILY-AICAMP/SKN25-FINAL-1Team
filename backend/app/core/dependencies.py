@@ -7,38 +7,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.config import settings
 
-from app.models.doctor import Doctor
+from app.models.hospital import Hospital
 from app.models.user import User
 
 security = HTTPBearer()
 
-# 토큰 검증 미들웨어
-# 수의사 인증
-async def get_current_doctor(
+# 수의사(병원) 인증
+async def get_current_hospital(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ):
     try:
         token = credentials.credentials
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        doctor_id: str = payload.get("sub")
+        hospital_id: str = payload.get("sub")
         token_type: str = payload.get("type")
 
-        if doctor_id is None or token_type != "doctor":
+        if hospital_id is None or token_type != "hospital":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-    result = await db.execute(
-        select(Doctor).where(Doctor.doctorid == int(doctor_id))
-    )
-    doctor = result.scalar_one_or_none()
+    hospital = await db.get(Hospital, int(hospital_id))
 
-    if doctor is None:
+    if hospital is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-    return doctor
+    return hospital
 
 # 보호자 인증
 async def get_current_user(

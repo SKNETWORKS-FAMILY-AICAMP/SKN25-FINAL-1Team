@@ -16,7 +16,7 @@ from app.schemas.prescription import (
     PrescriptionResponse,
 )
 from app.schemas.common import MessageResponse
-from app.core.dependencies import get_current_doctor
+from app.core.dependencies import get_current_hospital
 
 router = APIRouter(tags=["prescriptions"])
 
@@ -25,7 +25,7 @@ router = APIRouter(tags=["prescriptions"])
 async def search_drug(
     keyword: str,
     db: AsyncSession = Depends(get_db),
-    _: object = Depends(get_current_doctor),
+    _=Depends(get_current_hospital),
 ):
     if not keyword or len(keyword.strip()) < 1:
         raise HTTPException(status_code=400, detail="검색어를 입력해주세요.")
@@ -40,7 +40,7 @@ async def search_drug(
 async def add_prescription(
     payload: PrescriptionCreate,
     db: AsyncSession = Depends(get_db),
-    _: object = Depends(get_current_doctor),
+    _=Depends(get_current_hospital),
 ):
     prescription = await create_prescription(
         db,
@@ -57,7 +57,7 @@ async def add_prescription(
 async def get_prescriptions(
     doctor_emrid: int,
     db: AsyncSession = Depends(get_db),
-    _: object = Depends(get_current_doctor),
+    _=Depends(get_current_hospital),
 ):
     rows = await get_prescriptions_by_emrid(db, doctor_emrid)
     result = [
@@ -79,7 +79,7 @@ async def get_prescriptions(
 async def remove_prescription(
     prescription_id: int,
     db: AsyncSession = Depends(get_db),
-    _: object = Depends(get_current_doctor),
+    _=Depends(get_current_hospital),
 ):
     deleted = await delete_prescription(db, prescription_id)
     if not deleted:
