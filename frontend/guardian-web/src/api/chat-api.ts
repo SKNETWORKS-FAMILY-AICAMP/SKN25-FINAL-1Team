@@ -109,6 +109,11 @@ export type ChatStreamEvent =
       type: "message";
       content: string;
     }
+  // 진행 단계 알림 (image_analysis: 이미지 분석중 / generating: 응답 생성중)
+  | {
+      type: "status";
+      phase: "image_analysis" | "generating";
+    }
   | {
       type: "quick_replies";
       options: string[];
