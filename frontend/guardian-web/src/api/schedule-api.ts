@@ -21,6 +21,7 @@ export interface GetSchedulesParams {
 export interface GetAvailableScheduleSlotsParams {
   date: string;
   doctorid?: number;
+  hospitalid?: number;
   duration_min: number;
 }
 
@@ -43,6 +44,7 @@ export const getSchedules = async ({
 export const getAvailableScheduleSlots = async ({
   date,
   doctorid,
+  hospitalid,
   duration_min,
 }: GetAvailableScheduleSlotsParams): Promise<AvailableScheduleSlotsResponse> => {
   const response = await apiClient.get<AvailableScheduleSlotsResponse>(
@@ -51,6 +53,7 @@ export const getAvailableScheduleSlots = async ({
       params: {
         date,
         doctorid,
+        hospitalid,
         duration_min,
       },
     },

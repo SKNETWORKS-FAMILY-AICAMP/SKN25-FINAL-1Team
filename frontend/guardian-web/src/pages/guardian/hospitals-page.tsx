@@ -9,6 +9,7 @@ import {
   type Hospital,
   type HospitalDoctor,
 } from "../../api/hospital-mock";
+import { getHospitalDetail, getMyHospitals } from "../../api/hospital-api";
 
 // 선택한 병원을 새로고침해도 유지(향후 hospital-store/persist로 이전 예정).
 const SELECTED_HOSPITAL_KEY = "medipaw.guardian.hospitalid";
@@ -31,7 +32,7 @@ const HospitalSwitcher = ({
   selectedId,
   onSelect,
 }: {
-  hospitals: Hospital[];
+  hospitals: { hospitalid: number; name: string }[];
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) => {
@@ -334,22 +335,61 @@ const HospitalDetail = ({ hospital }: { hospital: Hospital }) => {
 
 const HospitalsPage = () => {
   const { t } = useTranslation();
-  // TODO(api): 보호자가 등록한 병원 목록을 백엔드에서 받아온다. 지금은 목업.
-  const hospitals = MOCK_HOSPITALS;
 
-  const [selectedId, setSelectedId] = useState<number | null>(() => {
-    const stored = Number(window.localStorage.getItem(SELECTED_HOSPITAL_KEY));
-    if (hospitals.some((h) => h.hospitalid === stored)) return stored;
-    return hospitals[0]?.hospitalid ?? null;
-  });
+  const [myHospitals, setMyHospitals] = useState<{ hospitalid: number; name: string }[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [hospital, setHospital] = useState<Hospital | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleSelect = (id: number) => {
     setSelectedId(id);
     window.localStorage.setItem(SELECTED_HOSPITAL_KEY, String(id));
   };
 
-  const selectedHospital =
-    hospitals.find((h) => h.hospitalid === selectedId) ?? null;
+  // 내 병원 목록 로드 (실패 시 데모 목업 폴백 — 백엔드 미가동 대비)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      let list: { hospitalid: number; name: string }[];
+      try {
+        list = await getMyHospitals();
+      } catch {
+        list = MOCK_HOSPITALS.map((h) => ({ hospitalid: h.hospitalid, name: h.name }));
+      }
+      if (!mounted) return;
+      setMyHospitals(list);
+      if (list.length > 0) {
+        const stored = Number(window.localStorage.getItem(SELECTED_HOSPITAL_KEY));
+        const initial = list.some((h) => h.hospitalid === stored) ? stored : list[0].hospitalid;
+        setSelectedId(initial);
+      }
+      setIsLoading(false);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // 선택 병원 상세 로드 (실패 시 목업 폴백)
+  useEffect(() => {
+    if (selectedId == null) {
+      setHospital(null);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      let detail: Hospital | null;
+      try {
+        detail = await getHospitalDetail(selectedId);
+      } catch {
+        detail = MOCK_HOSPITALS.find((h) => h.hospitalid === selectedId) ?? null;
+      }
+      if (mounted) setHospital(detail);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [selectedId]);
 
   return (
     <GuardianLayout>
@@ -357,9 +397,9 @@ const HospitalsPage = () => {
         title={t("hospitalsPage.title")}
         description={t("hospitalsPage.description")}
         rightAction={
-          hospitals.length > 0 ? (
+          myHospitals.length > 0 ? (
             <HospitalSwitcher
-              hospitals={hospitals}
+              hospitals={myHospitals}
               selectedId={selectedId}
               onSelect={handleSelect}
             />
@@ -367,23 +407,26 @@ const HospitalsPage = () => {
         }
       />
 
-      {hospitals.length === 0 ? (
-        // 운영팀이 아직 어떤 병원도 등록하지 않은 상태
-        <div className="flex flex-1 min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">
-            {t("hospitalsPage.noHospitals")}
-          </p>
+      {isLoading ? (
+        <div className="flex flex-1 min-h-[480px] items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
         </div>
-      ) : selectedHospital ? (
-        <HospitalDetail hospital={selectedHospital} />
-      ) : (
-        // 병원은 있지만 아직 선택 안 함
+      ) : myHospitals.length === 0 ? (
+        // 등록된 병원이 없는 보호자 — 병원 등록 유도
         <div className="flex flex-1 min-h-[480px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
           <h2 className="text-xl font-bold text-slate-800">
             {t("hospitalsPage.emptyTitle")}
           </h2>
           <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-slate-500">
             {t("hospitalsPage.emptyDescription")}
+          </p>
+        </div>
+      ) : hospital ? (
+        <HospitalDetail hospital={hospital} />
+      ) : (
+        <div className="flex flex-1 min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500">
+            {t("hospitalsPage.noHospitals")}
           </p>
         </div>
       )}

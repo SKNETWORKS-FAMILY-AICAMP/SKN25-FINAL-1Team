@@ -1,6 +1,6 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ChatCard, ChatMessage } from "../../hooks/use-chat-conversation";
+import type { ChatCard, ChatMessage, SlotOption } from "../../hooks/use-chat-conversation";
 import { useTranslation } from "../../i18n/language-context";
 import { useDynamicTranslation } from "../../i18n/use-dynamic-translation";
 import {
@@ -20,7 +20,98 @@ interface ChatMessageListProps {
   onOpenDatePicker: () => void;
 }
 
-/** 예약 가능 시간 카드 — 슬롯 목록 + '예약 가능한 날짜 보기' 버튼 */
+type SlotsT = (key: string, vars?: Record<string, string | number>) => string;
+
+const sortSlots = (slots: SlotOption[]) =>
+  [...slots].sort(
+    (a, b) =>
+      (a.date ?? "").localeCompare(b.date ?? "") ||
+      (a.time ?? "").localeCompare(b.time ?? ""),
+  );
+
+/** 슬롯 한 줄 (시간 + 진료시간 + 원장명) */
+const SlotRow = ({
+  slot,
+  showDoctor,
+  isStreaming,
+  onSendMessage,
+  t,
+  lang,
+}: {
+  slot: SlotOption;
+  showDoctor: boolean;
+  isStreaming: boolean;
+  onSendMessage: (content: string) => void;
+  t: SlotsT;
+  lang: Language;
+}) => {
+  const monthDay = slot.date ? formatChatMonthDay(slot.date, t) : slot.monthDay;
+  const weekday = slot.date ? weekdayOf(slot.date, lang) : slot.weekday;
+  const timeText = slot.time ? formatChatTime(slot.time, t) : slot.timeText;
+  const durationText = slot.durationMin
+    ? formatChatDuration(slot.durationMin, t)
+    : slot.durationText;
+  return (
+    <li className="flex items-center justify-between gap-3 px-5 py-4">
+      <div className="min-w-0">
+        <p className="text-sm font-extrabold text-slate-900">
+          {monthDay} ({weekday})
+        </p>
+        <p className="mt-0.5 text-xs font-semibold text-slate-500">
+          {timeText}
+          <span className="mx-1.5 text-slate-300">|</span>
+          <span className="text-blue-600">
+            {durationText} {t("chatbot.durationEstimate")}
+          </span>
+          {showDoctor && slot.doctorName ? (
+            <>
+              <span className="mx-1.5 text-slate-300">|</span>
+              <span className="text-slate-600">{slot.doctorName}</span>
+            </>
+          ) : null}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onSendMessage(slot.label)}
+        disabled={isStreaming}
+        className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-blue-700 disabled:opacity-50"
+      >
+        {t("chatbot.cardSelect")}
+      </button>
+    </li>
+  );
+};
+
+const Chip = ({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={[
+      "rounded-full px-3 py-1.5 text-xs font-bold transition",
+      active
+        ? "bg-blue-600 text-white"
+        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+    ].join(" ")}
+  >
+    {children}
+  </button>
+);
+
+/**
+ * 예약 가능 시간 카드.
+ * 원장이 2명 이상이면 추천(가장 빠른 시간) + 칩 3개[원장 직접 선택 / 시간대 전체 / 가장 빠른 시간].
+ * 1명이거나 원장 정보가 없으면 기존처럼 평평하게 나열.
+ * (분야 매칭 추천은 백엔드에 원장 specialty 가 생기면 'earliest' 기본을 대체)
+ */
 const SlotsCard = ({
   card,
   isStreaming,
@@ -33,68 +124,113 @@ const SlotsCard = ({
   isStreaming: boolean;
   onSendMessage: (content: string) => void;
   onOpenDatePicker: () => void;
-  t: (key: string, vars?: Record<string, string | number>) => string;
+  t: SlotsT;
   lang: Language;
-}) => (
-  <div className="w-full overflow-hidden rounded-3xl rounded-bl-lg border border-slate-200 bg-white shadow-sm">
-    {card.slots.length > 0 && (
-      <>
-        <ul className="divide-y divide-slate-100">
-          {card.slots.map((slot) => {
-            const monthDay = slot.date
-              ? formatChatMonthDay(slot.date, t)
-              : slot.monthDay;
-            const weekday = slot.date ? weekdayOf(slot.date, lang) : slot.weekday;
-            const timeText = slot.time ? formatChatTime(slot.time, t) : slot.timeText;
-            const durationText = slot.durationMin
-              ? formatChatDuration(slot.durationMin, t)
-              : slot.durationText;
-            return (
-              <li
-                key={slot.label}
-                className="flex items-center justify-between gap-3 px-5 py-4"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-extrabold text-slate-900">
-                    {monthDay} ({weekday})
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-500">
-                    {timeText}
-                    <span className="mx-1.5 text-slate-300">|</span>
-                    <span className="text-blue-600">
-                      {durationText} {t("chatbot.durationEstimate")}
-                    </span>
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onSendMessage(slot.label)}
-                  disabled={isStreaming}
-                  className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {t("chatbot.cardSelect")}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="px-5 pb-1 pt-2 text-[10px] font-medium text-slate-400">
-          {t("chatbot.slotsDisclaimer")}
-        </p>
-      </>
-    )}
-    <div className="p-3">
-      <button
-        type="button"
-        onClick={onOpenDatePicker}
-        disabled={isStreaming}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/60 px-4 py-3 text-xs font-extrabold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
-      >
-        {t("chatbot.viewAvailableDates")}
-      </button>
+}) => {
+  const slots = card.slots;
+  const doctors = useMemo(() => {
+    const map = new Map<number, string>();
+    slots.forEach((s) => {
+      if (s.doctorid != null && s.doctorName) map.set(s.doctorid, s.doctorName);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [slots]);
+  const multiDoctor = doctors.length >= 2;
+
+  const [view, setView] = useState<{
+    mode: "earliest" | "all" | "pick";
+    doctorId?: number;
+  }>({ mode: "earliest" });
+
+  const sorted = useMemo(() => sortSlots(slots), [slots]);
+
+  let visible = sorted;
+  let showDoctorChooser = false;
+  if (multiDoctor) {
+    if (view.mode === "earliest") visible = sorted.slice(0, 2);
+    else if (view.mode === "all") visible = sorted;
+    else if (view.mode === "pick") {
+      if (view.doctorId == null) {
+        showDoctorChooser = true;
+        visible = [];
+      } else {
+        visible = sorted.filter((s) => s.doctorid === view.doctorId);
+      }
+    }
+  }
+
+  return (
+    <div className="w-full overflow-hidden rounded-3xl rounded-bl-lg border border-slate-200 bg-white shadow-sm">
+      {slots.length > 0 && (
+        <>
+          {multiDoctor && (
+            <div className="flex flex-wrap gap-2 px-5 pt-4">
+              <Chip active={view.mode === "pick"} onClick={() => setView({ mode: "pick" })}>
+                {t("chatbot.pickDoctor")}
+              </Chip>
+              <Chip active={view.mode === "all"} onClick={() => setView({ mode: "all" })}>
+                {t("chatbot.viewAllTimes")}
+              </Chip>
+              <Chip active={view.mode === "earliest"} onClick={() => setView({ mode: "earliest" })}>
+                {t("chatbot.earliestTime")}
+              </Chip>
+            </div>
+          )}
+
+          {showDoctorChooser ? (
+            <div className="px-5 py-4">
+              <p className="mb-2 text-xs font-bold text-slate-500">
+                {t("chatbot.pickDoctorPrompt")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {doctors.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setView({ mode: "pick", doctorId: d.id })}
+                    className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                  >
+                    {d.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {visible.map((slot) => (
+                <SlotRow
+                  key={slot.label}
+                  slot={slot}
+                  showDoctor={multiDoctor}
+                  isStreaming={isStreaming}
+                  onSendMessage={onSendMessage}
+                  t={t}
+                  lang={lang}
+                />
+              ))}
+            </ul>
+          )}
+
+          {!showDoctorChooser && (
+            <p className="px-5 pb-1 pt-2 text-[10px] font-medium text-slate-400">
+              {t("chatbot.slotsDisclaimer")}
+            </p>
+          )}
+        </>
+      )}
+      <div className="p-3">
+        <button
+          type="button"
+          onClick={onOpenDatePicker}
+          disabled={isStreaming}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/60 px-4 py-3 text-xs font-extrabold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
+        >
+          {t("chatbot.viewAvailableDates")}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** 예약 확정 카드 */
 const ConfirmationCard = ({

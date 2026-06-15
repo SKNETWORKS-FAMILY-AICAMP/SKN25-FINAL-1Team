@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { listApplications } from "../../onboarding/store";
+import { listApplications, type ApplicationOut } from "../../onboarding/api";
 import type { ApplicationStatus } from "../../onboarding/types";
 import StatusBadge from "./StatusBadge";
 
@@ -15,7 +15,18 @@ const FILTERS: (ApplicationStatus | "전체")[] = [
 
 export default function ApplicationsList() {
   const [filter, setFilter] = useState<ApplicationStatus | "전체">("전체");
-  const all = useMemo(() => listApplications(), []);
+  const [all, setAll] = useState<ApplicationOut[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    listApplications()
+      .then((list) => mounted && setAll(list))
+      .catch(() => mounted && setAll([]));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const rows = filter === "전체" ? all : all.filter((a) => a.status === filter);
 
   return (
@@ -69,7 +80,7 @@ export default function ApplicationsList() {
                     {app.doctors.map((d) => d.name).filter(Boolean).join(", ") || "-"}
                   </td>
                   <td className="px-5 py-4 font-semibold text-slate-500">
-                    {new Date(app.createdAt).toLocaleDateString("ko-KR")}
+                    {app.createdAt ? new Date(app.createdAt).toLocaleDateString("ko-KR") : "-"}
                   </td>
                   <td className="px-5 py-4">
                     <StatusBadge status={app.status} />

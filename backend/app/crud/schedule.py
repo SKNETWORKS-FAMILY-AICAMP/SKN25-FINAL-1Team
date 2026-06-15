@@ -337,35 +337,13 @@ class AvailableSlot:
         self.doctor_name = doctor_name
 
 
-# 빈 슬롯 조회 (vet_scheduleDB 운영시간 기반 동적 계산)
-async def get_available_slots(db: AsyncSession, date: str, duration_min: int, doctorid: int = None):
-    target_date = datetime.strptime(date, "%Y-%m-%d").date()
-    now_kst = datetime.now(KST)
-
-    # 법정공휴일: 무조건 휴무
-    if _is_legal_holiday(target_date):
-        return [], "해당 날짜는 휴일(법정 공휴일)로 진료가 없습니다."
-
-    # 의사 확인
-    if doctorid:
-        doc_result = await db.execute(select(Doctor).where(Doctor.doctorid == doctorid))
-        doctor = doc_result.scalar_one_or_none()
-    else:
-        doc_result = await db.execute(select(Doctor))
-        doctor = doc_result.scalars().first()
-
-    if not doctor:
-        return [], "예약 가능한 수의사가 없습니다."
-
-    resolved_doctorid = doctor.doctorid
-
-    # 운영시간 조회 (특정일 오버라이드 > 주간 템플릿 > 기본값)
-    hours = await _get_hours_for_date(db, resolved_doctorid, target_date)
+# 단일 원장의 해당 날짜 빈 슬롯 계산 (휴진이면 빈 리스트)
+async def _slots_for_doctor(db: AsyncSession, doctor, target_date, duration_min: int, now_kst):
+    hours = await _get_hours_for_date(db, doctor.doctorid, target_date)
     if hours is None:
-        return [], "해당 날짜는 병원 휴무일(휴진)입니다."
+        return []
 
     op_start, op_end, lunch_start, lunch_end = hours
-
     vet_time_slots = _generate_time_slots(op_start, op_end, lunch_start, lunch_end)
 
     # 해당 날짜에 이미 활성 예약된 시작 시간 수집
@@ -374,7 +352,7 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
             Schedule.confirmed_time.isnot(None),
             Schedule.deleted_at.is_(None),
             Schedule.status != "CANCELLED",
-            Schedule.doctorid == resolved_doctorid,
+            Schedule.doctorid == doctor.doctorid,
         )
     )
     booked = set()
@@ -398,8 +376,7 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
 
     # duration_min 기반 연속 슬롯 계산 (30분 간격 기준)
     needed = max(1, -(-duration_min // 30))
-    available_starts = []
-
+    starts = []
     for i in range(len(avail) - needed + 1):
         consecutive = True
         for j in range(1, needed):
@@ -410,19 +387,58 @@ async def get_available_slots(db: AsyncSession, date: str, duration_min: int, do
             t = avail[i]
             h, m = map(int, t.split(":"))
             end_dt = datetime(2000, 1, 1, h, m) + timedelta(minutes=duration_min)
-            available_starts.append(AvailableSlot(
+            starts.append(AvailableSlot(
                 start_time=t,
                 end_time=end_dt.strftime("%H:%M"),
-                doctorid=resolved_doctorid,
+                doctorid=doctor.doctorid,
                 doctor_name=doctor.doctor_name,
             ))
+    return starts
 
-    if not available_starts:
-        if is_today and current_hhmm >= op_end:
-            return [], "금일 진료가 마감되었습니다."
+
+# 빈 슬롯 조회 (vet_scheduleDB 운영시간 기반 동적 계산)
+# doctorid 지정 시 그 원장만, hospitalid 지정 시 그 병원의 전 원장 슬롯을 합쳐 반환.
+async def get_available_slots(
+    db: AsyncSession,
+    date: str,
+    duration_min: int,
+    doctorid: int = None,
+    hospitalid: int = None,
+):
+    target_date = datetime.strptime(date, "%Y-%m-%d").date()
+    now_kst = datetime.now(KST)
+
+    # 법정공휴일: 무조건 휴무
+    if _is_legal_holiday(target_date):
+        return [], "해당 날짜는 휴일(법정 공휴일)로 진료가 없습니다."
+
+    # 대상 원장 집합: doctorid 지정 > hospitalid 전체 > (호환) 첫 원장
+    if doctorid:
+        doc_result = await db.execute(select(Doctor).where(Doctor.doctorid == doctorid))
+        doctor = doc_result.scalar_one_or_none()
+        doctors = [doctor] if doctor else []
+    elif hospitalid:
+        doc_result = await db.execute(
+            select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+        )
+        doctors = list(doc_result.scalars().all())
+    else:
+        doc_result = await db.execute(select(Doctor))
+        first = doc_result.scalars().first()
+        doctors = [first] if first else []
+
+    if not doctors:
+        return [], "예약 가능한 수의사가 없습니다."
+
+    all_starts = []
+    for doctor in doctors:
+        all_starts.extend(await _slots_for_doctor(db, doctor, target_date, duration_min, now_kst))
+
+    if not all_starts:
         return [], "예약 가능한 시간이 모두 마감되었습니다."
 
-    return available_starts, ""
+    all_starts.sort(key=lambda s: (s.start_time, s.doctorid))
+    return all_starts, ""
 
 
 # 응급도 기반 '가장 빠른 빈 슬롯' 탐색 (MCP 예약 오케스트레이션의 핵심)

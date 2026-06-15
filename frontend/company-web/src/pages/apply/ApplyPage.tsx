@@ -10,7 +10,7 @@ import {
   SectionCard,
   TagInput,
 } from "../../onboarding/form-fields";
-import { addApplication } from "../../onboarding/store";
+import { submitSignupRequest, uploadFile, type SignupRequestPayload } from "../../onboarding/api";
 import {
   EMPTY_HOURS,
   LIMITS,
@@ -137,6 +137,7 @@ export default function ApplyPage() {
 
   const [errors, setErrors] = useState<string[]>([]);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const updateDoctor = (key: string, patch: Partial<DoctorApplication>) =>
     setDoctors((list) => list.map((d) => (d.key === key ? { ...d, ...patch } : d)));
@@ -163,7 +164,15 @@ export default function ApplyPage() {
     return e;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const uploadPickedFile = async (
+    picked: UploadedFile | undefined,
+    prefix: "hospital" | "doctor" | "signup-docs",
+  ) => {
+    if (!picked?.file) return undefined;
+    return uploadFile(picked.file, prefix);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const e = validate();
     setErrors(e);
@@ -171,23 +180,47 @@ export default function ApplyPage() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    const created = addApplication({
-      hospitalName: hospitalName.trim(),
-      businessNumber: businessNumber.trim(),
-      businessLicenseFile,
-      hospitalPhone: hospitalPhone.trim(),
-      hospitalAddress: hospitalAddress.trim(),
-      ownerEmail: ownerEmail.trim(),
-      desiredLoginId: desiredLoginId.trim(),
-      tagline: tagline.trim(),
-      intro: intro.trim(),
-      features,
-      banner,
-      hours,
-      doctors,
-    });
-    setSubmittedId(created.id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSubmitting(true);
+    try {
+      const businessLicenseUrl = await uploadPickedFile(businessLicenseFile, "signup-docs");
+      const bannerUrl = await uploadPickedFile(banner, "hospital");
+      const doctorPayloads = await Promise.all(
+        doctors.map(async (doctor) => ({
+          name: doctor.name.trim(),
+          licenseNumber: doctor.licenseNumber.trim(),
+          licenseUrl: await uploadPickedFile(doctor.licenseFile, "doctor"),
+          email: doctor.email?.trim() || undefined,
+          specialty: doctor.specialty?.trim() || undefined,
+          education: doctor.education?.trim() || undefined,
+          bio: doctor.bio?.trim() || undefined,
+          specialtyAreas: doctor.specialtyAreas,
+          photoUrl: await uploadPickedFile(doctor.photo, "doctor"),
+        })),
+      );
+      const payload: SignupRequestPayload = {
+        hospitalName: hospitalName.trim(),
+        businessNumber: businessNumber.trim(),
+        businessLicenseUrl,
+        hospitalPhone: hospitalPhone.trim(),
+        hospitalAddress: hospitalAddress.trim(),
+        ownerEmail: ownerEmail.trim(),
+        desiredLoginId: desiredLoginId.trim(),
+        tagline: tagline.trim(),
+        intro: intro.trim(),
+        features,
+        bannerUrl,
+        hours,
+        doctors: doctorPayloads,
+      };
+      const created = await submitSignupRequest(payload);
+      setSubmittedId(String(created.id));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setErrors([err instanceof Error ? err.message : "입점 신청 제출에 실패했습니다."]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -359,8 +392,8 @@ export default function ApplyPage() {
                   신원 확인 및 서비스 제공을 위한 개인정보·서류 수집 및 이용에 동의합니다. (필수)
                 </span>
               </label>
-              <button type="submit" className="mp-btn-primary mt-5 w-full">
-                입점 신청하기
+              <button type="submit" disabled={submitting} className="mp-btn-primary mt-5 w-full disabled:opacity-60">
+                {submitting ? "제출 중…" : "입점 신청하기"}
               </button>
             </div>
           </form>

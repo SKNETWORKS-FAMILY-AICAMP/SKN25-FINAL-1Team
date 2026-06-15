@@ -2,26 +2,34 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
+import { adminLogin } from "../../onboarding/api";
 
-/**
- * 운영팀 로그인 (mock). 실제론 admin 인증 API 로 교체.
- * 데모에서는 아이디/비번 입력 후 로그인 시 통과한다.
- */
+/** 운영팀 로그인 — 백엔드 /admin/login (JWT). */
 export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (!loginId.trim() || !password.trim()) {
             setError("아이디와 비밀번호를 입력해 주세요.");
             return;
           }
-          onLogin();
+          setSubmitting(true);
+          setError("");
+          try {
+            await adminLogin(loginId.trim(), password);
+            onLogin();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
+          } finally {
+            setSubmitting(false);
+          }
         }}
         className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
       >
@@ -55,8 +63,8 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
         {error ? <p className="mt-3 text-xs font-bold text-rose-500">{error}</p> : null}
 
-        <button type="submit" className="mp-btn-primary mt-5 w-full">
-          로그인
+        <button type="submit" disabled={submitting} className="mp-btn-primary mt-5 w-full">
+          {submitting ? "로그인 중…" : "로그인"}
         </button>
         <Link to="/" className="mt-3 block text-center text-xs font-bold text-slate-400 hover:text-slate-600">
           홈으로

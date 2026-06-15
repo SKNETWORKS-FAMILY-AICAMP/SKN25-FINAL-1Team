@@ -8,6 +8,8 @@ interface ChatDatePickerProps {
   onCancel: () => void;
   /** 진료 소요시간(분). 추천 슬롯이 실제 예약 소요시간과 어긋나지 않도록 확정과 동일한 값을 받는다. */
   durationMin: number;
+  /** 선택된 병원 — 슬롯 조회를 해당 병원으로 스코핑(다중 병원). */
+  hospitalId?: number | null;
 }
 
 const fmt2 = (n: number) => String(n).padStart(2, "0");
@@ -18,7 +20,7 @@ const localeForLang = (lang: Language) =>
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
 
-const ChatDatePicker = ({ onSelectSlot, onCancel, durationMin }: ChatDatePickerProps) => {
+const ChatDatePicker = ({ onSelectSlot, onCancel, durationMin, hospitalId }: ChatDatePickerProps) => {
   const { lang, t } = useTranslation();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -51,11 +53,11 @@ const ChatDatePicker = ({ onSelectSlot, onCancel, durationMin }: ChatDatePickerP
     if (!selectedDate) return;
     setSlots([]);
     setLoadingSlots(true);
-    getAvailableScheduleSlots({ date: toDateStr(selectedDate), duration_min: durationMin })
+    getAvailableScheduleSlots({ date: toDateStr(selectedDate), duration_min: durationMin, hospitalid: hospitalId ?? undefined })
       .then(resp => { if (resp.code === 200) setSlots(resp.result); })
       .catch(() => {})
       .finally(() => setLoadingSlots(false));
-  }, [selectedDate, durationMin]);
+  }, [selectedDate, durationMin, hospitalId]);
 
   const isSelectable = (d: Date | null) => {
     if (!d) return false;

@@ -39,6 +39,8 @@ interface UseAgentPipelineParams {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   setQuickReplies: React.Dispatch<React.SetStateAction<string[]>>;
   setIsStreaming: React.Dispatch<React.SetStateAction<boolean>>;
+  // 선택된 병원 — 슬롯 조회·예약을 해당 병원으로 스코핑(다중 병원).
+  hospitalId?: number | null;
 }
 
 const toPetPayload = (pet: Pet): AgentPet => {
@@ -115,6 +117,7 @@ export const useAgentPipeline = ({
   setMessages,
   setQuickReplies,
   setIsStreaming,
+  hospitalId,
 }: UseAgentPipelineParams) => {
   const { lang, t } = useTranslation();
   const [phase, setPhase] = useState<PipelinePhase>("chatting");
@@ -124,7 +127,7 @@ export const useAgentPipeline = ({
   const triageResultRef = useRef<Record<string, unknown> | null>(null);
   const scheduleResultRef = useRef<Record<string, unknown> | null>(null);
   const currentPetRef = useRef<Pet | null>(null);
-  const slotMapRef = useRef<Record<string, { date: string; time: string; doctorid: number }>>({});
+  const slotMapRef = useRef<Record<string, { date: string; time: string; doctorid: number; doctorName?: string }>>({});
   const emridRef = useRef<number | null>(null);
   const lastRequestRef = useRef<number>(0);
   const scheduleRequestRef = useRef<number>(0);
@@ -182,6 +185,8 @@ export const useAgentPipeline = ({
         date: s.date,
         time: s.time,
         durationMin,
+        doctorid: s.doctorid,
+        doctorName: s.doctorName,
         monthDay: formatChatMonthDay(s.date, t),
         weekday: weekdayOf(s.date, lang),
         timeText: formatChatTime(s.time, t),
@@ -195,15 +200,25 @@ export const useAgentPipeline = ({
     datesToCheck: string[],
     limit: number,
     durationMin: number,
-  ): Promise<{ date: string; start_time: string; doctorid?: number }[]> => {
-    const collected: { date: string; start_time: string; doctorid?: number }[] = [];
+  ): Promise<{ date: string; start_time: string; doctorid?: number; doctorName?: string }[]> => {
+    const collected: { date: string; start_time: string; doctorid?: number; doctorName?: string }[] = [];
     for (const date of datesToCheck) {
       if (collected.length >= limit) break;
       try {
-        const resp = await getAvailableScheduleSlots({ date, duration_min: durationMin });
+        const resp = await getAvailableScheduleSlots({
+          date,
+          duration_min: durationMin,
+          hospitalid: hospitalId ?? undefined,
+        });
         if (resp.code === 200) {
-          for (const slot of (resp.result ?? []).slice(0, 2)) {
-            collected.push({ date, start_time: slot.start_time, doctorid: slot.doctorid });
+          // 원장별로 빠른 시간을 고루 담기 위해 날짜당 최대 3개까지 수집
+          for (const slot of (resp.result ?? []).slice(0, 3)) {
+            collected.push({
+              date,
+              start_time: slot.start_time,
+              doctorid: slot.doctorid,
+              doctorName: slot.doctor_name,
+            });
             if (collected.length >= limit) break;
           }
         }
@@ -245,19 +260,19 @@ export const useAgentPipeline = ({
       const raw = await streamAgentResult(task_id);
       if (requestId !== scheduleRequestRef.current) return;
 
-      let collected: { date: string; start_time: string; doctorid?: number }[] = [];
+      let collected: { date: string; start_time: string; doctorid?: number; doctorName?: string }[] = [];
       let durationMin = 30;
 
       if (raw && typeof raw === "object" && "proposed_slots" in raw) {
         // ── MCP 예약 오케스트레이션 경로 — 백엔드(에이전트)가 MCP 툴로 슬롯을 이미 찾아줌 ──
         const bookingRes = raw as {
-          proposed_slots?: { date: string; start_time: string; end_time?: string; doctorid?: number }[];
+          proposed_slots?: { date: string; start_time: string; end_time?: string; doctorid?: number; doctor_name?: string }[];
           message?: string;
         };
         scheduleResultRef.current = raw as Record<string, unknown>;
         if (bookingRes.message) appendBot(bookingRes.message);
         const ps = bookingRes.proposed_slots ?? [];
-        collected = ps.map((s) => ({ date: s.date, start_time: s.start_time, doctorid: s.doctorid }));
+        collected = ps.map((s) => ({ date: s.date, start_time: s.start_time, doctorid: s.doctorid, doctorName: s.doctor_name }));
         // duration: 첫 슬롯 start~end 차이로 추정(없으면 30)
         const first = ps[0];
         if (first?.start_time && first?.end_time) {
@@ -304,7 +319,7 @@ export const useAgentPipeline = ({
         durationMin = schedRes.estimated_duration_min || 30;
       }
 
-      const newSlotMap: Record<string, { date: string; time: string; doctorid: number }> = {};
+      const newSlotMap: Record<string, { date: string; time: string; doctorid: number; doctorName?: string }> = {};
       const slotOptions: SlotOption[] = [];
 
       for (const s of collected) {
@@ -315,12 +330,14 @@ export const useAgentPipeline = ({
           day: Number(d),
           time,
         });
-        newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1 };
+        newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1, doctorName: s.doctorName };
         slotOptions.push({
           label,
           date: s.date,
           time,
           durationMin,
+          doctorid: s.doctorid,
+          doctorName: s.doctorName,
           monthDay: formatChatMonthDay(s.date, t),
           weekday: weekdayOf(s.date, lang),
           timeText: formatChatTime(time, t),
@@ -381,6 +398,7 @@ export const useAgentPipeline = ({
         doctorid: slot.doctorid,
         confirmed_time: `${slot.date}T${slot.time}:00+09:00`,
         duration_min: duration,
+        hospitalid: hospitalId ?? undefined,
       });
 
       if (resp.code === 200 || resp.code === 201) {
