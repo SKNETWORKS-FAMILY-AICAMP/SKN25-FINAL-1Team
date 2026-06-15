@@ -122,16 +122,20 @@ export function ReservationFormModal({
     }
   }, [activePatientIndex, filteredPatients.length]);
 
-  // 선택한 날짜에 이미 예약된 시작 시간(수정 중인 본인 예약은 제외)
+  // 선택한 날짜 + 선택한 의사 기준으로 이미 예약된 시작 시간(수정 중인 본인 예약은 제외)
   const bookedTimes = useMemo(() => {
     const taken = new Set<string>();
     for (const item of reservations) {
-      if (item.date === form.dateKey && item.id !== reservation?.id) {
+      if (
+        item.date === form.dateKey &&
+        item.id !== reservation?.id &&
+        item.doctorName === form.doctorName
+      ) {
         taken.add(item.start);
       }
     }
     return taken;
-  }, [reservations, form.dateKey, reservation?.id]);
+  }, [reservations, form.dateKey, reservation?.id, form.doctorName]);
 
   // 예약된 시간 + 오늘 기준 지난 시간은 선택지에서 숨긴다
   const availableTimeOptions = useMemo(() => {
