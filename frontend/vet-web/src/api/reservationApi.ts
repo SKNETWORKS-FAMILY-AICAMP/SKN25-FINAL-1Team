@@ -1,9 +1,9 @@
 import { apiClient } from "./client"
 
-export const getReservations = async () => {
-  const response = await apiClient.get(
-    "/doctor/reservations"
-  )
+export const getReservations = async (doctorid?: number) => {
+  const response = await apiClient.get("/doctor/reservations", {
+    params: doctorid != null ? { doctorid } : undefined,
+  })
 
   return response.data
 }

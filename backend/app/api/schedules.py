@@ -54,8 +54,8 @@ async def create_checkup(
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
-    # 수의사 확인 (첫 번째 수의사로 자동 배정)
-    result = await db.execute(select(Doctor))
+    # 수의사 확인 (doctorid 기준 첫 번째 수의사로 자동 배정)
+    result = await db.execute(select(Doctor).order_by(Doctor.doctorid.asc()))
     doctor = result.scalars().first()
     if not doctor:
         raise HTTPException(status_code=404, detail="등록된 수의사가 없습니다.")
@@ -116,7 +116,7 @@ async def get_schedules(
 
     from datetime import date
     result = []
-    for schedule, pet, doctor, category in rows:
+    for schedule, pet, doctor, category, hospital in rows:
         age = None
         if pet.birth_date:
             today = date.today()
@@ -136,8 +136,8 @@ async def get_schedules(
             "confirmed_time": schedule.confirmed_time.astimezone(KST).isoformat() if schedule.confirmed_time else None,
             "confirmed_end_time": schedule.confirmed_end_time.astimezone(KST).isoformat() if schedule.confirmed_end_time else None,
             "duration_min": schedule.duration_min,
-            "hospital_name": doctor.hospital_name if doctor else None,
-            "hospital_address": doctor.hospital_address if doctor else None,
+            "hospital_name": hospital.hospital_name if hospital else None,
+            "hospital_address": hospital.hospital_address if hospital else None,
             "doctorid": schedule.doctorid,
             "doctor_name": doctor.doctor_name if doctor else None,
         })
@@ -208,6 +208,12 @@ async def get_schedule(
     )
     doctor = doctor_result.scalar_one_or_none()
 
+    from app.models.hospital import Hospital
+    hospital = None
+    if doctor and doctor.hospitalid:
+        hospital_row = await db.execute(select(Hospital).where(Hospital.hospitalid == doctor.hospitalid))
+        hospital = hospital_row.scalar_one_or_none()
+
     from datetime import date
     age = None
     if pet.birth_date:
@@ -227,8 +233,8 @@ async def get_schedule(
             "confirmed_time": schedule.confirmed_time.astimezone(KST).isoformat() if schedule.confirmed_time else None,
             "confirmed_end_time": schedule.confirmed_end_time.astimezone(KST).isoformat() if schedule.confirmed_end_time else None,
             "duration_min": schedule.duration_min,
-            "hospital_name": doctor.hospital_name if doctor else None,
-            "hospital_address": doctor.hospital_address if doctor else None,
+            "hospital_name": hospital.hospital_name if hospital else None,
+            "hospital_address": hospital.hospital_address if hospital else None,
             "doctorid": schedule.doctorid,
             "doctor_name": doctor.doctor_name if doctor else None,
             "memo": guardian.memo
@@ -561,6 +567,12 @@ async def confirm_schedule_api(
     doctor_row = await db.execute(select(Doctor).where(Doctor.doctorid == schedule.doctorid))
     doctor = doctor_row.scalar_one_or_none()
 
+    from app.models.hospital import Hospital
+    hospital = None
+    if doctor and doctor.hospitalid:
+        hospital_row = await db.execute(select(Hospital).where(Hospital.hospitalid == doctor.hospitalid))
+        hospital = hospital_row.scalar_one_or_none()
+
     return {
         "code": 201,
         "message": "예약이 확정되었습니다.",
@@ -569,8 +581,8 @@ async def confirm_schedule_api(
             "confirmed_time": schedule.confirmed_time.astimezone(KST).isoformat() if schedule.confirmed_time else None,
             "confirmed_end_time": schedule.confirmed_end_time.astimezone(KST).isoformat() if schedule.confirmed_end_time else None,
             "status": schedule.status,
-            "hospital_name": doctor.hospital_name if doctor else None,
-            "hospital_address": doctor.hospital_address if doctor else None,
+            "hospital_name": hospital.hospital_name if hospital else None,
+            "hospital_address": hospital.hospital_address if hospital else None,
             "doctor_name": doctor.doctor_name if doctor else None,
             "duration_min": request.duration_min,
             "chart_task_id": chart_task_id,
