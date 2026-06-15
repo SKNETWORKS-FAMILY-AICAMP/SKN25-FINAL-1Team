@@ -7,7 +7,9 @@
 
 생성 계정:
   보호자(guardian): guardian_test / Test1234!
-  수의사(vet):      admin / Test1234!
+  병원(hospital):   admin / Test1234!
+  의사 1:           관리자 (license: 3-4070)
+  의사 2:           김수의 (license: 3-9999)
 """
 import asyncio
 import os
@@ -81,62 +83,114 @@ async def main():
 
         # ── vet_test 계정 삭제 ───────────────────────
         vet_test_row = (await db.execute(
-            text('SELECT doctorid FROM "doctorDB" WHERE loginid = :id'), {"id": "vet_test"}
+            text('SELECT doctorid FROM "doctorDB" WHERE license_number = :lnum'), {"lnum": "vet_test_license"}
         )).fetchone()
         if vet_test_row:
-            await db.execute(text('DELETE FROM "doctorDB" WHERE loginid = :id'), {"id": "vet_test"})
+            await db.execute(text('DELETE FROM "doctorDB" WHERE license_number = :lnum'), {"lnum": "vet_test_license"})
             await db.commit()
             print("🗑️  vet_test 계정 삭제 완료")
 
-        # ── admin 수의사 계정 ─────────────────────────
-        admin_row = (await db.execute(
-            text('SELECT doctorid FROM "doctorDB" WHERE loginid = :id'), {"id": "admin"}
+        # ── MediPaw 병원 seed (loginid/password 포함) ──
+        HOSPITAL_BNUM = "000-00-00001"
+        hosp_row = (await db.execute(
+            text('SELECT hospitalid FROM "hospitalDB" WHERE business_number = :bnum'),
+            {"bnum": HOSPITAL_BNUM},
         )).fetchone()
 
-        if admin_row:
+        if hosp_row:
+            hospital_id = hosp_row[0]
+            await db.execute(text("""
+                UPDATE "hospitalDB"
+                SET loginid = :loginid, password = :pw, is_initial_password = false, updated_at = now()
+                WHERE hospitalid = :hid
+            """), {
+                "loginid": "admin",
+                "pw": hash_password("Test1234!"),
+                "hid": hospital_id,
+            })
+            await db.commit()
+            print(f"✅ 병원 계정 갱신: MediPaw 동물병원 (hospitalid={hospital_id})")
+        else:
+            result = await db.execute(text("""
+                INSERT INTO "hospitalDB"
+                  (hospital_name, hospital_address, hospital_number, business_number,
+                   loginid, password, is_initial_password, created_at, updated_at)
+                VALUES
+                  ('MediPaw 동물병원', '서울시 강남구 테스트로 1', '02-0000-0001', :bnum,
+                   :loginid, :pw, false, now(), now())
+                RETURNING hospitalid
+            """), {
+                "bnum": HOSPITAL_BNUM,
+                "loginid": "admin",
+                "pw": hash_password("Test1234!"),
+            })
+            await db.commit()
+            hospital_id = result.fetchone()[0]
+            print(f"✅ 병원 생성: MediPaw 동물병원 (hospitalid={hospital_id})")
+
+        # ── 수의사 1: 관리자 ───────────────────────────
+        doc1_row = (await db.execute(
+            text('SELECT doctorid FROM "doctorDB" WHERE license_number = :lnum AND hospitalid = :hid'),
+            {"lnum": "3-4070", "hid": hospital_id},
+        )).fetchone()
+
+        if doc1_row:
             await db.execute(text("""
                 UPDATE "doctorDB"
-                SET password = :pw, doctor_name = :dname, hospital_name = :hname,
-                    hospital_address = :haddr, hospital_number = :hnum,
-                    license_number = :lnum, email = :email, updated_at = now()
-                WHERE loginid = :loginid
+                SET doctor_name = :dname, license_number = :lnum,
+                    email = :email, updated_at = now()
+                WHERE doctorid = :did
             """), {
-                "loginid": "admin",
-                "pw": hash_password("Test1234!"),
                 "dname": "관리자",
-                "hname": "MediPaw 동물병원",
-                "haddr": "서울시 강남구 테스트로 1",
-                "hnum": "02-0000-0001",
                 "lnum": "3-4070",
                 "email": "aoj.medipaw@gmail.com",
+                "did": doc1_row[0],
             })
             await db.commit()
-            print("✅ admin 계정 비밀번호 갱신 완료: admin")
+            print(f"✅ 수의사1 갱신: 관리자 (doctorid={doc1_row[0]})")
         else:
-            await db.execute(text("""
-                INSERT INTO "doctorDB"
-                  (loginid, password, is_initial_password, doctor_name, hospital_name,
-                   hospital_address, hospital_number, business_number, license_number, email, created_at, updated_at)
-                VALUES
-                  (:loginid, :pw, false, :dname, :hname, :haddr, :hnum, :bnum, :lnum, :email, now(), now())
+            result = await db.execute(text("""
+                INSERT INTO "doctorDB" (hospitalid, doctor_name, license_number, email, created_at, updated_at)
+                VALUES (:hid, :dname, :lnum, :email, now(), now())
+                RETURNING doctorid
             """), {
-                "loginid": "admin",
-                "pw": hash_password("Test1234!"),
+                "hid": hospital_id,
                 "dname": "관리자",
-                "hname": "MediPaw 동물병원",
-                "haddr": "서울시 강남구 테스트로 1",
-                "hnum": "02-0000-0001",
-                "bnum": "000-00-00001",
                 "lnum": "3-4070",
                 "email": "aoj.medipaw@gmail.com",
             })
             await db.commit()
-            print("✅ admin 계정 생성: admin / Test1234!")
+            did1 = result.fetchone()[0]
+            print(f"✅ 수의사1 생성: 관리자 (doctorid={did1})")
+
+        # ── 수의사 2: 김수의 ───────────────────────────
+        doc2_row = (await db.execute(
+            text('SELECT doctorid FROM "doctorDB" WHERE license_number = :lnum AND hospitalid = :hid'),
+            {"lnum": "3-9999", "hid": hospital_id},
+        )).fetchone()
+
+        if doc2_row:
+            print(f"✅ 수의사2 이미 존재: 김수의 (doctorid={doc2_row[0]})")
+        else:
+            result = await db.execute(text("""
+                INSERT INTO "doctorDB" (hospitalid, doctor_name, license_number, email, created_at, updated_at)
+                VALUES (:hid, :dname, :lnum, :email, now(), now())
+                RETURNING doctorid
+            """), {
+                "hid": hospital_id,
+                "dname": "김수의",
+                "lnum": "3-9999",
+                "email": "vet2.medipaw@gmail.com",
+            })
+            await db.commit()
+            did2 = result.fetchone()[0]
+            print(f"✅ 수의사2 생성: 김수의 (doctorid={did2})")
 
     await engine.dispose()
     print("\n완료! 아래 계정으로 로그인하세요:")
     print("  보호자: http://localhost:5173  →  guardian_test / Test1234!")
-    print("  수의사: http://localhost:5174  →  admin / Test1234!")
+    print("  병원:   http://localhost:5174  →  admin / Test1234!")
+    print("           소속 수의사: 관리자 (면허 3-4070), 김수의 (면허 3-9999)")
 
 
 if __name__ == "__main__":

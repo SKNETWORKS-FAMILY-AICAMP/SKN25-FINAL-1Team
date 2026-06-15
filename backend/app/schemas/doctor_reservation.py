@@ -7,7 +7,8 @@ class ReservationCreate(BaseModel):
     pet_id: int
     date: str
     time: str
-    doctor_name: Optional[str] = None
+    doctorid: Optional[int] = None       # ID 우선 — 이걸 보내야 정확히 배정됨
+    doctor_name: Optional[str] = None    # 하위호환: doctorid 없을 때만 이름으로 검색
     memo: Optional[str] = None
     category_code: int = 1  # 1=정기검진, 2=일반진료
 
@@ -16,7 +17,8 @@ class ReservationCreate(BaseModel):
 class ReservationUpdate(BaseModel):
     date: Optional[str] = None
     time: Optional[str] = None
-    doctor_name: Optional[str] = None
+    doctorid: Optional[int] = None       # ID 우선
+    doctor_name: Optional[str] = None    # 하위호환
     memo: Optional[str] = None
 
 

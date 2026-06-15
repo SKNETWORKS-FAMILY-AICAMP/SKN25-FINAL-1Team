@@ -12,8 +12,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.main import app
 from app.db.session import get_db
-from app.core.dependencies import get_current_user, get_current_doctor
+from app.core.dependencies import get_current_user, get_current_hospital
 from app.models.user import User
+from app.models.hospital import Hospital
 from app.models.doctor import Doctor
 from app.models.pet import Pet
 from app.models.schedule import Schedule
@@ -213,14 +214,16 @@ async def run_scenario_tests():
                 res = await session.execute(select(User).where(User.userid == user_id))
                 return res.scalar_one()
 
-        async def get_mock_doctor():
+        hospital_id = doctor.hospitalid
+
+        async def get_mock_hospital():
             async with async_session() as session:
-                res = await session.execute(select(Doctor).where(Doctor.doctorid == doctor_id))
+                res = await session.execute(select(Hospital).where(Hospital.hospitalid == hospital_id))
                 return res.scalar_one()
 
         async with httpx.AsyncClient(app=app, base_url="http://test") as client:
             app.dependency_overrides[get_current_user] = get_mock_user
-            app.dependency_overrides[get_current_doctor] = get_mock_doctor
+            app.dependency_overrides[get_current_hospital] = get_mock_hospital
 
             # =========================================================================
             # SCENARIO 7: CORS 크로스 오리진 검증

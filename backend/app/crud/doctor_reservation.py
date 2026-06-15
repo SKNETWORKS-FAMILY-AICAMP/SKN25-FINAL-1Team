@@ -36,22 +36,28 @@ DEFAULT_DURATION_MIN = 30
 COMPLETION_GRACE_SECONDS = 300
 
 
-async def _resolve_doctor(db: AsyncSession, doctor_name: str | None) -> Doctor | None:
-    doctor = None
+async def _resolve_doctor(
+    db: AsyncSession,
+    doctorid: int | None,
+    doctor_name: str | None = None,
+) -> Doctor | None:
+    """doctorid를 우선 사용하고, 없으면 이름으로 검색한다. 둘 다 없으면 None 반환."""
+    if doctorid is not None:
+        result = await db.execute(select(Doctor).where(Doctor.doctorid == doctorid))
+        return result.scalars().first()
     if doctor_name:
-        result = await db.execute(
-            select(Doctor).where(Doctor.doctor_name == doctor_name)
-        )
-        doctor = result.scalars().first()
-    if not doctor:
-        result = await db.execute(select(Doctor))
-        doctor = result.scalars().first()
-    return doctor
+        result = await db.execute(select(Doctor).where(Doctor.doctor_name == doctor_name))
+        return result.scalars().first()
+    return None
 
 
-async def get_reservations(db: AsyncSession):
+async def get_reservations(
+    db: AsyncSession,
+    hospital_id: int | None = None,
+    doctorid: int | None = None,
+):
     """예약 목록 조회용 조인 쿼리. 소프트 삭제된 예약/진료기록은 제외한다."""
-    result = await db.execute(
+    query = (
         select(
             Schedule,
             Guardian,
@@ -72,8 +78,13 @@ async def get_reservations(db: AsyncSession):
         .where(Schedule.deleted_at.is_(None))
         .where(Guardian.deleted_at.is_(None))
         .where(Schedule.status != "CANCELLED")
-        .order_by(Schedule.confirmed_time)
     )
+    if hospital_id is not None:
+        query = query.where(Doctor.hospitalid == hospital_id)
+    if doctorid is not None:
+        query = query.where(Schedule.doctorid == doctorid)
+    query = query.order_by(Schedule.confirmed_time)
+    result = await db.execute(query)
     return result.all()
 
 
@@ -160,11 +171,12 @@ async def create_reservation(
     pet_id: int,
     date_str: str,
     time_str: str,
+    doctorid: int | None = None,
     doctor_name: str | None = None,
     memo: str | None = None,
     category_code: int = DEFAULT_CATEGORY_CODE,
 ):
-    doctor = await _resolve_doctor(db, doctor_name)
+    doctor = await _resolve_doctor(db, doctorid, doctor_name)
     if not doctor:
         return None
 
@@ -217,6 +229,7 @@ async def update_reservation(
     schedule_id: int,
     date_str: str | None = None,
     time_str: str | None = None,
+    doctorid: int | None = None,
     doctor_name: str | None = None,
     memo: str | None = None,
 ):
@@ -227,7 +240,7 @@ async def update_reservation(
     guardian = await get_guardian_by_emrid(db, schedule.emrid)
 
     # 의사 변경이 있으면 새 의사 기준으로 충돌을 검사해야 하므로 시간 검사 전에 먼저 결정한다.
-    new_doctor = await _resolve_doctor(db, doctor_name) if doctor_name else None
+    new_doctor = await _resolve_doctor(db, doctorid, doctor_name) if (doctorid is not None or doctor_name) else None
     target_doctorid = new_doctor.doctorid if new_doctor else schedule.doctorid
 
     if date_str and time_str:

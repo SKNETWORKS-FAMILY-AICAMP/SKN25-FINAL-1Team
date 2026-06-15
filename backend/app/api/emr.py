@@ -23,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_
 
 from app.core.config import settings
-from app.core.dependencies import get_current_doctor
+from app.core.dependencies import get_current_hospital
+from app.crud.doctor import get_first_doctor
 from app.utils.file_validation import validate_file
 from app.db.session import get_db
 from app.models.doctor import Doctor
@@ -53,16 +54,17 @@ async def emr_queue(
     target_date: date = Query(default_factory=date.today, alias="date"),
     doctor_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """오늘의 진료 대기/완료 큐를 반환한다."""
     if doctor_id is not None:
         target = await db.get(Doctor, doctor_id)
-        if target is None or target.hospital_name != current_doctor.hospital_name:
+        if target is None or target.hospitalid != current_hospital.hospitalid:
             raise HTTPException(status_code=403, detail="해당 수의사에 대한 접근 권한이 없습니다.")
         effective_id = doctor_id
     else:
-        effective_id = current_doctor.doctorid
+        first = await get_first_doctor(db, current_hospital.hospitalid)
+        effective_id = first.doctorid if first else None
     waiting, completed = await get_emr_queue(db, effective_id, target_date)
     return {
         "code": 200,
@@ -77,7 +79,7 @@ async def emr_queue(
 async def emr_detail(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """schedule_id 기준 EMR 상세 정보.
 
@@ -98,7 +100,7 @@ async def emr_detail(
 async def emr_report(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """AI Chart 에이전트가 생성한 SOAP 초안을 반환한다."""
     report = await get_report_by_schedule(db, schedule_id)
@@ -125,7 +127,7 @@ async def emr_report(
 async def emr_triage(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """보호자 문진 AI 트리아지 결과를 반환한다."""
     triage = await get_triage_by_schedule(db, schedule_id)
@@ -160,7 +162,7 @@ async def emr_triage(
 async def emr_validation(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """Validation + Judge 에이전트 결과를 반환한다."""
     validation = await get_validation_by_schedule(db, schedule_id)
@@ -199,7 +201,7 @@ async def generate_auto_prescription(
     schedule_id: int,
     body: AutoPrescriptionRequest = Body(default_factory=AutoPrescriptionRequest),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """사전 문진 정보를 바탕으로 AI 처방 초안을 생성한다.
     triage + drugsDB 후보 약품을 바탕으로 OpenAI로 실시간 생성한다.
@@ -365,7 +367,7 @@ async def generate_auto_prescription(
 async def doctor_followup(
     emrid: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """보호자가 등록한 전체 경과를 하나의 누적 보고로 묶어 반환한다."""
     result = await db.execute(
@@ -406,7 +408,7 @@ async def doctor_followup(
 @router.post("/upload/file", status_code=200)
 async def upload_emr_file(
     file: UploadFile = File(...),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     content_type = file.content_type or "application/octet-stream"
     body = await file.read()
@@ -443,7 +445,7 @@ async def update_pet_by_doctor(
     pet_id: int,
     body: PetUpdateByDoctor,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """수의사가 진료 중 체중·특이사항을 업데이트한다."""
     from app.models.pet import Pet
@@ -475,7 +477,7 @@ async def update_pet_by_doctor(
 async def reset_visit(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     """진료 완료된 스케줄을 진료 대기로 되돌리고 EMR·처방전을 초기화한다."""
     from app.models.schedule import Schedule

@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.core.dependencies import get_current_doctor
-from app.models.doctor import Doctor
+from app.core.dependencies import get_current_hospital
 from app.utils.age import calculate_age
 from app.utils.timezone import to_kst
 from app.schemas.patient import PatientUpdate
@@ -34,7 +33,7 @@ async def list_patients(
     species: str | None = Query(None),
     active_only: bool = Query(False, description="True=취소된 예약만 있는 환자 제외"),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     rows, total_count = await get_patient_list(
         db,
@@ -87,7 +86,7 @@ async def list_patients(
 async def patient_detail(
     petid: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     result = await get_patient_detail(db, petid)
 
@@ -169,7 +168,7 @@ async def update_patient_endpoint(
     petid: int,
     payload: PatientUpdate,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     result = await get_patient_detail(db, petid)
 

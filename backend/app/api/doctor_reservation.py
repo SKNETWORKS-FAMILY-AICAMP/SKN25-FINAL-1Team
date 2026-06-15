@@ -1,11 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.core.dependencies import get_current_doctor
-from app.models.doctor import Doctor
+from app.core.dependencies import get_current_hospital
 from app.utils.age import calculate_age
 from app.utils.timezone import to_kst
 
@@ -93,10 +94,11 @@ def _serialize_reservation(row) -> dict:
 
 @router.get("")
 async def reservation_list(
+    doctorid: Optional[int] = Query(None, description="특정 수의사 예약만 조회 (미지정 시 병원 전체)"),
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
-    rows = await get_reservations(db)
+    rows = await get_reservations(db, hospital_id=current_hospital.hospitalid, doctorid=doctorid)
 
     return {
         "code": 200,
@@ -108,7 +110,7 @@ async def reservation_list(
 async def add_reservation(
     request: ReservationCreate,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     try:
         schedule = await create_reservation(
@@ -116,6 +118,7 @@ async def add_reservation(
             pet_id=request.pet_id,
             date_str=request.date,
             time_str=request.time,
+            doctorid=request.doctorid,
             doctor_name=request.doctor_name,
             memo=request.memo,
             category_code=request.category_code,
@@ -144,7 +147,7 @@ async def edit_reservation(
     schedule_id: int,
     request: ReservationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     try:
         updated = await update_reservation(
@@ -152,6 +155,7 @@ async def edit_reservation(
             schedule_id,
             date_str=request.date,
             time_str=request.time,
+            doctorid=request.doctorid,
             doctor_name=request.doctor_name,
             memo=request.memo,
         )
@@ -178,7 +182,7 @@ async def edit_reservation(
 async def remove_reservation(
     schedule_id: int,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     logger.info(f"[DELETE reservation] schedule_id={schedule_id}")
 
@@ -224,7 +228,7 @@ async def change_reservation_status(
     schedule_id: int,
     request: ReservationStatusUpdate,
     db: AsyncSession = Depends(get_db),
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_hospital=Depends(get_current_hospital),
 ):
     updated = await update_reservation_status(
         db,
