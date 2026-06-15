@@ -80,6 +80,7 @@ def _serialize_reservation(row) -> dict:
         ),
         "owner_name": user.name,
         "phone": user.phone,
+        "doctorid": doctor.doctorid,
         "doctor_name": doctor.doctor_name,
         "visit_reason": _visit_reason(category, triage_result),
         "triage": _triage_key(triage, triage_result),

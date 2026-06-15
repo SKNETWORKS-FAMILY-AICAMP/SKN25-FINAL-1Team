@@ -123,6 +123,7 @@ export function mapApiReservations(items: ApiReservation[]): {
       end: item.end,
       status: item.triage ?? "normal",
       visitReason: item.visit_reason,
+      doctorid: item.doctorid,
       doctorName: item.doctor_name,
       memo: item.memo,
     });

@@ -27,6 +27,7 @@ export interface ReservationItem {
   end: string;
   status: ReservationStatus;
   visitReason: string;
+  doctorid: number;
   doctorName: string;
   memo: string;
 }
@@ -57,6 +58,7 @@ export interface ApiReservation {
   last_checkup_date: string;
   owner_name: string;
   phone: string;
+  doctorid: number;
   doctor_name: string;
   visit_reason: string;
   triage: ReservationStatus;

@@ -88,9 +88,11 @@ export default function ReservationPage({
   const visibleReservations = useMemo(
     () =>
       dayReservations.filter(
-        (reservation) => !activeStatus || reservation.status === activeStatus
+        (reservation) =>
+          (!activeStatus || reservation.status === activeStatus) &&
+          (selectedDoctorId === null || reservation.doctorid === selectedDoctorId)
       ),
-    [activeStatus, dayReservations]
+    [activeStatus, dayReservations, selectedDoctorId]
   );
 
   const selectedReservation =
@@ -246,6 +248,8 @@ export default function ReservationPage({
               patientsById={patientsById}
               selectedReservationId={selectedReservationId}
               onSelect={setSelectedReservationId}
+              doctors={doctors}
+              selectedDoctorId={selectedDoctorId}
             />
 
             <DetailPanel
