@@ -7,6 +7,7 @@ from app.models.schedule import Schedule
 from app.models.guardian import Guardian
 from app.models.pet import Pet
 from app.models.triage_result import TriageResult
+from app.models.doctor import Doctor
 from app.utils.timezone import KST
 
 
@@ -47,10 +48,11 @@ async def get_hospital_day_schedules(
     kst_end = end.replace(tzinfo=KST)
 
     result = await db.execute(
-        select(Schedule, Guardian, Pet, TriageResult)
+        select(Schedule, Guardian, Pet, TriageResult, Doctor)
         .join(Guardian, Schedule.emrid == Guardian.emrid)
         .join(Pet, Guardian.petid == Pet.petid)
         .outerjoin(TriageResult, Guardian.emrid == TriageResult.emrid)
+        .join(Doctor, Schedule.doctorid == Doctor.doctorid)
         .where(Schedule.doctorid.in_(doctor_ids))
         .where(Schedule.confirmed_time >= kst_start)
         .where(Schedule.confirmed_time < kst_end)

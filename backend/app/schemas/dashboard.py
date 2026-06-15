@@ -15,6 +15,8 @@ class DashboardScheduleItem(BaseModel):
     reason: str
     type: str
     status: str
+    doctorid: int
+    doctorName: str
 
 
 # 대시보드 요약 통계

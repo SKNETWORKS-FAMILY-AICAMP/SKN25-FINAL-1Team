@@ -273,6 +273,8 @@ export default function ReservationPage({
               selectedDate={selectedDate}
               reservations={filteredReservations}
               patientsById={patientsById}
+              doctors={doctors}
+              selectedDoctorId={selectedDoctorId}
               onSelectReservation={(reservation, reservationDate) => {
                 setSelectedDate(reservationDate);
                 setSelectedReservationId(reservation.id);

@@ -25,8 +25,8 @@ export const summaryToneStyle: Record<
     value: "text-amber-700",
   },
   red: {
-    wrapper: "bg-red-50",
-    value: "text-red-500",
+    wrapper: "bg-[#FFEFEF]",
+    value: "text-[#E11D48]",
   },
   green: {
     wrapper: "bg-slate-50",
@@ -40,27 +40,27 @@ export const visitTypeStyle: Record<
 > = {
   emergency: {
     label: "응급",
-    badge: "border-red-100 bg-red-50 text-red-500",
-    dot: "bg-red-500",
-    card: "border-red-100 bg-red-50 text-slate-800 before:bg-red-500",
+    badge: "border-[#FECDD3] bg-[#FFEFEF] text-[#E11D48]",
+    dot: "bg-[#E11D48]",
+    card: "border-[#FECDD3] bg-white text-slate-800 before:bg-[#E11D48]",
   },
   semiEmergency: {
     label: "준응급",
-    badge: "border-amber-100 bg-amber-50 text-amber-600",
-    dot: "bg-amber-600",
-    card: "border-amber-100 bg-amber-50 text-slate-800 before:bg-amber-600",
+    badge: "border-[#FDE68A] bg-[#FFFBEB] text-[#D97706]",
+    dot: "bg-[#D97706]",
+    card: "border-[#FDE68A] bg-white text-slate-800 before:bg-[#D97706]",
   },
   normal: {
     label: "일반",
-    badge: "border-green-100 bg-green-50 text-green-700",
-    dot: "bg-green-500",
-    card: "border-green-100 bg-green-50 text-slate-800 before:bg-green-500",
+    badge: "border-[#CBD5E1] bg-[#F1F5F9] text-[#475569]",
+    dot: "bg-teal-500",
+    card: "border-slate-200 bg-white text-slate-800 before:bg-teal-500",
   },
   checkup: {
     label: "검진/일반예약",
-    badge: "border-slate-200 bg-slate-50 text-slate-500",
-    dot: "bg-slate-400",
-    card: "border-slate-200 bg-slate-50 text-slate-800 before:bg-slate-400",
+    badge: "border-[#CEEAD6] bg-[#E6F4EA] text-[#137333]",
+    dot: "bg-teal-500",
+    card: "border-slate-200 bg-white text-slate-800 before:bg-teal-500",
   },
 };
 

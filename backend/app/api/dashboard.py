@@ -76,7 +76,7 @@ async def get_today_dashboard(
     waiting_count = 0
     completed_count = 0
 
-    for schedule, guardian, pet, triage in rows:
+    for schedule, guardian, pet, triage, doctor in rows:
         visit_type = _visit_type(triage.urgency_level_num if triage else None)
 
         if visit_type == "emergency":
@@ -98,6 +98,8 @@ async def get_today_dashboard(
             reason=_reason(guardian, triage),
             type=visit_type,
             status=schedule.status,
+            doctorid=schedule.doctorid,
+            doctorName=doctor.doctor_name,
         ))
 
     return DashboardResult(

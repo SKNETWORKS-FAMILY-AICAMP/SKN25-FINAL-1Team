@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { DoctorInfo } from "../../api/emrApi";
 import type {
   PatientsById,
   ReservationItem,
 } from "../../types/reservation";
 import { useClosedDates, useWeeklySchedule } from "../../contexts/OperatingHoursContext";
 import type { DaySchedule } from "../../api/settingsApi";
-import { TriageBadge } from "../common/TriageBadge";
 import {
   TODAY,
   getDateKey,
@@ -32,11 +32,22 @@ const WEEKLY_BOTTOM_PADDING = 8;
 const WEEKLY_FULL_CARD_HEIGHT = 58;
 const WEEKLY_CARD_INSET = 0;
 
+const DOCTOR_COLORS = [
+  { bar: "before:bg-teal-500", dot: "bg-teal-500" },
+  { bar: "before:bg-orange-300", dot: "bg-orange-300" },
+  { bar: "before:bg-indigo-400", dot: "bg-indigo-400" },
+  { bar: "before:bg-amber-400", dot: "bg-amber-400" },
+] as const;
+
+type DoctorColor = (typeof DOCTOR_COLORS)[number];
+
 interface WeeklyScheduleProps {
   selectedDate: Date;
   reservations: ReservationItem[];
   patientsById: PatientsById;
   onSelectReservation: (reservation: ReservationItem, reservationDate: Date) => void;
+  doctors?: DoctorInfo[];
+  selectedDoctorId?: number | null;
 }
 
 function getNonOpOverlays(
@@ -66,6 +77,8 @@ export function WeeklySchedule({
   reservations,
   patientsById,
   onSelectReservation,
+  doctors = [],
+  selectedDoctorId = null,
 }: WeeklyScheduleProps) {
   const weeklySchedule = useWeeklySchedule();
   const closedDates = useClosedDates();
@@ -77,13 +90,21 @@ export function WeeklySchedule({
     [weekDays]
   );
 
+  const isSplitMode = selectedDoctorId === null && doctors.length > 1;
+
+  const singleDoctorColor = useMemo(() => {
+    if (isSplitMode || selectedDoctorId === null) return undefined;
+    const idx = doctors.findIndex((d) => d.doctorid === selectedDoctorId);
+    if (idx === -1) return undefined;
+    return DOCTOR_COLORS[idx % DOCTOR_COLORS.length];
+  }, [isSplitMode, selectedDoctorId, doctors]);
+
   const getDayEntry = (date: Date): DaySchedule | undefined => {
     if (closedDates.has(getDateKey(date))) return undefined;
     const dow = (date.getDay() + 6) % 7;
     return weeklySchedule.find((d) => d.day_of_week === dow);
   };
 
-  // 이 주의 모든 영업 요일 중 가장 이른 시작 ~ 가장 늦은 마감
   const globalRange = useMemo((): TimelineRange => {
     const openDays = weekDays
       .map(getDayEntry)
@@ -96,7 +117,6 @@ export function WeeklySchedule({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekDays, weeklySchedule, closedDates]);
 
-  // 점심시간은 첫 영업 요일 기준 (공유 타임라인)
   const firstOpenDay = weekDays.map(getDayEntry).find((d) => d?.is_open && d.start_time);
   const lunchStart = firstOpenDay?.lunch_start ?? "12:00";
   const lunchEnd   = firstOpenDay?.lunch_end   ?? "13:00";
@@ -172,8 +192,26 @@ export function WeeklySchedule({
   return (
     <div className="h-full min-w-0">
       <section className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        {/* 헤더: 날짜 행 */}
         <div className="grid shrink-0 grid-cols-[62px_repeat(7,minmax(0,1fr))] border-b border-slate-200">
-          <div className="border-r border-slate-200 bg-white" />
+          {/* 왼쪽 62px: split 모드면 범례 */}
+          <div className="border-r border-slate-200 bg-white">
+            {isSplitMode && (
+              <div className="flex h-full flex-col items-start justify-center gap-1 px-2">
+                {doctors.map((doctor, i) => {
+                  const color = DOCTOR_COLORS[i % DOCTOR_COLORS.length];
+                  return (
+                    <div key={doctor.doctorid} className="flex items-center gap-1">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${color.dot}`} />
+                      <span className="truncate text-[10px] font-bold text-slate-500">
+                        {doctor.doctor_name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           {weekDays.map((day, index) => {
             const isToday = isSameDate(day, TODAY);
             const isSunday = day.getDay() === 0;
@@ -231,12 +269,80 @@ export function WeeklySchedule({
                 (reservation) =>
                   reservation.date === dayKey && reservation.start !== "12:00"
               );
+              const overlays = getNonOpOverlays(getDayEntry(day), timelineRange, weeklyHourHeight);
+
+              if (isSplitMode) {
+                const perDoctorPositioned = doctors.map((doctor, colorIndex) => ({
+                  doctor,
+                  colorIndex,
+                  positioned: buildPositionedTimelineItems(
+                    dayReservations.filter((r) => r.doctorid === doctor.doctorid),
+                    timelineRange,
+                    timelineScale,
+                  ),
+                }));
+
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={[
+                      "relative min-w-0 border-r border-slate-100 last:border-r-0",
+                      isToday ? "bg-slate-50" : "bg-white",
+                    ].join(" ")}
+                  >
+                    {hourTicks.map((tick) => (
+                      <div
+                        key={tick.minutes}
+                        className="absolute left-0 right-0 border-t border-slate-100"
+                        style={{ top: tick.top }}
+                      />
+                    ))}
+
+                    {/* 수의사 구분 세로선 */}
+                    {doctors.slice(0, -1).map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute top-0 bottom-0 z-[3] border-l border-slate-100"
+                        style={{ left: `${((i + 1) / doctors.length) * 100}%` }}
+                      />
+                    ))}
+
+                    {overlays.map((o, i) => (
+                      <div
+                        key={i}
+                        className="pointer-events-none absolute inset-x-0 z-[2]"
+                        style={{
+                          top: o.top,
+                          height: o.height,
+                          backgroundColor: "rgba(226,232,240,0.65)",
+                        }}
+                      />
+                    ))}
+
+                    {perDoctorPositioned.map(({ colorIndex, positioned }) => {
+                      const color = DOCTOR_COLORS[colorIndex % DOCTOR_COLORS.length];
+                      return positioned.map((p) => (
+                        <WeeklyReservationCard
+                          key={p.item.id}
+                          positioned={p}
+                          patient={patientsById[p.item.patientId]}
+                          day={day}
+                          onSelectReservation={onSelectReservation}
+                          doctorColor={color}
+                          doctorIndex={colorIndex}
+                          totalDoctors={doctors.length}
+                        />
+                      ));
+                    })}
+                  </div>
+                );
+              }
+
               const positionedReservations = buildPositionedTimelineItems(
                 dayReservations,
                 timelineRange,
                 timelineScale
               );
-              const overlays = getNonOpOverlays(getDayEntry(day), timelineRange, weeklyHourHeight);
 
               return (
                 <div
@@ -261,9 +367,7 @@ export function WeeklySchedule({
                       style={{
                         top: o.top,
                         height: o.height,
-                        backgroundImage:
-                          "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.04) 5px, rgba(0,0,0,0.04) 10px)",
-                        backgroundColor: "rgba(243,244,246,0.85)",
+                        backgroundColor: "rgba(226,232,240,0.65)",
                       }}
                     />
                   ))}
@@ -275,6 +379,7 @@ export function WeeklySchedule({
                       patient={patientsById[positioned.item.patientId]}
                       day={day}
                       onSelectReservation={onSelectReservation}
+                      doctorColor={singleDoctorColor}
                     />
                   ))}
                 </div>
@@ -303,15 +408,40 @@ function WeeklyReservationCard({
   patient,
   day,
   onSelectReservation,
+  doctorColor,
+  doctorIndex,
+  totalDoctors,
 }: {
   positioned: PositionedTimelineItem<ReservationItem>;
   patient: PatientsById[number] | undefined;
   day: Date;
   onSelectReservation: (reservation: ReservationItem, reservationDate: Date) => void;
+  doctorColor?: DoctorColor;
+  doctorIndex?: number;
+  totalDoctors?: number;
 }) {
   const { item, top, height, timeLabel, columnIndex, columnCount } = positioned;
   const compact = height < WEEKLY_FULL_CARD_HEIGHT;
   const shortTimeLabel = timeLabel.replace(" ~ ", "-");
+
+  const cardColorClass = doctorColor
+    ? `bg-white border-slate-200 text-slate-800 ${doctorColor.bar}`
+    : weeklyCardClass[item.status];
+
+  let leftStyle: string;
+  let widthStyle: string;
+  if (doctorIndex !== undefined && totalDoctors !== undefined && totalDoctors > 1) {
+    const zoneWidthPct = 100 / totalDoctors;
+    const zoneStartPct = doctorIndex * zoneWidthPct;
+    const cardLeftPct = zoneStartPct + (columnIndex / columnCount) * zoneWidthPct;
+    const cardWidthPct = zoneWidthPct / columnCount;
+    const gap = columnCount > 1 ? 2 : 1;
+    leftStyle = `calc(${cardLeftPct}% + ${gap}px)`;
+    widthStyle = `calc(${cardWidthPct}% - ${gap * 2}px)`;
+  } else {
+    leftStyle = `calc(${(columnIndex / columnCount) * 100}% + ${WEEKLY_CARD_INSET}px)`;
+    widthStyle = `calc(${100 / columnCount}% - ${WEEKLY_CARD_INSET * 2}px)`;
+  }
 
   return (
     <button
@@ -321,18 +451,18 @@ function WeeklyReservationCard({
         patient ? `${patient.petName} (${patient.guardianName})` : item.visitReason
       }`}
       className={[
-        `absolute z-10 flex flex-col overflow-hidden rounded-lg border pl-3 pr-2 text-left shadow-sm transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1 before:rounded-l-lg hover:shadow-md ${weeklyCardClass[item.status]}`,
+        `absolute z-10 flex flex-col overflow-hidden rounded-lg border pl-3 pr-2 text-left shadow-sm transition before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1 before:rounded-l-lg hover:shadow-md ${cardColorClass}`,
         compact ? "py-1" : "py-1.5",
       ].join(" ")}
       style={{
         top,
         height,
-        left: `calc(${(columnIndex / columnCount) * 100}% + ${WEEKLY_CARD_INSET}px)`,
-        width: `calc(${100 / columnCount}% - ${WEEKLY_CARD_INSET * 2}px)`,
+        left: leftStyle,
+        width: widthStyle,
       }}
     >
       {compact ? (
-        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-between gap-1.5">
+        <div className="flex min-h-0 min-w-0 flex-1 items-center gap-1.5">
           <div className="min-w-0">
             <p className="min-w-0 truncate text-[10px] font-extrabold leading-tight tabular-nums text-slate-700">
               {shortTimeLabel}
@@ -341,9 +471,6 @@ function WeeklyReservationCard({
               {patient ? patient.petName : item.visitReason}
             </p>
           </div>
-          <span className="shrink-0">
-            <TriageBadge level={item.status} />
-          </span>
         </div>
       ) : (
         <>
@@ -358,14 +485,11 @@ function WeeklyReservationCard({
               </span>
             ) : null}
           </p>
-          <div className="mt-0.5 flex h-5 min-w-0 items-center justify-between gap-1 overflow-hidden">
-            <p className="min-w-0 truncate text-[10px] font-bold leading-tight text-slate-500">
+          {!doctorColor && (
+            <p className="mt-0.5 min-w-0 truncate text-[10px] font-bold leading-tight text-slate-500">
               {item.visitReason}
             </p>
-            <span className="shrink-0">
-              <TriageBadge level={item.status} />
-            </span>
-          </div>
+          )}
         </>
       )}
     </button>

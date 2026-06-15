@@ -26,28 +26,32 @@ const DAILY_BOTTOM_PADDING = 24;
 
 const DOCTOR_COLORS = [
   {
+    // 수의사 1: 따뜻한 느낌의 올리브/그린
     bg: "bg-white",
-    border: "border-slate-200",
-    bar: "before:bg-slate-400",
-    dot: "bg-slate-400",
+    border: "border-slate-100",
+    bar: "before:bg-teal-500",
+    dot: "bg-teal-500",
   },
   {
+    // 수의사 2: 포근한 베이지/살구 톤
     bg: "bg-white",
-    border: "border-slate-200",
-    bar: "before:bg-stone-400",
-    dot: "bg-stone-400",
+    border: "border-slate-100",
+    bar: "before:bg-orange-300",
+    dot: "bg-orange-300",
   },
   {
+    // 수의사 3: 차분하고 은은한 인디고 블루
     bg: "bg-white",
-    border: "border-slate-200",
-    bar: "before:bg-amber-500",
-    dot: "bg-amber-500",
+    border: "border-slate-100",
+    bar: "before:bg-indigo-400",
+    dot: "bg-indigo-400",
   },
   {
+    // 수의사 4: 화사한 파스텔 옐로우/amber
     bg: "bg-white",
-    border: "border-slate-200",
-    bar: "before:bg-rose-500",
-    dot: "bg-rose-500",
+    border: "border-slate-100",
+    bar: "before:bg-amber-400",
+    dot: "bg-amber-400",
   },
 ] as const;
 

@@ -9,6 +9,8 @@ import type {
   DashboardSummaries,
 } from "../../api/dashboardApi";
 import type { AuthSession } from "../../api/authApi";
+import type { DoctorInfo } from "../../api/emrApi";
+import { fetchHospitalDoctors } from "../../api/emrApi";
 import { DashboardSchedulePanel } from "../../components/dashboard/DashboardSchedulePanel";
 import { DashboardSummaryCards } from "../../components/dashboard/DashboardSummaryCards";
 import AppLayout, { type AppMenuId } from "../../layouts/AppLayout";
@@ -37,9 +39,9 @@ export default function DashboardPage({
     emergency: 0,
     completed: 0,
   });
-  const [scheduleItems, setScheduleItems] = useState<DashboardScheduleItem[]>(
-    []
-  );
+  const [scheduleItems, setScheduleItems] = useState<DashboardScheduleItem[]>([]);
+  const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -53,6 +55,20 @@ export default function DashboardPage({
     () => createSummaryCards(summaries),
     [summaries]
   );
+
+  const visibleSchedules = useMemo(
+    () =>
+      selectedDoctorId === null
+        ? scheduleItems
+        : scheduleItems.filter((s) => s.doctorid === selectedDoctorId),
+    [scheduleItems, selectedDoctorId]
+  );
+
+  useEffect(() => {
+    fetchHospitalDoctors(session.accessToken)
+      .then(setDoctors)
+      .catch(() => {});
+  }, [session.accessToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,12 +87,7 @@ export default function DashboardPage({
         if (!cancelled) {
           const status = getDashboardApiErrorStatus(err);
 
-          setSummaries({
-            total: 0,
-            waiting: 0,
-            emergency: 0,
-            completed: 0,
-          });
+          setSummaries({ total: 0, waiting: 0, emergency: 0, completed: 0 });
           setScheduleItems([]);
           setErrorMessage(getDashboardApiErrorMessage(err));
 
@@ -86,15 +97,18 @@ export default function DashboardPage({
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
   }, [session.accessToken, apiDate, onLogout]);
+
+  const selectedDoctorName =
+    selectedDoctorId === null
+      ? undefined
+      : doctors.find((d) => d.doctorid === selectedDoctorId)?.doctor_name ?? session.user.name;
 
   return (
     <AppLayout
@@ -119,14 +133,35 @@ export default function DashboardPage({
             </p>
           </div>
           <DashboardSummaryCards summaries={summaryCards} className="pt-1" />
+
+          {doctors.length > 0 && (
+            <div className="ml-auto pt-1">
+              <select
+                value={selectedDoctorId ?? ""}
+                onChange={(e) =>
+                  setSelectedDoctorId(e.target.value === "" ? null : Number(e.target.value))
+                }
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">전체 수의사</option>
+                {doctors.map((doctor) => (
+                  <option key={doctor.doctorid} value={doctor.doctorid}>
+                    {doctor.doctor_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <DashboardSchedulePanel
-            schedules={scheduleItems}
+            schedules={visibleSchedules}
             isLoading={isLoading}
             errorMessage={errorMessage}
             holidayName={holidayName}
-            doctorName={session.user.name}
+            doctorName={selectedDoctorName ?? session.user.name}
+            doctors={doctors}
+            selectedDoctorId={selectedDoctorId}
           />
         </div>
       </div>

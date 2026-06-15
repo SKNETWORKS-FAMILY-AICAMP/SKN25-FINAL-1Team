@@ -15,6 +15,8 @@ export interface DashboardScheduleItem {
   reason: string;
   type: VisitType;
   status: string;
+  doctorid: number;
+  doctorName: string;
 }
 
 export interface DashboardSummaries {

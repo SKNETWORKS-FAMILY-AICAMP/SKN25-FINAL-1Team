@@ -32,18 +32,18 @@ export const reservationStatusMeta: Record<
 > = {
   emergency: {
     label: "응급",
-    badgeClass: "border border-red-100 bg-red-50 text-red-500",
-    softClass: "border border-red-100 bg-red-50 text-red-500",
+    badgeClass: "border border-[#FECDD3] bg-[#FFEFEF] text-[#E11D48]",
+    softClass: "border border-[#FECDD3] bg-[#FFEFEF] text-[#E11D48]",
   },
   semiEmergency: {
     label: "준응급",
-    badgeClass: "border border-amber-100 bg-amber-50 text-amber-600",
-    softClass: "border border-amber-100 bg-amber-50 text-amber-600",
+    badgeClass: "border border-[#FDE68A] bg-[#FFFBEB] text-[#D97706]",
+    softClass: "border border-[#FDE68A] bg-[#FFFBEB] text-[#D97706]",
   },
   normal: {
     label: "일반",
-    badgeClass: "border border-green-100 bg-green-50 text-green-700",
-    softClass: "border border-green-100 bg-green-50 text-green-700",
+    badgeClass: "border border-[#CBD5E1] bg-[#F1F5F9] text-[#475569]",
+    softClass: "border border-[#CBD5E1] bg-[#F1F5F9] text-[#475569]",
   },
 };
 
@@ -51,7 +51,7 @@ export const DEFAULT_PET_IMAGE =
   "https://images.unsplash.com/photo-1583511655826-05700d52f4d9?auto=format&fit=crop&w=240&q=80";
 
 export const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
-export const weekDayLabels = ["월", "화", "수", "목", "금", "토", "일"];
+export const weekDayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
 export const statusOrder: ReservationStatus[] = [
   "emergency",
@@ -212,8 +212,8 @@ export function isSameDate(left: Date, right: Date) {
 }
 
 export function getWeekDays(date: Date) {
-  const monday = startOfWeek(date, { weekStartsOn: 1 });
-  return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+  const sunday = startOfWeek(date, { weekStartsOn: 0 });
+  return Array.from({ length: 7 }, (_, index) => addDays(sunday, index));
 }
 
 export function getMonthGrid(date: Date) {
