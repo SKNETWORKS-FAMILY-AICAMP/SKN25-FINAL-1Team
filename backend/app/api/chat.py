@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
-from langchain_openai import ChatOpenAI
 from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, TranslateRequest
 from app.crud.chat import (
@@ -13,7 +12,6 @@ from app.crud.chat import (
 )
 from app.core.dependencies import get_current_user
 from app.utils.file_validation import validate_file
-from app.core.config import settings
 from app.models.pet import Pet
 from app.models.triage_result import TriageResult
 from app.models.schedule import Schedule
@@ -24,6 +22,7 @@ from app.crud.chat import add_message
 from app.services.chat_service import (
     process_chat_message,
 )
+from app.services.translation import translate_batch
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -112,81 +111,31 @@ async def upload_chat_file(
     return {"code": 200, "result": result}
 
 
-_LANG_NAMES = {
-    "ko": "Korean",
-    "en": "English",
-    "ja": "Japanese",
-    "zh": "Simplified Chinese",
-}
-
-
-async def _translate_batch(texts: list[str], target: str) -> list[str]:
-    """주어진 문구들을 target 언어로 일괄 번역한다. 실패 시 원문을 그대로 반환."""
-    target = target if target in _LANG_NAMES else "en"
-    items = [(i, text) for i, text in enumerate(texts) if text and text.strip()]
-    translations: list[str] = list(texts)
-    if not items:
-        return translations
-
-    try:
-        llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL or "gpt-4o-mini",
-            api_key=settings.OPENAI_API_KEY,
-            temperature=0.0,
-            timeout=30.0,
-            max_retries=1,
-            model_kwargs={"response_format": {"type": "json_object"}},
-        )
-        numbered = "\n".join(f'{i}: {text}' for i, text in items)
-        response = await llm.ainvoke(
-            [
-                {
-                    "role": "system",
-                    "content": (
-                        f"You are a translation engine. Translate each numbered line into {_LANG_NAMES[target]}. "
-                        "Keep meaning, tone, emojis, numbers, dates and times unchanged. "
-                        "If a line is already in the target language, return it unchanged. "
-                        'Return ONLY a JSON object of the form {"translations": {"<index>": "<translated text>"}} '
-                        "using the same indices you were given."
-                    ),
-                },
-                {"role": "user", "content": numbered},
-            ],
-            config={"run_name": "chat_translate"},
-        )
-        raw = response.content if isinstance(response.content, str) else "{}"
-        parsed = json.loads(raw or "{}")
-        mapping = parsed.get("translations", parsed)
-        if isinstance(mapping, dict):
-            for i, _ in items:
-                value = mapping.get(str(i), mapping.get(i))
-                if isinstance(value, str) and value.strip():
-                    translations[i] = value
-    except Exception as exc:
-        # 번역 실패 시 원문을 그대로 반환 — 화면이 비지 않도록 한다.
-        logger.warning("[Chat/Translate] failed target=%s: %s", target, exc, exc_info=True)
-
-    return translations
-
-
 # 메시지/추천 일괄 번역 — 언어 변경 시 챗봇 답변·사용자 메시지를 선택 언어로 다시 렌더링
 @router.post("/translate")
 async def translate_texts(
     request: TranslateRequest,
     current_user=Depends(get_current_user),
 ):
-    translations = await _translate_batch(request.texts, request.target_lang)
+    translations = await translate_batch(request.texts, request.target_lang)
     return {"code": 200, "result": {"translations": translations}}
 
 
-# 상담 기록 목록 조회
+# 상담 기록 목록 조회 (offset 페이지네이션 — 무한스크롤용 10개씩)
 @router.get("/sessions")
 async def get_chat_sessions(
     pet_id: int = Query(...),
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    sessions = await get_chat_sessions_by_petid(db, current_user.userid, pet_id)
+    # limit+1개를 받아 다음 페이지 존재 여부를 판단하고, 실제 반환은 limit개로 자른다
+    sessions = await get_chat_sessions_by_petid(
+        db, current_user.userid, pet_id, limit=limit, offset=offset
+    )
+    has_more = len(sessions) > limit
+    sessions = sessions[:limit]
 
     # 경과보고(followup)가 '활성'인 세션 표시용 — need_followup이고 진료 시작 시간 전인 emrid.
     # 상세의 can_followup과 동일 기준. 목록에 작은 마커를 달아 보호자가 식별할 수 있게 한다.
@@ -219,6 +168,8 @@ async def get_chat_sessions(
 
     return {
         "code": 200,
+        # has_more: 다음 페이지(스크롤 더 로딩)가 있는지 — 프론트 무한스크롤 종료 판단용
+        "has_more": has_more,
         "result": [
             {
                 "session_id": session.id,

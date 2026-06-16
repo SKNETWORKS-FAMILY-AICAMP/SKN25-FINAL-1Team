@@ -15,6 +15,7 @@ from app.crud.chat import (
 )
 from app.core.config import settings
 from app.utils.s3 import read_object_bytes_from_url
+from app.services.translation import translate_batch
 
 from ai.agents.triage.agent import TriageAgent
 
@@ -100,6 +101,14 @@ async def analyze_image(image_url: str, user_text: str) -> dict | None:
     return analysis or None
 
 
+# 상담 제목(주요증상) 언어 고정 — 완료 시점 UI 언어로 번역해 DB에 박제. 이후 언어를 바꿔도 재번역 안 함.
+async def _localize_title_keywords(keywords: list[str], lang: str) -> list[str]:
+    # 한국어면 원문 그대로 (트리아지 결과가 이미 한국어라 번역 불필요)
+    if not keywords or (lang or "ko") == "ko":
+        return keywords
+    return await translate_batch(keywords, lang)
+
+
 async def process_chat_message(
     db: AsyncSession,
     session_id: int,
@@ -180,9 +189,10 @@ async def process_chat_message(
             meta=result.get("state"),
         )
 
-        # 상담 제목 = 응급 주증상(명사형), 완료 처리
+        # 상담 제목 = 응급 주증상(명사형) → 완료 시점 언어로 번역해 저장, 완료 처리
         chief = result.get("chief_complaints") or []
-        await update_session_complete(db, session, chief[:2])
+        title_keywords = await _localize_title_keywords(chief[:2], request.lang)
+        await update_session_complete(db, session, title_keywords)
 
         # 최종 결과 전달
         yield {
@@ -195,7 +205,7 @@ async def process_chat_message(
                     "RED",
                 ),
                 "is_complete": True,
-                "keywords": chief[:2],
+                "keywords": title_keywords,
             },
         }
         return
@@ -211,9 +221,10 @@ async def process_chat_message(
             meta=result.get("state"),
         )
 
-        # 상담 제목 = 주요 증상 2개(명사형 키워드)
+        # 상담 제목 = 주요 증상 2개(명사형 키워드) → 완료 시점 언어로 번역해 저장
         chief = result.get("chief_complaints") or []
-        await update_session_complete(db, session, chief[:2])
+        title_keywords = await _localize_title_keywords(chief[:2], request.lang)
+        await update_session_complete(db, session, title_keywords)
 
         # 최종 결과 전달
         yield {
@@ -224,9 +235,10 @@ async def process_chat_message(
                 "urgency": result["urgency"],
                 "score": result["score"],
                 "triage_summary": result["triage_summary"],
+                # 다운스트림(차트·RAG)용은 한국어 원본 유지, 제목용 keywords만 번역
                 "chief_complaints": result["chief_complaints"],
                 "suspected_conditions": result["suspected_conditions"],
-                "keywords": chief[:2],
+                "keywords": title_keywords,
             },
         }
         return

@@ -10,10 +10,10 @@
       "Ilie & Thomovsky. Can Vet J 2024;65:375–384 — Part III (Arrhythmia, Unable to walk)"
     ],
     "onset_time_definitions": {
-      "abrupt": "수초~수분 이내",
-      "rapid": "12시간 이내",
-      "acute": "24시간 이내",
-      "recent": "7일 이내"
+      "within_minutes": "수초~수분 이내",
+      "within_12h": "12시간 이내",
+      "within_24h": "24시간 이내",
+      "within_7days": "7일 이내"
     },
     "urgency_values": [
       "RED",
@@ -720,10 +720,10 @@
           "persistent"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -749,10 +749,10 @@
           "persistent": 5
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -863,9 +863,9 @@
         ],
         "vomiting_frequency": [
           "none",
-          "single",
-          "multiple",
-          "continuous"
+          "once",
+          "several",
+          "nonstop"
         ],
         "diarrhea": [
           "no",
@@ -898,10 +898,10 @@
           "yes"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -911,9 +911,9 @@
         },
         "vomiting_frequency": {
           "none": 0,
-          "single": 1,
-          "multiple": 3,
-          "continuous": 5
+          "once": 1,
+          "several": 3,
+          "nonstop": 5
         },
         "diarrhea": {
           "no": 0,
@@ -946,10 +946,10 @@
           "yes": 8
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1096,10 +1096,10 @@
           "generalized"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -1123,10 +1123,10 @@
           "generalized": 4
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1243,10 +1243,10 @@
           "yes"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -1268,10 +1268,10 @@
           "yes": 6
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1513,10 +1513,10 @@
           "none"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -1542,10 +1542,10 @@
           "none": 3
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1651,10 +1651,10 @@
           "yes"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -1677,10 +1677,10 @@
           "yes": 2
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1805,10 +1805,10 @@
           "complete"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -1838,10 +1838,10 @@
           "complete": 8
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -1971,10 +1971,10 @@
           "yes"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -2001,10 +2001,10 @@
           "yes": 5
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [
@@ -2121,10 +2121,10 @@
           "discharge_or_pain"
         ],
         "onset": [
-          "abrupt",
-          "rapid",
-          "acute",
-          "recent"
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
         ]
       },
       "field_scoring": {
@@ -2149,10 +2149,10 @@
           "discharge_or_pain": 4
         },
         "onset": {
-          "abrupt": 3,
-          "rapid": 2,
-          "acute": 1,
-          "recent": 0
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
         }
       },
       "questions": [

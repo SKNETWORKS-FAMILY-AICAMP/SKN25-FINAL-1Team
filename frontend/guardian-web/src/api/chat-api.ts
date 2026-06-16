@@ -32,6 +32,8 @@ export interface ChatSessionsResponse {
   code: number;
   message?: string;
   result: ChatSessionHistory[];
+  /** 다음 페이지(더 로딩할 상담)가 있는지 — 무한스크롤 종료 판단용. */
+  has_more?: boolean;
 }
 
 export interface ChatSessionMessage {
@@ -172,12 +174,17 @@ export const createChatSession = async (
   return response.data;
 };
 
+// 상담 목록 조회 (offset 페이지네이션 — 10개씩)
 export const getChatSessions = async (
   petId: number,
+  limit = 10,
+  offset = 0,
 ): Promise<ChatSessionsResponse> => {
   const response = await apiClient.get<ChatSessionsResponse>("/chat/sessions", {
     params: {
       pet_id: petId,
+      limit,
+      offset,
     },
   });
   return response.data;

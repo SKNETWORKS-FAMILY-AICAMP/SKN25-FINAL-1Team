@@ -121,6 +121,9 @@ export const useChatSessions = ({
 }: UseChatSessionsParams) => {
   const { t } = useTranslation();
   const [chatHistories, setChatHistories] = useState<ChatSessionHistory[]>([]);
+  // 무한스크롤 페이지네이션 — 10개씩, 더 있는지(hasMore) / 추가 로딩중(isLoadingMore)
+  const [hasMoreHistories, setHasMoreHistories] = useState(false);
+  const [isLoadingMoreHistories, setIsLoadingMoreHistories] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(
     null,
   );
@@ -143,22 +146,49 @@ export const useChatSessions = ({
     [chatHistories, selectedHistoryId],
   );
 
+  // 목록 갱신 — 항상 첫 페이지(offset 0)로 리셋
   const refreshChatHistories = async (petId: number) => {
     try {
       const response = await getChatSessions(petId);
       if (response.code === 200) {
         setChatHistories(response.result);
+        setHasMoreHistories(Boolean(response.has_more));
       }
     } catch {
       // 갱신 실패는 무시 — 이미 표시 중인 목록 유지
     }
   };
 
+  // 더 보기 — 스크롤 바닥 도달 시 다음 10개를 이어 붙임(append)
+  const loadMoreChatHistories = useCallback(async () => {
+    if (!selectedPet || !hasMoreHistories || isLoadingMoreHistories) {
+      return;
+    }
+    try {
+      setIsLoadingMoreHistories(true);
+      // offset = 이미 불러온 개수 (별도 page 카운터 불필요)
+      const response = await getChatSessions(
+        selectedPet.pet_id,
+        10,
+        chatHistories.length,
+      );
+      if (response.code === 200) {
+        setChatHistories((prev) => [...prev, ...response.result]);
+        setHasMoreHistories(Boolean(response.has_more));
+      }
+    } catch {
+      // 추가 로딩 실패는 무시 — 이미 표시 중인 목록 유지
+    } finally {
+      setIsLoadingMoreHistories(false);
+    }
+  }, [selectedPet, hasMoreHistories, isLoadingMoreHistories, chatHistories.length]);
+
   useEffect(() => {
     if (!selectedPet) {
       // isLoadingHistories는 끄지 않는다 — 마운트~펫 해결 사이 false 프레임이 생겨
       // 빈 화면이 깜빡이기 때문. 펫이 없을 땐 ChatSessionList가 이 값을 무시한다.
       setChatHistories([]);
+      setHasMoreHistories(false);
       return;
     }
 
@@ -177,10 +207,13 @@ export const useChatSessions = ({
         if (response.code !== 200) {
           setErrorMessage(response.message || t("chatbot.historyLoadError"));
           setChatHistories([]);
+          setHasMoreHistories(false);
           return;
         }
 
+        // 첫 페이지 — 교체 후 다음 페이지 존재 여부 세팅
         setChatHistories(response.result);
+        setHasMoreHistories(Boolean(response.has_more));
 
         // 새로고침/직접진입(POP) 직후 첫 로드라면, 저장된 세션을 한 번만 자동 복원.
         // 인앱 Link 재진입(PUSH)은 allowRefreshRestore=false라 복원하지 않는다.
@@ -209,6 +242,7 @@ export const useChatSessions = ({
           getErrorMessage(error, t("chatbot.historyLoadError")),
         );
         setChatHistories([]);
+        setHasMoreHistories(false);
       } finally {
         if (isMounted) {
           setIsLoadingHistories(false);
@@ -420,6 +454,10 @@ export const useChatSessions = ({
     isLoadingHistories,
     isLoadingHistoryMessages,
     creatingPetId,
+    // 무한스크롤 페이지네이션
+    hasMoreHistories,
+    isLoadingMoreHistories,
+    loadMoreChatHistories,
     resetSessionStateForPetChange,
     handleCreateSession,
     handleSelectHistory,

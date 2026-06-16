@@ -40,7 +40,7 @@ services:
       args:
         # dev 에서는 비전(torch) 미설치로 이미지/빌드/기동 대폭 단축(~6GB 절감).
         # 사진 분석을 로컬에서 테스트하려면 "true" 로 바꾼 뒤 ./dev.sh 로 재빌드.
-        INSTALL_VISION: "false"
+        INSTALL_VISION: "true"
     env_file:
       - ../../backend/.env
     restart: unless-stopped

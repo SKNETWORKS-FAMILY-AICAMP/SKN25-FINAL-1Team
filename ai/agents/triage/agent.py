@@ -5,6 +5,7 @@ import re
 from ai.llm import (
     call_llm,
     call_llm_json,
+    call_llm_structured,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ from ai.agents.triage.rules import (
     select_next_question,
     build_sections_guide,
     build_red_flag_guide,
+    build_extract_schema,
     get_red_flag_message,
 )
 
@@ -283,10 +285,17 @@ class TriageAgent:
             user_message=user_message,
         )
 
-        return await call_llm_json(
+        data = await call_llm_structured(
             prompt=prompt,
+            schema=build_extract_schema(self.rules),
             temperature=0,
         )
+
+        # 모르는 필드(null) 제거
+        fields = data.get("fields") or {}
+        data["fields"] = {k: v for k, v in fields.items() if v is not None}
+
+        return data
 
     # 질문 생성 호출 (어떻게 물을지)
     async def _generate_question(
@@ -296,10 +305,13 @@ class TriageAgent:
         user_message: str,
     ):
 
+        # 이미 확인된 필드는 제외 — 묶음 질문이 답한 항목을 다시 묻지 않게
+        remaining = [f for f in question.get("extract_fields", []) if f not in fields]
+
         prompt = QUESTION_PROMPT.format(
             state=json.dumps(fields, ensure_ascii=False),
             user_message=user_message,
-            target_fields=", ".join(question.get("extract_fields", [])),
+            target_fields=", ".join(remaining),
             goal=question.get("goal", ""),
             example_questions="\n".join(question.get("example_questions", [])),
         )

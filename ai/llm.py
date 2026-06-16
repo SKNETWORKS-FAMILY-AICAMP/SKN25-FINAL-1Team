@@ -39,3 +39,20 @@ async def call_llm_json(
     )
 
     return json.loads(text)
+
+
+# 구조화 출력 — JSON 스키마로 형식·enum 강제 (누락/오염 방지)
+async def call_llm_structured(
+    prompt: str,
+    schema: dict,
+    temperature: float = 0,
+):
+    llm = get_llm(temperature=temperature)
+
+    structured = llm.with_structured_output(
+        schema,
+        method="json_schema",
+        strict=True,
+    )
+
+    return await structured.ainvoke(prompt)

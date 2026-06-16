@@ -138,6 +138,53 @@ def build_sections_guide(
     return "\n".join(lines)
 
 
+# 추출용 JSON 스키마 생성 (field_schema 기반)
+def build_extract_schema(
+    rules: dict,
+):
+
+    field_props = {}
+
+    for section in rules.get("sections", []):
+
+        for name, values in (section.get("field_schema") or {}).items():
+
+            # 모르는 필드는 null 허용
+            field_props[name] = {
+                "type": ["string", "null"],
+                "enum": [*values, None],
+            }
+
+    section_ids = [s.get("id") for s in rules.get("sections", [])]
+
+    return {
+        "title": "TriageExtraction",
+        "type": "object",
+        "properties": {
+            "intent": {"type": "string", "enum": ["triage", "recall", "off_topic"]},
+            "section": {"type": ["string", "null"], "enum": [*section_ids, None]},
+            "red_flag": {"type": "boolean"},
+            "red_flag_chief": {"type": ["string", "null"]},
+            "fields": {
+                "type": "object",
+                "properties": field_props,
+                "required": list(field_props.keys()),
+                "additionalProperties": False,
+            },
+            "observations": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": [
+            "intent",
+            "section",
+            "red_flag",
+            "red_flag_chief",
+            "fields",
+            "observations",
+        ],
+        "additionalProperties": False,
+    }
+
+
 # 추출 프롬프트용 red_flag 신호 안내 텍스트 생성
 def build_red_flag_guide(
     rules: dict,
