@@ -19,6 +19,12 @@ function authHeaders(): Record<string, string> {
 }
 
 async function asJson(res: Response) {
+  // 토큰이 있는데 401 = 세션 만료(로그인 시도의 401은 토큰이 없어 구분됨) → 자동 로그아웃 후 로그인 화면.
+  if (res.status === 401 && getAdminToken()) {
+    clearAdminToken();
+    if (typeof window !== "undefined") window.location.assign("/admin");
+    throw new Error("세션이 만료되었습니다. 다시 로그인해주세요.");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const error = data as { detail?: string; message?: string };
@@ -195,6 +201,7 @@ export interface AdminHospitalListItem {
   address?: string | null;
   phone?: string | null;
   doctorCount: number;
+  is_active: boolean;
 }
 
 export interface AdminDoctor {
@@ -217,6 +224,7 @@ export interface AdminHospitalDetail {
   address?: string | null;
   phone?: string | null;
   businessNumber?: string | null;
+  is_active: boolean;
   tagline?: string | null;
   intro?: string | null;
   bannerImage?: string | null;
@@ -296,5 +304,11 @@ export async function updateDoctorProfile(did: number, body: Partial<AdminDoctor
 export async function setDoctorActive(did: number, is_active: boolean): Promise<void> {
   await asJson(
     await fetch(`${API}/admin/doctors/${did}/active`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ is_active }) }),
+  );
+}
+
+export async function setHospitalActive(hid: number, is_active: boolean): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/hospitals/${hid}/active`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ is_active }) }),
   );
 }

@@ -164,9 +164,9 @@ const DoctorCard = ({ doctor }: { doctor: HospitalDoctor }) => {
         src={doctor.profileImage}
         alt={doctor.name}
         fallbackText={doctor.name.trim().charAt(0)}
-        className="h-64 w-full object-cover"
+        className="aspect-[4/3] w-full object-cover"
         style={{ objectPosition: doctor.profileImagePosition || "50% 20%" }}
-        fallbackClassName="flex h-64 w-full items-center justify-center bg-blue-50 text-5xl font-extrabold text-blue-600"
+        fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-blue-50 text-5xl font-extrabold text-blue-600"
       />
       <div className="flex flex-1 flex-col p-6">
         <h3 className="text-lg font-extrabold text-slate-950">{doctor.name}</h3>

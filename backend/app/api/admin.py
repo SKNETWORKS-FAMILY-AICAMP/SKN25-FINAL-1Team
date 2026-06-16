@@ -21,7 +21,6 @@ from app.api.settings import (
     _update_hospital_weekly_schedule,
 )
 from app.models.validation_result import ValidationResult
-from app.models.agent_pipeline_result import AgentPipelineResult
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -143,6 +142,19 @@ async def admin_update_hospital_hours(
     return await _update_hospital_weekly_schedule(db, hid, body.schedule)
 
 
+@router.put("/hospitals/{hid}/active")
+async def admin_set_hospital_active(
+    hid: int,
+    body: DoctorActiveUpdate,  # {is_active: bool} 동일 형태 재사용
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    ok = await ah_crud.set_hospital_active(db, hid, body.is_active)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="병원을 찾을 수 없습니다.")
+    return {"code": 200, "message": "폐업 처리되었습니다." if not body.is_active else "영업 재개되었습니다."}
+
+
 @router.post("/hospitals/{hid}/doctors")
 async def admin_add_doctor(
     hid: int,
@@ -207,32 +219,11 @@ async def validation_results(
     return {"code": 200, "result": result}
 
 
-# ── 모니터링: Judge (agent_pipeline_resultDB.judge_result) ──
+# ── 모니터링: Judge (메모리 링버퍼 — DB 불필요) ──
 @router.get("/judge/results")
 async def judge_results(
     needs_review_only: bool = Query(False),
-    db: AsyncSession = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    q = (
-        select(AgentPipelineResult)
-        .where(AgentPipelineResult.judge_result.isnot(None))
-        .order_by(AgentPipelineResult.created_at.desc())
-        .limit(200)
-    )
-    rows = await db.execute(q)
-    result = []
-    for a in rows.scalars().all():
-        jr = a.judge_result or {}
-        verdict = jr.get("monitoring_verdict")
-        if needs_review_only and verdict != "NEEDS_REVIEW":
-            continue
-        result.append({
-            "emrid": a.emrid,
-            "createdAt": a.created_at.isoformat() if a.created_at else None,
-            "verdict": verdict,
-            "scores": jr.get("quality_scores") or {},
-            "turnCount": jr.get("turn_count"),
-            "notes": jr.get("notes"),
-        })
-    return {"code": 200, "result": result}
+    from ai.monitoring import recent_judge
+    return {"code": 200, "result": recent_judge(needs_review_only)}

@@ -208,9 +208,7 @@ import json
 from datetime import datetime
 from app.utils.timezone import to_kst
 
-async def build_patient_context(
-    db: AsyncSession, petid: int, hospitalid: int | None = None
-) -> dict:
+async def build_patient_context(db: AsyncSession, petid: int) -> dict:
     # 1. Fetch Pet profile
     pet_res = await db.execute(select(Pet, User).join(User, Pet.userid == User.userid).where(Pet.petid == petid))
     pet_row = pet_res.first()
@@ -230,12 +228,10 @@ async def build_patient_context(
         "is_neutered": bool(pet.is_neutered) if pet.is_neutered is not None else False
     }
 
-    # 2. EMR history & Prescriptions (병원 스코프: 타 병원 EMR은 AI 컨텍스트에서 제외)
-    doctor_ids = None
-    if hospitalid is not None:
-        from app.crud.doctor import get_doctor_ids_by_hospital
-        doctor_ids = await get_doctor_ids_by_hospital(db, hospitalid)
-    history_rows = await get_patient_emr_history(db, petid, doctor_ids)
+    # 2. EMR history & Prescriptions
+    # 에이전트는 트리아지 품질을 위해 펫의 전체 진료 이력을 조회한다(교차병원 포함 OK).
+    # ※ 수의사 화면의 raw EMR '표시'는 별도로 병원 스코프됨(api/patient.py) — 타 병원 기록은 화면에 안 뜸.
+    history_rows = await get_patient_emr_history(db, petid)
     emr_history = []
     prescriptions = []
     chronic_conditions = set()

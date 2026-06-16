@@ -9,6 +9,7 @@ import {
   addDoctor,
   updateDoctorProfile,
   setDoctorActive,
+  setHospitalActive,
   uploadFile,
   type AdminHospitalDetail,
   type DaySchedule,
@@ -43,12 +44,14 @@ interface EditHospital {
   features: string[];
   bannerImage: string;
   bannerImagePosition: string;
+  is_active: boolean;
   doctors: EditDoctor[];
 }
 
 function toDraft(d: AdminHospitalDetail): EditHospital {
   return {
     hospitalid: d.hospitalid,
+    is_active: d.is_active,
     name: d.name || "",
     tagline: d.tagline || "",
     address: d.address || "",
@@ -137,12 +140,38 @@ export default function HospitalManage() {
     patchDoctor(doc.doctorid, { is_active: !doc.is_active });
   };
 
+  const toggleHospitalActive = async () => {
+    const next = !draft.is_active;
+    if (!next && !window.confirm("폐업 처리하면 보호자 검색·예약에서 빠집니다. (기록은 보존) 진행할까요?")) return;
+    await setHospitalActive(hid, next);
+    patchHospital({ is_active: next });
+    flash(next ? "영업 재개되었습니다." : "폐업 처리되었습니다.");
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
       <Link to="/admin/hospitals" className="text-sm font-bold text-blue-600 hover:text-blue-700">
         ← 병원 목록
       </Link>
-      <h1 className="mt-2 text-2xl font-black text-slate-900">{draft.name}</h1>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-black text-slate-900">{draft.name}</h1>
+          {!draft.is_active ? (
+            <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-500">폐업</span>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => void toggleHospitalActive()}
+          className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${
+            draft.is_active
+              ? "border border-rose-200 text-rose-500 hover:bg-rose-50"
+              : "border border-blue-200 text-blue-600 hover:bg-blue-50"
+          }`}
+        >
+          {draft.is_active ? "폐업 처리" : "영업 재개"}
+        </button>
+      </div>
       {msg ? <div className="mt-3 rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">{msg}</div> : null}
 
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
@@ -164,7 +193,7 @@ export default function HospitalManage() {
                 url={draft.bannerImage}
                 position={draft.bannerImagePosition}
                 prefix="hospital"
-                aspect="16 / 7"
+                aspect="4 / 3"
                 onUrl={(u) => patchHospital({ bannerImage: u })}
                 onPosition={(p) => patchHospital({ bannerImagePosition: p })}
               />
@@ -238,9 +267,9 @@ function HospitalPreview({ draft }: { draft: EditHospital }) {
             {activeDoctors.map((doc) => (
               <div key={doc.doctorid} className="overflow-hidden rounded-xl border border-slate-200">
                 {doc.profileImage ? (
-                  <img src={doc.profileImage} alt={doc.name} className="h-40 w-full object-cover" style={{ objectPosition: doc.profileImagePosition }} />
+                  <img src={doc.profileImage} alt={doc.name} className="aspect-[4/3] w-full object-cover" style={{ objectPosition: doc.profileImagePosition }} />
                 ) : (
-                  <div className="flex h-40 w-full items-center justify-center bg-blue-50 text-4xl font-extrabold text-blue-600">
+                  <div className="flex aspect-[4/3] w-full items-center justify-center bg-blue-50 text-4xl font-extrabold text-blue-600">
                     {(doc.name || "?").trim().charAt(0)}
                   </div>
                 )}
@@ -403,7 +432,7 @@ function DoctorEditor({
           url={doc.profileImage}
           position={doc.profileImagePosition}
           prefix="doctor"
-          aspect="4 / 5"
+          aspect="4 / 3"
           onUrl={(u) => onPatch({ profileImage: u })}
           onPosition={(p) => onPatch({ profileImagePosition: p })}
         />

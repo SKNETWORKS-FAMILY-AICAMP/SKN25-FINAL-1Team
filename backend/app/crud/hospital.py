@@ -100,7 +100,8 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
 
 
 async def search_hospitals(db: AsyncSession, query: str = None) -> list[dict]:
-    q = select(Hospital).order_by(Hospital.hospitalid)
+    # 폐업(is_active=False) 병원은 보호자 검색/신규 등록 대상에서 제외.
+    q = select(Hospital).where(Hospital.is_active == True).order_by(Hospital.hospitalid)  # noqa: E712
     if query:
         q = q.where(Hospital.hospital_name.ilike(f"%{query}%"))
     result = await db.execute(q)

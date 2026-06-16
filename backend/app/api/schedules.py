@@ -321,23 +321,19 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
     from app.db.session import AsyncSessionLocal
     from app.crud.patient import build_patient_context
     from app.models.chat_history import ChatHistory
-    from app.models.schedule import Schedule
 
     async with AsyncSessionLocal() as db:
         triage = (await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))).scalar_one_or_none()
         guardian = (await db.execute(select(Guardian).where(Guardian.emrid == emrid))).scalar_one_or_none()
         pet_row = await db.execute(select(Pet).where(Pet.petid == guardian.petid)) if guardian else None
         pet = pet_row.scalar_one_or_none() if pet_row else None
-        # 병원 스코프: 이 예약 원장의 병원 진료기록만 AI 컨텍스트에 포함(교차병원 차단).
-        schedule = (await db.execute(select(Schedule).where(Schedule.emrid == emrid))).scalars().first()
-        doctor = await db.get(Doctor, schedule.doctorid) if schedule else None
-        hospitalid = doctor.hospitalid if doctor else None
 
     if not triage or not pet:
         return None
 
     async with AsyncSessionLocal() as db:
-        patient_context_data = await build_patient_context(db, pet.petid, hospitalid)
+        # 에이전트는 전체 진료 이력 조회(교차병원 포함). 수의사 화면 표시 스코핑은 별도(api/patient.py).
+        patient_context_data = await build_patient_context(db, pet.petid)
 
     agent_chat_history: list = []
     photo_predictions: list[dict] = []

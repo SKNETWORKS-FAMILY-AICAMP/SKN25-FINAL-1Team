@@ -34,6 +34,7 @@ class MyHospitalOut(BaseModel):
     hospitalid: int
     name: str
     is_primary: bool
+    is_active: bool = True  # 폐업 병원 뱃지용
 
 
 class AddHospitalRequest(BaseModel):

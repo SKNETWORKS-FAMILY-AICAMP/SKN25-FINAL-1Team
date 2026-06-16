@@ -31,6 +31,7 @@ async def list_hospitals(db: AsyncSession) -> list[dict]:
             "address": h.hospital_address,
             "phone": h.hospital_number,
             "doctorCount": count,
+            "is_active": h.is_active,
         })
     return out
 
@@ -68,6 +69,7 @@ async def get_hospital_admin(db: AsyncSession, hid: int) -> dict | None:
         "address": h.hospital_address,
         "phone": h.hospital_number,
         "businessNumber": h.business_number,
+        "is_active": h.is_active,
         "tagline": prof.tagline if prof else None,
         "intro": prof.intro if prof else None,
         "bannerImage": prof.banner_image_url if prof else None,
@@ -160,6 +162,16 @@ async def update_doctor_profile(db: AsyncSession, did: int, data: dict) -> bool:
     if "profileImagePosition" in data:
         dp.profile_image_position = data["profileImagePosition"]
 
+    await db.commit()
+    return True
+
+
+async def set_hospital_active(db: AsyncSession, hid: int, is_active: bool) -> bool:
+    """병원 폐업/영업재개. 레코드·기록은 보존하고 노출/예약 가능 여부만 토글."""
+    h = await db.get(Hospital, hid)
+    if not h:
+        return False
+    h.is_active = is_active
     await db.commit()
     return True
 

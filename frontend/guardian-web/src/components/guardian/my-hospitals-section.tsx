@@ -111,14 +111,18 @@ const MyHospitalsSection = () => {
             >
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-bold text-slate-900">{h.name}</span>
-                {h.is_primary ? (
+                {h.is_active === false ? (
+                  <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-500">
+                    {t("myHospitals.closedBadge")}
+                  </span>
+                ) : h.is_primary ? (
                   <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600">
                     {t("myHospitals.primaryBadge")}
                   </span>
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                {!h.is_primary ? (
+                {!h.is_primary && h.is_active !== false ? (
                   <button
                     type="button"
                     onClick={() => handlePrimary(h.hospitalid)}

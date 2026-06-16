@@ -7,6 +7,7 @@ export interface MyHospital {
   hospitalid: number;
   name: string;
   is_primary: boolean;
+  is_active?: boolean; // 폐업 병원이면 false
 }
 
 export const getMyHospitals = async (): Promise<MyHospital[]> => {

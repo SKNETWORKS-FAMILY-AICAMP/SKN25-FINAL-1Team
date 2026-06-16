@@ -89,6 +89,8 @@ export const useHospitalStore = create<HospitalState>((set, get) => ({
 
   setPrimary: async (hospitalid) => {
     await setPrimaryHospital(hospitalid);
+    // 기본 병원으로 지정하면 앱 전역 '현재 병원'도 그 병원으로 전환(홈/예약/챗봇/병원탭 연동).
+    get().setCurrent(hospitalid);
     await get().load();
   },
 

@@ -55,7 +55,12 @@ export default function HospitalsList() {
             <tbody className="divide-y divide-slate-100">
               {rows.map((h) => (
                 <tr key={h.hospitalid} className="transition hover:bg-slate-50">
-                  <td className="px-5 py-4 font-extrabold text-slate-900">{h.name}</td>
+                  <td className="px-5 py-4 font-extrabold text-slate-900">
+                    {h.name}
+                    {!h.is_active ? (
+                      <span className="ml-2 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-500">폐업</span>
+                    ) : null}
+                  </td>
                   <td className="px-5 py-4 font-semibold text-slate-500">{h.address || "-"}</td>
                   <td className="px-5 py-4 font-semibold text-slate-500">{h.doctorCount}명</td>
                   <td className="px-5 py-4 text-right">

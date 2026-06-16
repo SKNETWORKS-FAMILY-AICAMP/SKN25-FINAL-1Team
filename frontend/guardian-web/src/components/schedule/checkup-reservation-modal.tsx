@@ -41,7 +41,12 @@ const CheckupReservationModal = ({
   const categoryLabel = categoryCode === 2 ? "일반진료" : categoryCode === 1 ? "정기검진" : null;
 
   // 병원 → 원장 선택. 병원 목록·현재 병원은 전역 store, 원장은 병원 상세에서.
-  const hospitals = useHospitalStore((state) => state.myHospitals);
+  const allHospitals = useHospitalStore((state) => state.myHospitals);
+  // 폐업 병원은 신규 예약 대상에서 제외.
+  const hospitals = React.useMemo(
+    () => allHospitals.filter((h) => h.is_active !== false),
+    [allHospitals],
+  );
   const currentHospitalId = useHospitalStore((state) => state.currentHospitalId);
   const setCurrentHospital = useHospitalStore((state) => state.setCurrent);
   const [selectedHospitalId, setSelectedHospitalId] =
@@ -49,7 +54,7 @@ const CheckupReservationModal = ({
   const [doctors, setDoctors] = React.useState<HospitalDoctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = React.useState<number | null>(null);
 
-  // 병원 목록 로드 후 선택값 보정(없거나 목록에 없으면 첫 병원)
+  // 병원 목록 로드 후 선택값 보정(없거나 목록에 없거나 폐업이면 첫 영업 병원)
   React.useEffect(() => {
     if (hospitals.length === 0) return;
     setSelectedHospitalId((prev) =>
