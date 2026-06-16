@@ -44,11 +44,16 @@ async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(g
     access_token  = create_access_token({"sub": str(hospital.hospitalid), "type": "hospital"})
     refresh_token = create_refresh_token({"sub": str(hospital.hospitalid), "type": "hospital"})
 
+    doctors = await get_doctors_by_hospital(db, hospital.hospitalid)
+    main_doctor = doctors[0] if doctors else None
+
     return DoctorTokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         is_initial_password=hospital.is_initial_password,
         hospital_name=hospital.hospital_name,
+        doctor_name=main_doctor.doctor_name if main_doctor else None,
+        license_number=main_doctor.license_number if main_doctor else None,
         hospital_number=hospital.hospital_number,
         business_number=hospital.business_number,
     )
