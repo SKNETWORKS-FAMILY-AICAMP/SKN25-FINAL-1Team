@@ -62,8 +62,6 @@ export const updatePet = async (
   petId: number,
   payload: Partial<CreatePetPayload>,
 ): Promise<UpdatePetResponse> => {
-  // TODO: Replace base64 profile_image payloads with the production upload flow:
-  // FastAPI presigned URL issuance -> direct S3 upload -> CloudFront URL persistence.
   const response = await apiClient.put<UpdatePetResponse>(
     `/pets/${petId}`,
     payload,

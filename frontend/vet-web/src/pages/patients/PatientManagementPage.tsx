@@ -53,7 +53,6 @@ export default function PatientManagementPage({
     <AppLayout
       session={session}
       activeMenu="patients"
-      notificationCount={1}
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
