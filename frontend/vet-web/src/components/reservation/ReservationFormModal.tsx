@@ -26,6 +26,7 @@ import {
 } from "../../utils/reservationUtils";
 import {
   type DayHours,
+  useClosedDates,
   useOperatingHoursForDate,
 } from "../../contexts/OperatingHoursContext";
 import {
@@ -85,6 +86,7 @@ export function ReservationFormModal({
   );
   const [reservationDate, setReservationDate] = useState(selectedDate);
   const dayHours = useOperatingHoursForDate(reservationDate);
+  const closedDates = useClosedDates();
   const [form, setForm] = useState<ReservationFormState>({
     date: formatDateWithWeekday(selectedDate),
     dateKey: getDateKey(selectedDate),
@@ -93,6 +95,9 @@ export function ReservationFormModal({
     memo: reservation?.memo ?? "",
     categoryCode: null,
   });
+
+  const isClosedDay = dayHours === null;
+  const isSpecificClosed = isClosedDay && closedDates.has(form.dateKey);
 
   const timeOptions = useMemo(
     () => (dayHours ? generateTimeOptions(dayHours) : []),
@@ -379,6 +384,13 @@ export function ReservationFormModal({
                 }
               />
             </div>
+            {isClosedDay && (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+                {isSpecificClosed
+                  ? "특정일 휴진으로 지정된 날짜입니다. 예약을 추가할 수 없습니다."
+                  : "병원 운영 요일이 아닙니다. 예약을 추가할 수 없습니다."}
+              </p>
+            )}
             <label className="mt-3 block text-xs font-extrabold text-slate-800">
               <span className="mb-1 block">메모</span>
               <span className="relative">
