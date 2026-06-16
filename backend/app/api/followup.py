@@ -109,7 +109,11 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
                 "weight": float(pet.weight_kg) if pet.weight_kg else None,
             }
 
-            patient_context_data = await build_patient_context(db, pet.petid)
+            # 병원 스코프: 이 예약 원장의 병원 진료기록만 AI 컨텍스트에 포함(교차병원 차단).
+            from app.models.doctor import Doctor as _Doctor
+            _doctor = await db.get(_Doctor, sched.doctorid) if sched else None
+            _hospitalid = _doctor.hospitalid if _doctor else None
+            patient_context_data = await build_patient_context(db, pet.petid, _hospitalid)
 
             payload = {
                 "pet": pet_payload,

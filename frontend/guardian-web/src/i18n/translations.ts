@@ -52,6 +52,12 @@ const ko: TranslationTree = {
     add: "추가",
     added: "등록됨",
   },
+  onboarding: {
+    title: "다니는 병원을 등록해 주세요",
+    subtitle: "병원을 등록하면 예약과 진료기록을 한곳에서 관리할 수 있어요.",
+    start: "시작하기",
+    startHint: "병원을 한 곳 이상 등록하면 시작할 수 있어요.",
+  },
   nav: {
     home: "홈",
     hospitals: "병원",
@@ -531,6 +537,12 @@ const en: TranslationTree = {
     noResults: "No results.",
     add: "Add",
     added: "Added",
+  },
+  onboarding: {
+    title: "Register your clinic",
+    subtitle: "Once you add a clinic, you can manage bookings and records in one place.",
+    start: "Get started",
+    startHint: "Add at least one clinic to get started.",
   },
   nav: {
     home: "Home",
@@ -1012,6 +1024,12 @@ const ja: TranslationTree = {
     add: "追加",
     added: "登録済み",
   },
+  onboarding: {
+    title: "通っている病院を登録してください",
+    subtitle: "病院を登録すると、予約と診療記録を一か所で管理できます。",
+    start: "はじめる",
+    startHint: "病院を1つ以上登録すると開始できます。",
+  },
   nav: {
     home: "ホーム",
     hospitals: "病院",
@@ -1489,6 +1507,12 @@ const zh: TranslationTree = {
     noResults: "无搜索结果。",
     add: "添加",
     added: "已登记",
+  },
+  onboarding: {
+    title: "请登记您就诊的医院",
+    subtitle: "登记医院后，可在一处管理预约和诊疗记录。",
+    start: "开始使用",
+    startHint: "登记至少一家医院后即可开始。",
   },
   nav: {
     home: "首页",

@@ -85,6 +85,19 @@ const ScheduleCard = ({
             localeForLang(lang),
           )}
         </p>
+
+        {schedule.hospital_name || schedule.doctor_name ? (
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            {[
+              schedule.hospital_name,
+              schedule.doctor_name
+                ? t("schedule.inCharge", { name: schedule.doctor_name })
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
       </div>
 
       {canManage ? (

@@ -7,7 +7,19 @@ from app.core.security import verify_password, create_access_token
 from app.core.dependencies import get_current_admin
 from app.crud.admin import get_admin_by_loginid
 from app.crud import signup_request as sr_crud
+from app.crud import admin_hospital as ah_crud
 from app.schemas.admin import AdminLoginRequest, RejectRequest
+from app.schemas.admin_hospital import (
+    HospitalProfileUpdate,
+    DoctorCreate,
+    DoctorProfileUpdate,
+    DoctorActiveUpdate,
+)
+from app.api.settings import (
+    WeeklyScheduleResponse,
+    _get_hospital_weekly_schedule,
+    _update_hospital_weekly_schedule,
+)
 from app.models.validation_result import ValidationResult
 from app.models.agent_pipeline_result import AgentPipelineResult
 
@@ -76,6 +88,98 @@ async def reject_request(
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="신청을 찾을 수 없습니다.")
     return {"code": 200, "result": sr_crud.to_out(r)}
+
+
+# ── 병원/원장 프로필 관리 ──────────────────────────────────
+@router.get("/hospitals")
+async def admin_list_hospitals(
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    return {"code": 200, "result": await ah_crud.list_hospitals(db)}
+
+
+@router.get("/hospitals/{hid}")
+async def admin_get_hospital(
+    hid: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    detail = await ah_crud.get_hospital_admin(db, hid)
+    if not detail:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="병원을 찾을 수 없습니다.")
+    return {"code": 200, "result": detail}
+
+
+@router.put("/hospitals/{hid}/profile")
+async def admin_update_hospital_profile(
+    hid: int,
+    body: HospitalProfileUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    ok = await ah_crud.update_hospital_profile(db, hid, body.model_dump(exclude_unset=True))
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="병원을 찾을 수 없습니다.")
+    return {"code": 200, "message": "저장되었습니다."}
+
+
+@router.get("/hospitals/{hid}/hours", response_model=WeeklyScheduleResponse)
+async def admin_get_hospital_hours(
+    hid: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    return await _get_hospital_weekly_schedule(db, hid)
+
+
+@router.put("/hospitals/{hid}/hours", response_model=WeeklyScheduleResponse)
+async def admin_update_hospital_hours(
+    hid: int,
+    body: WeeklyScheduleResponse,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    return await _update_hospital_weekly_schedule(db, hid, body.schedule)
+
+
+@router.post("/hospitals/{hid}/doctors")
+async def admin_add_doctor(
+    hid: int,
+    body: DoctorCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    doctorid = await ah_crud.add_doctor(db, hid, body.model_dump())
+    if doctorid is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="병원을 찾을 수 없습니다.")
+    return {"code": 200, "result": {"doctorid": doctorid}, "message": "원장이 추가되었습니다."}
+
+
+@router.put("/doctors/{did}/profile")
+async def admin_update_doctor_profile(
+    did: int,
+    body: DoctorProfileUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    ok = await ah_crud.update_doctor_profile(db, did, body.model_dump(exclude_unset=True))
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="원장을 찾을 수 없습니다.")
+    return {"code": 200, "message": "저장되었습니다."}
+
+
+@router.put("/doctors/{did}/active")
+async def admin_set_doctor_active(
+    did: int,
+    body: DoctorActiveUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    ok = await ah_crud.set_doctor_active(db, did, body.is_active)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="원장을 찾을 수 없습니다.")
+    return {"code": 200, "message": "변경되었습니다."}
 
 
 # ── 모니터링: Validation (validation_resultDB) ─────────────

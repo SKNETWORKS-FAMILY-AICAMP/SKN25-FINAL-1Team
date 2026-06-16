@@ -8,9 +8,11 @@ import ChangePasswordPage from "../pages/guardian/change-password-page";
 import HomePage from "../pages/guardian/home-page";
 import HospitalsPage from "../pages/guardian/hospitals-page";
 import MypagePage from "../pages/guardian/mypage-page";
+import OnboardingPage from "../pages/guardian/onboarding-page";
 import ScheduleListPage from "../pages/guardian/schedule-list-page";
 import PetRegisterPage from "../pages/pets/pet-register-page";
 import GuardianShell from "../layouts/guardian-shell";
+import OnboardingGate from "./onboarding-gate";
 import ProtectedRoute from "./protected-route";
 
 const AppRouter = () => {
@@ -23,7 +25,9 @@ const AppRouter = () => {
         <Route path="/find-id" element={<FindIdPage />} />
         <Route path="/find-password" element={<FindPasswordPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route element={<GuardianShell />}>
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route element={<OnboardingGate />}>
+            <Route element={<GuardianShell />}>
             <Route path="/home" element={<HomePage />} />
             <Route path="/hospitals" element={<HospitalsPage />} />
             <Route path="/reservations" element={<ScheduleListPage />} />
@@ -32,6 +36,7 @@ const AppRouter = () => {
             <Route path="/mypage/password" element={<ChangePasswordPage />} />
             <Route path="/pets/register" element={<PetRegisterPage />} />
             <Route path="/pets/:petId" element={<PetRegisterPage />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

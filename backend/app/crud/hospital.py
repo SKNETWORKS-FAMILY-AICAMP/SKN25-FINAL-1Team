@@ -66,7 +66,9 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
     prof = await db.get(HospitalProfile, hospitalid)
 
     docs = await db.execute(
-        select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+        select(Doctor)
+        .where(Doctor.hospitalid == hospitalid, Doctor.is_active == True)  # noqa: E712 — 비활성 원장은 보호자 소개탭/예약에서 숨김
+        .order_by(Doctor.doctorid)
     )
     doctors_out = []
     for d in docs.scalars().all():
@@ -79,6 +81,7 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
             "bio": dp.bio if dp else None,
             "specialtyAreas": (dp.specialty_areas if dp and dp.specialty_areas else []),
             "profileImage": dp.profile_image_url if dp else None,
+            "profileImagePosition": dp.profile_image_position if dp else None,
         })
 
     return {
@@ -90,6 +93,7 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
         "phone": hosp.hospital_number,
         "hours": await format_hospital_hours(db, hospitalid),
         "bannerImage": prof.banner_image_url if prof else None,
+        "bannerImagePosition": prof.banner_image_position if prof else None,
         "features": (prof.features if prof and prof.features else []),
         "doctors": doctors_out,
     }

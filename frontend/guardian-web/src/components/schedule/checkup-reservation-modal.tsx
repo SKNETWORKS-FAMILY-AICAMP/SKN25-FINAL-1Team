@@ -1,15 +1,12 @@
 import React, { useRef } from "react";
 
 import type { Pet } from "../../api/pets-api";
-import { MOCK_HOSPITALS, type HospitalDoctor } from "../../api/hospital-mock";
+import { type HospitalDoctor } from "../../api/hospital-mock";
 import { getHospitalDetail } from "../../api/hospital-api";
-import { useMyHospitals } from "../../hooks/use-my-hospitals";
+import { useHospitalStore } from "../../stores/hospital-store";
 import ActionButton from "../common/action-button";
 import { useCheckupReservation } from "../../hooks/use-checkup-reservation";
 import { useTranslation } from "../../i18n/language-context";
-
-// 보호자가 병원탭에서 마지막에 고른 병원과 동기화 (hospitals-page 와 동일 키).
-const SELECTED_HOSPITAL_KEY = "medipaw.guardian.hospitalid";
 
 interface CheckupReservationModalProps {
   pet: Pet;
@@ -43,12 +40,12 @@ const CheckupReservationModal = ({
   const [categoryCode, setCategoryCode] = React.useState<1 | 2 | null>(null);
   const categoryLabel = categoryCode === 2 ? "일반진료" : categoryCode === 1 ? "정기검진" : null;
 
-  // 병원 → 원장 선택. 내 병원 목록은 API(백엔드 미가동 시 mock 폴백), 원장은 병원 상세에서.
-  const { hospitals } = useMyHospitals();
-  const [selectedHospitalId, setSelectedHospitalId] = React.useState<number | null>(() => {
-    const stored = Number(window.localStorage.getItem(SELECTED_HOSPITAL_KEY));
-    return stored > 0 ? stored : null;
-  });
+  // 병원 → 원장 선택. 병원 목록·현재 병원은 전역 store, 원장은 병원 상세에서.
+  const hospitals = useHospitalStore((state) => state.myHospitals);
+  const currentHospitalId = useHospitalStore((state) => state.currentHospitalId);
+  const setCurrentHospital = useHospitalStore((state) => state.setCurrent);
+  const [selectedHospitalId, setSelectedHospitalId] =
+    React.useState<number | null>(currentHospitalId);
   const [doctors, setDoctors] = React.useState<HospitalDoctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = React.useState<number | null>(null);
 
@@ -74,11 +71,7 @@ const CheckupReservationModal = ({
         if (mounted) setDoctors(d.doctors ?? []);
       })
       .catch(() => {
-        if (mounted) {
-          setDoctors(
-            MOCK_HOSPITALS.find((h) => h.hospitalid === selectedHospitalId)?.doctors ?? [],
-          );
-        }
+        if (mounted) setDoctors([]);
       });
     return () => {
       mounted = false;
@@ -112,7 +105,7 @@ const CheckupReservationModal = ({
 
   const handleSelectHospital = (id: number) => {
     setSelectedHospitalId(id);
-    window.localStorage.setItem(SELECTED_HOSPITAL_KEY, String(id));
+    setCurrentHospital(id); // 앱 전역 현재 병원도 함께 전환
     setSelectedDoctorId(null);
     setSelectedSlot(null);
   };

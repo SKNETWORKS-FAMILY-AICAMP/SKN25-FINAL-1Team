@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { ClipboardList, LogOut, ShieldCheck, Stethoscope } from "lucide-react";
+import { Building2, ClipboardList, LogOut, ShieldCheck, Stethoscope } from "lucide-react";
 
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 import AdminLogin from "./AdminLogin";
 import ApplicationsList from "./ApplicationsList";
 import ApplicationDetail from "./ApplicationDetail";
+import HospitalsList from "./HospitalsList";
+import HospitalManage from "./HospitalManage";
 import ValidationPanel from "./ValidationPanel";
 import JudgePanel from "./JudgePanel";
 import { clearAdminToken, isAdminAuthed } from "../../onboarding/api";
@@ -28,6 +30,9 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
           <NavLink to="/admin" end className={navClass}>
             <ClipboardList className="h-4 w-4" /> 입점 신청
           </NavLink>
+          <NavLink to="/admin/hospitals" className={navClass}>
+            <Building2 className="h-4 w-4" /> 병원 관리
+          </NavLink>
           <NavLink to="/admin/validation" className={navClass}>
             <ShieldCheck className="h-4 w-4" /> Validation
           </NavLink>
@@ -44,10 +49,12 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
         </button>
       </aside>
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-clip">
         <Routes>
           <Route index element={<ApplicationsList />} />
           <Route path="applications/:id" element={<ApplicationDetail />} />
+          <Route path="hospitals" element={<HospitalsList />} />
+          <Route path="hospitals/:id" element={<HospitalManage />} />
           <Route path="validation" element={<ValidationPanel />} />
           <Route path="judge" element={<JudgePanel />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />

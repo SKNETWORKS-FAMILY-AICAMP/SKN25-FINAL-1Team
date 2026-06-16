@@ -1,42 +1,65 @@
 import { useEffect, useState } from "react";
 
-import {
-  addMyHospital,
-  getMyHospitals,
-  removeMyHospital,
-  searchHospitals,
-  setPrimaryHospital,
-  type HospitalSearchItem,
-  type MyHospital,
-} from "../../api/hospital-api";
+import { searchHospitals, type HospitalSearchItem } from "../../api/hospital-api";
+import { useHospitalStore } from "../../stores/hospital-store";
 import ActionButton from "../common/action-button";
 import SectionCard from "../common/section-card";
 import { useTranslation } from "../../i18n/language-context";
 
 const MyHospitalsSection = () => {
   const { t } = useTranslation();
-  const [hospitals, setHospitals] = useState<MyHospital[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // 등록 병원·기본 병원은 전역 store 단일 소스 — 여기서 바꾸면 홈/예약/병원탭에 함께 반영.
+  const hospitals = useHospitalStore((state) => state.myHospitals);
+  const status = useHospitalStore((state) => state.status);
+  const load = useHospitalStore((state) => state.load);
+  const addHospital = useHospitalStore((state) => state.add);
+  const removeHospital = useHospitalStore((state) => state.remove);
+  const setPrimary = useHospitalStore((state) => state.setPrimary);
+  const isLoading = status === "idle" || status === "loading";
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HospitalSearchItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const reload = async () => {
-    try {
-      setHospitals(await getMyHospitals());
-    } catch {
-      // 백엔드 미가동 시 조용히 비움(데모)
-      setHospitals([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void reload();
-  }, []);
+    if (status === "idle") {
+      void load();
+    }
+  }, [status, load]);
+
+  // 입력 즉시 검색(디바운스). 버튼을 누르지 않아도 부분일치로 바로 결과가 뜬다.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      setSearched(false);
+      setIsSearching(false);
+      return;
+    }
+    let ignore = false;
+    setIsSearching(true);
+    const handle = window.setTimeout(() => {
+      searchHospitals(q)
+        .then((list) => {
+          if (!ignore) setResults(list);
+        })
+        .catch(() => {
+          if (!ignore) setResults([]);
+        })
+        .finally(() => {
+          if (!ignore) {
+            setSearched(true);
+            setIsSearching(false);
+          }
+        });
+    }, 250);
+    return () => {
+      ignore = true;
+      window.clearTimeout(handle);
+    };
+  }, [query]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -54,18 +77,15 @@ const MyHospitalsSection = () => {
   const registeredIds = new Set(hospitals.map((h) => h.hospitalid));
 
   const handleAdd = async (hospitalid: number) => {
-    await addMyHospital(hospitalid);
-    await reload();
+    await addHospital(hospitalid);
   };
 
   const handlePrimary = async (hospitalid: number) => {
-    await setPrimaryHospital(hospitalid);
-    await reload();
+    await setPrimary(hospitalid);
   };
 
   const handleRemove = async (hospitalid: number) => {
-    await removeMyHospital(hospitalid);
-    await reload();
+    await removeHospital(hospitalid);
   };
 
   return (
@@ -148,32 +168,47 @@ const MyHospitalsSection = () => {
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
-              {results.map((r) => (
-                <li
-                  key={r.hospitalid}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-900">{r.name}</p>
-                    {r.address ? (
-                      <p className="truncate text-xs font-semibold text-slate-400">{r.address}</p>
-                    ) : null}
-                  </div>
-                  {registeredIds.has(r.hospitalid) ? (
-                    <span className="shrink-0 text-xs font-bold text-slate-400">
-                      {t("myHospitals.added")}
-                    </span>
-                  ) : (
+              {results.map((r) => {
+                const isRegistered = registeredIds.has(r.hospitalid);
+                if (isRegistered) {
+                  return (
+                    <li
+                      key={r.hospitalid}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">{r.name}</p>
+                        {r.address ? (
+                          <p className="truncate text-xs font-semibold text-slate-400">{r.address}</p>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-xs font-bold text-slate-400">
+                        {t("myHospitals.added")}
+                      </span>
+                    </li>
+                  );
+                }
+                return (
+                  <li key={r.hospitalid}>
+                    {/* 카드 전체가 클릭 영역 — 안의 "추가"는 시각 칩(span). */}
                     <button
                       type="button"
                       onClick={() => handleAdd(r.hospitalid)}
-                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-blue-700"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50/40"
                     >
-                      {t("myHospitals.add")}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">{r.name}</p>
+                        {r.address ? (
+                          <p className="truncate text-xs font-semibold text-slate-400">{r.address}</p>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">
+                        {t("myHospitals.add")}
+                      </span>
                     </button>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )
         ) : null}
