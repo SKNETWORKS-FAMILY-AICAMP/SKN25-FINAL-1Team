@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { type DaySchedule, fetchWeeklySchedule, updateWeeklySchedule } from "../../api/settingsApi";
+import {
+  type DaySchedule,
+  fetchWeeklySchedule,
+  getSettingsApiErrorMessage,
+  updateWeeklySchedule,
+} from "../../api/settingsApi";
 import type { AuthSession } from "../../api/authApi";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import { DAY_LABELS, defaultWeek, Toggle, InlineTimeSelect } from "./settingsShared";
@@ -46,8 +51,8 @@ export function HospitalHoursModal({ session, onClose }: Props) {
       const saved = await updateWeeklySchedule(session.accessToken, schedule);
       setSchedule(saved);
       onClose();
-    } catch {
-      setError("저장에 실패했습니다.");
+    } catch (err: unknown) {
+      setError(getSettingsApiErrorMessage(err, "저장에 실패했습니다."));
     } finally {
       setSaving(false);
     }
@@ -146,26 +151,26 @@ export function HospitalHoursModal({ session, onClose }: Props) {
                             />
                           </div>
                         ) : (
-                          <span className="text-xs font-semibold text-slate-300">휴진</span>
+                          <div className="flex h-8 items-center">
+                            <span className="text-xs font-semibold text-slate-300">휴진</span>
+                          </div>
                         )}
                       </td>
                       <td className="py-3">
                         {day.is_open ? (
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <InlineTimeSelect
-                                value={day.lunch_start ?? "12:00"}
-                                onChange={(v) => updateDay(day.day_of_week, { lunch_start: v })}
-                                disabled={noLunch}
-                              />
-                              <span className={`text-xs ${noLunch ? "text-slate-200" : "text-slate-400"}`}>~</span>
-                              <InlineTimeSelect
-                                value={day.lunch_end ?? "13:00"}
-                                onChange={(v) => updateDay(day.day_of_week, { lunch_end: v })}
-                                disabled={noLunch}
-                              />
-                            </div>
-                            <label className="flex cursor-pointer items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <InlineTimeSelect
+                              value={day.lunch_start ?? "12:00"}
+                              onChange={(v) => updateDay(day.day_of_week, { lunch_start: v })}
+                              disabled={noLunch}
+                            />
+                            <span className={`text-xs ${noLunch ? "text-slate-200" : "text-slate-400"}`}>~</span>
+                            <InlineTimeSelect
+                              value={day.lunch_end ?? "13:00"}
+                              onChange={(v) => updateDay(day.day_of_week, { lunch_end: v })}
+                              disabled={noLunch}
+                            />
+                            <label className="flex cursor-pointer items-center gap-1 ml-1">
                               <input
                                 type="checkbox"
                                 checked={noLunch}
@@ -182,7 +187,9 @@ export function HospitalHoursModal({ session, onClose }: Props) {
                             </label>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-300">-</span>
+                          <div className="flex h-8 items-center">
+                            <span className="text-xs text-slate-300">-</span>
+                          </div>
                         )}
                       </td>
                       <td className="py-3 text-center">

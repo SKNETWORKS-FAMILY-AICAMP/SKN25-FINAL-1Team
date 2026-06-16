@@ -32,10 +32,10 @@ export function PatientListView({
 }: PatientListViewProps) {
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="mb-4 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mb-6 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold text-slate-900">환자 관리</h1>
-          <p className="mt-2 text-sm font-bold text-slate-500">
+          <p className="mt-1 text-sm font-bold text-slate-500">
             병원 전체 환자 리스트를 확인하고 관리할 수 있습니다.
           </p>
         </div>
@@ -51,7 +51,7 @@ export function PatientListView({
         </label>
       </div>
 
-      <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm h-[calc(100vh-184px)]">
+      <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm h-[calc(100vh-184px)]">
         <div className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 xl:px-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-extrabold text-slate-900">전체 환자</h2>

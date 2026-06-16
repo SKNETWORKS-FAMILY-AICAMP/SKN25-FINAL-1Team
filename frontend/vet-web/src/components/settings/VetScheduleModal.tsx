@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import {
   type DaySchedule,
   fetchVetWeeklySchedule,
+  getSettingsApiErrorMessage,
   updateVetWeeklySchedule,
 } from "../../api/settingsApi";
 import { fetchHospitalDoctors, type DoctorInfo } from "../../api/emrApi";
@@ -91,8 +92,8 @@ export function VetScheduleModal({ session, onClose, onOpenDetail }: Props) {
         })
       );
       onClose();
-    } catch {
-      setError("저장에 실패했습니다.");
+    } catch (err: unknown) {
+      setError(getSettingsApiErrorMessage(err, "저장에 실패했습니다."));
     } finally {
       setSaving(false);
     }
