@@ -1,6 +1,6 @@
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,7 @@ from app.models.hospital import Hospital
 from app.models.hospital_profile import HospitalProfile
 from app.models.doctor import Doctor
 from app.models.doctor_profile import DoctorProfile
+from app.models.vet_schedule import HospitalWeeklySchedule, VetWeeklySchedule
 from app.schemas.onboarding import SignupRequestIn
 from app.core.security import hash_password
 
@@ -84,6 +85,42 @@ async def reject_signup_request(db: AsyncSession, req_id: int, reason: str) -> C
     return r
 
 
+_HOURS_KEY_TO_DAYS = {
+    "weekday":  [0, 1, 2, 3, 4],
+    "saturday": [5],
+    "sunday":   [6],
+}
+
+
+def _parse_time(t: str) -> time | None:
+    if not t:
+        return None
+    h, m = map(int, t.split(":"))
+    return time(h, m)
+
+
+def _build_schedule_rows(hours_dict: dict) -> list[dict]:
+    lunch = hours_dict.get("lunch") or {}
+    lunch_start = _parse_time(lunch.get("start"))
+    lunch_end   = _parse_time(lunch.get("end"))
+    rows = []
+    for key, days in _HOURS_KEY_TO_DAYS.items():
+        day_hours = hours_dict.get(key)
+        is_open   = day_hours is not None
+        start = _parse_time(day_hours["open"])  if is_open else None
+        end   = _parse_time(day_hours["close"]) if is_open else None
+        for dow in days:
+            rows.append({
+                "day_of_week": dow,
+                "is_open":     is_open,
+                "start_time":  start,
+                "end_time":    end,
+                "lunch_start": lunch_start if is_open else None,
+                "lunch_end":   lunch_end   if is_open else None,
+            })
+    return rows
+
+
 def _gen_temp_password(length: int = 10) -> str:
     chars = string.ascii_letters + string.digits
     return "".join(secrets.choice(chars) for _ in range(length))
@@ -119,6 +156,11 @@ async def approve_signup_request(db: AsyncSession, req_id: int) -> dict | None:
         features=r.features,
     ))
 
+    # 2-1) 병원 주간 스케줄
+    if r.hours:
+        for row in _build_schedule_rows(r.hours):
+            db.add(HospitalWeeklySchedule(hospitalid=hospital.hospitalid, **row))
+
     # 3) 원장 + 공개 프로필
     for d in (r.doctors or []):
         doctor = Doctor(
@@ -137,12 +179,11 @@ async def approve_signup_request(db: AsyncSession, req_id: int) -> dict | None:
             specialty_areas=d.get("specialtyAreas") or [],
             profile_image_url=d.get("photoUrl"),
         ))
-        # TODO(schedule-db-split):
-        # 입점 신청의 hours 원본은 clinic_signup_requestDB.hours / doctors[].hours에 보존한다.
-        # 수의사웹 스케줄 DB가 병원 기본 근무시간 / 원장별 근무시간 / 특정일 예외로
-        # 분리된 뒤, app/services/schedule_provisioning.py에서 새 구조에 맞게 반영한다.
-        # 현재 PR에서는 다른 팀원의 스케줄 DB 개편과 충돌하지 않도록 vet_scheduleDB write를 막아둔다.
-        # provision_doctor_weekly_schedule(db, doctor.doctorid, d.get("hours") or r.hours)
+        # 3-1) 수의사 주간 스케줄 (의사 개별 hours 우선, 없으면 병원 hours 폴백)
+        doc_hours = d.get("hours") or r.hours
+        if doc_hours:
+            for row in _build_schedule_rows(doc_hours):
+                db.add(VetWeeklySchedule(doctorid=doctor.doctorid, **row))
 
     # 4) 신청 상태
     r.status = "승인발행"
