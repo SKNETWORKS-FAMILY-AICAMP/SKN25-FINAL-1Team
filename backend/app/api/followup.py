@@ -29,7 +29,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
     from app.models.triage_result import TriageResult
     from app.models.schedule import Schedule
     from app.models.followup import Followup
-    from ai.tasks import RUNNERS
+    from ai.agents.followup import run_followup
     from app.crud.patient import build_patient_context
 
     async with AsyncSessionLocal() as db:
@@ -124,7 +124,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
             import asyncio
             try:
                 result = await asyncio.wait_for(
-                    RUNNERS["followup"](payload, lambda _: None, emrid, None),
+                    run_followup(payload, lambda _: None, emrid, None),
                     timeout=10.0
                 )
             except asyncio.TimeoutError:

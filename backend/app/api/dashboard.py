@@ -42,8 +42,12 @@ def _hhmm(dt: datetime | None) -> str:
 
 
 def _visit_type(urgency_num: int | None) -> str:
-    from ai.triage.engine import urgency_num_to_visit_type
-    return urgency_num_to_visit_type(urgency_num)
+    # VTL 4단계(urgency_level_num) → 화면 표시 3버킷
+    if urgency_num == 1:
+        return "emergency"      # 응급
+    if urgency_num in (2, 3):
+        return "semiEmergency"  # 준응급
+    return "normal"             # 일반
 
 
 def _reason(guardian, triage) -> str:

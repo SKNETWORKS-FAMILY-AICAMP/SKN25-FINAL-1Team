@@ -37,14 +37,19 @@ router = APIRouter(
 
 def _triage_key(triage, triage_result) -> str:
     """챗봇 문진 결과가 있으면 그 응급도를 우선 사용한다."""
-    # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
-    from ai.triage.engine import urgency_num_to_visit_type
+    # VTL 4단계(urgency_level_num) → 화면 표시 3버킷
+    def _bucket(n) -> str:
+        if n == 1:
+            return "emergency"      # 응급
+        if n in (2, 3):
+            return "semiEmergency"  # 준응급
+        return "normal"             # 일반
 
     if triage_result:
-        return urgency_num_to_visit_type(triage_result.urgency_level_num)
+        return _bucket(triage_result.urgency_level_num)
 
     if triage:
-        return urgency_num_to_visit_type(triage.code)
+        return _bucket(triage.code)
 
     return "normal"
 

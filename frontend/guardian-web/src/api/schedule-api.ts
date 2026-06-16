@@ -62,6 +62,46 @@ export const getAvailableScheduleSlots = async ({
   return response.data;
 };
 
+// 백엔드 recommend_slots 슬롯(원시형)
+export interface RecommendSlotRaw {
+  date: string;
+  start_time: string;
+  end_time?: string;
+  doctorid?: number;
+  doctor_name?: string;
+}
+
+export interface ScheduleRecommendationResponse {
+  code: number;
+  message: string;
+  result: {
+    estimated_duration_min: number;
+    is_initial_visit: boolean;
+    reasoning?: string;
+    recommendations: {
+      bucket: string;
+      recommended: RecommendSlotRaw[];
+      earliest: RecommendSlotRaw[];
+      by_doctor: Record<string, { doctor_name?: string; slots: RecommendSlotRaw[] }>;
+    };
+  };
+}
+
+// 문진 완료 후 예약 추천 (duration LLM + 3모드 슬롯)
+export const getScheduleRecommendation = async (body: {
+  pet: unknown;
+  triage: unknown;
+  hospitalid?: number;
+  doctorid?: number;
+}): Promise<ScheduleRecommendationResponse> => {
+  const response = await apiClient.post<ScheduleRecommendationResponse>(
+    "/schedules/recommend",
+    body,
+  );
+
+  return response.data;
+};
+
 export const reserveCheckupSchedule = async (
   payload: CheckupReservationPayload,
 ): Promise<CheckupReservationResponse> => {

@@ -18,7 +18,6 @@ from app.models.pet import Pet
 from app.models.doctor import Doctor
 from app.models.guardian import Guardian
 from app.models.triage_result import TriageResult
-from ai.tasks import _task_store, cleanup_task_after_ttl, safe_create_task, PipelineState
 from app.crud.alarm import create_alarm
 
 logger = logging.getLogger(__name__)
@@ -177,6 +176,24 @@ async def get_available(
             for slot in slots
         ]
     }
+
+
+# 응급도 기반 슬롯 추천 (LangGraph: duration 산정 LLM → 3모드 슬롯 결정론)
+@router.post("/recommend")
+async def recommend_schedule_api(
+    body: dict,
+    current_user = Depends(get_current_user),
+):
+    """문진 완료 후 예약 단계. duration + 추천/수의사별/가장가까운 3모드를 한 번에 반환."""
+    from ai.graph import run_schedule_pipeline
+
+    result = await run_schedule_pipeline(
+        pet=body.get("pet") or {},
+        triage=body.get("triage") or body.get("triage_result") or {},
+        hospitalid=body.get("hospitalid"),
+        doctorid=body.get("doctorid"),
+    )
+    return {"code": 200, "message": "", "result": result}
 
 
 # 예약 조회
@@ -535,34 +552,9 @@ async def confirm_schedule_api(
     except Exception as e:
         logger.warning(f"[Alarm] chatbot confirm alarm failed schedule_id={schedule.scheduleid}: {e}")
 
-    # Chart + Validation + Judge 파이프라인 백그라운드 실행
-    chart_task_id = str(uuid.uuid4())
-    validation_task_id = str(uuid.uuid4())
-    judge_task_id = str(uuid.uuid4())
-    for tid in (chart_task_id, validation_task_id, judge_task_id):
-        _task_store[tid] = {"status": "queued", "step": ""}
-
-    logger.info(
-        "[Confirm] pipeline_state=%s emrid=%s scheduleid=%s",
-        PipelineState.SCHEDULE_CONFIRMED, request.emrid, schedule.scheduleid,
-    )
-    safe_create_task(
-        _run_post_booking_agents(
-            emrid=request.emrid,
-            scheduleid=schedule.scheduleid,
-            duration_min=request.duration_min,
-            user_id=current_user.userid,
-            chart_task_id=chart_task_id,
-            validation_task_id=validation_task_id,
-            judge_task_id=judge_task_id,
-        ),
-        task_id=chart_task_id,          # 대표 task_id로 레지스트리 등록
-        name="post_booking_agents",
-    )
-    logger.info(
-        f"[Confirm] emrid={request.emrid} scheduleid={schedule.scheduleid} "
-        f"chart={chart_task_id[:8]} validation={validation_task_id[:8]} judge={judge_task_id[:8]}"
-    )
+    # Phase 3: Chart→Validation→Judge 백그라운드 파이프라인 (재작성 예정 — 현재 임시 비활성)
+    chart_task_id = validation_task_id = judge_task_id = None
+    logger.info(f"[Confirm] emrid={request.emrid} scheduleid={schedule.scheduleid} (post-booking 비활성)")
 
     # 확정 카드(챗봇)용 병원 정보 — confirm 응답에 병원명/주소/담당의 포함
     doctor_row = await db.execute(select(Doctor).where(Doctor.doctorid == schedule.doctorid))

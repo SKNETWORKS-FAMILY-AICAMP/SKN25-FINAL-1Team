@@ -524,6 +524,89 @@ async def find_earliest_slots(
     return collected
 
 
+# ── 응급도 기반 슬롯 추천 (3모드, 결정론) ─────────────────────────────────────
+# triage 응급도로 추천 분배를 정한다. LLM 없이 vet_scheduleDB 운영시간만으로 계산.
+#   응급(RED) → 가장 빠른 운영일 2개 + 다음 운영일 1개
+#   그 외     → 운영일 3일에 1개씩(오늘·내일·모레), 휴진/마감이면 다음 운영일로 밀기.
+def _recommend_bucket(urgency) -> str:
+    """triage urgency(라벨 'RED'/'ORANGE'.. 또는 숫자 1~5) → 'emergency' | 'standard'."""
+    if isinstance(urgency, (int, float)):
+        return "emergency" if int(urgency) <= 1 else "standard"
+    return "emergency" if str(urgency).strip().upper() == "RED" else "standard"
+
+
+# AvailableSlot → 응답용 dict
+def _slot_to_dict(d, slot: "AvailableSlot") -> dict:
+    return {
+        "date": d.isoformat(),
+        "start_time": slot.start_time,
+        "end_time": slot.end_time,
+        "doctorid": slot.doctorid,
+        "doctor_name": slot.doctor_name,
+    }
+
+
+# 운영일마다 정해진 개수(quota)씩 가장 빠른 슬롯 수집 (휴진은 건너뜀 = fill-forward)
+async def _collect_by_day_quota(
+    db: AsyncSession,
+    day_quotas: list[int],
+    duration_min: int,
+    hospitalid: int | None,
+    doctorid: int | None,
+    max_scan_days: int = 21,
+) -> list[dict]:
+    """day_quotas=[2,1] → '첫 운영일 2개, 다음 운영일 1개'.
+
+    휴진/마감으로 빈 날은 quota를 소비하지 않고 다음 운영일로 넘어간다(fill-forward).
+    """
+    today = datetime.now(KST).date()
+    collected: list[dict] = []
+    quota_idx = 0
+    for day_index in range(max_scan_days):
+        if quota_idx >= len(day_quotas):
+            break
+        d = today + timedelta(days=day_index)
+        slots, _ = await get_available_slots(db, d.isoformat(), duration_min, doctorid, hospitalid)
+        if not slots:
+            continue  # 휴진/마감 → 다음 운영일
+        for s in slots[: day_quotas[quota_idx]]:
+            collected.append(_slot_to_dict(d, s))
+        quota_idx += 1
+    return collected
+
+
+# 응급도 기반 3모드 슬롯 추천 (추천시간 / 가장 가까운 시간 / 수의사별)
+async def recommend_slots(
+    db: AsyncSession,
+    *,
+    urgency,
+    duration_min: int,
+    hospitalid: int | None = None,
+    doctorid: int | None = None,
+) -> dict:
+    """3모드를 한 번에 계산 — 프론트가 칩 전환 시 재요청 없이 쓰도록.
+
+    반환: {bucket, recommended[], earliest[], by_doctor{docid: {doctor_name, slots[]}}}
+    """
+    bucket = _recommend_bucket(urgency)
+    rec_quota = [2, 1] if bucket == "emergency" else [1, 1, 1]  # 응급=오늘2+내일1 / 그외=오늘1·내일1·모레1
+
+    recommended = await _collect_by_day_quota(db, rec_quota, duration_min, hospitalid, doctorid)
+    earliest = await _collect_by_day_quota(db, [3], duration_min, hospitalid, doctorid)  # 가장 빠른 운영일 앞 3개
+
+    by_doctor: dict[int, dict] = {}
+    # 수의사별: 병원 전체 조회일 때만 원장 각각에 추천 분배 적용
+    if hospitalid and not doctorid:
+        docs = (await db.execute(
+            select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+        )).scalars().all()
+        for doc in docs:
+            slots = await _collect_by_day_quota(db, rec_quota, duration_min, None, doc.doctorid)
+            by_doctor[doc.doctorid] = {"doctor_name": doc.doctor_name, "slots": slots}
+
+    return {"bucket": bucket, "recommended": recommended, "earliest": earliest, "by_doctor": by_doctor}
+
+
 # 챗봇 예약 확정
 async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
