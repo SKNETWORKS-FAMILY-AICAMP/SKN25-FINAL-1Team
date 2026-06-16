@@ -55,7 +55,7 @@ from app.models.chat_history import ChatHistory         # noqa: F401
 from app.models.alarm import DoctorAlarm                # noqa: F401
 from app.models.drug import Drug                        # noqa: F401
 from app.models.prescription import Prescription        # noqa: F401
-from app.models.vet_schedule import VetSchedule         # noqa: F401
+from app.models.vet_schedule import HospitalWeeklySchedule, HospitalClosedDate, VetWeeklySchedule  # noqa: F401
 from app.models.emr import EMR                          # noqa: F401
 from app.models.report import Report                    # noqa: F401
 from app.models.triage_result import TriageResult       # noqa: F401
