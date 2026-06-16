@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import {
   type DaySchedule,
   fetchVetWeeklySchedule,
+  fetchWeeklySchedule,
   updateVetWeeklySchedule,
 } from "../../api/settingsApi";
 import { fetchHospitalDoctors, type DoctorInfo } from "../../api/emrApi";
@@ -20,6 +21,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
   const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
   const [selectedVetId, setSelectedVetId] = useState<number | undefined>(initialVetId);
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultWeek);
+  const [hospSchedule, setHospSchedule] = useState<DaySchedule[]>([]);
   const [selectedDow, setSelectedDow] = useState(0);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -29,6 +31,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
   useEscapeToClose(onClose, !saving);
 
   useEffect(() => {
+    fetchWeeklySchedule(session.accessToken).then(setHospSchedule).catch(() => {});
     fetchHospitalDoctors(session.accessToken)
       .then((docs) => {
         setDoctors(docs);
@@ -44,10 +47,18 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
     if (!selectedVetId) return;
     setLoadingSchedule(true);
     fetchVetWeeklySchedule(session.accessToken, selectedVetId)
-      .then(setSchedule)
+      .then((doctorSchedule) => {
+        // 의사가 설정하지 않은 요일(is_open=false)은 병원 운영시간을 기본값으로 채움
+        const merged = doctorSchedule.map((day) => {
+          if (day.is_open) return day;
+          const hosp = hospSchedule.find((h) => h.day_of_week === day.day_of_week);
+          return hosp?.is_open ? { ...hosp, day_of_week: day.day_of_week } : day;
+        });
+        setSchedule(merged);
+      })
       .catch(() => {})
       .finally(() => setLoadingSchedule(false));
-  }, [session.accessToken, selectedVetId]);
+  }, [session.accessToken, selectedVetId, hospSchedule]);
 
   const currentDay = schedule.find((d) => d.day_of_week === selectedDow) ?? schedule[0];
 
@@ -64,8 +75,10 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
     try {
       await updateVetWeeklySchedule(session.accessToken, selectedVetId, schedule);
       onClose();
-    } catch {
-      setError("저장에 실패했습니다.");
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (err as any)?.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : "저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -163,6 +176,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
                     <InlineTimeSelect
                       value={currentDay?.lunch_start ?? "12:00"}
                       onChange={(v) => updateCurrentDay({ lunch_start: v })}
+                      disabled={!currentDay?.lunch_start}
                     />
                   </div>
                   <div>
@@ -170,6 +184,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
                     <InlineTimeSelect
                       value={currentDay?.lunch_end ?? "13:00"}
                       onChange={(v) => updateCurrentDay({ lunch_end: v })}
+                      disabled={!currentDay?.lunch_start}
                     />
                   </div>
                 </div>

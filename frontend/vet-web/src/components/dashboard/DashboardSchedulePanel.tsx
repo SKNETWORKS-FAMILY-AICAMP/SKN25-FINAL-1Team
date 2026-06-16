@@ -115,7 +115,9 @@ export function DashboardSchedulePanel({
           <ClinicRoomIcon />
           <span>진료실 1</span>
           <span className="text-xs font-bold text-slate-500">
-            수의사: {doctorName ?? "-"}
+            수의사: {isSplitMode
+              ? doctors.map((d) => d.doctor_name).join(", ")
+              : (doctorName ?? "-")}
           </span>
         </div>
 

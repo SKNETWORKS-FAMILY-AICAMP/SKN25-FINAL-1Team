@@ -23,6 +23,7 @@ interface DoctorLoginResponse {
   refresh_token: string;
   token_type: string;
   is_initial_password: boolean;
+  hospital_name?: string;
   license_number?: string;
   hospital_number?: string;
   business_number?: string;
@@ -112,9 +113,9 @@ export async function loginDoctor(loginid: string, password: string) {
       lastLoginAt: new Date().toISOString(),
       user: {
         id: loginid,
-        name: "수의사 관리자",
-        hospitalName: "MediPaw 동물병원",
-        role: "VETERINARIAN",
+        name: data.hospital_name ?? loginid,
+        hospitalName: data.hospital_name ?? loginid,
+        role: "HOSPITAL_ADMIN",
         isFirstLogin: data.is_initial_password,
         licenseNumber: data.license_number,
         hospitalPhone: data.hospital_number,

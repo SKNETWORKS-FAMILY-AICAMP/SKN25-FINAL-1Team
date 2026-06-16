@@ -42,15 +42,22 @@ export function Toggle({ checked, onChange }: { checked: boolean; onChange: () =
 export function InlineTimeSelect({
   value,
   onChange,
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-extrabold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+      disabled={disabled}
+      className={`h-8 rounded-lg border px-2 text-xs font-extrabold outline-none transition ${
+        disabled
+          ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+          : "border-slate-200 bg-white text-slate-800 focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+      }`}
     >
       {timeOptions.map((t) => (
         <option key={t} value={t}>{t}</option>

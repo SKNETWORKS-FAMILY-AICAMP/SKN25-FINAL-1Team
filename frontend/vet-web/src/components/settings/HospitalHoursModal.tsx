@@ -12,6 +12,7 @@ interface Props {
 
 export function HospitalHoursModal({ session, onClose }: Props) {
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultWeek);
+  const [bulk, setBulk] = useState({ start: "09:00", end: "18:00", lunchStart: "12:00", lunchEnd: "13:00" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -80,6 +81,37 @@ export function HospitalHoursModal({ session, onClose }: Props) {
 
         {/* 테이블 */}
         <div className="px-6 py-4">
+          {/* 일괄 적용 */}
+          {!loading && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
+              <span className="shrink-0 text-xs font-extrabold text-slate-500">일괄 적용</span>
+              <div className="flex flex-1 flex-wrap items-center gap-2">
+                <InlineTimeSelect value={bulk.start} onChange={(v) => setBulk((b) => ({ ...b, start: v }))} />
+                <span className="text-xs text-slate-400">~</span>
+                <InlineTimeSelect value={bulk.end} onChange={(v) => setBulk((b) => ({ ...b, end: v }))} />
+                <span className="text-xs text-slate-300">|</span>
+                <span className="text-xs font-semibold text-slate-400">점심</span>
+                <InlineTimeSelect value={bulk.lunchStart} onChange={(v) => setBulk((b) => ({ ...b, lunchStart: v }))} />
+                <span className="text-xs text-slate-400">~</span>
+                <InlineTimeSelect value={bulk.lunchEnd} onChange={(v) => setBulk((b) => ({ ...b, lunchEnd: v }))} />
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setSchedule((prev) =>
+                    prev.map((d) =>
+                      d.is_open
+                        ? { ...d, start_time: bulk.start, end_time: bulk.end, lunch_start: bulk.lunchStart, lunch_end: bulk.lunchEnd }
+                        : d
+                    )
+                  )
+                }
+                className="shrink-0 h-8 rounded-lg bg-blue-600 px-3 text-xs font-extrabold text-white hover:bg-blue-700"
+              >
+                적용
+              </button>
+            </div>
+          )}
           {loading ? (
             <p className="py-8 text-center text-sm text-slate-400">불러오는 중...</p>
           ) : (
@@ -93,50 +125,72 @@ export function HospitalHoursModal({ session, onClose }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {schedule.map((day) => (
-                  <tr key={day.day_of_week} className="border-b border-slate-50 last:border-0">
-                    <td className="py-3 text-sm font-extrabold text-slate-700">
-                      {DAY_LABELS[day.day_of_week]}
-                    </td>
-                    <td className="py-3">
-                      {day.is_open ? (
-                        <div className="flex items-center gap-1.5">
-                          <InlineTimeSelect
-                            value={day.start_time ?? "09:00"}
-                            onChange={(v) => updateDay(day.day_of_week, { start_time: v })}
-                          />
-                          <span className="text-xs text-slate-400">~</span>
-                          <InlineTimeSelect
-                            value={day.end_time ?? "18:00"}
-                            onChange={(v) => updateDay(day.day_of_week, { end_time: v })}
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-300">휴진</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      {day.is_open ? (
-                        <div className="flex items-center gap-1.5">
-                          <InlineTimeSelect
-                            value={day.lunch_start ?? "12:00"}
-                            onChange={(v) => updateDay(day.day_of_week, { lunch_start: v })}
-                          />
-                          <span className="text-xs text-slate-400">~</span>
-                          <InlineTimeSelect
-                            value={day.lunch_end ?? "13:00"}
-                            onChange={(v) => updateDay(day.day_of_week, { lunch_end: v })}
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-300">-</span>
-                      )}
-                    </td>
-                    <td className="py-3 text-center">
-                      <Toggle checked={day.is_open} onChange={() => toggleOpen(day.day_of_week)} />
-                    </td>
-                  </tr>
-                ))}
+                {schedule.map((day) => {
+                  const noLunch = day.is_open && !day.lunch_start;
+                  return (
+                    <tr key={day.day_of_week} className="border-b border-slate-50 last:border-0">
+                      <td className="py-3 text-sm font-extrabold text-slate-700">
+                        {DAY_LABELS[day.day_of_week]}
+                      </td>
+                      <td className="py-3">
+                        {day.is_open ? (
+                          <div className="flex items-center gap-1.5">
+                            <InlineTimeSelect
+                              value={day.start_time ?? "09:00"}
+                              onChange={(v) => updateDay(day.day_of_week, { start_time: v })}
+                            />
+                            <span className="text-xs text-slate-400">~</span>
+                            <InlineTimeSelect
+                              value={day.end_time ?? "18:00"}
+                              onChange={(v) => updateDay(day.day_of_week, { end_time: v })}
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-300">휴진</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {day.is_open ? (
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <InlineTimeSelect
+                                value={day.lunch_start ?? "12:00"}
+                                onChange={(v) => updateDay(day.day_of_week, { lunch_start: v })}
+                                disabled={noLunch}
+                              />
+                              <span className={`text-xs ${noLunch ? "text-slate-200" : "text-slate-400"}`}>~</span>
+                              <InlineTimeSelect
+                                value={day.lunch_end ?? "13:00"}
+                                onChange={(v) => updateDay(day.day_of_week, { lunch_end: v })}
+                                disabled={noLunch}
+                              />
+                            </div>
+                            <label className="flex cursor-pointer items-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                checked={noLunch}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    updateDay(day.day_of_week, { lunch_start: null, lunch_end: null });
+                                  } else {
+                                    updateDay(day.day_of_week, { lunch_start: "12:00", lunch_end: "13:00" });
+                                  }
+                                }}
+                                className="h-3.5 w-3.5 rounded border-slate-300 accent-blue-600"
+                              />
+                              <span className="text-xs font-semibold text-slate-400">점심 없음</span>
+                            </label>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 text-center">
+                        <Toggle checked={day.is_open} onChange={() => toggleOpen(day.day_of_week)} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
