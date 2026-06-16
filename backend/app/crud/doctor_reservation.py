@@ -302,10 +302,10 @@ def schedule_slot_release(schedule_id: int, grace_seconds: int = COMPLETION_GRAC
     그 안에 상태가 바뀌면 슬롯을 풀지 않는다. 서버 재시작 시 대기 중인 건은 유실되지만
     그 경우 슬롯이 그대로 점유되는 '안전한 실패'라 데이터 정합성 문제는 없다.
     """
-    from ai.tasks import safe_create_task
+    import asyncio
 
     completion_time = datetime.now(timezone.utc)  # 완료 누른 시각 ≈ 지금
-    safe_create_task(
+    asyncio.create_task(
         _release_slot_after_grace(schedule_id, grace_seconds, completion_time),
         name=f"slot_release:{schedule_id}",
     )

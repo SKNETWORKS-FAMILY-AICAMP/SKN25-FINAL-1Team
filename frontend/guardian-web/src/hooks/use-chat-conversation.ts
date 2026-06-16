@@ -29,7 +29,14 @@ export interface SlotOption {
 
 /** 챗봇 말풍선 대신 렌더링하는 구조화 카드 */
 export type ChatCard =
-  | { kind: "slots"; slots: SlotOption[] }
+  // slots: 기본 표시용 slots + (있으면) 3모드 미리계산본 — 칩 전환 시 재요청 없음
+  | {
+      kind: "slots";
+      slots: SlotOption[];
+      recommended?: SlotOption[]; // 추천시간(응급도 분배)
+      earliest?: SlotOption[]; // 가장 가까운 시간
+      byDoctor?: { doctorid: number; doctorName?: string; slots: SlotOption[] }[]; // 수의사별
+    }
   | {
       kind: "confirmation";
       petName: string;

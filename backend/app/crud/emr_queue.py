@@ -21,9 +21,12 @@ from app.utils.timezone import KST, to_kst
 
 
 def _urgency_to_triage_status(urgency_num: Optional[int]) -> str:
-    # 응급도→표시 버킷 매핑은 단일 기준(triage_engine)에서 관리한다.
-    from ai.triage.engine import urgency_num_to_visit_type
-    return urgency_num_to_visit_type(urgency_num)
+    # VTL 4단계(urgency_level_num) → 화면 표시 3버킷
+    if urgency_num == 1:
+        return "emergency"      # 응급
+    if urgency_num in (2, 3):
+        return "semiEmergency"  # 준응급
+    return "normal"             # 일반
 
 
 def _calc_age(birth_date) -> int:

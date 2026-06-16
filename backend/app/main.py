@@ -111,7 +111,6 @@ from app.api.signup_requests import router as signup_requests_router
 from app.api.admin import router as admin_router
 from app.core.config import settings
 from app.middleware.request_id import RequestIDMiddleware, get_request_id
-from ai.router import router as agent_router
 
 _log = logging.getLogger(__name__)
 
@@ -127,9 +126,6 @@ async def lifespan(app: FastAPI):
     """
     _log.info("[Startup] MediPaw API 서버 시작")
     yield
-    # Graceful shutdown: 실행 중인 background task 취소 (최대 10초 대기)
-    from ai.tasks import cancel_all_tasks
-    await cancel_all_tasks(timeout=10.0)
     _log.info("[Shutdown] MediPaw API 서버 종료")
 
 
@@ -238,4 +234,3 @@ app.include_router(settings_router)
 app.include_router(hospitals_router)
 app.include_router(signup_requests_router)
 app.include_router(admin_router)
-app.include_router(agent_router)

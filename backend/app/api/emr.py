@@ -16,7 +16,6 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
-from ai.observability import get_langfuse_handler
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -334,7 +333,6 @@ async def generate_auto_prescription(
             },
             {"role": "user", "content": prompt},
         ],
-        config={"run_name": "emr_medication", "callbacks": [get_langfuse_handler()]},
     )
 
     data = json.loads(response.content if isinstance(response.content, str) else "{}")

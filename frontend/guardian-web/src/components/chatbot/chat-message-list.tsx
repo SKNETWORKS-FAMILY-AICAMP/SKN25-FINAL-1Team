@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import type { ChatCard, ChatMessage, SlotOption } from "../../hooks/use-chat-conversation";
 import { useTranslation } from "../../i18n/language-context";
@@ -108,9 +108,9 @@ const Chip = ({
 
 /**
  * 예약 가능 시간 카드.
- * 원장이 2명 이상이면 추천(가장 빠른 시간) + 칩 3개[원장 직접 선택 / 시간대 전체 / 가장 빠른 시간].
- * 1명이거나 원장 정보가 없으면 기존처럼 평평하게 나열.
- * (분야 매칭 추천은 백엔드에 원장 specialty 가 생기면 'earliest' 기본을 대체)
+ * 백엔드가 3모드(recommended/earliest/byDoctor)를 미리 계산해 주면 칩 3개
+ *   [추천시간 / 수의사별 / 가장 가까운 시간] 으로 보여준다 (수의사별은 원장 2명 이상일 때만).
+ * 모드가 없으면(날짜 직접 선택 fallback) 기존처럼 card.slots 를 평평하게 나열.
  */
 const SlotsCard = ({
   card,
@@ -127,50 +127,49 @@ const SlotsCard = ({
   t: SlotsT;
   lang: Language;
 }) => {
-  const slots = card.slots;
-  const doctors = useMemo(() => {
-    const map = new Map<number, string>();
-    slots.forEach((s) => {
-      if (s.doctorid != null && s.doctorName) map.set(s.doctorid, s.doctorName);
-    });
-    return Array.from(map, ([id, name]) => ({ id, name }));
-  }, [slots]);
-  const multiDoctor = doctors.length >= 2;
+  const recommended = card.recommended ?? [];
+  const earliest = card.earliest ?? [];
+  const byDoctor = card.byDoctor ?? [];
+  const hasModes = recommended.length > 0 || earliest.length > 0; // 새 추천 경로 여부
+  const multiDoctor = byDoctor.length >= 2; // 수의사별 칩은 원장 2명 이상일 때만
 
   const [view, setView] = useState<{
-    mode: "earliest" | "all" | "pick";
+    mode: "recommended" | "earliest" | "pick";
     doctorId?: number;
-  }>({ mode: "earliest" });
+  }>({ mode: "recommended" });
 
-  const sorted = useMemo(() => sortSlots(slots), [slots]);
-
-  let visible = sorted;
+  let visible: SlotOption[];
   let showDoctorChooser = false;
-  if (multiDoctor) {
-    if (view.mode === "earliest") visible = sorted.slice(0, 2);
-    else if (view.mode === "all") visible = sorted;
-    else if (view.mode === "pick") {
-      if (view.doctorId == null) {
-        showDoctorChooser = true;
-        visible = [];
-      } else {
-        visible = sorted.filter((s) => s.doctorid === view.doctorId);
-      }
+  if (!hasModes) {
+    visible = sortSlots(card.slots); // fallback: 평평한 목록
+  } else if (view.mode === "recommended") {
+    visible = sortSlots(recommended.length ? recommended : earliest);
+  } else if (view.mode === "earliest") {
+    visible = sortSlots(earliest);
+  } else {
+    // 수의사별 — 원장 먼저 고르고 그 원장 슬롯 표시
+    if (view.doctorId == null) {
+      showDoctorChooser = true;
+      visible = [];
+    } else {
+      visible = sortSlots(byDoctor.find((d) => d.doctorid === view.doctorId)?.slots ?? []);
     }
   }
 
   return (
     <div className="w-full overflow-hidden rounded-3xl rounded-bl-lg border border-slate-200 bg-white shadow-sm">
-      {slots.length > 0 && (
+      {(card.slots.length > 0 || hasModes) && (
         <>
-          {multiDoctor && (
+          {hasModes && (
             <div className="flex flex-wrap gap-2 px-5 pt-4">
-              <Chip active={view.mode === "pick"} onClick={() => setView({ mode: "pick" })}>
-                {t("chatbot.pickDoctor")}
+              <Chip active={view.mode === "recommended"} onClick={() => setView({ mode: "recommended" })}>
+                {t("chatbot.recommendedTime")}
               </Chip>
-              <Chip active={view.mode === "all"} onClick={() => setView({ mode: "all" })}>
-                {t("chatbot.viewAllTimes")}
-              </Chip>
+              {multiDoctor && (
+                <Chip active={view.mode === "pick"} onClick={() => setView({ mode: "pick" })}>
+                  {t("chatbot.byDoctor")}
+                </Chip>
+              )}
               <Chip active={view.mode === "earliest"} onClick={() => setView({ mode: "earliest" })}>
                 {t("chatbot.earliestTime")}
               </Chip>
@@ -183,14 +182,14 @@ const SlotsCard = ({
                 {t("chatbot.pickDoctorPrompt")}
               </p>
               <div className="flex flex-wrap gap-2">
-                {doctors.map((d) => (
+                {byDoctor.map((d) => (
                   <button
-                    key={d.id}
+                    key={d.doctorid}
                     type="button"
-                    onClick={() => setView({ mode: "pick", doctorId: d.id })}
+                    onClick={() => setView({ mode: "pick", doctorId: d.doctorid })}
                     className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
                   >
-                    {d.name}
+                    {d.doctorName ?? `#${d.doctorid}`}
                   </button>
                 ))}
               </div>

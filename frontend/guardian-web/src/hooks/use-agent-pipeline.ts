@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 
-import { runAgentTask, streamAgentResult } from "../api/agent-api";
 import { createFollowup } from "../api/followup-api";
 import {
-  getAvailableScheduleSlots,
+  getScheduleRecommendation,
   confirmSchedule,
 } from "../api/schedule-api";
+import type { RecommendSlotRaw } from "../api/schedule-api";
 import { useTranslation } from "../i18n/language-context";
 import type { Pet } from "../api/pets-api";
 import type { ChatCard, ChatMessage, SlotOption } from "./use-chat-conversation";
@@ -55,60 +55,6 @@ const toPetPayload = (pet: Pet): AgentPet => {
     gender: pet.gender || "미상",
     weight: pet.weight_kg ?? "?",
   };
-};
-
-const WINDOW_DAYS: Record<string, { start: number; count: number }> = {
-  immediate: { start: 0, count: 1 },
-  emergency_today: { start: 0, count: 1 },
-  urgent_24h: { start: 1, count: 2 },
-  semi_urgent_48h: { start: 2, count: 3 },
-  routine_72h: { start: 3, count: 3 },
-};
-
-// 한국 법정 공휴일 집합 (주말 체크는 별도)
-const KR_HOLIDAYS = new Set([
-  "2026-01-01","2026-02-16","2026-02-17","2026-02-18","2026-03-01","2026-03-02",
-  "2026-05-01","2026-05-05","2026-05-24","2026-05-25","2026-06-03","2026-06-06",
-  "2026-07-17","2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26",
-  "2026-10-03","2026-10-05","2026-10-09","2026-12-25",
-  "2027-01-01","2027-02-06","2027-02-07","2027-02-08","2027-02-09","2027-03-01",
-  "2027-05-01","2027-05-05","2027-05-13","2027-06-06","2027-07-17","2027-08-15",
-  "2027-08-16","2027-09-14","2027-09-15","2027-09-16","2027-10-03","2027-10-04",
-  "2027-10-09","2027-10-11","2027-12-25","2027-12-27",
-]);
-
-const isClinicClosed = (dateStr: string): boolean => {
-  const d = new Date(dateStr);
-  const day = d.getDay(); // 0=Sun, 6=Sat
-  return day === 0 || day === 6 || KR_HOLIDAYS.has(dateStr);
-};
-
-const getDatesForWindow = (slotWindow: string): string[] => {
-  const { start, count } = WINDOW_DAYS[slotWindow] ?? { start: 1, count: 2 };
-  const dates: string[] = [];
-  const today = new Date();
-  // 주말/공휴일 건너뛰며 영업일 기준으로 날짜 수집
-  let scanned = 0;
-  for (let i = start; dates.length < count && scanned < 30; i++, scanned++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    const ds = d.toISOString().split("T")[0];
-    if (!isClinicClosed(ds)) dates.push(ds);
-  }
-  return dates;
-};
-
-/** 슬롯이 없을 때 최대 scanDays 영업일 내에서 추가 날짜 탐색 */
-const getExtendedBusinessDates = (startOffset: number, scanDays = 21): string[] => {
-  const dates: string[] = [];
-  const today = new Date();
-  for (let i = startOffset; dates.length < scanDays; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    const ds = d.toISOString().split("T")[0];
-    if (!isClinicClosed(ds)) dates.push(ds);
-  }
-  return dates;
 };
 
 const nextId = () => Date.now() + Math.random();
@@ -195,45 +141,35 @@ export const useAgentPipeline = ({
     });
   };
 
-  /** 주어진 날짜들에서 빈 슬롯을 limit 개까지 모은다. 추천/빠른조회 양쪽에서 재사용. */
-  const collectSlots = async (
-    datesToCheck: string[],
-    limit: number,
+  // 백엔드 추천 슬롯(원시) → SlotOption + slotMap 등록 (라벨로 선택 라우팅)
+  const toSlotOption = (
+    s: RecommendSlotRaw,
     durationMin: number,
-  ): Promise<{ date: string; start_time: string; doctorid?: number; doctorName?: string }[]> => {
-    const collected: { date: string; start_time: string; doctorid?: number; doctorName?: string }[] = [];
-    for (const date of datesToCheck) {
-      if (collected.length >= limit) break;
-      try {
-        const resp = await getAvailableScheduleSlots({
-          date,
-          duration_min: durationMin,
-          hospitalid: hospitalId ?? undefined,
-        });
-        if (resp.code === 200) {
-          // 원장별로 빠른 시간을 고루 담기 위해 날짜당 최대 3개까지 수집
-          for (const slot of (resp.result ?? []).slice(0, 3)) {
-            collected.push({
-              date,
-              start_time: slot.start_time,
-              doctorid: slot.doctorid,
-              doctorName: slot.doctor_name,
-            });
-            if (collected.length >= limit) break;
-          }
-        }
-      } catch {
-        // ignore per-date errors
-      }
-    }
-    return collected;
+    slotMap: Record<string, { date: string; time: string; doctorid: number; doctorName?: string }>,
+  ): SlotOption => {
+    const time = s.start_time.slice(0, 5);
+    const [, m, d] = s.date.split("-");
+    const label = t("chatbot.slotLabel", { month: Number(m), day: Number(d), time });
+    slotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1, doctorName: s.doctor_name };
+    return {
+      label,
+      date: s.date,
+      time,
+      durationMin,
+      doctorid: s.doctorid,
+      doctorName: s.doctor_name,
+      monthDay: formatChatMonthDay(s.date, t),
+      weekday: weekdayOf(s.date, lang),
+      timeText: formatChatTime(time, t),
+      durationText: formatChatDuration(durationMin, t),
+    };
   };
 
   const startSchedulePhase = async (
     pet: Pet,
     collectedInfo: Record<string, unknown>,
     emrid?: number,
-    scheduleTaskId?: string,
+    _scheduleTaskId?: string, // (구) 서버 선실행 task_id — 현재 미사용
   ) => {
     triageResultRef.current = collectedInfo;
     currentPetRef.current = pet;
@@ -245,116 +181,39 @@ export const useAgentPipeline = ({
     appendBotKey("chatbot.checkingSlots", "checking-slots");
 
     try {
-      // 서버가 triage 완료 직후 schedule agent를 이미 실행해 둔 경우(schedule_task_id)
-      // 그 결과를 재사용한다 → 중복 LLM 호출 제거 + 진단정보를 클라이언트로 내릴 필요 없음.
-      // task_id가 없으면(구버전 호환) 클라이언트에서 직접 실행한다.
-      let task_id = scheduleTaskId;
-      if (!task_id) {
-        const started = await runAgentTask("schedule", {
-          pet: toPetPayload(pet),
-          triage_result: collectedInfo,
-        });
-        task_id = started.task_id;
-      }
-
-      const raw = await streamAgentResult(task_id);
+      // LangGraph(schedule): duration 산정(LLM) → 3모드 슬롯(결정론)을 한 번에 받음
+      const resp = await getScheduleRecommendation({
+        pet: toPetPayload(pet),
+        triage: collectedInfo,
+        hospitalid: hospitalId ?? undefined,
+      });
       if (requestId !== scheduleRequestRef.current) return;
 
-      let collected: { date: string; start_time: string; doctorid?: number; doctorName?: string }[] = [];
-      let durationMin = 30;
+      const result = resp.result;
+      const durationMin = result?.estimated_duration_min || 30;
+      scheduleResultRef.current = result as unknown as Record<string, unknown>;
 
-      if (raw && typeof raw === "object" && "proposed_slots" in raw) {
-        // ── MCP 예약 오케스트레이션 경로 — 백엔드(에이전트)가 MCP 툴로 슬롯을 이미 찾아줌 ──
-        const bookingRes = raw as {
-          proposed_slots?: { date: string; start_time: string; end_time?: string; doctorid?: number; doctor_name?: string }[];
-          message?: string;
-        };
-        scheduleResultRef.current = raw as Record<string, unknown>;
-        if (bookingRes.message) appendBot(bookingRes.message);
-        const ps = bookingRes.proposed_slots ?? [];
-        collected = ps.map((s) => ({ date: s.date, start_time: s.start_time, doctorid: s.doctorid, doctorName: s.doctor_name }));
-        // duration: 첫 슬롯 start~end 차이로 추정(없으면 30)
-        const first = ps[0];
-        if (first?.start_time && first?.end_time) {
-          const [sh, sm] = first.start_time.split(":").map(Number);
-          const [eh, em] = first.end_time.split(":").map(Number);
-          const diff = eh * 60 + em - (sh * 60 + sm);
-          if (diff > 0) durationMin = diff;
-        }
-      } else {
-        // ── 기존 schedule 경로 — slot_window 받아 프론트가 슬롯 조회 ──
-        const schedRes = raw as {
-          slot_window: string;
-          estimated_duration_min: number;
-          pre_visit_instructions: string[];
-          priority_reason: string;
-        } | null;
+      // 3모드를 미리 SlotOption으로 변환 (칩 전환 시 재요청 없음)
+      const recs = result?.recommendations;
+      const slotMap: Record<string, { date: string; time: string; doctorid: number; doctorName?: string }> = {};
+      const recommended = (recs?.recommended ?? []).map((s) => toSlotOption(s, durationMin, slotMap));
+      const earliest = (recs?.earliest ?? []).map((s) => toSlotOption(s, durationMin, slotMap));
+      const byDoctor = Object.entries(recs?.by_doctor ?? {}).map(([id, v]) => ({
+        doctorid: Number(id),
+        doctorName: v.doctor_name,
+        slots: (v.slots ?? []).map((s) => toSlotOption(s, durationMin, slotMap)),
+      }));
+      slotMapRef.current = slotMap;
 
-        if (!schedRes?.slot_window) {
-          appendBotKey("chatbot.slotsLoadSlow", "slots-result");
-          appendCard({ kind: "slots", slots: [] }, "slots-result");
-          setPhase("slot-selection");
-          setShowDatePicker(true);
-          return;
-        }
-
-        scheduleResultRef.current = raw;
-
-        // 1차: urgency window 기준 영업일 탐색 — 추천 슬롯 3개 제시
-        const dates = getDatesForWindow(schedRes.slot_window);
-        collected = await collectSlots(dates, 3, schedRes.estimated_duration_min);
-        if (requestId !== scheduleRequestRef.current) return;
-
-        // 2차: 1차 탐색에서 슬롯을 못 찾은 경우 최대 21영업일 확장 탐색
-        if (collected.length === 0) {
-          const windowStart = WINDOW_DAYS[schedRes.slot_window]?.start ?? 1;
-          collected = await collectSlots(
-            getExtendedBusinessDates(windowStart, 21),
-            3,
-            schedRes.estimated_duration_min,
-          );
-          if (requestId !== scheduleRequestRef.current) return;
-        }
-
-        durationMin = schedRes.estimated_duration_min || 30;
-      }
-
-      const newSlotMap: Record<string, { date: string; time: string; doctorid: number; doctorName?: string }> = {};
-      const slotOptions: SlotOption[] = [];
-
-      for (const s of collected) {
-        const time = s.start_time.slice(0, 5);
-        const [, m, d] = s.date.split("-");
-        const label = t("chatbot.slotLabel", {
-          month: Number(m),
-          day: Number(d),
-          time,
-        });
-        newSlotMap[label] = { date: s.date, time, doctorid: s.doctorid || 1, doctorName: s.doctorName };
-        slotOptions.push({
-          label,
-          date: s.date,
-          time,
-          durationMin,
-          doctorid: s.doctorid,
-          doctorName: s.doctorName,
-          monthDay: formatChatMonthDay(s.date, t),
-          weekday: weekdayOf(s.date, lang),
-          timeText: formatChatTime(time, t),
-          durationText: formatChatDuration(durationMin, t),
-        });
-      }
-
-      slotMapRef.current = newSlotMap;
-
-      // 내원 전 준비사항(pre_visit_instructions)은 여기서 보여주지 않고
-      // 예약 확정 후 확정 카드 아래에 정리해서 노출한다(scheduleResultRef에 보관됨).
-      if (slotOptions.length > 0) {
+      if (recommended.length > 0 || earliest.length > 0) {
         appendBotKey("chatbot.slotsFound", "slots-result");
-        appendCard({ kind: "slots", slots: slotOptions }, "slots-result");
+        appendCard(
+          { kind: "slots", slots: recommended.length ? recommended : earliest, recommended, earliest, byDoctor },
+          "slots-result",
+        );
         setPhase("slot-selection");
       } else {
-        // 슬롯을 찾지 못했어도 '날짜 보기'는 카드에서 항상 제공
+        // 슬롯을 못 찾아도 '날짜 보기'는 카드에서 항상 제공
         appendBotKey("chatbot.noSlotsPickDate", "slots-result");
         appendCard({ kind: "slots", slots: [] }, "slots-result");
         setPhase("slot-selection");
