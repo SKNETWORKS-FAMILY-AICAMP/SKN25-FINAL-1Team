@@ -178,7 +178,7 @@ export const useCheckupReservation = ({
         doctorid: doctorId,
       });
 
-      if (response.code !== 200 || !response.result) {
+      if ((response.code !== 200 && response.code !== 201) || !response.result) {
         setErrorMessage(response.message || t("schedule.checkupFailed"));
         return;
       }
