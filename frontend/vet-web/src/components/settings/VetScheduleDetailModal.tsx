@@ -4,6 +4,7 @@ import {
   type DaySchedule,
   fetchVetWeeklySchedule,
   fetchWeeklySchedule,
+  getSettingsApiErrorMessage,
   updateVetWeeklySchedule,
 } from "../../api/settingsApi";
 import { fetchHospitalDoctors, type DoctorInfo } from "../../api/emrApi";
@@ -35,9 +36,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
     fetchHospitalDoctors(session.accessToken)
       .then((docs) => {
         setDoctors(docs);
-        if (!selectedVetId && docs.length > 0) {
-          setSelectedVetId(docs[0].doctorid);
-        }
+        setSelectedVetId((current) => current ?? docs[0]?.doctorid);
       })
       .catch(() => {})
       .finally(() => setLoadingDoctors(false));
@@ -76,9 +75,7 @@ export function VetScheduleDetailModal({ session, initialVetId, onClose }: Props
       await updateVetWeeklySchedule(session.accessToken, selectedVetId, schedule);
       onClose();
     } catch (err: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detail = (err as any)?.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "저장에 실패했습니다.");
+      setError(getSettingsApiErrorMessage(err, "저장에 실패했습니다."));
     } finally {
       setSaving(false);
     }

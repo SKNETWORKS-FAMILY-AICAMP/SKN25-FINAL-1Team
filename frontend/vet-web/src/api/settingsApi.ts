@@ -1,4 +1,5 @@
-import { apiClient } from "./client";
+import axios, { type AxiosError } from "axios";
+import { API_BASE_URL, apiClient } from "./client";
 
 export interface OperatingHours {
   start_time: string;
@@ -20,6 +21,31 @@ export interface AddClosedDateResponse {
   success: boolean;
   has_existing_reservations: boolean;
   reservation_count: number;
+}
+
+type SettingsApiErrorResponse = {
+  message?: string;
+  detail?: string;
+  error?: string;
+};
+
+export function getSettingsApiErrorMessage(err: unknown, fallbackMessage: string) {
+  if (!axios.isAxiosError(err)) {
+    return err instanceof Error ? err.message : fallbackMessage;
+  }
+
+  const axiosError = err as AxiosError<SettingsApiErrorResponse>;
+
+  if (!axiosError.response) {
+    return `백엔드 서버에 연결할 수 없습니다. ${API_BASE_URL} 서버가 실행 중인지 확인해주세요.`;
+  }
+
+  return (
+    axiosError.response.data?.message ??
+    axiosError.response.data?.detail ??
+    axiosError.response.data?.error ??
+    fallbackMessage
+  );
 }
 
 export async function fetchOperatingHours(accessToken: string): Promise<OperatingHours> {
