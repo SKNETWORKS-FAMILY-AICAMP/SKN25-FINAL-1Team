@@ -41,7 +41,6 @@ export default function DashboardPage({
   });
   const [scheduleItems, setScheduleItems] = useState<DashboardScheduleItem[]>([]);
   const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -56,13 +55,6 @@ export default function DashboardPage({
     [summaries]
   );
 
-  const visibleSchedules = useMemo(
-    () =>
-      selectedDoctorId === null
-        ? scheduleItems
-        : scheduleItems.filter((s) => s.doctorid === selectedDoctorId),
-    [scheduleItems, selectedDoctorId]
-  );
 
   useEffect(() => {
     fetchHospitalDoctors(session.accessToken)
@@ -105,11 +97,6 @@ export default function DashboardPage({
     };
   }, [session.accessToken, apiDate, onLogout]);
 
-  const selectedDoctorName =
-    selectedDoctorId === null
-      ? undefined
-      : doctors.find((d) => d.doctorid === selectedDoctorId)?.doctor_name ?? session.user.name;
-
   return (
     <AppLayout
       session={session}
@@ -134,34 +121,15 @@ export default function DashboardPage({
           </div>
           <DashboardSummaryCards summaries={summaryCards} className="pt-1" />
 
-          {doctors.length > 0 && (
-            <div className="ml-auto pt-1">
-              <select
-                value={selectedDoctorId ?? ""}
-                onChange={(e) =>
-                  setSelectedDoctorId(e.target.value === "" ? null : Number(e.target.value))
-                }
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">전체 수의사</option>
-                {doctors.map((doctor) => (
-                  <option key={doctor.doctorid} value={doctor.doctorid}>
-                    {doctor.doctor_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
         <div className="min-w-0 flex-1">
           <DashboardSchedulePanel
-            schedules={visibleSchedules}
+            schedules={scheduleItems}
             isLoading={isLoading}
             errorMessage={errorMessage}
             holidayName={holidayName}
-            doctorName={selectedDoctorName ?? session.user.name}
             doctors={doctors}
-            selectedDoctorId={selectedDoctorId}
+            selectedDoctorId={null}
           />
         </div>
       </div>

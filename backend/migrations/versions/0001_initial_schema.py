@@ -31,7 +31,7 @@ from app.models.schedule import Schedule  # noqa: F401
 from app.models.triage_result import TriageResult  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.validation_result import ValidationResult  # noqa: F401
-from app.models.vet_schedule import VetSchedule  # noqa: F401
+from app.models.vet_schedule import HospitalWeeklySchedule, HospitalClosedDate, VetWeeklySchedule  # noqa: F401
 
 
 revision: str = "0001_initial_schema"
@@ -43,13 +43,36 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     bind = op.get_bind()
 
-    # triage_rag_documents 는 다음 마이그레이션(160babc)이 vector 확장과 함께 생성한다.
-    # env.py 가 해당 모델을 import 하므로 Base.metadata 에는 포함되지만, 여기서 만들면:
-    #   1) 이 시점엔 vector 확장이 없어 VECTOR 컬럼 생성이 'type "vector" does not exist' 로 실패
-    #   2) 설령 만들어도 160babc 의 create_table 과 'already exists' 충돌
-    # → 빈 DB 셋업이 통째로 깨지므로 0001 에서는 제외하고 160babc 에 맡긴다.
-    tables = [t for t in Base.metadata.sorted_tables if t.name != "triage_rag_documents"]
+    # 제외 목록:
+    #   triage_rag_documents  → vector 확장이 없어 VECTOR 타입 생성 실패 (160babc 가 처리)
+    #   hospital_weekly_scheduleDB / hospital_closed_datesDB / vet_weekly_scheduleDB
+    #     → j1b2c3d4e5f6 에서 vet_scheduleDB 를 분리해 생성. 여기서 미리 만들면
+    #       해당 마이그레이션과 'already exists' 충돌.
+    _EXCLUDE = {
+        "triage_rag_documents",
+        "hospital_weekly_scheduleDB",
+        "hospital_closed_datesDB",
+        "vet_weekly_scheduleDB",
+    }
+    tables = [t for t in Base.metadata.sorted_tables if t.name not in _EXCLUDE]
     Base.metadata.create_all(bind=bind, tables=tables)
+
+    # vet_scheduleDB 는 현재 모델에서 제거됐지만 9c2269ea2bfb ~ e7f8a9b0c1d2 가
+    # ALTER TABLE 로 이 테이블을 수정하므로 빈 DB 에도 존재해야 한다.
+    # 중간 마이그레이션이 추가할 컬럼을 미리 포함해두면 IF NOT EXISTS 덕분에 no-op 으로 통과.
+    bind.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS "vet_scheduleDB" (
+            vetscheduleid SERIAL PRIMARY KEY,
+            doctorid      INTEGER NOT NULL REFERENCES "doctorDB"(doctorid),
+            date          DATE,
+            start_time    TIME,
+            end_time      TIME,
+            lunch_start   TIME,
+            lunch_end     TIME,
+            day_of_week   INTEGER,
+            is_open       BOOLEAN NOT NULL DEFAULT TRUE
+        )
+    """))
 
     bind.execute(
         sa.text(
