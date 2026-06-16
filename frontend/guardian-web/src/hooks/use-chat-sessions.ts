@@ -352,14 +352,23 @@ export const useChatSessions = ({
       }
 
       const detail = response.result;
-      const restoredMessages: ChatMessage[] = detail.messages.map(
-        (message, index) => ({
+      // 저장 안 되는 시작 인사말을 맨 앞에 복원(라이브 UX와 동일)
+      const greeting: ChatMessage = {
+        id: historyId * 100000 - 1,
+        role: "assistant",
+        content: t("chatbot.initialQuestion"),
+      };
+      // 저장된 메시지 복원 — meta.card가 있으면 확정·주의사항 카드로 되살림
+      const restoredMessages: ChatMessage[] = [
+        greeting,
+        ...detail.messages.map((message, index) => ({
           id: historyId * 100000 + index,
           role: message.role,
           content: message.content,
           attachmentUrl: message.image_url || undefined,
-        }),
-      );
+          card: (message.meta as { card?: ChatMessage["card"] } | undefined)?.card,
+        })),
+      ];
 
       // 문진 미완료 → 라이브 문진으로 이어서 진행(입력 활성화).
       if (detail.resumable_triage && selectedPet) {

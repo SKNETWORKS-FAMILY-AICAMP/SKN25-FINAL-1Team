@@ -12,7 +12,10 @@ from app.crud.chat import (
     get_chat_session,
     add_message,
     update_session_complete,
+    create_triage_guardian,
+    update_session_emrid,
 )
+from app.crud.triage import build_triage_result
 from app.core.config import settings
 from app.utils.s3 import read_object_bytes_from_url
 from app.services.translation import translate_batch
@@ -20,6 +23,37 @@ from app.services.translation import translate_batch
 from ai.agents.triage.agent import TriageAgent
 
 logger = logging.getLogger(__name__)
+
+
+# urgency 라벨 → VTL 번호 (DB엔 원본 라벨 저장, num은 파생)
+_URGENCY_NUM = {"RED": 1, "ORANGE": 2, "YELLOW": 3, "GREEN": 4}
+
+
+# TriageAgent 출력 → triage_resultDB 컬럼 매핑
+def _triage_info_from_result(result: dict) -> dict:
+    chiefs = result.get("chief_complaints") or []
+    return {
+        "urgency_level": result.get("urgency", "GREEN"),
+        "urgency_level_num": _URGENCY_NUM.get(result.get("urgency"), 4),
+        "chief_complaint": chiefs[0] if chiefs else None,
+        "symptom_keywords": chiefs,
+        "suspected_diseases": result.get("suspected_conditions") or [],
+        "symptom_summary": result.get("triage_summary") or "",
+        # 새 에이전트가 안 주는 값 → NULL/기본
+        "red_flags": None, "symptom_onset": None, "vtl_basis": None,
+        "recommended_action": None, "need_photo": False,
+        "need_followup": False, "followup_reason": None,
+    }
+
+
+# 문진 완료 적재: guardianDB(emrid 발급) → chat_historyDB.emrid → triage_resultDB
+async def _persist_triage_completion(db, session, result) -> int:
+    guardian = await create_triage_guardian(db, session.petid)
+    emrid = guardian.emrid
+    await update_session_emrid(db, session, emrid)
+    db.add(build_triage_result(emrid, _triage_info_from_result(result)))
+    await db.commit()
+    return emrid
 
 
 # 이미지 확장자 → MIME 타입
@@ -194,6 +228,9 @@ async def process_chat_message(
         title_keywords = await _localize_title_keywords(chief[:2], request.lang)
         await update_session_complete(db, session, title_keywords)
 
+        # 문진 완료 적재 → emrid 발급(예약에 필요)
+        emrid = await _persist_triage_completion(db, session, result)
+
         # 최종 결과 전달
         yield {
             "type": "result",
@@ -205,6 +242,7 @@ async def process_chat_message(
                     "RED",
                 ),
                 "is_complete": True,
+                "emrid": emrid,
                 "keywords": title_keywords,
             },
         }
@@ -217,7 +255,7 @@ async def process_chat_message(
             db,
             session,
             "assistant",
-            "문진이 완료되었습니다.",
+            result["reply"],
             meta=result.get("state"),
         )
 
@@ -226,12 +264,16 @@ async def process_chat_message(
         title_keywords = await _localize_title_keywords(chief[:2], request.lang)
         await update_session_complete(db, session, title_keywords)
 
+        # 문진 완료 적재 → emrid 발급(예약에 필요)
+        emrid = await _persist_triage_completion(db, session, result)
+
         # 최종 결과 전달
         yield {
             "type": "result",
             "result": {
-                "reply": "문진이 완료되었습니다.",
+                "reply": result["reply"],
                 "is_complete": True,
+                "emrid": emrid,
                 "urgency": result["urgency"],
                 "score": result["score"],
                 "triage_summary": result["triage_summary"],
@@ -243,13 +285,15 @@ async def process_chat_message(
         }
         return
 
-    # 일반 문진 진행
+    # 일반 문진 진행 — 재진입 시 pill 복원되도록 quick_replies도 meta에 저장
+    _meta = dict(result.get("state") or {})
+    _meta["quick_replies"] = result.get("quick_replies", [])
     await add_message(
         db,
         session,
         "assistant",
         result["reply"],
-        meta=result.get("state"),
+        meta=_meta,
     )
 
     # 최종 결과 전달

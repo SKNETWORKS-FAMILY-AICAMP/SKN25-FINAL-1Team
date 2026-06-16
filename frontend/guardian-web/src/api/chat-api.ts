@@ -40,6 +40,7 @@ export interface ChatSessionMessage {
   role: "user" | "assistant";
   content: string;
   image_url?: string | null;
+  meta?: Record<string, unknown>; // 확정·주의사항 카드 등 복원용 (meta.card)
 }
 
 export interface ChatSessionDetailResult {

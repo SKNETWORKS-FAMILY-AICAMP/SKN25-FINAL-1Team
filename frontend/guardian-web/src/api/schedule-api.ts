@@ -78,6 +78,7 @@ export interface ScheduleRecommendationResponse {
     estimated_duration_min: number;
     is_initial_visit: boolean;
     reasoning?: string;
+    pre_visit_instructions?: string[];
     recommendations: {
       bucket: string;
       recommended: RecommendSlotRaw[];

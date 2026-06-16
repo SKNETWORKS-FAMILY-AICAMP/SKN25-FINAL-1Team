@@ -3,12 +3,13 @@ import logging
 
 from ai.llm import call_llm_structured
 
-from ai.agents.schedule.prompts import DURATION_PROMPT
+from ai.agents.schedule.prompts import DURATION_PROMPT, CARE_TIPS_PROMPT
 
 logger = logging.getLogger(__name__)
 
 # duration 산정 결과 구조 강제 (누락/오염 방지)
 _DURATION_SCHEMA = {
+    "title": "DurationEstimate",
     "type": "object",
     "properties": {
         "estimated_duration_min": {"type": "integer"},
@@ -20,6 +21,17 @@ _DURATION_SCHEMA = {
 
 _MIN_DURATION = 15
 _MAX_DURATION = 60
+
+# 내원 전 주의사항 구조 강제
+_CARE_TIPS_SCHEMA = {
+    "title": "CareTips",
+    "type": "object",
+    "properties": {
+        "tips": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["tips"],
+    "additionalProperties": False,
+}
 
 # 응급도 라벨 → fallback 기본 시간 (LLM 실패 시에만 사용)
 _FALLBACK_BASE = {"RED": 40, "ORANGE": 40, "YELLOW": 30, "GREEN": 20}
@@ -57,6 +69,19 @@ class ScheduleAgent:
             "is_initial_visit": is_initial,
             "reasoning": reasoning,
         }
+
+    # 내원 전 주의사항 생성 (LLM) — 증상 기반 가정 케어 팁 2~4개
+    async def care_guidance(self, triage: dict) -> list[str]:
+        prompt = CARE_TIPS_PROMPT.format(
+            triage=json.dumps(self._triage_view(triage), ensure_ascii=False, default=str),
+        )
+        try:
+            data = await call_llm_structured(prompt=prompt, schema=_CARE_TIPS_SCHEMA)
+            tips = [str(t).strip() for t in (data.get("tips") or []) if str(t).strip()]
+            return tips[:4]
+        except Exception as e:
+            logger.warning("[schedule] care_guidance LLM 실패: %s", e)
+            return []
 
     # 프롬프트에 넣을 트리아지 핵심 필드만 추림 (키 이름 호환)
     def _triage_view(self, triage: dict) -> dict:
