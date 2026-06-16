@@ -27,8 +27,6 @@ interface AppLayoutProps {
   activeMenu?: AppMenuId;
   compact?: boolean;
   serviceName?: string;
-  /** @deprecated 알림은 내부에서 관리됩니다. */
-  notificationCount?: number;
   onLogout: () => void;
   onNavigate?: (menuId: AppMenuId, state?: Record<string, unknown>) => void;
 }

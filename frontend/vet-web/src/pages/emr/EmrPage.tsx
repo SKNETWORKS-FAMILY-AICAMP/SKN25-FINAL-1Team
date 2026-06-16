@@ -212,7 +212,6 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       session={session}
       activeMenu="emr"
       serviceName="동물병원 의료 보조 시스템"
-      notificationCount={3}
       onLogout={onLogout}
       onNavigate={onNavigate}
       compact

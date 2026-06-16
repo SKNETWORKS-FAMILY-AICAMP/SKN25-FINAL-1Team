@@ -205,7 +205,6 @@ export default function ReservationPage({
     <AppLayout
       session={session}
       activeMenu="reservation"
-      notificationCount={2}
       onLogout={onLogout}
       onNavigate={onNavigate}
     >

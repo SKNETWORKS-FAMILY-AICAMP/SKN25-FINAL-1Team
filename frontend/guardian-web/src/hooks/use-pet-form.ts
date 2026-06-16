@@ -237,8 +237,9 @@ export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
     const payload = getPayloadFromForm(form);
 
     if (!previewUrl || previewUrl.startsWith("data:")) {
-      // base64 데이터 URI는 DB에 저장하지 않음 (VARCHAR(500) 초과)
-      // 실제 이미지 업로드는 S3 presigned-url 연동 후 구현 예정
+      // 사진 미선택 시 기본 프로필 이미지를 무작위로 부여한다.
+      // (업로드 성공 시 previewUrl엔 CloudFront URL이 들어있다 — handleImageChange 참고.
+      //  data: 미리보기는 백엔드 validator가 거부하므로 방어적으로 함께 처리)
       payload.profile_image = getRandomDefaultProfileImage();
     } else {
       payload.profile_image = previewUrl;
