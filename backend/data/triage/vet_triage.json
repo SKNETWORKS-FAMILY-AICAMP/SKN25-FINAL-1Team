@@ -1,64 +1,45 @@
 {
   "meta": {
-    "version": "3.0.0",
-    "title": "Veterinary Chatbot Triage — Unified Decision Tree + VTL",
-    "description": "보호자용 챗봇 decision tree(질문·pill 생성)와 수의사용 VTL discriminator를 단일 파일로 통합. 챗봇 에이전트는 sections[].questions[]를 따라 대화를 진행하며, 각 pill의 vtl_discriminator_id로 VTL 근거를 참조한다. red_flag pill 선택 시 즉시 대화 중단 → schedule agent 호출.",
+    "version": "7.0.0",
+    "title": "수의 챗봇 문진 — 자연어 정보 추출 + VTL 응급도 채점",
+    "description": "LLM 기반 자연어 문진 챗봇용 데이터 구조. 챗봇은 sections[]의 goal/required_fields를 참고하여 사용자의 자연어 응답에서 field를 추출하고, field_schema에 정의된 값으로 정규화한다. 각 section의 completion_fields(응급도 계산 및 예약 우선순위 결정에 필요한 최소 필드)가 모두 채워지면, 남은 required_fields와 관계없이 문진을 종료할 수 있다. 부족한 field는 questions[].example_questions를 참고해 자연스러운 질문을 생성한다. RED는 red_flags 매칭 시에만 발생한다. 수집된 field를 기준으로 field_scoring으로 점수를 합산하고 scoring_engine으로 ORANGE/YELLOW/GREEN을 판정한다 (field_scoring은 RED를 유발하지 않음). 이 JSON은 urgency 판정까지만 담당하며, 진료 시간 산정·예약 슬롯 배정·응급 연락 등 후속 처리는 별도 에이전트(예약/스케줄 담당)의 책임이다.",
     "sources": [
       "Ruys LJ et al. J Vet Emerg Crit Care 2012;22(3):303–312 — VTL 68 discriminators",
       "Thomovsky & Ilie. Can Vet J 2024;65:162–172 — Part I (Respiratory, Seizure)",
       "Ilie & Thomovsky. Can Vet J 2024;65:278–288 — Part II (Collapse, Bleeding)",
       "Ilie & Thomovsky. Can Vet J 2024;65:375–384 — Part III (Arrhythmia, Unable to walk)"
     ],
-    "urgency_levels": {
-      "RED": {
-        "label_ko": "즉시 응급",
-        "color": "#C0392B",
-        "action": "immediate_contact",
-        "base_visit_minutes": 30,
-        "target_wait_minutes": 0
-      },
-      "ORANGE": {
-        "label_ko": "긴급",
-        "color": "#E67E22",
-        "action": "same_day",
-        "base_visit_minutes": 20,
-        "target_wait_minutes": 15
-      },
-      "YELLOW": {
-        "label_ko": "준긴급",
-        "color": "#F1C40F",
-        "action": "within_hours",
-        "base_visit_minutes": 15,
-        "target_wait_minutes": 45
-      },
-      "GREEN": {
-        "label_ko": "일반",
-        "color": "#27AE60",
-        "action": "regular_appointment",
-        "base_visit_minutes": 10,
-        "target_wait_minutes": 120
-      }
-    },
     "onset_time_definitions": {
-      "abrupt": "수초~수분 이내",
-      "rapid": "12시간 이내",
-      "acute": "24시간 이내",
-      "recent": "7일 이내"
-    }
+      "within_minutes": "수초~수분 이내",
+      "within_12h": "12시간 이내",
+      "within_24h": "24시간 이내",
+      "within_7days": "7일 이내"
+    },
+    "urgency_values": [
+      "RED",
+      "ORANGE",
+      "YELLOW",
+      "GREEN"
+    ]
   },
   "red_flags": {
-    "description": "보호자가 이 키워드/증상을 언급하거나 해당 pill을 선택하면 추가 질문 없이 즉시 RED로 확정하고 schedule agent를 호출한다. 챗봇은 즉시 응급 메시지를 표시한다.",
+    "description": "보호자가 이 키워드/증상을 언급하거나 해당 조건에 해당하면 추가 질문 없이 즉시 urgency를 RED로 확정한다. 챗봇은 즉시 응급 메시지를 표시한다.",
     "trigger_mode": "ANY — 하나라도 해당하면 즉시 발동",
     "on_trigger": {
       "urgency": "RED",
+      "priority": "immediate",
       "chatbot_message": "⚠️ 지금 바로 병원에 연락하거나 내원해 주세요. 생명에 위협이 될 수 있는 응급 상황입니다.",
-      "action": "stop_conversation → call schedule_agent(urgency=RED, priority=immediate)"
+      "stop_conversation": true
     },
     "flags": [
       {
         "id": "RF-01",
         "chief": "발작",
-        "suspected": ["특발성 발작", "중독", "대사성 질환"],
+        "suspected": [
+          "특발성 발작",
+          "중독",
+          "대사성 질환"
+        ],
         "label": "지금 발작 중이에요",
         "vtl_ref": "R-NEURO-01",
         "keywords": [
@@ -76,7 +57,11 @@
       {
         "id": "RF-02",
         "chief": "호흡곤란",
-        "suspected": ["폐부종", "흉수/기흉", "상기도 폐쇄"],
+        "suspected": [
+          "폐부종",
+          "흉수/기흉",
+          "상기도 폐쇄"
+        ],
         "label": "숨을 거의 못 쉬어요 / 입을 벌리고 헐떡여요",
         "vtl_ref": "R-RESP-01",
         "keywords": [
@@ -95,7 +80,11 @@
       {
         "id": "RF-03",
         "chief": "의식소실",
-        "suspected": ["쇼크", "중독", "두부 외상"],
+        "suspected": [
+          "쇼크",
+          "중독",
+          "두부 외상"
+        ],
         "label": "완전히 의식이 없어요 (반응 없음)",
         "vtl_ref": "R-NEURO-02",
         "keywords": [
@@ -113,7 +102,11 @@
       {
         "id": "RF-04",
         "chief": "청색증",
-        "suspected": ["저산소증", "심부전", "폐질환"],
+        "suspected": [
+          "저산소증",
+          "심부전",
+          "폐질환"
+        ],
         "label": "잇몸/혀가 파래요 (청색증)",
         "vtl_ref": "R-RESP-01",
         "keywords": [
@@ -129,7 +122,10 @@
       {
         "id": "RF-05",
         "chief": "급성 복부팽만",
-        "suspected": ["위확장염전(GDV)", "복강내 출혈"],
+        "suspected": [
+          "위확장염전(GDV)",
+          "복강내 출혈"
+        ],
         "label": "배가 갑자기 크게 부풀었어요 (30분~12시간)",
         "vtl_ref": "R-GI-01",
         "keywords": [
@@ -145,7 +141,10 @@
       {
         "id": "RF-06",
         "chief": "난산",
-        "suspected": ["난산", "태아 정체"],
+        "suspected": [
+          "난산",
+          "태아 정체"
+        ],
         "label": "새끼가 밖으로 나오다 멈췄어요",
         "vtl_ref": "R-OBS-01",
         "keywords": [
@@ -159,7 +158,10 @@
       {
         "id": "RF-07",
         "chief": "장기 노출",
-        "suspected": ["복벽 열창", "장 탈출"],
+        "suspected": [
+          "복벽 열창",
+          "장 탈출"
+        ],
         "label": "내장이 밖으로 나왔어요",
         "vtl_ref": "O-TRA-01",
         "keywords": [
@@ -172,7 +174,10 @@
       {
         "id": "RF-08",
         "chief": "안구 돌출",
-        "suspected": ["안구 탈출", "안와 외상"],
+        "suspected": [
+          "안구 탈출",
+          "안와 외상"
+        ],
         "label": "눈이 튀어나왔어요",
         "vtl_ref": "O-TRA-03",
         "keywords": [
@@ -186,7 +191,11 @@
       {
         "id": "RF-09",
         "chief": "대량 출혈",
-        "suspected": ["응고장애", "대혈관 손상", "저혈량 쇼크"],
+        "suspected": [
+          "응고장애",
+          "대혈관 손상",
+          "저혈량 쇼크"
+        ],
         "label": "피가 멈추지 않고 쏟아져요",
         "vtl_ref": "R-CIRC-02",
         "keywords": [
@@ -204,7 +213,9 @@
       {
         "id": "RF-10",
         "chief": "뒷다리 마비",
-        "suspected": ["동맥혈전색전증(ATE)"],
+        "suspected": [
+          "동맥혈전색전증(ATE)"
+        ],
         "label": "🐱 고양이가 뒷다리를 끌고 비명을 질러요",
         "vtl_ref": "O-CIRC-02",
         "keywords": [
@@ -220,7 +231,11 @@
       {
         "id": "RF-11",
         "chief": "허탈/창백",
-        "suspected": ["쇼크", "내출혈", "패혈증"],
+        "suspected": [
+          "쇼크",
+          "내출혈",
+          "패혈증"
+        ],
         "label": "잇몸이 창백하고 쓰러졌어요",
         "vtl_ref": "R-CIRC-01",
         "keywords": [
@@ -235,7 +250,10 @@
       {
         "id": "RF-12",
         "chief": "배뇨 불가",
-        "suspected": ["요도폐색", "급성 신손상"],
+        "suspected": [
+          "요도폐색",
+          "급성 신손상"
+        ],
         "label": "소변을 12시간 이상 전혀 못 봐요",
         "vtl_ref": "O-URO-02",
         "keywords": [
@@ -250,7 +268,9 @@
       {
         "id": "RF-13",
         "chief": "중독성 발작",
-        "suspected": ["퍼메트린 중독"],
+        "suspected": [
+          "퍼메트린 중독"
+        ],
         "label": "🐱 고양이 - 외용 벼룩약 바른 후 발작",
         "vtl_ref": "R-NEURO-01",
         "keywords": [
@@ -265,7 +285,9 @@
       {
         "id": "RF-14",
         "chief": "독성 교상",
-        "suspected": ["독사/독거미 교상"],
+        "suspected": [
+          "독사/독거미 교상"
+        ],
         "label": "독사/독거미에 물렸어요",
         "vtl_ref": "O-TRA-02",
         "keywords": [
@@ -280,7 +302,10 @@
       {
         "id": "RF-15",
         "chief": "저체온",
-        "suspected": ["쇼크", "저체온증"],
+        "suspected": [
+          "쇼크",
+          "저체온증"
+        ],
         "label": "체온이 너무 낮아요 (몸이 차갑고 축 늘어짐)",
         "vtl_ref": "R-GEN-03",
         "keywords": [
@@ -294,7 +319,9 @@
       {
         "id": "RF-16",
         "chief": "독성물질 섭취",
-        "suspected": ["중독"],
+        "suspected": [
+          "중독"
+        ],
         "label": "독성물질을 먹었어요 (초콜릿·자일리톨·포도·양파·쥐약 등)",
         "vtl_ref": "R-TOX-01",
         "keywords": [
@@ -317,7 +344,10 @@
       {
         "id": "RF-17",
         "chief": "열사병 의심",
-        "suspected": ["열사병", "고체온증"],
+        "suspected": [
+          "열사병",
+          "고체온증"
+        ],
         "label": "더운 곳에 있다가 헥헥대며 축 늘어져요 (열사병 의심)",
         "vtl_ref": "R-GEN-04",
         "keywords": [
@@ -336,7 +366,10 @@
       {
         "id": "RF-18",
         "chief": "기도 이물/질식",
-        "suspected": ["기도 이물", "상기도 폐쇄"],
+        "suspected": [
+          "기도 이물",
+          "상기도 폐쇄"
+        ],
         "label": "목에 뭔가 걸린 듯 켁켁대고 숨을 못 쉬어요 (질식·기도 이물)",
         "vtl_ref": "R-RESP-02",
         "keywords": [
@@ -354,7 +387,10 @@
       {
         "id": "RF-19",
         "chief": "알레르기 반응",
-        "suspected": ["아나필락시스", "혈관부종"],
+        "suspected": [
+          "아나필락시스",
+          "혈관부종"
+        ],
         "label": "벌에 쏘이거나 약/백신 후 얼굴이 붓고 무너져요 (알레르기 쇼크)",
         "vtl_ref": "R-IMM-01",
         "keywords": [
@@ -374,7 +410,9 @@
       {
         "id": "RF-20",
         "chief": "음부 분비물",
-        "suspected": ["자궁축농증"],
+        "suspected": [
+          "자궁축농증"
+        ],
         "label": "중성화 안 한 암컷이 음부에서 고름이 나오고 축 늘어져요 (자궁축농증 의심)",
         "vtl_ref": "O-REP-01",
         "keywords": [
@@ -389,7 +427,9 @@
       {
         "id": "RF-21",
         "chief": "난산",
-        "suspected": ["난산"],
+        "suspected": [
+          "난산"
+        ],
         "label": "강한 진통/힘주기가 오래 이어지는데 새끼가 안 나와요 (난산)",
         "vtl_ref": "R-OBS-02",
         "keywords": [
@@ -405,7 +445,9 @@
       {
         "id": "RF-22",
         "chief": "배뇨곤란",
-        "suspected": ["요도폐색"],
+        "suspected": [
+          "요도폐색"
+        ],
         "label": "소변을 보려고 계속 힘주는데 안 나오고 아파해요 (요도폐색 의심)",
         "vtl_ref": "O-URO-03",
         "keywords": [
@@ -422,7 +464,11 @@
       {
         "id": "RF-23",
         "chief": "외상",
-        "suspected": ["다발성 외상", "내부 장기 손상", "골절"],
+        "suspected": [
+          "다발성 외상",
+          "내부 장기 손상",
+          "골절"
+        ],
         "label": "높은 곳에서 떨어지거나 차에 치였어요 (추락·교통사고)",
         "vtl_ref": "O-TRA-04",
         "keywords": [
@@ -441,7 +487,10 @@
       {
         "id": "RF-24",
         "chief": "감전/화상",
-        "suspected": ["전기 화상", "폐부종"],
+        "suspected": [
+          "전기 화상",
+          "폐부종"
+        ],
         "label": "전기 코드를 씹거나 감전됐어요 / 심한 화상을 입었어요",
         "vtl_ref": "O-TRA-05",
         "keywords": [
@@ -459,7 +508,10 @@
       {
         "id": "RF-25",
         "chief": "익수",
-        "suspected": ["흡인성 폐렴", "저산소증"],
+        "suspected": [
+          "흡인성 폐렴",
+          "저산소증"
+        ],
         "label": "물에 빠졌었어요 (익수)",
         "vtl_ref": "R-RESP-03",
         "keywords": [
@@ -473,22 +525,27 @@
     ]
   },
   "scoring_engine": {
-    "description": "에이전트 구현용 응급도 계산 로직",
+    "description": "에이전트 구현용 응급도 계산 로직 (필드 기반, completion_fields 충족 시 조기 종료). RED는 red_flags 매칭에서만 발생한다. field_scoring은 ORANGE/YELLOW/GREEN 구분에만 사용된다.",
     "steps": [
       {
         "step": 1,
         "name": "red_flag_check",
-        "logic": "IF any pill.red_flag == true OR free_text matches red_flags[].keywords → urgency = RED, stop immediately"
+        "logic": "추출된 field 값 또는 사용자 자유 텍스트가 red_flags[].keywords/조건에 해당하면 → urgency = RED, 즉시 종료. RED는 이 단계에서만 결정된다."
+      },
+      {
+        "step": "1.5",
+        "name": "completion_check",
+        "logic": "각 사용자 응답 후, 현재 section의 completion_fields가 모두 채워졌는지 확인한다. 모두 채워졌다면 남은 required_fields를 묻지 않고 즉시 2단계(field_score_sum)로 진행한다."
       },
       {
         "step": 2,
-        "name": "score_sum",
-        "logic": "total_score = SUM(urgency_score for all selected pills where urgency_score is set)"
+        "name": "field_score_sum",
+        "logic": "completion_fields가 모두 채워지면 문진을 종료할 수 있다. total_score = 현재까지 수집된 필드(완료 시점의 completion_fields, 또는 추가로 수집된 required_fields)에 대해 section의 field_scoring을 사용해 점수를 합산. 미수집 필드는 점수에 포함하지 않는다(0으로 처리하지 않음 — 단순 누락 처리). 이 점수는 ORANGE/YELLOW/GREEN 판정에만 사용되며 RED를 유발하지 않는다 (RED는 1단계 red_flag_check에서만 결정)."
       },
       {
         "step": 3,
-        "name": "timing_modifier",
-        "logic": "Find the pill where is_timing == true → add urgency_modifier to total_score"
+        "name": "onset_modifier",
+        "logic": "onset 필드 값에 해당하는 점수를 field_scoring.onset에서 조회하여 total_score에 가산"
       },
       {
         "step": 4,
@@ -499,16 +556,8 @@
             "add": 1
           },
           {
-            "condition": "section == CARDIAC AND species == cat",
+            "condition": "section == GENERAL AND species == cat",
             "add": 1
-          },
-          {
-            "condition": "section == UNABLE_TO_WALK AND species == cat",
-            "add": 1
-          },
-          {
-            "condition": "section == UROGENITAL AND sex == male_intact AND species == cat",
-            "add": 2
           }
         ]
       },
@@ -516,10 +565,6 @@
         "step": 5,
         "name": "urgency_map",
         "thresholds": [
-          {
-            "min": 10,
-            "urgency": "RED"
-          },
           {
             "min": 7,
             "urgency": "ORANGE"
@@ -532,24 +577,28 @@
             "min": 0,
             "urgency": "GREEN"
           }
-        ]
+        ],
+        "note": "RED(min=10)는 red_flag_check(1단계)에서만 결정되므로 이 맵에서 제외된다. field_scoring 합산 결과는 ORANGE/YELLOW/GREEN 중 하나로만 매핑된다."
       }
     ],
     "pseudocode": [
-      "function triage(answers, species, sex, section):",
-      "  # Step 1: red_flag 즉시 확인",
-      "  for pill in answers:",
-      "    if pill.red_flag == true: return RED",
-      "  # Step 2~3: 점수 합산 + timing modifier",
-      "  score = sum(p.urgency_score for p in answers if p.urgency_score)",
-      "  score += next(p.urgency_modifier for p in answers if p.is_timing, 0)",
-      "  # Step 4: 종별 보정",
-      "  if species=='cat' and section in ['RESPIRATORY','CARDIAC','UNABLE_TO_WALK']: score+=1",
-      "  if species=='cat' and section=='UROGENITAL' and sex=='male_intact': score+=2",
-      "  # Step 5: urgency 결정",
-      "  if score>=10: return RED",
-      "  if score>=7:  return ORANGE",
-      "  if score>=4:  return YELLOW",
+      "function triage(fields, species, section):",
+      "  # 1단계: red_flag 즉시 확인 — RED는 이 단계에서만 결정됨",
+      "  if red_flag_matched(fields, free_text): return RED",
+      "  # 1.5단계: 조기 종료 조건 확인",
+      "  if all(f in fields for f in section.completion_fields):",
+      "    proceed_to_scoring = True  # 남은 required_fields는 더 묻지 않음",
+      "  # 2단계: 수집된 field에 대해서만 점수 합산 (ORANGE/YELLOW/GREEN 판정용)",
+      "  score = 0",
+      "  for field_name, value in fields.items():",
+      "    if field_name in section.field_scoring:",
+      "      score += section.field_scoring[field_name][value]",
+      "  # 3단계: onset 보정은 2단계 합산에 포함됨 (onset도 field_scoring에 포함)",
+      "  # 4단계: 종별 보정",
+      "  if species == 'cat' and section in ['RESPIRATORY', 'GENERAL']: score += 1",
+      "  # 5단계: urgency 결정 (RED 제외 — ORANGE/YELLOW/GREEN만 해당)",
+      "  if score >= section.urgency_rules.ORANGE_threshold: return ORANGE",
+      "  if score >= section.urgency_rules.YELLOW_threshold: return YELLOW",
       "  return GREEN"
     ]
   },
@@ -563,69 +612,67 @@
       "pills": [
         {
           "label": "🐶 강아지",
-          "value": "dog",
-          "next": "Q_INIT_SYMPTOM"
+          "value": "dog"
         },
         {
           "label": "🐱 고양이",
-          "value": "cat",
-          "next": "Q_INIT_SYMPTOM"
+          "value": "cat"
         }
       ]
     },
     {
       "id": "Q_INIT_SYMPTOM",
-      "text": "오늘 가장 걱정되는 증상이 무엇인가요? (해당하는 것 선택)",
+      "text": "오늘 가장 걱정되는 증상이 무엇인가요?",
       "type": "multi",
-      "hint": "여러 개 선택 가능합니다",
+      "hint": "여러 개 선택 가능합니다. 또는 자유롭게 증상을 말씀해주셔도 됩니다.",
       "pills": [
         {
-          "label": "숨 쉬기 힘들어해요",
+          "label": "기침/호흡",
           "value": "RESPIRATORY",
           "next_section": "RESPIRATORY"
         },
         {
-          "label": "발작 / 경련해요",
-          "value": "SEIZURE",
-          "next_section": "SEIZURE"
-        },
-        {
-          "label": "쓰러졌어요",
-          "value": "COLLAPSE",
-          "next_section": "COLLAPSE"
-        },
-        {
-          "label": "피가 나요",
-          "value": "BLEEDING",
-          "next_section": "BLEEDING"
-        },
-        {
-          "label": "심장이 이상한 것 같아요",
-          "value": "CARDIAC",
-          "next_section": "CARDIAC"
-        },
-        {
-          "label": "못 걷거나 마비가 왔어요",
-          "value": "UNABLE_TO_WALK",
-          "next_section": "UNABLE_TO_WALK"
-        },
-        {
-          "label": "토하거나 설사해요",
+          "label": "구토/설사",
           "value": "GI",
           "next_section": "GI"
         },
         {
-          "label": "다쳤어요 (외상)",
-          "value": "TRAUMA",
-          "next_section": "TRAUMA"
+          "label": "피부",
+          "value": "SKIN",
+          "next_section": "SKIN"
         },
         {
-          "label": "소변 / 배변 문제",
-          "value": "UROGENITAL",
-          "next_section": "UROGENITAL"
+          "label": "눈",
+          "value": "EYE",
+          "next_section": "EYE"
         },
         {
-          "label": "기운 없고 잘 못 먹어요",
+          "label": "귀",
+          "value": "EAR",
+          "next_section": "EAR"
+        },
+        {
+          "label": "배뇨/배변(소변)",
+          "value": "UROLOGY",
+          "next_section": "UROLOGY"
+        },
+        {
+          "label": "발작/신경증상",
+          "value": "NEUROLOGY",
+          "next_section": "NEUROLOGY"
+        },
+        {
+          "label": "다리/외상",
+          "value": "ORTHOPEDIC",
+          "next_section": "ORTHOPEDIC"
+        },
+        {
+          "label": "생식기/임신·출산",
+          "value": "REPRODUCTIVE",
+          "next_section": "REPRODUCTIVE"
+        },
+        {
+          "label": "기타",
           "value": "GENERAL",
           "next_section": "GENERAL"
         }
@@ -637,1086 +684,151 @@
       "id": "RESPIRATORY",
       "label": "호흡 문제",
       "vtl_subcategory": "respiratory",
+      "goal": "호흡곤란 정도, 기침 양상, 호흡음 이상 여부 및 발생 시점 파악",
+      "required_fields": [
+        "breathing_difficulty",
+        "open_mouth_breathing",
+        "abnormal_breath_sound",
+        "cough_frequency",
+        "onset"
+      ],
+      "completion_fields": [
+        "breathing_difficulty",
+        "open_mouth_breathing",
+        "onset"
+      ],
+      "field_schema": {
+        "breathing_difficulty": [
+          "none",
+          "mild",
+          "moderate",
+          "severe"
+        ],
+        "open_mouth_breathing": [
+          "no",
+          "yes"
+        ],
+        "abnormal_breath_sound": [
+          "none",
+          "stridor",
+          "silent_dyspnea"
+        ],
+        "cough_frequency": [
+          "none",
+          "occasional",
+          "frequent",
+          "persistent"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "breathing_difficulty": {
+          "none": 0,
+          "mild": 4,
+          "moderate": 7,
+          "severe": 8
+        },
+        "open_mouth_breathing": {
+          "no": 0,
+          "yes": 8
+        },
+        "abnormal_breath_sound": {
+          "none": 0,
+          "stridor": 7,
+          "silent_dyspnea": 6
+        },
+        "cough_frequency": {
+          "none": 0,
+          "occasional": 2,
+          "frequent": 3,
+          "persistent": 5
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
       "questions": [
         {
           "id": "Q_RESP_01",
-          "text": "지금 숨 쉬는 상태가 어떤가요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "입을 벌리고 헐떡이거나 거의 못 쉬어요",
-              "value": "severe",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-RESP-01",
-              "keywords": [
-                "severe respiratory distress",
-                "open mouth breathing"
-              ]
-            },
-            {
-              "label": "숨소리가 이상하고 힘들어 보여요",
-              "value": "moderate",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-RESP-01",
-              "keywords": [
-                "moderate respiratory distress"
-              ],
-              "next": "Q_RESP_02"
-            },
-            {
-              "label": "약간 헐떡이거나 숨이 빠른 것 같아요",
-              "value": "mild",
-              "urgency_score": 4,
-              "vtl_discriminator_id": "Y-RESP-01",
-              "keywords": [
-                "mild respiratory distress"
-              ],
-              "next": "Q_RESP_02"
-            },
-            {
-              "label": "기침만 해요",
-              "value": "cough_only",
-              "urgency_score": 2,
-              "keywords": [
-                "coughing"
-              ],
-              "next": "Q_RESP_SOUND"
-            }
+          "goal": "호흡곤란 정도 확인",
+          "extract_fields": [
+            "breathing_difficulty",
+            "open_mouth_breathing"
+          ],
+          "example_questions": [
+            "숨 쉬기 힘들어 보이나요?",
+            "입을 벌리고 헐떡이나요?",
+            "평소보다 숨이 가쁜가요?",
+            "기침만 하고 호흡 자체는 괜찮나요?"
           ]
         },
         {
           "id": "Q_RESP_02",
-          "text": "숨 쉴 때 소리가 나나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "네, 그르렁거리거나 쌕쌕 소리가 나요",
-              "value": "stridor",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-RESP-02",
-              "keywords": [
-                "acute stridor",
-                "upper airway"
-              ],
-              "next": "Q_RESP_03"
-            },
-            {
-              "label": "소리 없이 숨만 가빠요",
-              "value": "silent",
-              "urgency_score": 6,
-              "keywords": [
-                "lower airway",
-                "pleural effusion",
-                "pneumothorax"
-              ],
-              "next": "Q_RESP_03"
-            },
-            {
-              "label": "잘 모르겠어요",
-              "value": "unknown",
-              "urgency_score": 5,
-              "next": "Q_RESP_03"
-            }
+          "goal": "호흡음 이상 여부 확인",
+          "extract_fields": [
+            "abnormal_breath_sound"
+          ],
+          "example_questions": [
+            "숨 쉴 때 그르렁거리거나 쌕쌕 소리가 나나요?",
+            "소리 없이 숨만 가빠지나요?"
           ]
         },
         {
           "id": "Q_RESP_03",
-          "text": "다음 중 해당되는 것을 모두 선택해주세요",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "피부 아래 공기가 든 것처럼 부풀어있어요",
-              "value": "subcutaneous_emphysema",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-RESP-03",
-              "keywords": [
-                "subcutaneous emphysema",
-                "pneumothorax"
-              ]
-            },
-            {
-              "label": "주둥이가 납작한 품종이에요 (불독·퍼그·시추 등)",
-              "value": "brachycephalic",
-              "urgency_score": 6,
-              "keywords": [
-                "brachycephalic airway syndrome"
-              ],
-              "species": "dog"
-            },
-            {
-              "label": "심장 질환 진단을 받은 적 있어요",
-              "value": "cardiac_history",
-              "urgency_score": 6,
-              "keywords": [
-                "cardiogenic pulmonary edema",
-                "congestive heart failure"
-              ]
-            },
-            {
-              "label": "최근 연기나 독가스를 마셨어요",
-              "value": "toxin_inhalation",
-              "urgency_score": 6,
-              "keywords": [
-                "non-cardiogenic pulmonary edema",
-                "toxin inhalation"
-              ]
-            },
-            {
-              "label": "해당 없음",
-              "value": "none",
-              "urgency_score": 0
-            }
+          "goal": "기침 빈도 확인",
+          "extract_fields": [
+            "cough_frequency"
           ],
-          "next": "Q_RESP_TIMING"
-        },
-        {
-          "id": "Q_RESP_SOUND",
-          "text": "기침은 얼마나 자주 하나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "하루 종일 계속 기침해요",
-              "value": "persistent",
-              "urgency_score": 5,
-              "keywords": [
-                "persistent cough"
-              ],
-              "next": "Q_RESP_TIMING"
-            },
-            {
-              "label": "가끔 기침해요",
-              "value": "occasional",
-              "urgency_score": 2,
-              "next": "Q_RESP_TIMING"
-            }
+          "example_questions": [
+            "기침을 얼마나 자주 하나요?",
+            "하루 종일 계속 기침하나요, 가끔 하나요?"
           ]
         },
         {
           "id": "Q_RESP_TIMING",
-          "text": "증상이 언제부터 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "갑자기 지금 (수분~1시간)",
-              "value": "abrupt",
-              "urgency_modifier": 3
-            },
-            {
-              "label": "오늘 하루 안에",
-              "value": "rapid",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "2~3일 전부터",
-              "value": "acute",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "1주일 이상",
-              "value": "recent",
-              "urgency_modifier": 0
-            }
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
           ],
-          "is_final": true
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 시작됐나요, 며칠 전부터 서서히 그랬나요?"
+          ]
         }
       ],
       "urgency_rules": [
         {
-          "condition": "red_flag == true OR total_score >= 10",
+          "condition": "red_flag == true",
           "urgency": "RED",
-          "triage_note": "즉각 산소 공급 및 응급 처치. NOSE 프로토콜 적용 검토."
+          "triage_note": "즉각 산소 공급 및 응급 처치 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
         },
         {
           "condition": "total_score >= 7",
           "urgency": "ORANGE",
-          "triage_note": "15분 내 진료. 호흡 상태 지속 관찰."
+          "triage_note": "신속한 진료 필요. 호흡 상태 지속 관찰."
         },
         {
           "condition": "total_score >= 4",
           "urgency": "YELLOW",
-          "triage_note": "30~60분 내 진료."
+          "triage_note": "빠른 시일 내 진료 권장."
         },
         {
           "condition": "total_score < 4",
           "urgency": "GREEN",
           "triage_note": "일반 예약 가능."
-        }
-      ]
-    },
-    {
-      "id": "SEIZURE",
-      "label": "발작 / 경련",
-      "vtl_subcategory": "neurological",
-      "questions": [
-        {
-          "id": "Q_SEI_01",
-          "text": "발작이 지금도 일어나고 있나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "네, 지금 발작 중이에요",
-              "value": "active_now",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-NEURO-01",
-              "keywords": [
-                "currently seizuring",
-                "status epilepticus"
-              ]
-            },
-            {
-              "label": "방금 멈췄어요 (30분 이내)",
-              "value": "just_stopped",
-              "urgency_score": 9,
-              "keywords": [
-                "post-ictal"
-              ],
-              "next": "Q_SEI_02"
-            },
-            {
-              "label": "오늘 발작이 있었어요",
-              "value": "today",
-              "urgency_score": 7,
-              "next": "Q_SEI_02"
-            },
-            {
-              "label": "어제 이전에 발작이 있었어요",
-              "value": "past",
-              "urgency_score": 4,
-              "next": "Q_SEI_02"
-            }
-          ]
-        },
-        {
-          "id": "Q_SEI_02",
-          "text": "발작이 몇 번이나 있었나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "5분 이상 멈추지 않고 계속됐어요",
-              "value": "status_epilepticus",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-NEURO-01",
-              "keywords": [
-                "status epilepticus SE"
-              ]
-            },
-            {
-              "label": "24시간 내에 2번 이상 반복됐어요",
-              "value": "cluster",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-NEURO-04",
-              "keywords": [
-                "cluster seizures"
-              ],
-              "next": "Q_SEI_03"
-            },
-            {
-              "label": "1번 있었고 지금은 괜찮아요",
-              "value": "single",
-              "urgency_score": 4,
-              "vtl_discriminator_id": "G-GEN-05",
-              "keywords": [
-                "isolated seizure"
-              ],
-              "next": "Q_SEI_03"
-            }
-          ]
-        },
-        {
-          "id": "Q_SEI_03",
-          "text": "발작 원인이 될 수 있는 것이 있나요? (해당 모두 선택)",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "🐱 고양이 - 외용 벼룩약(퍼밍트린)을 바른 후 시작됐어요",
-              "value": "permethrin_cat",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-NEURO-01",
-              "keywords": [
-                "permethrin toxicity cats"
-              ],
-              "species": "cat",
-              "special_instruction": "즉시 중성 세제로 목욕시켜주세요"
-            },
-            {
-              "label": "독성 물질을 먹었을 수 있어요",
-              "value": "toxin",
-              "urgency_score": 9,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-GI-01",
-              "keywords": [
-                "toxin ingestion seizure",
-                "antifreeze xylitol"
-              ]
-            },
-            {
-              "label": "임신 중이거나 최근 출산·수유 중이에요",
-              "value": "pregnant_lactating",
-              "urgency_score": 9,
-              "keywords": [
-                "eclampsia hypocalcemia"
-              ]
-            },
-            {
-              "label": "당뇨 치료 중이에요",
-              "value": "diabetic",
-              "urgency_score": 8,
-              "keywords": [
-                "hypoglycemia diabetic seizure"
-              ]
-            },
-            {
-              "label": "이전에도 발작이 있어 약을 먹고 있어요",
-              "value": "on_meds",
-              "urgency_score": 6,
-              "keywords": [
-                "breakthrough seizure phenobarbital levetiracetam"
-              ]
-            },
-            {
-              "label": "원인을 모르겠어요",
-              "value": "unknown",
-              "urgency_score": 5,
-              "keywords": [
-                "idiopathic epilepsy"
-              ]
-            }
-          ],
-          "next": "Q_SEI_04"
-        },
-        {
-          "id": "Q_SEI_04",
-          "text": "발작 후 상태는 어떤가요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "발작 후 의식이 없어요",
-              "value": "unconscious",
-              "urgency_score": 9,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-NEURO-02",
-              "keywords": [
-                "post-ictal coma unresponsive"
-              ]
-            },
-            {
-              "label": "몸이 뜨겁고 헐떡여요",
-              "value": "hyperthermia",
-              "urgency_score": 8,
-              "keywords": [
-                "post-seizure hyperthermia neurogenic pulmonary edema"
-              ],
-              "next": "Q_SEI_TIMING"
-            },
-            {
-              "label": "비틀거리거나 멍해요",
-              "value": "postictal",
-              "urgency_score": 5,
-              "keywords": [
-                "postictal phase"
-              ],
-              "next": "Q_SEI_TIMING"
-            },
-            {
-              "label": "거의 정상으로 회복됐어요",
-              "value": "recovered",
-              "urgency_score": 0,
-              "next": "Q_SEI_TIMING"
-            }
-          ]
-        },
-        {
-          "id": "Q_SEI_TIMING",
-          "text": "발작이 처음 시작된 건 언제인가요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "1시간 이내",
-              "value": "abrupt",
-              "urgency_modifier": 3
-            },
-            {
-              "label": "오늘 하루 안에",
-              "value": "rapid",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "2~3일 전부터",
-              "value": "acute",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "1주일 이상",
-              "value": "recent",
-              "urgency_modifier": 0
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 응급. SE 또는 독소 의심. 항경련제 투여 후 이송."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "RED",
-          "triage_note": "클러스터 발작. 즉시 내원."
-        },
-        {
-          "condition": "total_score >= 5",
-          "urgency": "ORANGE",
-          "triage_note": "당일 진료. 혈당 확인."
-        },
-        {
-          "condition": "total_score < 5",
-          "urgency": "YELLOW",
-          "triage_note": "원인 감별 위해 빠른 진료 권장."
-        }
-      ],
-      "followup_trigger": {
-        "enabled": true,
-        "message": "발작 경과를 영상으로 기록해두시면 진료에 도움이 됩니다. 추가 발작이 있으면 즉시 알려주세요."
-      }
-    },
-    {
-      "id": "COLLAPSE",
-      "label": "쓰러짐",
-      "vtl_subcategory": "circulatory",
-      "questions": [
-        {
-          "id": "Q_COL_01",
-          "text": "지금 쓰러진 상태가 어떤가요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "완전히 쓰러져서 일어나지 못해요",
-              "value": "complete",
-              "urgency_score": 9,
-              "red_flag": true,
-              "keywords": [
-                "complete collapse recumbent"
-              ]
-            },
-            {
-              "label": "앉아 있지만 서지 못해요",
-              "value": "partial",
-              "urgency_score": 7,
-              "keywords": [
-                "partial collapse hind limb"
-              ],
-              "next": "Q_COL_02"
-            },
-            {
-              "label": "잠깐 쓰러졌다가 회복됐어요 (실신)",
-              "value": "syncope",
-              "urgency_score": 7,
-              "keywords": [
-                "syncope arrhythmia"
-              ],
-              "next": "Q_COL_02"
-            }
-          ]
-        },
-        {
-          "id": "Q_COL_02",
-          "text": "다음 중 해당하는 것을 모두 선택해주세요",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "잇몸/혀가 창백하거나 파래요",
-              "value": "pale_gums",
-              "urgency_score": 9,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-CIRC-01",
-              "keywords": [
-                "shock pale mucous membranes"
-              ]
-            },
-            {
-              "label": "🐱 고양이 - 뒷다리를 끌고 통증이 심해요",
-              "value": "cat_ATE",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-CIRC-02",
-              "keywords": [
-                "feline ATE aortic thromboembolism"
-              ],
-              "species": "cat"
-            },
-            {
-              "label": "배가 부풀어있어요",
-              "value": "abdominal_distension",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "R-GI-01",
-              "keywords": [
-                "hemoabdomen GDV abdominal distension"
-              ]
-            },
-            {
-              "label": "심장 소리가 멀리서 들린다고 했어요",
-              "value": "muffled_heart",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-CIRC-04",
-              "keywords": [
-                "pericardial effusion cardiac tamponade muffled heart sounds"
-              ]
-            },
-            {
-              "label": "알레르기 반응 후 쓰러졌어요 (벌 쏘임·약물 등)",
-              "value": "anaphylaxis",
-              "urgency_score": 10,
-              "red_flag": true,
-              "keywords": [
-                "anaphylaxis anaphylactic shock"
-              ]
-            },
-            {
-              "label": "더위에 오래 노출됐어요",
-              "value": "heatstroke",
-              "urgency_score": 9,
-              "keywords": [
-                "heatstroke hyperthermia"
-              ],
-              "species": "dog"
-            },
-            {
-              "label": "독성 물질을 먹었을 수 있어요",
-              "value": "toxin",
-              "urgency_score": 8,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-GI-01",
-              "keywords": [
-                "toxin ingestion collapse"
-              ]
-            },
-            {
-              "label": "해당 없음",
-              "value": "none",
-              "urgency_score": 0
-            }
-          ],
-          "next": "Q_COL_TIMING"
-        },
-        {
-          "id": "Q_COL_TIMING",
-          "text": "쓰러진 것이 언제인가요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "지금 쓰러져 있어요",
-              "value": "now",
-              "urgency_modifier": 3
-            },
-            {
-              "label": "1시간 이내",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "오늘",
-              "value": "rapid",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "어제 이전",
-              "value": "acute",
-              "urgency_modifier": 0
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 심폐 안정화. 쇼크·ATE·아나필락시스·심낭삼출 의심."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "RED",
-          "triage_note": "즉각 내원. 심혈관 불안정."
-        },
-        {
-          "condition": "total_score >= 5",
-          "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료."
-        },
-        {
-          "condition": "total_score < 5",
-          "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
-        }
-      ]
-    },
-    {
-      "id": "BLEEDING",
-      "label": "출혈",
-      "vtl_subcategory": "circulatory",
-      "questions": [
-        {
-          "id": "Q_BLD_01",
-          "text": "출혈이 어디서 나고 있나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "겉으로 피가 쏟아지고 멈추지 않아요",
-              "value": "exsanguinating",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-CIRC-02",
-              "keywords": [
-                "exsanguinating hemorrhage"
-              ]
-            },
-            {
-              "label": "배나 가슴 안에서 출혈이 의심돼요",
-              "value": "internal",
-              "urgency_score": 9,
-              "vtl_discriminator_id": "O-CIRC-04",
-              "keywords": [
-                "internal hemorrhage hemoabdomen hemothorax"
-              ],
-              "next": "Q_BLD_02"
-            },
-            {
-              "label": "코나 입에서 피가 나요",
-              "value": "nasal_oral",
-              "urgency_score": 6,
-              "keywords": [
-                "epistaxis oral bleeding"
-              ],
-              "next": "Q_BLD_02"
-            },
-            {
-              "label": "피부에 멍이나 출혈반점이 생겼어요",
-              "value": "petechiae",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-GEN-01",
-              "keywords": [
-                "petechiae ecchymosis coagulopathy thrombocytopenia"
-              ],
-              "next": "Q_BLD_02"
-            },
-            {
-              "label": "검거나 피 섞인 변이에요",
-              "value": "melena",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "Y-GI-03",
-              "keywords": [
-                "melena hematochezia GI hemorrhage"
-              ],
-              "next": "Q_BLD_02"
-            }
-          ]
-        },
-        {
-          "id": "Q_BLD_02",
-          "text": "출혈 원인이 될 수 있는 것이 있나요?",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "쥐약이나 항응고제를 먹었을 수 있어요",
-              "value": "rodenticide",
-              "urgency_score": 9,
-              "red_flag": true,
-              "keywords": [
-                "anticoagulant rodenticide coagulopathy"
-              ]
-            },
-            {
-              "label": "외상 (사고·낙상·물림)",
-              "value": "trauma",
-              "urgency_score": 7,
-              "keywords": [
-                "traumatic hemorrhage"
-              ]
-            },
-            {
-              "label": "암 치료 중이에요",
-              "value": "neoplasia",
-              "urgency_score": 7,
-              "keywords": [
-                "neoplastic hemorrhage splenic hemangiosarcoma"
-              ]
-            },
-            {
-              "label": "여러 군데에서 동시에 피가 나요",
-              "value": "multiple_sites",
-              "urgency_score": 8,
-              "keywords": [
-                "DIC coagulopathy multiple bleeding sites"
-              ]
-            },
-            {
-              "label": "해당 없음",
-              "value": "none",
-              "urgency_score": 0
-            }
-          ],
-          "next": "Q_BLD_TIMING"
-        },
-        {
-          "id": "Q_BLD_TIMING",
-          "text": "출혈이 언제부터 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "지금 출혈 중",
-              "value": "now",
-              "urgency_modifier": 3
-            },
-            {
-              "label": "1시간 이내",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "오늘",
-              "value": "rapid",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "어제 이전",
-              "value": "acute",
-              "urgency_modifier": 0
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 지혈 처치 및 쇼크 안정화."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "RED",
-          "triage_note": "당일 즉시 내원. 내부 출혈·응고 장애 가능성."
-        },
-        {
-          "condition": "total_score >= 4",
-          "urgency": "ORANGE",
-          "triage_note": "당일 진료."
-        },
-        {
-          "condition": "total_score < 4",
-          "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
-        }
-      ]
-    },
-    {
-      "id": "CARDIAC",
-      "label": "심장 / 부정맥",
-      "vtl_subcategory": "circulatory",
-      "questions": [
-        {
-          "id": "Q_CARD_01",
-          "text": "심장 관련 증상이 어떤가요? (해당 모두 선택)",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "갑자기 쓰러지거나 기절했어요",
-              "value": "syncope",
-              "urgency_score": 8,
-              "keywords": [
-                "syncope arrhythmia cardiac"
-              ]
-            },
-            {
-              "label": "심장이 매우 빠르게 뛰는 것 같아요",
-              "value": "tachycardia",
-              "urgency_score": 7,
-              "keywords": [
-                "tachyarrhythmia SVT atrial fibrillation ventricular tachycardia"
-              ]
-            },
-            {
-              "label": "심장이 너무 느리게 뛰는 것 같아요",
-              "value": "bradycardia",
-              "urgency_score": 7,
-              "keywords": [
-                "bradyarrhythmia AV block sick sinus syndrome"
-              ]
-            },
-            {
-              "label": "심장 잡음이 있다고 들었어요",
-              "value": "murmur",
-              "urgency_score": 2,
-              "keywords": [
-                "heart murmur"
-              ]
-            }
-          ],
-          "next": "Q_CARD_02"
-        },
-        {
-          "id": "Q_CARD_02",
-          "text": "심장 증상과 함께 다음 중 해당하는 것이 있나요?",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "숨 쉬기 힘들어해요",
-              "value": "dyspnea",
-              "urgency_score": 8,
-              "keywords": [
-                "congestive heart failure pulmonary edema pleural effusion"
-              ]
-            },
-            {
-              "label": "잇몸이 창백하거나 파래요",
-              "value": "pale_gums",
-              "urgency_score": 9,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-CIRC-01",
-              "keywords": [
-                "poor perfusion cardiogenic shock"
-              ]
-            },
-            {
-              "label": "🐱 고양이 - 뒷다리가 갑자기 마비되고 차갑고 아파해요",
-              "value": "cat_ATE",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-CIRC-02",
-              "keywords": [
-                "feline ATE HCM aortic thromboembolism cold limb"
-              ],
-              "species": "cat"
-            },
-            {
-              "label": "🐶 대형견 - 배에 물이 찬 것 같아요",
-              "value": "ascites",
-              "urgency_score": 7,
-              "keywords": [
-                "right-sided CHF ascites pericardial effusion"
-              ],
-              "species": "dog"
-            },
-            {
-              "label": "해당 없음",
-              "value": "none",
-              "urgency_score": 0
-            }
-          ],
-          "next": "Q_CARD_TIMING"
-        },
-        {
-          "id": "Q_CARD_TIMING",
-          "text": "심장 증상이 언제부터 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "갑자기 오늘",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "며칠 전부터",
-              "value": "acute",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "1주일 이상",
-              "value": "recent",
-              "urgency_modifier": 0
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 심폐 안정화. ATE·쇼크·부정맥 의심."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료."
-        },
-        {
-          "condition": "total_score >= 3",
-          "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
-        },
-        {
-          "condition": "total_score < 3",
-          "urgency": "GREEN",
-          "triage_note": "일반 예약 가능."
-        }
-      ]
-    },
-    {
-      "id": "UNABLE_TO_WALK",
-      "label": "못 걷거나 마비",
-      "vtl_subcategory": "neurological",
-      "questions": [
-        {
-          "id": "Q_UTW_01",
-          "text": "걷지 못하는 상태가 어떤가요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "완전히 마비됐어요 (전혀 못 움직여요)",
-              "value": "complete_paralysis",
-              "urgency_score": 9,
-              "red_flag": true,
-              "keywords": [
-                "paralysis tetraplegia paraplegia"
-              ]
-            },
-            {
-              "label": "다리에 힘이 없어요 (조금 움직이긴 해요)",
-              "value": "paresis",
-              "urgency_score": 7,
-              "keywords": [
-                "paresis weakness"
-              ],
-              "next": "Q_UTW_02"
-            },
-            {
-              "label": "비틀거리거나 균형을 못 잡아요",
-              "value": "ataxia",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "Y-NEURO-01",
-              "keywords": [
-                "ataxia vestibular"
-              ],
-              "next": "Q_UTW_02"
-            },
-            {
-              "label": "걸으려 하지 않아요 (다리는 움직여요)",
-              "value": "reluctant",
-              "urgency_score": 4,
-              "keywords": [
-                "orthopedic pain reluctant to walk"
-              ],
-              "next": "Q_UTW_02"
-            }
-          ]
-        },
-        {
-          "id": "Q_UTW_02",
-          "text": "다음 중 해당하는 것을 모두 선택해주세요",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "🐱 고양이 - 뒷다리가 갑자기 마비되고 차갑고 아파해요",
-              "value": "cat_ATE",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-CIRC-02",
-              "keywords": [
-                "feline ATE absent femoral pulse cold limb"
-              ],
-              "species": "cat"
-            },
-            {
-              "label": "갑자기 수분~1시간 내에 시작됐어요",
-              "value": "acute_onset",
-              "urgency_score": 8,
-              "keywords": [
-                "acute onset paralysis spinal injury FCE"
-              ]
-            },
-            {
-              "label": "다친 후 시작됐어요",
-              "value": "post_trauma",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "Y-TRA-03",
-              "keywords": [
-                "traumatic spinal injury fracture spinal luxation"
-              ],
-              "special_instruction": "척추 골절 의심 시 평평한 판 위에 올려 이송"
-            },
-            {
-              "label": "의식이 흐릿하거나 반응이 둔해요",
-              "value": "altered_mentation",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-NEURO-01",
-              "keywords": [
-                "brain disease increased intracranial pressure"
-              ]
-            },
-            {
-              "label": "뼈가 부러진 것 같아요",
-              "value": "fracture",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "Y-TRA-03",
-              "keywords": [
-                "fracture open fracture"
-              ]
-            },
-            {
-              "label": "해당 없음",
-              "value": "none",
-              "urgency_score": 0
-            }
-          ],
-          "next": "Q_UTW_TIMING"
-        },
-        {
-          "id": "Q_UTW_TIMING",
-          "text": "증상이 언제 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "갑자기 (수분~1시간)",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "오늘",
-              "value": "rapid",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "점점 진행 중",
-              "value": "acute",
-              "urgency_modifier": 0
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 내원. ATE·척추 손상·완전 마비 의심."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "RED",
-          "triage_note": "즉각 내원. 신경계·혈관계 긴급 평가 필요."
-        },
-        {
-          "condition": "total_score >= 5",
-          "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료."
-        },
-        {
-          "condition": "total_score < 5",
-          "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
         }
       ]
     },
@@ -1724,153 +836,206 @@
       "id": "GI",
       "label": "소화기 증상",
       "vtl_subcategory": "gastrointestinal",
+      "goal": "구토/설사 빈도, 혈변·혈토 여부, 식욕 변화, 이물 섭취 가능성 및 발생 시점 파악",
+      "required_fields": [
+        "vomiting",
+        "vomiting_frequency",
+        "diarrhea",
+        "diarrhea_frequency",
+        "blood_present",
+        "appetite_change",
+        "abdominal_distension",
+        "foreign_body_possible",
+        "toxin_ingestion_possible",
+        "onset"
+      ],
+      "completion_fields": [
+        "vomiting",
+        "diarrhea",
+        "blood_present",
+        "abdominal_distension",
+        "onset"
+      ],
+      "field_schema": {
+        "vomiting": [
+          "no",
+          "yes"
+        ],
+        "vomiting_frequency": [
+          "none",
+          "once",
+          "several",
+          "nonstop"
+        ],
+        "diarrhea": [
+          "no",
+          "yes"
+        ],
+        "diarrhea_frequency": [
+          "none",
+          "mild",
+          "frequent"
+        ],
+        "blood_present": [
+          "no",
+          "yes"
+        ],
+        "appetite_change": [
+          "normal",
+          "reduced",
+          "none"
+        ],
+        "abdominal_distension": [
+          "no",
+          "yes"
+        ],
+        "foreign_body_possible": [
+          "no",
+          "yes"
+        ],
+        "toxin_ingestion_possible": [
+          "no",
+          "yes"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "vomiting": {
+          "no": 0,
+          "yes": 1
+        },
+        "vomiting_frequency": {
+          "none": 0,
+          "once": 1,
+          "several": 3,
+          "nonstop": 5
+        },
+        "diarrhea": {
+          "no": 0,
+          "yes": 1
+        },
+        "diarrhea_frequency": {
+          "none": 0,
+          "mild": 1,
+          "frequent": 3
+        },
+        "blood_present": {
+          "no": 0,
+          "yes": 7
+        },
+        "appetite_change": {
+          "normal": 0,
+          "reduced": 1,
+          "none": 3
+        },
+        "abdominal_distension": {
+          "no": 0,
+          "yes": 8
+        },
+        "foreign_body_possible": {
+          "no": 0,
+          "yes": 5
+        },
+        "toxin_ingestion_possible": {
+          "no": 0,
+          "yes": 8
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
       "questions": [
         {
           "id": "Q_GI_01",
-          "text": "주요 증상은 무엇인가요? (해당 모두 선택)",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "배가 갑자기 크게 부풀었어요 (12시간 이내)",
-              "value": "acute_bloat",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-GI-01",
-              "keywords": [
-                "rapid onset abdominal distension GDV"
-              ],
-              "species": "dog"
-            },
-            {
-              "label": "구토를 해요",
-              "value": "vomiting",
-              "urgency_score": 4,
-              "vtl_discriminator_id": "G-GEN-03",
-              "keywords": [
-                "vomiting"
-              ]
-            },
-            {
-              "label": "설사를 해요",
-              "value": "diarrhea",
-              "urgency_score": 3,
-              "keywords": [
-                "diarrhea"
-              ]
-            },
-            {
-              "label": "검거나 피 섞인 변이에요",
-              "value": "melena",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "Y-GI-03",
-              "keywords": [
-                "melena GI hemorrhage"
-              ]
-            },
-            {
-              "label": "이물질을 삼킨 것 같아요",
-              "value": "foreign_body",
-              "urgency_score": 5,
-              "vtl_discriminator_id": "Y-GI-01",
-              "keywords": [
-                "foreign body ingestion"
-              ]
-            },
-            {
-              "label": "독성 물질을 먹었어요",
-              "value": "toxin",
-              "urgency_score": 8,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-GI-01",
-              "keywords": [
-                "toxin ingestion"
-              ]
-            }
+          "goal": "구토/설사 여부 및 위험 요인(복부팽만·이물·독성물질) 확인",
+          "extract_fields": [
+            "vomiting",
+            "diarrhea",
+            "abdominal_distension",
+            "foreign_body_possible",
+            "toxin_ingestion_possible"
           ],
-          "next": "Q_GI_02"
+          "example_questions": [
+            "구토를 하나요, 설사를 하나요, 둘 다인가요?",
+            "혹시 배가 갑자기 크게 부풀었나요?",
+            "이물질을 삼킨 것 같나요?",
+            "독성 물질을 먹었을 가능성이 있나요?"
+          ]
         },
         {
           "id": "Q_GI_02",
-          "text": "구토나 설사가 어느 정도인가요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "멈추지 않고 계속 구토해요",
-              "value": "persistent",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "Y-GI-02",
-              "keywords": [
-                "persistent vomiting"
-              ]
-            },
-            {
-              "label": "이물 삼킴 후 24시간 이상 됐고 구토·밥 안 먹어요",
-              "value": "fb_over_24h",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-GI-02",
-              "keywords": [
-                "foreign body >24h anorexia vomiting"
-              ]
-            },
-            {
-              "label": "피가 섞여 있어요",
-              "value": "blood",
-              "urgency_score": 7,
-              "keywords": [
-                "hematemesis bloody diarrhea"
-              ]
-            },
-            {
-              "label": "몇 번 했지만 지금은 괜찮아요",
-              "value": "mild",
-              "urgency_score": 2,
-              "keywords": [
-                "occasional vomiting mild"
-              ]
-            }
+          "goal": "구토/설사 빈도 확인",
+          "extract_fields": [
+            "vomiting_frequency",
+            "diarrhea_frequency"
           ],
-          "next": "Q_GI_TIMING"
+          "example_questions": [
+            "구토나 설사를 몇 번 정도 했나요?",
+            "멈추지 않고 계속하나요, 몇 번 하고 멈췄나요?"
+          ]
+        },
+        {
+          "id": "Q_GI_03",
+          "goal": "혈변/혈토 여부 확인",
+          "extract_fields": [
+            "blood_present"
+          ],
+          "example_questions": [
+            "변이나 토사물에 피가 섞여 있나요?",
+            "색깔이 검거나 붉게 보이나요?"
+          ]
+        },
+        {
+          "id": "Q_GI_04",
+          "goal": "식욕 변화 확인",
+          "extract_fields": [
+            "appetite_change"
+          ],
+          "example_questions": [
+            "밥은 평소처럼 먹나요?",
+            "밥을 잘 안 먹거나 아예 안 먹나요?"
+          ]
         },
         {
           "id": "Q_GI_TIMING",
-          "text": "증상이 언제부터 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "갑자기 오늘",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "2~3일 전부터",
-              "value": "acute",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "1주일 이상",
-              "value": "recent",
-              "urgency_modifier": 0
-            }
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
           ],
-          "is_final": true
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "오늘 갑자기 그런가요, 며칠 전부터인가요?"
+          ]
         }
       ],
       "urgency_rules": [
         {
           "condition": "red_flag == true",
           "urgency": "RED",
-          "triage_note": "즉각 응급. GDV 의심."
+          "triage_note": "급성 복부팽만(GDV) 등 응급 질환 의심. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
         },
         {
           "condition": "total_score >= 8",
           "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료. 독소·심한 GI 출혈 의심."
+          "triage_note": "신속한 진료 필요. 독소·심한 출혈 의심."
         },
         {
           "condition": "total_score >= 5",
           "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
+          "triage_note": "빠른 시일 내 진료 권장."
         },
         {
           "condition": "total_score < 5",
@@ -1880,289 +1045,426 @@
       ]
     },
     {
-      "id": "TRAUMA",
-      "label": "외상",
-      "vtl_subcategory": "trauma",
+      "id": "SKIN",
+      "label": "피부 문제",
+      "vtl_subcategory": "dermatology",
+      "goal": "피부 병변의 종류, 가려움 정도, 분포 범위 및 발생 시점 파악",
+      "required_fields": [
+        "hair_loss",
+        "redness",
+        "discharge_or_pus",
+        "lesion_type",
+        "pruritus",
+        "distribution",
+        "onset"
+      ],
+      "completion_fields": [
+        "lesion_type",
+        "pruritus",
+        "onset"
+      ],
+      "field_schema": {
+        "hair_loss": [
+          "no",
+          "yes"
+        ],
+        "redness": [
+          "no",
+          "yes"
+        ],
+        "discharge_or_pus": [
+          "no",
+          "yes"
+        ],
+        "lesion_type": [
+          "none",
+          "redness",
+          "hair_loss",
+          "mass",
+          "pus",
+          "ulcer"
+        ],
+        "pruritus": [
+          "none",
+          "mild",
+          "moderate",
+          "severe"
+        ],
+        "distribution": [
+          "single_area",
+          "multiple_areas",
+          "generalized"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "lesion_type": {
+          "none": 0,
+          "redness": 2,
+          "hair_loss": 1,
+          "mass": 5,
+          "pus": 6,
+          "ulcer": 6
+        },
+        "pruritus": {
+          "none": 0,
+          "mild": 1,
+          "moderate": 3,
+          "severe": 5
+        },
+        "distribution": {
+          "single_area": 0,
+          "multiple_areas": 2,
+          "generalized": 4
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
       "questions": [
         {
-          "id": "Q_TRA_01",
-          "text": "어떤 외상이 있나요? (해당 모두 선택)",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "내장이 밖으로 나왔어요",
-              "value": "evisceration",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-TRA-01",
-              "keywords": [
-                "evisceration"
-              ]
-            },
-            {
-              "label": "독사·독거미에 물렸어요",
-              "value": "envenomation_high",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-TRA-02",
-              "keywords": [
-                "high lethality envenomation"
-              ]
-            },
-            {
-              "label": "눈이 튀어나왔어요",
-              "value": "proptosed_eye",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-TRA-03",
-              "keywords": [
-                "proptosed eye ocular proptosis"
-              ]
-            },
-            {
-              "label": "눈에 화학물질이 들어갔어요",
-              "value": "chemical_ocular",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-TRA-04",
-              "keywords": [
-                "acute chemical ocular injury"
-              ]
-            },
-            {
-              "label": "차에 치였어요",
-              "value": "hit_by_car",
-              "urgency_score": 9,
-              "keywords": [
-                "traumatic pneumothorax internal hemorrhage"
-              ]
-            },
-            {
-              "label": "뼈가 부러진 것 같아요",
-              "value": "fracture",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "Y-TRA-03",
-              "keywords": [
-                "fracture open fracture"
-              ]
-            },
-            {
-              "label": "입 주변을 막대기 등으로 찔렸어요",
-              "value": "oral_stick",
-              "urgency_score": 5,
-              "vtl_discriminator_id": "Y-TRA-02",
-              "keywords": [
-                "oral stick trauma"
-              ]
-            },
-            {
-              "label": "상처·찢어진 곳이 있어요",
-              "value": "wound",
-              "urgency_score": 4,
-              "vtl_discriminator_id": "Y-TRA-04",
-              "keywords": [
-                "medium large skin wound laceration"
-              ]
-            }
+          "id": "Q_SKIN_01",
+          "goal": "피부 병변 종류 확인 (탈모/발적/진물·고름)",
+          "extract_fields": [
+            "hair_loss",
+            "redness",
+            "discharge_or_pus",
+            "lesion_type"
           ],
-          "next": "Q_TRA_02"
+          "example_questions": [
+            "털이 빠졌나요?",
+            "붉게 변했나요?",
+            "진물이나 고름이 있나요?"
+          ]
         },
         {
-          "id": "Q_TRA_02",
-          "text": "출혈이 있나요?",
-          "type": "single",
-          "pills": [
-            {
-              "label": "심하게 피가 나고 멈추지 않아요",
-              "value": "profuse",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-CIRC-02",
-              "keywords": [
-                "exsanguinating hemorrhage"
-              ]
-            },
-            {
-              "label": "조절이 안 되고 계속 나와요",
-              "value": "major",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-CIRC-01",
-              "keywords": [
-                "uncontrollable major hemorrhage"
-              ]
-            },
-            {
-              "label": "조금 나오거나 스며드는 정도예요",
-              "value": "minor",
-              "urgency_score": 4,
-              "vtl_discriminator_id": "Y-CIRC-01",
-              "keywords": [
-                "uncontrollable minor hemorrhage"
-              ]
-            },
-            {
-              "label": "출혈은 없어요",
-              "value": "none",
-              "urgency_score": 0
-            }
+          "id": "Q_SKIN_02",
+          "goal": "가려움/긁는 정도 확인",
+          "extract_fields": [
+            "pruritus"
           ],
-          "next": "Q_TRA_TIMING"
+          "example_questions": [
+            "계속 긁거나 핥나요?",
+            "많이 가려워하나요?"
+          ]
         },
         {
-          "id": "Q_TRA_TIMING",
-          "text": "다친 후 움직일 수 있나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "전혀 못 움직여요",
-              "value": "immobile",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "조금 움직여요",
-              "value": "limited",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "거의 정상으로 움직여요",
-              "value": "normal",
-              "urgency_modifier": 0
-            }
+          "id": "Q_SKIN_03",
+          "goal": "병변 분포 범위 확인",
+          "extract_fields": [
+            "distribution"
           ],
-          "is_final": true
+          "example_questions": [
+            "한 부위만 그런가요, 여러 군데인가요?",
+            "어느 부위에 증상이 있나요?"
+          ]
+        },
+        {
+          "id": "Q_SKIN_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 생겼나요, 서서히 심해졌나요?"
+          ]
         }
       ],
       "urgency_rules": [
         {
-          "condition": "red_flag == true OR total_score >= 10",
+          "condition": "red_flag == true",
           "urgency": "RED",
-          "triage_note": "즉각 응급 처치."
+          "triage_note": "즉각 응급 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
         },
         {
           "condition": "total_score >= 7",
           "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료."
-        },
-        {
-          "condition": "total_score >= 5",
-          "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
-        },
-        {
-          "condition": "total_score < 5",
-          "urgency": "GREEN",
-          "triage_note": "일반 예약 가능."
-        }
-      ]
-    },
-    {
-      "id": "UROGENITAL",
-      "label": "비뇨생식기",
-      "vtl_subcategory": "urogenital",
-      "questions": [
-        {
-          "id": "Q_URO_01",
-          "text": "어떤 증상이 있나요?",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "소변을 전혀 못 봐요 (막힌 것 같아요)",
-              "value": "obstruction",
-              "urgency_score": 10,
-              "red_flag": true,
-              "vtl_discriminator_id": "O-URO-02",
-              "keywords": [
-                "urethral obstruction FLUTD"
-              ],
-              "species_note": {
-                "cat": "중성화 안 된 수컷 고양이 극고위험. 24~48h 내 사망 가능.",
-                "dog": "수컷 강아지도 요도폐색 가능 (요석·종양)"
-              }
-            },
-            {
-              "label": "소변에 피가 섞여 있어요",
-              "value": "hematuria",
-              "urgency_score": 5,
-              "vtl_discriminator_id": "Y-URO-01",
-              "keywords": [
-                "hematuria cystitis urolithiasis"
-              ]
-            },
-            {
-              "label": "소변볼 때 힘들어해요 / 조금씩 봐요",
-              "value": "stranguria",
-              "urgency_score": 3,
-              "vtl_discriminator_id": "G-GEN-02",
-              "keywords": [
-                "stranguria tenesmus cystitis"
-              ]
-            },
-            {
-              "label": "고환이 갑자기 붓고 아파해요",
-              "value": "testicular_swelling",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-URO-01",
-              "keywords": [
-                "orchitis testicular torsion"
-              ]
-            },
-            {
-              "label": "임신 중이거나 분만 중인데 이상해요",
-              "value": "obstetric",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "R-OBS-01",
-              "keywords": [
-                "dystocia obstetric emergency"
-              ]
-            }
-          ],
-          "next": "Q_URO_TIMING"
-        },
-        {
-          "id": "Q_URO_TIMING",
-          "text": "마지막으로 소변을 본 게 언제인가요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "12시간 이상 못 봤어요",
-              "value": "anuria_12h",
-              "urgency_modifier": 3
-            },
-            {
-              "label": "몇 시간 전에 봤어요",
-              "value": "few_hours",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "최근에 봤어요",
-              "value": "recent",
-              "urgency_modifier": 0
-            },
-            {
-              "label": "잘 모르겠어요",
-              "value": "unknown",
-              "urgency_modifier": 1
-            }
-          ],
-          "is_final": true
-        }
-      ],
-      "urgency_rules": [
-        {
-          "condition": "red_flag == true OR total_score >= 10",
-          "urgency": "RED",
-          "triage_note": "즉각 처치. 요도폐색 수 시간 내 사망 가능."
-        },
-        {
-          "condition": "total_score >= 7",
-          "urgency": "ORANGE",
-          "triage_note": "당일 긴급 진료."
+          "triage_note": "신속한 진료 필요. 광범위 병변·중증 감염 의심."
         },
         {
           "condition": "total_score >= 4",
           "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "EYE",
+      "label": "눈 문제",
+      "vtl_subcategory": "ophthalmology",
+      "goal": "눈 분비물, 통증/이상 행동, 시력 변화 여부 및 발생 시점 파악",
+      "required_fields": [
+        "eye_discharge",
+        "eye_closed_or_squinting",
+        "rubbing_eye",
+        "vision_change",
+        "onset"
+      ],
+      "completion_fields": [
+        "eye_discharge",
+        "vision_change",
+        "onset"
+      ],
+      "field_schema": {
+        "eye_discharge": [
+          "none",
+          "mild",
+          "heavy"
+        ],
+        "eye_closed_or_squinting": [
+          "no",
+          "yes"
+        ],
+        "rubbing_eye": [
+          "no",
+          "yes"
+        ],
+        "vision_change": [
+          "no",
+          "yes"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "eye_discharge": {
+          "none": 0,
+          "mild": 1,
+          "heavy": 3
+        },
+        "eye_closed_or_squinting": {
+          "no": 0,
+          "yes": 4
+        },
+        "rubbing_eye": {
+          "no": 0,
+          "yes": 2
+        },
+        "vision_change": {
+          "no": 0,
+          "yes": 6
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_EYE_01",
+          "goal": "눈 분비물 여부 확인",
+          "extract_fields": [
+            "eye_discharge"
+          ],
+          "example_questions": [
+            "눈곱이 많나요?",
+            "눈에서 분비물이 나오나요?"
+          ]
+        },
+        {
+          "id": "Q_EYE_02",
+          "goal": "눈 통증/이상 행동 확인",
+          "extract_fields": [
+            "eye_closed_or_squinting",
+            "rubbing_eye"
+          ],
+          "example_questions": [
+            "눈을 잘 못 뜨나요?",
+            "눈을 자주 비비거나 찡그리나요?"
+          ]
+        },
+        {
+          "id": "Q_EYE_03",
+          "goal": "시력 변화 여부 확인",
+          "extract_fields": [
+            "vision_change"
+          ],
+          "example_questions": [
+            "사물을 잘 못 보는 것 같나요?",
+            "벽이나 가구에 부딫히는 모습이 있나요?"
+          ]
+        },
+        {
+          "id": "Q_EYE_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 그런가요, 며칠 전부터인가요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "안구 돌출 등 응급 안과 질환 의심. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요. 시력 저하·심한 통증 동반 시 우선 처치."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "EAR",
+      "label": "귀 문제",
+      "vtl_subcategory": "otology",
+      "goal": "귀 분비물, 냄새, 신경 증상(고개 기울임/평형 이상) 여부 파악",
+      "required_fields": [
+        "ear_scratching",
+        "ear_discharge_present",
+        "ear_odor",
+        "head_tilt",
+        "balance_problem"
+      ],
+      "completion_fields": [
+        "head_tilt",
+        "balance_problem"
+      ],
+      "field_schema": {
+        "ear_scratching": [
+          "no",
+          "yes"
+        ],
+        "ear_discharge_present": [
+          "no",
+          "yes"
+        ],
+        "ear_odor": [
+          "no",
+          "yes"
+        ],
+        "head_tilt": [
+          "no",
+          "yes"
+        ],
+        "balance_problem": [
+          "no",
+          "yes"
+        ]
+      },
+      "field_scoring": {
+        "ear_scratching": {
+          "no": 0,
+          "yes": 1
+        },
+        "ear_discharge_present": {
+          "no": 0,
+          "yes": 2
+        },
+        "ear_odor": {
+          "no": 0,
+          "yes": 2
+        },
+        "head_tilt": {
+          "no": 0,
+          "yes": 7
+        },
+        "balance_problem": {
+          "no": 0,
+          "yes": 7
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_EAR_01",
+          "goal": "귀를 긁는 정도 확인",
+          "extract_fields": [
+            "ear_scratching"
+          ],
+          "example_questions": [
+            "귀를 자주 긁나요?"
+          ]
+        },
+        {
+          "id": "Q_EAR_02",
+          "goal": "귀 분비물 및 냄새 여부 확인",
+          "extract_fields": [
+            "ear_discharge_present",
+            "ear_odor"
+          ],
+          "example_questions": [
+            "귀에서 분비물이 나오나요?",
+            "귀에서 냄새가 나나요?"
+          ]
+        },
+        {
+          "id": "Q_EAR_03",
+          "goal": "신경 증상(고개 기울임/평형 이상) 여부 확인",
+          "extract_fields": [
+            "head_tilt",
+            "balance_problem"
+          ],
+          "example_questions": [
+            "고개를 한쪽으로 기울이나요?",
+            "균형을 잘 못 잡거나 빙글빙글 도나요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "전정 장애·신경 증상 동반 시 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요. 고개 기울임/평형 이상 동반 시 신경학적 평가."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
         },
         {
           "condition": "total_score < 4",
@@ -2173,150 +1475,763 @@
     },
     {
       "id": "GENERAL",
-      "label": "전신 증상",
-      "vtl_subcategory": "generalized",
+      "label": "전신/기타 증상",
+      "vtl_subcategory": "general",
+      "goal": "기력 저하, 식욕·음수 변화 등 전신 증상의 정도와 발생 시점 파악",
+      "required_fields": [
+        "activity_level",
+        "able_to_stand",
+        "appetite",
+        "water_intake",
+        "onset"
+      ],
+      "completion_fields": [
+        "activity_level",
+        "able_to_stand",
+        "onset"
+      ],
+      "field_schema": {
+        "activity_level": [
+          "normal",
+          "reduced",
+          "lethargic",
+          "unresponsive"
+        ],
+        "able_to_stand": [
+          "yes",
+          "with_difficulty",
+          "no"
+        ],
+        "appetite": [
+          "normal",
+          "reduced",
+          "none"
+        ],
+        "water_intake": [
+          "normal",
+          "reduced",
+          "none"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "activity_level": {
+          "normal": 0,
+          "reduced": 2,
+          "lethargic": 5,
+          "unresponsive": 8
+        },
+        "able_to_stand": {
+          "yes": 0,
+          "with_difficulty": 4,
+          "no": 8
+        },
+        "appetite": {
+          "normal": 0,
+          "reduced": 1,
+          "none": 3
+        },
+        "water_intake": {
+          "normal": 0,
+          "reduced": 1,
+          "none": 3
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
       "questions": [
         {
           "id": "Q_GEN_01",
-          "text": "어떤 전신 증상이 있나요? (해당 모두 선택)",
-          "type": "multi",
-          "pills": [
-            {
-              "label": "체온이 너무 높아요 (40°C 이상 의심·열사병)",
-              "value": "hyperthermia",
-              "urgency_score": 8,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-GEN-02",
-              "keywords": [
-                "hyperthermia heatstroke body temp >41C"
-              ]
-            },
-            {
-              "label": "몸이 차갑고 축 늘어져요 (체온 저하 의심)",
-              "value": "hypothermia",
-              "urgency_score": 8,
-              "red_flag": true,
-              "vtl_discriminator_id": "R-GEN-03",
-              "keywords": [
-                "hypothermia rectal temp ≤36.7C"
-              ]
-            },
-            {
-              "label": "당뇨가 있고 기운이 없어요",
-              "value": "diabetic_lethargy",
-              "urgency_score": 8,
-              "vtl_discriminator_id": "O-GEN-02",
-              "keywords": [
-                "diabetic ketoacidosis hyperglycemia ketosis"
-              ]
-            },
-            {
-              "label": "피부에 멍이나 출혈반점이 있어요",
-              "value": "petechiae",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-GEN-01",
-              "keywords": [
-                "petechiae ecchymosis coagulopathy"
-              ]
-            },
-            {
-              "label": "온몸에 힘이 없어요",
-              "value": "weakness",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "O-GEN-04",
-              "keywords": [
-                "generalized weakness"
-              ]
-            },
-            {
-              "label": "심한 통증이 있는 것 같아요",
-              "value": "severe_pain",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "O-GEN-03",
-              "keywords": [
-                "severe pain"
-              ]
-            },
-            {
-              "label": "탈수가 심한 것 같아요 (피부 텐팅, 함몰 안구)",
-              "value": "severe_dehydration",
-              "urgency_score": 7,
-              "vtl_discriminator_id": "O-GEN-05",
-              "keywords": [
-                "severe dehydration >8%"
-              ]
-            },
-            {
-              "label": "🐱🐶 12주 미만인데 밥을 12시간 이상 안 먹어요",
-              "value": "puppy_kitten_anorexia",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "Y-GEN-06",
-              "keywords": [
-                "anorexia puppy kitten hypoglycemia risk"
-              ]
-            },
-            {
-              "label": "고개가 아래로 처져있어요 (고양이)",
-              "value": "ventroflexion",
-              "urgency_score": 6,
-              "vtl_discriminator_id": "Y-GEN-01",
-              "keywords": [
-                "ventroflexion hypokalemia thiamine deficiency cats"
-              ],
-              "species": "cat"
-            },
-            {
-              "label": "가려워해요 (경미)",
-              "value": "mild_pruritus",
-              "urgency_score": 1,
-              "vtl_discriminator_id": "G-GEN-04",
-              "keywords": [
-                "mild pruritus"
-              ]
-            }
+          "goal": "전신 상태(기력/활동성) 확인",
+          "extract_fields": [
+            "activity_level",
+            "able_to_stand"
           ],
-          "next": "Q_GEN_TIMING"
+          "example_questions": [
+            "평소보다 기운이 없나요?",
+            "잘 일어서거나 걷지 못하나요?",
+            "거의 누워만 있나요?"
+          ]
+        },
+        {
+          "id": "Q_GEN_02",
+          "goal": "식욕/음수 변화 확인",
+          "extract_fields": [
+            "appetite",
+            "water_intake"
+          ],
+          "example_questions": [
+            "밥을 잘 안 먹나요?",
+            "물도 잘 안 마시나요?"
+          ]
         },
         {
           "id": "Q_GEN_TIMING",
-          "text": "증상이 언제부터 시작됐나요?",
-          "type": "single",
-          "is_timing": true,
-          "pills": [
-            {
-              "label": "갑자기 오늘",
-              "value": "abrupt",
-              "urgency_modifier": 2
-            },
-            {
-              "label": "2~3일 전부터",
-              "value": "acute",
-              "urgency_modifier": 1
-            },
-            {
-              "label": "1주일 이상",
-              "value": "recent",
-              "urgency_modifier": 0
-            }
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
           ],
-          "is_final": true
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 그런가요, 며칠 전부터 서서히 그랬나요?"
+          ]
         }
       ],
       "urgency_rules": [
         {
-          "condition": "red_flag == true OR total_score >= 9",
+          "condition": "red_flag == true",
           "urgency": "RED",
-          "triage_note": "즉각 내원."
+          "triage_note": "쇼크·저혈당 등 전신 응급 상태 의심. 즉각 평가 필요."
         },
         {
-          "condition": "total_score >= 6",
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
           "urgency": "ORANGE",
-          "triage_note": "당일 진료 필요."
+          "triage_note": "신속한 진료 필요."
         },
         {
           "condition": "total_score >= 4",
           "urgency": "YELLOW",
-          "triage_note": "수 시간 내 진료 권장."
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "UROLOGY",
+      "label": "배뇨 문제",
+      "vtl_subcategory": "urogenital",
+      "goal": "배뇨 가능 여부, 혈뇨, 배뇨 시도 빈도 및 통증 여부, 발생 시점 파악",
+      "required_fields": [
+        "urination_ability",
+        "hematuria",
+        "straining_frequency",
+        "urination_pain",
+        "onset"
+      ],
+      "completion_fields": [
+        "urination_ability",
+        "hematuria",
+        "onset"
+      ],
+      "field_schema": {
+        "urination_ability": [
+          "normal",
+          "reduced",
+          "unable"
+        ],
+        "hematuria": [
+          "no",
+          "yes"
+        ],
+        "straining_frequency": [
+          "none",
+          "occasional",
+          "frequent_no_output"
+        ],
+        "urination_pain": [
+          "no",
+          "yes"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "urination_ability": {
+          "normal": 0,
+          "reduced": 4,
+          "unable": 8
+        },
+        "hematuria": {
+          "no": 0,
+          "yes": 4
+        },
+        "straining_frequency": {
+          "none": 0,
+          "occasional": 2,
+          "frequent_no_output": 7
+        },
+        "urination_pain": {
+          "no": 0,
+          "yes": 2
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_URO_01",
+          "goal": "배뇨 가능 여부 확인",
+          "extract_fields": [
+            "urination_ability"
+          ],
+          "example_questions": [
+            "소변을 보긴 하나요?",
+            "화장실에 가도 소변이 전혀 안 나오나요?",
+            "양이 평소보다 줄었나요?"
+          ]
+        },
+        {
+          "id": "Q_URO_02",
+          "goal": "혈뇨 여부 확인",
+          "extract_fields": [
+            "hematuria"
+          ],
+          "example_questions": [
+            "소변에 피가 섞여 있나요?",
+            "소변 색깔이 붉거나 갈색인가요?"
+          ]
+        },
+        {
+          "id": "Q_URO_03",
+          "goal": "배뇨 시도 빈도 및 통증 확인",
+          "extract_fields": [
+            "straining_frequency",
+            "urination_pain"
+          ],
+          "example_questions": [
+            "화장실을 계속 들락거리나요?",
+            "소변 볼 때 힘들어하거나 아파하나요?"
+          ]
+        },
+        {
+          "id": "Q_URO_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "오늘 갑자기 그런가요, 며칠 전부터인가요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "요도폐색 등 급성 신손상 위험. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요. 배뇨 불가·혈뇨 동반 시 우선 처치."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "NEUROLOGY",
+      "label": "신경 증상",
+      "vtl_subcategory": "neurology",
+      "goal": "발작, 의식 변화, 보행 이상(비틀거림/마비), 머리 기울임 여부 및 발생 시점 파악",
+      "required_fields": [
+        "seizure_status",
+        "consciousness_level",
+        "ataxia",
+        "head_tilt",
+        "limb_paralysis",
+        "onset"
+      ],
+      "completion_fields": [
+        "seizure_status",
+        "consciousness_level",
+        "limb_paralysis",
+        "onset"
+      ],
+      "field_schema": {
+        "seizure_status": [
+          "none",
+          "past_episode_resolved",
+          "currently_seizuring",
+          "cluster_seizures"
+        ],
+        "consciousness_level": [
+          "normal",
+          "dull",
+          "unresponsive"
+        ],
+        "ataxia": [
+          "no",
+          "mild",
+          "severe"
+        ],
+        "head_tilt": [
+          "no",
+          "yes"
+        ],
+        "limb_paralysis": [
+          "no",
+          "partial",
+          "complete"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "seizure_status": {
+          "none": 0,
+          "past_episode_resolved": 3,
+          "currently_seizuring": 8,
+          "cluster_seizures": 8
+        },
+        "consciousness_level": {
+          "normal": 0,
+          "dull": 4,
+          "unresponsive": 8
+        },
+        "ataxia": {
+          "no": 0,
+          "mild": 2,
+          "severe": 6
+        },
+        "head_tilt": {
+          "no": 0,
+          "yes": 5
+        },
+        "limb_paralysis": {
+          "no": 0,
+          "partial": 5,
+          "complete": 8
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_NEURO_01",
+          "goal": "발작 여부 및 상태 확인",
+          "extract_fields": [
+            "seizure_status"
+          ],
+          "example_questions": [
+            "지금도 발작 중인가요?",
+            "발작을 한 적이 있나요? 지금은 멈췄나요?",
+            "발작이 여러 번 반복됐나요?"
+          ]
+        },
+        {
+          "id": "Q_NEURO_02",
+          "goal": "의식 상태 확인",
+          "extract_fields": [
+            "consciousness_level"
+          ],
+          "example_questions": [
+            "평소처럼 반응하나요?",
+            "불러도 반응이 없거나 멍해 보이나요?"
+          ]
+        },
+        {
+          "id": "Q_NEURO_03",
+          "goal": "보행 이상(비틀거림/마비) 확인",
+          "extract_fields": [
+            "ataxia",
+            "limb_paralysis"
+          ],
+          "example_questions": [
+            "걸을 때 비틀거리나요?",
+            "다리에 힘이 없거나 마비된 것 같나요?"
+          ]
+        },
+        {
+          "id": "Q_NEURO_04",
+          "goal": "머리 기울임 확인",
+          "extract_fields": [
+            "head_tilt"
+          ],
+          "example_questions": [
+            "고개를 한쪽으로 기울이나요?"
+          ]
+        },
+        {
+          "id": "Q_NEURO_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 그랬나요, 서서히 그랬나요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "발작 지속·무반응·완전 마비 등 응급 신경학적 상태. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요. 신경학적 평가 우선."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "ORTHOPEDIC",
+      "label": "근골격/외상 문제",
+      "vtl_subcategory": "orthopedic_trauma",
+      "goal": "절뚝거림 정도, 체중 지지 가능 여부, 외상 종류 및 발생 시점 파악",
+      "required_fields": [
+        "lameness_severity",
+        "weight_bearing",
+        "trauma_type",
+        "open_wound",
+        "onset"
+      ],
+      "completion_fields": [
+        "weight_bearing",
+        "trauma_type",
+        "onset"
+      ],
+      "field_schema": {
+        "lameness_severity": [
+          "none",
+          "mild",
+          "moderate",
+          "severe"
+        ],
+        "weight_bearing": [
+          "normal",
+          "partial",
+          "unable"
+        ],
+        "trauma_type": [
+          "none",
+          "fall",
+          "vehicle_accident",
+          "fight_or_bite",
+          "blunt_impact"
+        ],
+        "open_wound": [
+          "no",
+          "yes"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "lameness_severity": {
+          "none": 0,
+          "mild": 1,
+          "moderate": 3,
+          "severe": 5
+        },
+        "weight_bearing": {
+          "normal": 0,
+          "partial": 3,
+          "unable": 7
+        },
+        "trauma_type": {
+          "none": 0,
+          "fall": 3,
+          "vehicle_accident": 8,
+          "fight_or_bite": 6,
+          "blunt_impact": 4
+        },
+        "open_wound": {
+          "no": 0,
+          "yes": 5
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_ORTHO_01",
+          "goal": "절뚝거림 정도 확인",
+          "extract_fields": [
+            "lameness_severity"
+          ],
+          "example_questions": [
+            "다리를 절뚝거리나요?",
+            "한쪽 다리를 안 쓰려고 하나요?"
+          ]
+        },
+        {
+          "id": "Q_ORTHO_02",
+          "goal": "체중 지지 가능 여부 확인",
+          "extract_fields": [
+            "weight_bearing"
+          ],
+          "example_questions": [
+            "그 다리로 서거나 걸을 수 있나요?",
+            "전혀 딛지 못하나요?"
+          ]
+        },
+        {
+          "id": "Q_ORTHO_03",
+          "goal": "외상 원인 및 상처 확인",
+          "extract_fields": [
+            "trauma_type",
+            "open_wound"
+          ],
+          "example_questions": [
+            "어떻게 다쳤나요? (떨어짐, 차에 부딫힘, 싸움 등)",
+            "피부가 찢어지거나 상처가 보이나요?"
+          ]
+        },
+        {
+          "id": "Q_ORTHO_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "언제 다쳤나요?",
+            "방금 그런가요, 며칠 전부터인가요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "교통사고 등 중증 외상 의심. 내부 손상 평가 위해 즉각 내원 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요. 골절·개방창 의심."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
+        },
+        {
+          "condition": "total_score < 4",
+          "urgency": "GREEN",
+          "triage_note": "일반 예약 가능."
+        }
+      ]
+    },
+    {
+      "id": "REPRODUCTIVE",
+      "label": "생식기 문제",
+      "vtl_subcategory": "reproductive",
+      "goal": "질 분비물/출혈, 분만 진행 상태, 유선 이상 여부 및 발생 시점 파악",
+      "required_fields": [
+        "vaginal_discharge",
+        "vaginal_bleeding",
+        "labor_status",
+        "mammary_problem",
+        "onset"
+      ],
+      "completion_fields": [
+        "vaginal_bleeding",
+        "labor_status",
+        "onset"
+      ],
+      "field_schema": {
+        "vaginal_discharge": [
+          "none",
+          "normal",
+          "abnormal"
+        ],
+        "vaginal_bleeding": [
+          "no",
+          "spotting",
+          "heavy"
+        ],
+        "labor_status": [
+          "not_pregnant_or_unknown",
+          "in_labor_normal",
+          "in_labor_stalled"
+        ],
+        "mammary_problem": [
+          "none",
+          "swelling",
+          "discharge_or_pain"
+        ],
+        "onset": [
+          "within_minutes",
+          "within_12h",
+          "within_24h",
+          "within_7days"
+        ]
+      },
+      "field_scoring": {
+        "vaginal_discharge": {
+          "none": 0,
+          "normal": 0,
+          "abnormal": 4
+        },
+        "vaginal_bleeding": {
+          "no": 0,
+          "spotting": 3,
+          "heavy": 9
+        },
+        "labor_status": {
+          "not_pregnant_or_unknown": 0,
+          "in_labor_normal": 2,
+          "in_labor_stalled": 8
+        },
+        "mammary_problem": {
+          "none": 0,
+          "swelling": 2,
+          "discharge_or_pain": 4
+        },
+        "onset": {
+          "within_minutes": 3,
+          "within_12h": 2,
+          "within_24h": 1,
+          "within_7days": 0
+        }
+      },
+      "questions": [
+        {
+          "id": "Q_REPRO_01",
+          "goal": "질 분비물 종류 확인",
+          "extract_fields": [
+            "vaginal_discharge"
+          ],
+          "example_questions": [
+            "분비물이 있나요?",
+            "냄새가 나거나 색깔이 평소와 다른가요?"
+          ]
+        },
+        {
+          "id": "Q_REPRO_02",
+          "goal": "질 출혈 여부 확인",
+          "extract_fields": [
+            "vaginal_bleeding"
+          ],
+          "example_questions": [
+            "음부에서 피가 나나요?",
+            "양이 많은가요, 약간 묻는 정도인가요?"
+          ]
+        },
+        {
+          "id": "Q_REPRO_03",
+          "goal": "분만 진행 상태 확인",
+          "extract_fields": [
+            "labor_status"
+          ],
+          "example_questions": [
+            "지금 새끼를 낳고 있나요?",
+            "새끼가 나오다가 멈췄나요?"
+          ]
+        },
+        {
+          "id": "Q_REPRO_04",
+          "goal": "유선 이상 여부 확인",
+          "extract_fields": [
+            "mammary_problem"
+          ],
+          "example_questions": [
+            "젖 부위가 붓거나 아파 보이나요?",
+            "유선에서 분비물이 나오나요?"
+          ]
+        },
+        {
+          "id": "Q_REPRO_TIMING",
+          "goal": "증상 발생 시점 확인",
+          "extract_fields": [
+            "onset"
+          ],
+          "example_questions": [
+            "이 증상이 언제부터 시작됐나요?",
+            "갑자기 그런가요, 며칠 전부터인가요?"
+          ]
+        }
+      ],
+      "urgency_rules": [
+        {
+          "condition": "red_flag == true",
+          "urgency": "RED",
+          "triage_note": "난산·다량 출혈 의심. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 12",
+          "urgency": "RED",
+          "triage_note": "문진 점수가 매우 높아 응급으로 판단. 즉각 평가 필요."
+        },
+        {
+          "condition": "total_score >= 7",
+          "urgency": "ORANGE",
+          "triage_note": "신속한 진료 필요."
+        },
+        {
+          "condition": "total_score >= 4",
+          "urgency": "YELLOW",
+          "triage_note": "빠른 시일 내 진료 권장."
         },
         {
           "condition": "total_score < 4",
@@ -2326,6 +2241,28 @@
       ]
     }
   ],
+  "section_priority": {
+    "description": "사용자가 여러 증상을 동시에 언급할 경우의 처리 규칙. 숫자가 낮을수록 우선순위가 높다.",
+    "priority": {
+      "RESPIRATORY": 1,
+      "NEUROLOGY": 2,
+      "GI": 3,
+      "UROLOGY": 4,
+      "ORTHOPEDIC": 5,
+      "EYE": 6,
+      "REPRODUCTIVE": 7,
+      "SKIN": 8,
+      "EAR": 9,
+      "GENERAL": 10
+    },
+    "agent_rules": [
+      "1. red_flags를 가장 먼저 확인한다. 일치하면 즉시 urgency=RED, 문진 종료.",
+      "2. 여러 section의 required_fields에 해당하는 증상이 동시에 언급되면, priority 숫자가 가장 낮은(우선순위가 높은) section을 주 섹션(primary_section)으로 선택한다.",
+      "3. 주 섹션을 중심으로 문진을 진행하며, completion_fields가 모두 채워지면 즉시 문진을 종료하고 scoring_engine을 실행한다 (남은 required_fields는 채우지 않아도 됨).",
+      "4. completion_fields 중 일부가 red_flag 조건에 해당하면 즉시 종료하고 urgency=RED로 확정한다.",
+      "5. 다른 section에서 이미 추출된 필드 값은 secondary_findings로 별도 저장하며, 재질문하지 않는다."
+    ]
+  },
   "vtl_discriminators": {
     "description": "Ruys et al.(2012) Table A1 기반 68개 VTL discriminator. 각 pill의 vtl_discriminator_id로 참조.",
     "source": "Ruys LJ et al. J Vet Emerg Crit Care 2012;22(3):303–312",
@@ -2767,84 +2704,20 @@
       }
     ]
   },
-  "common_followup_questions": {
-    "description": "섹션 종료 후 공통으로 수집하는 환자 기본 정보",
-    "questions": [
-      {
-        "id": "Q_COMMON_SEX",
-        "text": "성별은 어떻게 되나요?",
-        "type": "single",
-        "emr_field": "sex",
-        "pills": [
-          {
-            "label": "수컷 (중성화 완료)",
-            "value": "male_neutered"
-          },
-          {
-            "label": "수컷 (중성화 안 됨)",
-            "value": "male_intact"
-          },
-          {
-            "label": "암컷 (중성화 완료)",
-            "value": "female_spayed"
-          },
-          {
-            "label": "암컷 (중성화 안 됨)",
-            "value": "female_intact"
-          }
-        ]
-      },
-      {
-        "id": "Q_COMMON_AGE",
-        "text": "나이는 어떻게 되나요?",
-        "type": "single",
-        "emr_field": "age_group",
-        "pills": [
-          {
-            "label": "3개월 미만",
-            "value": "neonate"
-          },
-          {
-            "label": "3개월~1살",
-            "value": "puppy_kitten"
-          },
-          {
-            "label": "1~3살",
-            "value": "young"
-          },
-          {
-            "label": "4~7살",
-            "value": "adult"
-          },
-          {
-            "label": "8살 이상",
-            "value": "senior"
-          }
-        ]
-      },
-      {
-        "id": "Q_COMMON_VISIT",
-        "text": "저희 병원에 처음 방문하시나요?",
-        "type": "single",
-        "emr_field": "visit_type",
-        "pills": [
-          {
-            "label": "처음이에요",
-            "value": "new_patient"
-          },
-          {
-            "label": "이전에 방문한 적 있어요",
-            "value": "returning_patient"
-          }
-        ]
-      }
-    ]
+  "reservation_handoff": {
+    "description": "species/sex/age_group/visit_type 등 예약 관련 기본 정보는 응급도 판정이 끝난 후 예약(reservation) 단계에서 별도로 수집한다. 이 JSON(triage)은 응급도 판정에 필요한 정보만 다룬다.",
+    "fields_collected_in_reservation_stage": [
+      "species",
+      "sex",
+      "age_group",
+      "visit_type"
+    ],
+    "note": "species는 initial_questions(Q_INIT_SPECIES)에서 이미 수집되며, 그 외(sex/age_group/visit_type)는 예약 단계에서 수집한다."
   },
   "output_schema": {
-    "description": "triage agent 최종 출력 구조 (schedule/chart/validation agent로 전달)",
+    "description": "triage agent 최종 출력 구조. urgency 판정까지만 담당하며, 예약/스케줄 관련 필드(sex, age_group, visit_type, estimated_visit_minutes 등)는 reservation_handoff를 참고해 후속 단계에서 별도 수집한다.",
     "fields": {
       "urgency_level": "RED | ORANGE | YELLOW | GREEN",
-      "urgency_label_ko": "string",
       "total_score": "number",
       "red_flag_triggered": "boolean",
       "red_flag_id": "string | null",
@@ -2864,46 +2737,20 @@
       ],
       "followup_recommended": "boolean",
       "followup_message": "string | null",
-      "estimated_visit_minutes": "number",
       "patient_info": {
-        "species": "dog | cat",
-        "sex": "male_neutered | male_intact | female_spayed | female_intact",
-        "age_group": "neonate | puppy_kitten | young | adult | senior",
-        "visit_type": "new_patient | returning_patient"
+        "species": "dog | cat (initial_questions에서 수집, triage 단계 책임)"
       },
       "score_breakdown": [
         {
-          "question_id": "string",
-          "pill_value": "string",
-          "pill_label": "string",
-          "urgency_score": "number",
+          "field_name": "string (예: respiratory_severity)",
+          "field_value": "string (예: severe)",
+          "score": "number (field_scoring에서 조회한 점수)",
           "red_flag": "boolean",
           "vtl_discriminator_id": "string | null"
         }
       ],
       "chat_summary_for_emr": "string (2~4문장 사전 문진 요약)"
     }
-  },
-  "schedule_agent_hints": {
-    "urgency_base_minutes": {
-      "RED": 30,
-      "ORANGE": 20,
-      "YELLOW": 15,
-      "GREEN": 10
-    },
-    "modifiers": {
-      "new_patient": 5,
-      "senior": 5,
-      "neonate": 5,
-      "multiple_sections": 5
-    },
-    "species_modifiers": {
-      "cat_ATE": 15,
-      "cat_FLUTD_male_intact": 10,
-      "dog_GDV": 20,
-      "dog_brachycephalic": 10
-    },
-    "cap_minutes": 60
   },
   "validation_checklist": [
     {
@@ -2915,24 +2762,16 @@
       "check": "scoring_engine pseudocode 결과와 urgency_rules condition 일치"
     },
     {
-      "id": "V03",
-      "check": "species==cat AND section==UROGENITAL AND sex==male_intact → urgency >= ORANGE"
-    },
-    {
       "id": "V04",
-      "check": "permethrin_cat pill 선택 → special_instruction '목욕' 포함"
+      "check": "red_flag_id == 'RF-13' (퍼메트린 중독) → special_instructions에 '목욕' 포함"
     },
     {
       "id": "V05",
-      "check": "cat_ATE 선택 → followup_recommended == true"
+      "check": "red_flag_id == 'RF-10' (고양이 ATE) → followup_recommended == true"
     },
     {
       "id": "V06",
       "check": "red_flag_id 설정 시 alert_message 비어있지 않음"
-    },
-    {
-      "id": "V07",
-      "check": "schedule agent 추천 슬롯이 urgency action 기준 충족 (RED → immediate_contact)"
     },
     {
       "id": "V08",
@@ -2944,7 +2783,7 @@
     },
     {
       "id": "V10",
-      "check": "estimated_visit_minutes ≤ schedule_agent_hints.cap_minutes"
+      "check": "red_flag_triggered == false → urgency != RED (field_scoring만으로는 RED가 발생하지 않음)"
     }
   ]
 }

@@ -57,6 +57,8 @@ export interface ChatMessage {
   i18nKey?: string;
   i18nVars?: Record<string, string | number>;
   pipelineKey?: "checking-slots" | "slots-result" | "slot-error" | "booking-status" | "followup-restore";
+  /** 응답 대기 중 진행 단계 — 빈 말풍선 로딩 문구 분기용. */
+  statusPhase?: "image_analysis" | "generating";
 }
 
 interface UseChatConversationParams {
@@ -110,6 +112,18 @@ export const useChatConversation = ({
                 ...message,
                 content: `${message.content}${event.content}`,
               }
+            : message,
+        ),
+      );
+      return;
+    }
+
+    // 진행 단계 알림 → 빈 말풍선의 로딩 문구 분기에 사용
+    if (event.type === "status") {
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, statusPhase: event.phase }
             : message,
         ),
       );

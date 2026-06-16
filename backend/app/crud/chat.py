@@ -32,7 +32,10 @@ async def get_chat_session(db: AsyncSession, session_id: int, userid: int):
     return result.scalar_one_or_none()
 
 # 반려동물별 세션 목록 조회
-async def get_chat_sessions_by_petid(db: AsyncSession, userid: int, petid: int):
+# 상담 목록 조회 (페이지네이션) — 최신순, limit+1개 조회로 다음 페이지 존재 여부 판단
+async def get_chat_sessions_by_petid(
+    db: AsyncSession, userid: int, petid: int, limit: int = 10, offset: int = 0
+):
     result = await db.execute(
         select(ChatHistory)
         .where(
@@ -41,6 +44,8 @@ async def get_chat_sessions_by_petid(db: AsyncSession, userid: int, petid: int):
             ChatHistory.is_deleted == False
         )
         .order_by(ChatHistory.created_at.desc())
+        .offset(offset)
+        .limit(limit + 1)  # +1: 다음 페이지가 더 있는지 확인용
     )
     return result.scalars().all()
 

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 
 import type { ChatSessionHistory } from "../../api/chat-api";
 import type { Pet } from "../../api/pets-api";
@@ -23,6 +23,10 @@ interface ChatSessionListProps {
   chatHistories: ChatSessionHistory[];
   selectedHistoryId: number | null;
   isLoadingHistories: boolean;
+  /** 무한스크롤 — 다음 페이지 존재 여부 / 추가 로딩중 / 더 보기 호출. */
+  hasMoreHistories: boolean;
+  isLoadingMoreHistories: boolean;
+  onLoadMoreHistories: () => void;
   creatingPetId: number | null;
   onCreateSession: () => void;
   onSelectHistory: (historyId: number) => void;
@@ -37,6 +41,9 @@ const ChatSessionList = ({
   chatHistories,
   selectedHistoryId,
   isLoadingHistories,
+  hasMoreHistories,
+  isLoadingMoreHistories,
+  onLoadMoreHistories,
   creatingPetId,
   onCreateSession,
   onSelectHistory,
@@ -44,6 +51,22 @@ const ChatSessionList = ({
   getHistoryTitle,
 }: ChatSessionListProps) => {
   const { t } = useTranslation();
+
+  // 무한스크롤 — 목록 맨 아래 센티넬이 화면에 보이면 다음 페이지 로딩
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !hasMoreHistories) {
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isLoadingMoreHistories) {
+        onLoadMoreHistories();
+      }
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreHistories, isLoadingMoreHistories, onLoadMoreHistories]);
 
   return (
     <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-white lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
@@ -89,6 +112,7 @@ const ChatSessionList = ({
                   {t("chatbot.noHistory")}
                 </p>
               ) : (
+                <>
                 <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
                   {chatHistories.map((history) => {
                     const isSelected = history.session_id === selectedHistoryId;
@@ -133,6 +157,15 @@ const ChatSessionList = ({
                     );
                   })}
                 </div>
+                {/* 무한스크롤 센티넬 — 보이면 다음 10개 로딩, 로딩중엔 하단 스피너 */}
+                {hasMoreHistories && (
+                  <div ref={loadMoreRef} className="flex justify-center py-3">
+                    {isLoadingMoreHistories && (
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-100 border-t-blue-600" />
+                    )}
+                  </div>
+                )}
+                </>
               )}
             </div>
           </>

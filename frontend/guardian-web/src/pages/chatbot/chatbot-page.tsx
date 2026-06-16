@@ -31,7 +31,6 @@ import {
 } from "../../hooks/use-chat-sessions";
 import { useChatUpload } from "../../hooks/use-chat-upload";
 import { useTranslation } from "../../i18n/language-context";
-import { translateKnownText } from "../../i18n/known-text";
 
 const SYMPTOM_PILLS = [
   "구토",
@@ -138,7 +137,7 @@ const useStableCallback = <Args extends unknown[], Return>(
 };
 
 const ChatbotPage = () => {
-  const { lang, t } = useTranslation();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams] = useSearchParams();
   const selectedPetIdFromQuery = Number(searchParams.get("petId"));
@@ -245,6 +244,9 @@ const ChatbotPage = () => {
     isLoadingHistories,
     isLoadingHistoryMessages,
     creatingPetId,
+    hasMoreHistories,
+    isLoadingMoreHistories,
+    loadMoreChatHistories,
     resetSessionStateForPetChange,
     handleCreateSession,
     handleSelectHistory,
@@ -393,15 +395,16 @@ const ChatbotPage = () => {
 
   const todayChatTitle = useMemo(() => formatDateToYyyyMmDd(new Date()), []);
 
+  // 상담 제목 = 저장된 keywords 그대로 표시 (완료 시점 언어로 박제됨 → 재번역하지 않음)
   const getHistoryTitle = useCallback(
     (history: ChatSessionHistory) => {
       const keywords = history.keywords
-        .map((keyword) => translateKnownText(keyword.trim(), t, lang))
+        .map((keyword) => keyword.trim())
         .filter((keyword) => keyword && keyword.length <= 24)
         .slice(0, 3);
       return keywords.length > 0 ? keywords.join(", ") : t("chatbot.historyDefaultTitle");
     },
-    [lang, t],
+    [t],
   );
 
   useEffect(() => {
@@ -556,6 +559,9 @@ const ChatbotPage = () => {
               chatHistories={chatHistories}
               selectedHistoryId={selectedHistoryId}
               isLoadingHistories={isLoadingHistories}
+              hasMoreHistories={hasMoreHistories}
+              isLoadingMoreHistories={isLoadingMoreHistories}
+              onLoadMoreHistories={loadMoreChatHistories}
               creatingPetId={creatingPetId}
               onCreateSession={stableCreateSession}
               onSelectHistory={stableSelectHistory}
