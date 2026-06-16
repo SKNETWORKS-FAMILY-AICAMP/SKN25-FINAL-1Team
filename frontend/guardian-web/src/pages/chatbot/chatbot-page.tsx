@@ -20,7 +20,7 @@ import ChatInputBox from "../../components/chatbot/chat-input-box";
 import ChatMessageList from "../../components/chatbot/chat-message-list";
 import ChatSessionList from "../../components/chatbot/chat-session-list";
 import PetSelector from "../../components/chatbot/pet-selector";
-import { useMyHospitals } from "../../hooks/use-my-hospitals";
+import { useHospitalStore } from "../../stores/hospital-store";
 import { useAgentPipeline } from "../../hooks/use-agent-pipeline";
 import { useChatConversation } from "../../hooks/use-chat-conversation";
 import {
@@ -159,12 +159,11 @@ const ChatbotPage = () => {
   });
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  // 선택 병원 — 병원탭/예약 모달과 동일 키로 공유. 내 병원 목록은 API(백엔드 미가동 시 mock 폴백).
-  const { hospitals: myHospitals } = useMyHospitals();
-  const [selectedHospitalId, setSelectedHospitalId] = useState<number | null>(() => {
-    const stored = Number(window.localStorage.getItem("medipaw.guardian.hospitalid"));
-    return stored > 0 ? stored : null;
-  });
+  // 선택 병원 — 전역 store 단일 소스. 병원탭/예약 모달과 현재 병원 공유.
+  const myHospitals = useHospitalStore((state) => state.myHospitals);
+  const currentHospitalId = useHospitalStore((state) => state.currentHospitalId);
+  const setCurrentHospital = useHospitalStore((state) => state.setCurrent);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<number | null>(currentHospitalId);
   useEffect(() => {
     if (myHospitals.length === 0) return;
     setSelectedHospitalId((prev) =>
@@ -175,7 +174,7 @@ const ChatbotPage = () => {
   }, [myHospitals]);
   const handleSelectHospital = (id: number) => {
     setSelectedHospitalId(id);
-    window.localStorage.setItem("medipaw.guardian.hospitalid", String(id));
+    setCurrentHospital(id);
   };
   // 보호자가 한마디도 안 한 빈 세션 추적 — 이탈 시 삭제(req1).
   const liveSessionRef = useRef<LiveSessionInfo | null>(null);

@@ -53,11 +53,31 @@ async def create_checkup(
     if not pet:
         raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
 
-    # 수의사 확인 (doctorid 기준 첫 번째 수의사로 자동 배정)
-    result = await db.execute(select(Doctor).order_by(Doctor.doctorid.asc()))
-    doctor = result.scalars().first()
-    if not doctor:
-        raise HTTPException(status_code=404, detail="등록된 수의사가 없습니다.")
+    # 수의사 결정: 보호자가 고른 원장 우선 → 병원 첫 활성원장 → (호환) 전체 첫 활성원장.
+    # 비활성(is_active=False) 원장은 예약 대상에서 제외.
+    if request.doctorid is not None:
+        result = await db.execute(
+            select(Doctor).where(Doctor.doctorid == request.doctorid, Doctor.is_active == True)  # noqa: E712
+        )
+        doctor = result.scalar_one_or_none()
+        if not doctor:
+            raise HTTPException(status_code=404, detail="선택한 수의사를 찾을 수 없습니다.")
+    elif request.hospitalid is not None:
+        result = await db.execute(
+            select(Doctor)
+            .where(Doctor.hospitalid == request.hospitalid, Doctor.is_active == True)  # noqa: E712
+            .order_by(Doctor.doctorid.asc())
+        )
+        doctor = result.scalars().first()
+        if not doctor:
+            raise HTTPException(status_code=404, detail="해당 병원에 예약 가능한 수의사가 없습니다.")
+    else:
+        result = await db.execute(
+            select(Doctor).where(Doctor.is_active == True).order_by(Doctor.doctorid.asc())  # noqa: E712
+        )
+        doctor = result.scalars().first()
+        if not doctor:
+            raise HTTPException(status_code=404, detail="등록된 수의사가 없습니다.")
 
     schedule, guardian = await create_checkup_schedule(
         db=db,
@@ -332,6 +352,7 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
         return None
 
     async with AsyncSessionLocal() as db:
+        # 에이전트는 전체 진료 이력 조회(교차병원 포함). 수의사 화면 표시 스코핑은 별도(api/patient.py).
         patient_context_data = await build_patient_context(db, pet.petid)
 
     agent_chat_history: list = []

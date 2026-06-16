@@ -19,6 +19,12 @@ function authHeaders(): Record<string, string> {
 }
 
 async function asJson(res: Response) {
+  // 토큰이 있는데 401 = 세션 만료(로그인 시도의 401은 토큰이 없어 구분됨) → 자동 로그아웃 후 로그인 화면.
+  if (res.status === 401 && getAdminToken()) {
+    clearAdminToken();
+    if (typeof window !== "undefined") window.location.assign("/admin");
+    throw new Error("세션이 만료되었습니다. 다시 로그인해주세요.");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const error = data as { detail?: string; message?: string };
@@ -186,4 +192,123 @@ export async function getJudgeResults(needsReviewOnly: boolean): Promise<JudgeRe
     await fetch(`${API}/admin/judge/results?needs_review_only=${needsReviewOnly}`, { headers: authHeaders() }),
   );
   return Array.isArray(data.result) ? data.result.map(normalizeJudgeRecord) : [];
+}
+
+// ── 운영진: 병원/원장 프로필 관리 ───────────────────────────
+export interface AdminHospitalListItem {
+  hospitalid: number;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  doctorCount: number;
+  is_active: boolean;
+}
+
+export interface AdminDoctor {
+  doctorid: number;
+  name: string;
+  licenseNumber?: string | null;
+  email?: string | null;
+  is_active: boolean;
+  specialty?: string | null;
+  education?: string | null;
+  bio?: string | null;
+  specialtyAreas: string[];
+  profileImage?: string | null;
+  profileImagePosition?: string | null;
+}
+
+export interface AdminHospitalDetail {
+  hospitalid: number;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  businessNumber?: string | null;
+  is_active: boolean;
+  tagline?: string | null;
+  intro?: string | null;
+  bannerImage?: string | null;
+  bannerImagePosition?: string | null;
+  features: string[];
+  doctors: AdminDoctor[];
+}
+
+export interface DaySchedule {
+  day_of_week: number;
+  is_open: boolean;
+  start_time?: string | null;
+  end_time?: string | null;
+  lunch_start?: string | null;
+  lunch_end?: string | null;
+}
+
+function jsonHeaders(): Record<string, string> {
+  return { "Content-Type": "application/json", ...authHeaders() };
+}
+
+export async function listHospitals(): Promise<AdminHospitalListItem[]> {
+  const data = await asJson(await fetch(`${API}/admin/hospitals`, { headers: authHeaders() }));
+  return data.result ?? [];
+}
+
+export async function getHospital(hid: number): Promise<AdminHospitalDetail> {
+  const data = await asJson(await fetch(`${API}/admin/hospitals/${hid}`, { headers: authHeaders() }));
+  return data.result;
+}
+
+export async function updateHospitalProfile(
+  hid: number,
+  body: Partial<Pick<AdminHospitalDetail, "name" | "address" | "phone" | "tagline" | "intro" | "bannerImage" | "bannerImagePosition" | "features">>,
+): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/hospitals/${hid}/profile`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify(body) }),
+  );
+}
+
+export async function getHospitalHours(hid: number): Promise<DaySchedule[]> {
+  const data = await asJson(await fetch(`${API}/admin/hospitals/${hid}/hours`, { headers: authHeaders() }));
+  return data.schedule ?? [];
+}
+
+export async function updateHospitalHours(hid: number, schedule: DaySchedule[]): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/hospitals/${hid}/hours`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ schedule }) }),
+  );
+}
+
+export interface AdminDoctorInput {
+  name: string;
+  licenseNumber?: string;
+  email?: string;
+  specialty?: string;
+  education?: string;
+  bio?: string;
+  specialtyAreas: string[];
+  profileImage?: string;
+  profileImagePosition?: string;
+}
+
+export async function addDoctor(hid: number, body: AdminDoctorInput): Promise<number> {
+  const data = await asJson(
+    await fetch(`${API}/admin/hospitals/${hid}/doctors`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify(body) }),
+  );
+  return data.result?.doctorid;
+}
+
+export async function updateDoctorProfile(did: number, body: Partial<AdminDoctorInput>): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/doctors/${did}/profile`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify(body) }),
+  );
+}
+
+export async function setDoctorActive(did: number, is_active: boolean): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/doctors/${did}/active`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ is_active }) }),
+  );
+}
+
+export async function setHospitalActive(hid: number, is_active: boolean): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/hospitals/${hid}/active`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ is_active }) }),
+  );
 }

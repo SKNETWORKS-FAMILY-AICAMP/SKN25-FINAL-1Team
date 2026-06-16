@@ -435,17 +435,24 @@ async def get_available_slots(
         return [], "해당 날짜는 휴일(법정 공휴일)로 진료가 없습니다."
 
     # 대상 원장 집합: doctorid 지정 > hospitalid 전체 > (호환) 첫 원장
+    # 비활성 원장(is_active=False)은 신규 예약 대상에서 제외(보호자 UI 숨김 + API 방어).
     if doctorid:
-        doc_result = await db.execute(select(Doctor).where(Doctor.doctorid == doctorid))
+        doc_result = await db.execute(
+            select(Doctor).where(Doctor.doctorid == doctorid, Doctor.is_active == True)  # noqa: E712
+        )
         doctor = doc_result.scalar_one_or_none()
         doctors = [doctor] if doctor else []
     elif hospitalid:
         doc_result = await db.execute(
-            select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+            select(Doctor)
+            .where(Doctor.hospitalid == hospitalid, Doctor.is_active == True)  # noqa: E712
+            .order_by(Doctor.doctorid)
         )
         doctors = list(doc_result.scalars().all())
     else:
-        doc_result = await db.execute(select(Doctor))
+        doc_result = await db.execute(
+            select(Doctor).where(Doctor.is_active == True)  # noqa: E712
+        )
         first = doc_result.scalars().first()
         doctors = [first] if first else []
 

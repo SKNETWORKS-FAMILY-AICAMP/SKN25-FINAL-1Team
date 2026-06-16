@@ -13,7 +13,12 @@ async def list_my_hospitals(db: AsyncSession, userid: int) -> list[dict]:
         .order_by(GuardianHospital.is_primary.desc(), GuardianHospital.created_at)
     )
     return [
-        {"hospitalid": h.hospitalid, "name": h.hospital_name, "is_primary": gh.is_primary}
+        {
+            "hospitalid": h.hospitalid,
+            "name": h.hospital_name,
+            "is_primary": gh.is_primary,
+            "is_active": h.is_active,  # 폐업 병원은 보호자 목록에서 뱃지 표시용
+        }
         for gh, h in result.all()
     ]
 

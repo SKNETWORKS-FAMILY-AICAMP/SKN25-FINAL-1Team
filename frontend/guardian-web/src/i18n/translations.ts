@@ -43,6 +43,7 @@ const ko: TranslationTree = {
     description: "다니는 동물병원을 등록하고 기본 병원을 설정하세요.",
     empty: "등록된 병원이 없습니다.",
     primaryBadge: "기본",
+    closedBadge: "폐업",
     setPrimary: "기본으로",
     remove: "삭제",
     addTitle: "병원 추가",
@@ -51,6 +52,12 @@ const ko: TranslationTree = {
     noResults: "검색 결과가 없습니다.",
     add: "추가",
     added: "등록됨",
+  },
+  onboarding: {
+    title: "다니는 병원을 등록해 주세요",
+    subtitle: "병원을 등록하면 예약과 진료기록을 한곳에서 관리할 수 있어요.",
+    start: "시작하기",
+    startHint: "병원을 한 곳 이상 등록하면 시작할 수 있어요.",
   },
   nav: {
     home: "홈",
@@ -523,6 +530,7 @@ const en: TranslationTree = {
     description: "Register the clinics you visit and set a default.",
     empty: "No hospitals registered.",
     primaryBadge: "Default",
+    closedBadge: "Closed",
     setPrimary: "Set default",
     remove: "Remove",
     addTitle: "Add hospital",
@@ -531,6 +539,12 @@ const en: TranslationTree = {
     noResults: "No results.",
     add: "Add",
     added: "Added",
+  },
+  onboarding: {
+    title: "Register your clinic",
+    subtitle: "Once you add a clinic, you can manage bookings and records in one place.",
+    start: "Get started",
+    startHint: "Add at least one clinic to get started.",
   },
   nav: {
     home: "Home",
@@ -1003,6 +1017,7 @@ const ja: TranslationTree = {
     description: "通っている動物病院を登録し、基本病院を設定しましょう。",
     empty: "登録された病院がありません。",
     primaryBadge: "基本",
+    closedBadge: "閉院",
     setPrimary: "基本に設定",
     remove: "削除",
     addTitle: "病院を追加",
@@ -1011,6 +1026,12 @@ const ja: TranslationTree = {
     noResults: "検索結果がありません。",
     add: "追加",
     added: "登録済み",
+  },
+  onboarding: {
+    title: "通っている病院を登録してください",
+    subtitle: "病院を登録すると、予約と診療記録を一か所で管理できます。",
+    start: "はじめる",
+    startHint: "病院を1つ以上登録すると開始できます。",
   },
   nav: {
     home: "ホーム",
@@ -1481,6 +1502,7 @@ const zh: TranslationTree = {
     description: "登记您就诊的动物医院并设置默认医院。",
     empty: "尚未登记医院。",
     primaryBadge: "默认",
+    closedBadge: "停业",
     setPrimary: "设为默认",
     remove: "删除",
     addTitle: "添加医院",
@@ -1489,6 +1511,12 @@ const zh: TranslationTree = {
     noResults: "无搜索结果。",
     add: "添加",
     added: "已登记",
+  },
+  onboarding: {
+    title: "请登记您就诊的医院",
+    subtitle: "登记医院后，可在一处管理预约和诊疗记录。",
+    start: "开始使用",
+    startHint: "登记至少一家医院后即可开始。",
   },
   nav: {
     home: "首页",

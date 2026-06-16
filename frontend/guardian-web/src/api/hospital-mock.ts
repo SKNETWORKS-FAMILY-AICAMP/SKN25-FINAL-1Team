@@ -31,6 +31,8 @@ export interface HospitalDoctor {
   specialtyAreas?: string[];
   /** 사진 URL (없거나 로드 실패 시 이니셜 아바타로 폴백) */
   profileImage?: string;
+  /** 사진 초점 (CSS object-position "x% y%"). 운영팀이 조정. */
+  profileImagePosition?: string;
 }
 
 export interface Hospital {
@@ -48,6 +50,8 @@ export interface Hospital {
   hours?: string;
   /** 병원 배너 이미지 URL */
   bannerImage?: string;
+  /** 배너 초점 (CSS object-position "x% y%"). 운영팀이 조정. */
+  bannerImagePosition?: string;
   /** 병원 특징 태그 */
   features?: string[];
   doctors: HospitalDoctor[];

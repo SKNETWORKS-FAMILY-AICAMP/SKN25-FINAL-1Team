@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { useHospitalStore } from "./hospital-store";
+
 interface GuardianAuth {
   loginid: string;
   name?: string;
@@ -69,6 +71,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       window.localStorage.removeItem(storageKey);
     }
 
+    // 로그인 계정이 바뀌었을 수 있으므로(SPA, 새로고침 없음) 병원 store를 초기화 →
+    // 온보딩 게이트가 새 사용자 기준으로 다시 로드한다.
+    useHospitalStore.getState().reset();
+
     set({
       guardian,
       isAuthenticated: true,
@@ -115,6 +121,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAuth: () => {
     window.localStorage.removeItem(storageKey);
     window.sessionStorage.removeItem(storageKey);
+    useHospitalStore.getState().reset();
     set({
       guardian: null,
       isAuthenticated: false,

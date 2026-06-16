@@ -16,7 +16,9 @@ from app.crud.patient import (
     get_patient_emr_history,
     get_prescriptions_by_emr,
     update_patient,
+    is_pet_in_hospital,
 )
+from app.crud.doctor import get_doctor_ids_by_hospital
 
 
 router = APIRouter(
@@ -35,8 +37,11 @@ async def list_patients(
     db: AsyncSession = Depends(get_db),
     current_hospital=Depends(get_current_hospital),
 ):
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+
     rows, total_count = await get_patient_list(
         db,
+        doctor_ids,
         page=page,
         page_size=page_size,
         keyword=keyword,
@@ -45,7 +50,7 @@ async def list_patients(
     )
 
     pet_ids = [pet.petid for pet, _ in rows]
-    last_visit_map = await get_last_visit_map(db, pet_ids)
+    last_visit_map = await get_last_visit_map(db, pet_ids, doctor_ids)
 
     patient_list = []
     for pet, user in rows:
@@ -88,6 +93,13 @@ async def patient_detail(
     db: AsyncSession = Depends(get_db),
     current_hospital=Depends(get_current_hospital),
 ):
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    if not await is_pet_in_hospital(db, petid, doctor_ids):
+        return {
+            "code": 404,
+            "message": "환자를 찾을 수 없습니다."
+        }
+
     result = await get_patient_detail(db, petid)
 
     if not result:
@@ -98,7 +110,7 @@ async def patient_detail(
 
     pet, user = result
 
-    history_rows = await get_patient_emr_history(db, petid)
+    history_rows = await get_patient_emr_history(db, petid, doctor_ids)
 
     emr_history = []
     for emr, doctor, schedule in history_rows:
@@ -170,6 +182,13 @@ async def update_patient_endpoint(
     db: AsyncSession = Depends(get_db),
     current_hospital=Depends(get_current_hospital),
 ):
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    if not await is_pet_in_hospital(db, petid, doctor_ids):
+        raise HTTPException(
+            status_code=404,
+            detail="환자를 찾을 수 없습니다."
+        )
+
     result = await get_patient_detail(db, petid)
 
     if not result:

@@ -122,4 +122,12 @@ async def run_judge(
         "[Judge] emrid=%s verdict=%s scores=%s turns=%s",
         emrid, result.get("monitoring_verdict"), result.get("quality_scores"), turn_count,
     )
+
+    # 운영탭 표시용 메모리 적재(DB 불필요). 실패해도 judge 본 흐름엔 영향 없음.
+    try:
+        from ai.monitoring import record_judge
+        record_judge(emrid, result)
+    except Exception:
+        pass
+
     return {"agent": "judge", "emrid": emrid, **result}

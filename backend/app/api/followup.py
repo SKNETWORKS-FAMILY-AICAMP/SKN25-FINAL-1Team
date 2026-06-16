@@ -109,6 +109,7 @@ async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict |
                 "weight": float(pet.weight_kg) if pet.weight_kg else None,
             }
 
+            # 에이전트는 전체 진료 이력 조회(교차병원 포함). 수의사 화면 표시 스코핑은 별도(api/patient.py).
             patient_context_data = await build_patient_context(db, pet.petid)
 
             payload = {

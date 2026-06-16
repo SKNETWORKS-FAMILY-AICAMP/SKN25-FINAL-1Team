@@ -17,6 +17,8 @@ class CheckupScheduleRequest(BaseModel):
     time: str
     memo: Optional[str] = None
     category_code: int = 1  # 1=정기검진, 2=일반진료
+    doctorid: Optional[int] = None   # 보호자가 선택한 원장(다병원·다원장)
+    hospitalid: Optional[int] = None  # 원장 미지정 시 이 병원의 첫 활성 원장
 
 # 챗봇 예약 확정 요청
 class ConfirmScheduleRequest(BaseModel):

@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import { getMyHospitals } from "../api/hospital-api";
-import { MOCK_HOSPITALS } from "../api/hospital-mock";
+import { useHospitalStore } from "../stores/hospital-store";
 
 export interface MyHospitalItem {
   hospitalid: number;
@@ -9,31 +8,22 @@ export interface MyHospitalItem {
 }
 
 /**
- * 보호자가 등록한 병원 목록(병원 전환용). 예약 모달·챗봇·병원탭 공용.
- * 백엔드 미가동 시 데모 목업으로 폴백해 화면이 깨지지 않게 한다.
+ * 보호자가 등록한 병원 목록(병원 전환용). 예약 모달·챗봇 공용.
+ * 전역 hospital-store의 얇은 래퍼 — 단일 소스를 구독한다.
  */
 export function useMyHospitals() {
-  const [hospitals, setHospitals] = useState<MyHospitalItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const hospitals = useHospitalStore((state) => state.myHospitals);
+  const status = useHospitalStore((state) => state.status);
+  const load = useHospitalStore((state) => state.load);
 
   useEffect(() => {
-    let mounted = true;
-    getMyHospitals()
-      .then((list) => {
-        if (mounted) setHospitals(list.map((h) => ({ hospitalid: h.hospitalid, name: h.name })));
-      })
-      .catch(() => {
-        if (mounted) {
-          setHospitals(MOCK_HOSPITALS.map((h) => ({ hospitalid: h.hospitalid, name: h.name })));
-        }
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    if (status === "idle") {
+      void load();
+    }
+  }, [status, load]);
 
-  return { hospitals, isLoading };
+  return {
+    hospitals: hospitals.map((h) => ({ hospitalid: h.hospitalid, name: h.name })),
+    isLoading: status === "idle" || status === "loading",
+  };
 }

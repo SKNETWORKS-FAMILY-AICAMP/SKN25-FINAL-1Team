@@ -11,5 +11,6 @@ class HospitalProfile(Base):
     tagline          = Column(String, nullable=True)   # 한 줄 소개
     intro            = Column(Text, nullable=True)      # 소개 본문
     banner_image_url = Column(Text, nullable=True)      # S3 URL
+    banner_image_position = Column(String, nullable=True)  # CSS object-position "x% y%" (배너 초점)
     features         = Column(JSON, nullable=True)      # list[str] 병원 특징 태그
     updated_at       = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

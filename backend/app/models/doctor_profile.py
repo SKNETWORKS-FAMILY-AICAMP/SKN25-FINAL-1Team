@@ -13,4 +13,5 @@ class DoctorProfile(Base):
     bio               = Column(Text, nullable=True)      # 소개글
     specialty_areas   = Column(JSON, nullable=True)      # list[str] 전문 분야
     profile_image_url = Column(Text, nullable=True)      # S3 URL
+    profile_image_position = Column(String, nullable=True)  # CSS object-position "x% y%" (사진 초점)
     updated_at        = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

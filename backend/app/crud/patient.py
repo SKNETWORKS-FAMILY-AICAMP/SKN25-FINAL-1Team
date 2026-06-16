@@ -14,21 +14,57 @@ from app.models.guardian import Guardian
 from app.utils.age import calculate_age
 
 
+def _emr_in_hospital_exists(doctor_ids: list[int]):
+    """이 병원 원장이 작성한 EMR이 해당 펫에 1건 이상 있는지 (correlate용 EXISTS)."""
+    return (
+        select(EMR.doctor_emrid)
+        .where(EMR.petid == Pet.petid, EMR.doctorid.in_(doctor_ids))
+        .correlate(Pet)
+        .exists()
+    )
+
+
+def _schedule_in_hospital_exists(doctor_ids: list[int]):
+    """이 병원 원장에게 살아있는 예약이 해당 펫에 1건 이상 있는지 (correlate용 EXISTS)."""
+    return (
+        select(Schedule.scheduleid)
+        .join(Guardian, Schedule.emrid == Guardian.emrid)
+        .where(
+            Guardian.petid == Pet.petid,
+            Schedule.doctorid.in_(doctor_ids),
+            Schedule.deleted_at.is_(None),
+        )
+        .correlate(Pet)
+        .exists()
+    )
+
+
 async def get_patient_list(
     db: AsyncSession,
+    doctor_ids: list[int],
     page: int = 1,
     page_size: int = 10,
     keyword: str | None = None,
     species: str | None = None,
     active_only: bool = False,
 ):
-    """환자 목록 조회.
+    """환자 목록 조회 (병원 스코프).
 
+    doctor_ids: 현재 병원 소속 원장 id 목록. 이 병원 원장에게 실제 예약 또는 진료가
+                1건 이상 있는 펫만 반환한다(단순 병원 등록만 한 보호자는 제외).
     active_only=True: 소프트 삭제된 guardian만 남은 환자(=취소된 예약만 있는 환자)는 제외.
                       단, guardian 레코드가 아예 없는 신규 환자는 포함.
-    active_only=False(기본): 전체 등록 환자 반환.
+    active_only=False(기본): 병원 스코프 내 전체 환자 반환.
     """
     base = select(Pet, User).join(User, Pet.userid == User.userid)
+
+    # 병원 스코프: 이 병원 원장에게 예약(scheduleDB) 또는 진료(EMR)가 1건 이상 있는 펫만.
+    base = base.where(
+        or_(
+            _emr_in_hospital_exists(doctor_ids),
+            _schedule_in_hospital_exists(doctor_ids),
+        )
+    )
 
     if keyword:
         like = f"%{keyword}%"
@@ -72,21 +108,49 @@ async def get_patient_list(
     return rows, total_count
 
 
-async def get_last_visit_map(db: AsyncSession, pet_ids: list[int]):
+async def is_pet_in_hospital(db: AsyncSession, petid: int, doctor_ids: list[int]) -> bool:
+    """이 펫이 현재 병원의 환자인지 — 이 병원 원장에게 예약 또는 진료가 1건 이상 있으면 True."""
+    emr_here = (
+        select(EMR.doctor_emrid)
+        .where(EMR.petid == petid, EMR.doctorid.in_(doctor_ids))
+        .exists()
+    )
+    schedule_here = (
+        select(Schedule.scheduleid)
+        .join(Guardian, Schedule.emrid == Guardian.emrid)
+        .where(
+            Guardian.petid == petid,
+            Schedule.doctorid.in_(doctor_ids),
+            Schedule.deleted_at.is_(None),
+        )
+        .exists()
+    )
+    result = await db.execute(select(or_(emr_here, schedule_here)))
+    return bool(result.scalar())
+
+
+async def get_last_visit_map(
+    db: AsyncSession, pet_ids: list[int], doctor_ids: list[int] | None = None
+):
     """여러 반려동물의 마지막 방문일을 한 번의 쿼리로 조회한다(N+1 방지).
 
     소프트 삭제된 예약(scheduleDB.deleted_at)은 방문 이력에서 제외한다.
+    doctor_ids 가 주어지면 해당 병원 원장 진료(EMR)만으로 방문일을 계산한다.
     """
     if not pet_ids:
         return {}
 
-    result = await db.execute(
+    query = (
         select(EMR.petid, func.max(Schedule.confirmed_time))
         .join(Schedule, EMR.scheduleid == Schedule.scheduleid)
         .where(EMR.petid.in_(pet_ids))
         .where(Schedule.deleted_at.is_(None))
-        .group_by(EMR.petid)
     )
+    if doctor_ids is not None:
+        query = query.where(EMR.doctorid.in_(doctor_ids))
+    query = query.group_by(EMR.petid)
+
+    result = await db.execute(query)
     return {petid: last_visit for petid, last_visit in result.all()}
 
 
@@ -99,16 +163,26 @@ async def get_patient_detail(db: AsyncSession, petid: int):
     return result.first()
 
 
-async def get_patient_emr_history(db: AsyncSession, petid: int):
-    """환자의 진료 이력. 소프트 삭제된 예약은 제외한다."""
-    result = await db.execute(
+async def get_patient_emr_history(
+    db: AsyncSession, petid: int, doctor_ids: list[int] | None = None
+):
+    """환자의 진료 이력. 소프트 삭제된 예약은 제외한다.
+
+    doctor_ids 가 주어지면 해당 병원 원장이 작성한 EMR만 반환한다(교차병원 차단).
+    None 이면 스코프 없음(과거 호출 호환).
+    """
+    query = (
         select(EMR, Doctor, Schedule)
         .join(Doctor, EMR.doctorid == Doctor.doctorid)
         .join(Schedule, EMR.scheduleid == Schedule.scheduleid)
         .where(EMR.petid == petid)
         .where(Schedule.deleted_at.is_(None))
-        .order_by(EMR.created_at.desc())
     )
+    if doctor_ids is not None:
+        query = query.where(EMR.doctorid.in_(doctor_ids))
+    query = query.order_by(EMR.created_at.desc())
+
+    result = await db.execute(query)
     return result.all()
 
 
@@ -155,6 +229,8 @@ async def build_patient_context(db: AsyncSession, petid: int) -> dict:
     }
 
     # 2. EMR history & Prescriptions
+    # 에이전트는 트리아지 품질을 위해 펫의 전체 진료 이력을 조회한다(교차병원 포함 OK).
+    # ※ 수의사 화면의 raw EMR '표시'는 별도로 병원 스코프됨(api/patient.py) — 타 병원 기록은 화면에 안 뜸.
     history_rows = await get_patient_emr_history(db, petid)
     emr_history = []
     prescriptions = []

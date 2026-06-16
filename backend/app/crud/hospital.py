@@ -66,7 +66,9 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
     prof = await db.get(HospitalProfile, hospitalid)
 
     docs = await db.execute(
-        select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+        select(Doctor)
+        .where(Doctor.hospitalid == hospitalid, Doctor.is_active == True)  # noqa: E712 — 비활성 원장은 보호자 소개탭/예약에서 숨김
+        .order_by(Doctor.doctorid)
     )
     doctors_out = []
     for d in docs.scalars().all():
@@ -79,6 +81,7 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
             "bio": dp.bio if dp else None,
             "specialtyAreas": (dp.specialty_areas if dp and dp.specialty_areas else []),
             "profileImage": dp.profile_image_url if dp else None,
+            "profileImagePosition": dp.profile_image_position if dp else None,
         })
 
     return {
@@ -90,13 +93,15 @@ async def get_hospital_detail(db: AsyncSession, hospitalid: int) -> dict | None:
         "phone": hosp.hospital_number,
         "hours": await format_hospital_hours(db, hospitalid),
         "bannerImage": prof.banner_image_url if prof else None,
+        "bannerImagePosition": prof.banner_image_position if prof else None,
         "features": (prof.features if prof and prof.features else []),
         "doctors": doctors_out,
     }
 
 
 async def search_hospitals(db: AsyncSession, query: str = None) -> list[dict]:
-    q = select(Hospital).order_by(Hospital.hospitalid)
+    # 폐업(is_active=False) 병원은 보호자 검색/신규 등록 대상에서 제외.
+    q = select(Hospital).where(Hospital.is_active == True).order_by(Hospital.hospitalid)  # noqa: E712
     if query:
         q = q.where(Hospital.hospital_name.ilike(f"%{query}%"))
     result = await db.execute(q)

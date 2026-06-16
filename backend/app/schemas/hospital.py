@@ -11,6 +11,7 @@ class HospitalDoctorOut(BaseModel):
     bio: Optional[str] = None
     specialtyAreas: List[str] = []
     profileImage: Optional[str] = None
+    profileImagePosition: Optional[str] = None
 
 
 class HospitalDetailOut(BaseModel):
@@ -23,6 +24,7 @@ class HospitalDetailOut(BaseModel):
     phone: Optional[str] = None
     hours: Optional[str] = None  # vet_scheduleDB 에서 만든 표시 문자열(여러 줄)
     bannerImage: Optional[str] = None
+    bannerImagePosition: Optional[str] = None
     features: List[str] = []
     doctors: List[HospitalDoctorOut] = []
 
@@ -32,6 +34,7 @@ class MyHospitalOut(BaseModel):
     hospitalid: int
     name: str
     is_primary: bool
+    is_active: bool = True  # 폐업 병원 뱃지용
 
 
 class AddHospitalRequest(BaseModel):

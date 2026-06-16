@@ -1,18 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import PageHeader from "../../components/common/page-header";
 import SectionCard from "../../components/common/section-card";
 import GuardianLayout from "../../layouts/guardian-layout";
 import { useTranslation } from "../../i18n/language-context";
 import {
-  MOCK_HOSPITALS,
   type Hospital,
   type HospitalDoctor,
 } from "../../api/hospital-mock";
-import { getHospitalDetail, getMyHospitals } from "../../api/hospital-api";
-
-// 선택한 병원을 새로고침해도 유지(향후 hospital-store/persist로 이전 예정).
-const SELECTED_HOSPITAL_KEY = "medipaw.guardian.hospitalid";
+import { getHospitalDetail } from "../../api/hospital-api";
+import { useHospitalStore } from "../../stores/hospital-store";
 
 const ChevronDownIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -111,12 +108,14 @@ const ImageWithFallback = ({
   fallbackText,
   className,
   fallbackClassName,
+  style,
 }: {
   src?: string;
   alt: string;
   fallbackText: string;
   className: string;
   fallbackClassName: string;
+  style?: CSSProperties;
 }) => {
   const [errored, setErrored] = useState(false);
 
@@ -127,6 +126,7 @@ const ImageWithFallback = ({
         alt={alt}
         onError={() => setErrored(true)}
         className={className}
+        style={style}
       />
     );
   }
@@ -164,8 +164,9 @@ const DoctorCard = ({ doctor }: { doctor: HospitalDoctor }) => {
         src={doctor.profileImage}
         alt={doctor.name}
         fallbackText={doctor.name.trim().charAt(0)}
-        className="h-64 w-full object-cover object-top"
-        fallbackClassName="flex h-64 w-full items-center justify-center bg-blue-50 text-5xl font-extrabold text-blue-600"
+        className="aspect-[4/3] w-full object-cover"
+        style={{ objectPosition: doctor.profileImagePosition || "50% 20%" }}
+        fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-blue-50 text-5xl font-extrabold text-blue-600"
       />
       <div className="flex flex-1 flex-col p-6">
         <h3 className="text-lg font-extrabold text-slate-950">{doctor.name}</h3>
@@ -222,6 +223,7 @@ const HospitalDetail = ({ hospital }: { hospital: Hospital }) => {
                 alt={hospital.name}
                 fallbackText={hospital.name.trim().charAt(0)}
                 className="h-full w-full object-cover"
+                style={{ objectPosition: hospital.bannerImagePosition || "50% 50%" }}
                 fallbackClassName="h-full w-full bg-blue-50"
               />
               {/* 왼쪽→오른쪽 그라데이션 마스크 */}
@@ -336,56 +338,30 @@ const HospitalDetail = ({ hospital }: { hospital: Hospital }) => {
 const HospitalsPage = () => {
   const { t } = useTranslation();
 
-  const [myHospitals, setMyHospitals] = useState<{ hospitalid: number; name: string }[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 현재 병원/등록 목록은 전역 store 단일 소스. (온보딩 게이트가 이미 load 완료)
+  const myHospitals = useHospitalStore((state) => state.myHospitals);
+  const selectedId = useHospitalStore((state) => state.currentHospitalId);
+  const handleSelect = useHospitalStore((state) => state.setCurrent);
+  const status = useHospitalStore((state) => state.status);
+
   const [hospital, setHospital] = useState<Hospital | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSelect = (id: number) => {
-    setSelectedId(id);
-    window.localStorage.setItem(SELECTED_HOSPITAL_KEY, String(id));
-  };
+  const isLoading = status === "idle" || status === "loading";
 
-  // 내 병원 목록 로드 (실패 시 데모 목업 폴백 — 백엔드 미가동 대비)
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      let list: { hospitalid: number; name: string }[];
-      try {
-        list = await getMyHospitals();
-      } catch {
-        list = MOCK_HOSPITALS.map((h) => ({ hospitalid: h.hospitalid, name: h.name }));
-      }
-      if (!mounted) return;
-      setMyHospitals(list);
-      if (list.length > 0) {
-        const stored = Number(window.localStorage.getItem(SELECTED_HOSPITAL_KEY));
-        const initial = list.some((h) => h.hospitalid === stored) ? stored : list[0].hospitalid;
-        setSelectedId(initial);
-      }
-      setIsLoading(false);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // 선택 병원 상세 로드 (실패 시 목업 폴백)
+  // 선택 병원 상세 로드
   useEffect(() => {
     if (selectedId == null) {
       setHospital(null);
       return;
     }
     let mounted = true;
-    (async () => {
-      let detail: Hospital | null;
-      try {
-        detail = await getHospitalDetail(selectedId);
-      } catch {
-        detail = MOCK_HOSPITALS.find((h) => h.hospitalid === selectedId) ?? null;
-      }
-      if (mounted) setHospital(detail);
-    })();
+    getHospitalDetail(selectedId)
+      .then((detail) => {
+        if (mounted) setHospital(detail);
+      })
+      .catch(() => {
+        if (mounted) setHospital(null);
+      });
     return () => {
       mounted = false;
     };
