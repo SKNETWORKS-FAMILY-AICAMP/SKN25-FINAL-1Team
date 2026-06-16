@@ -48,6 +48,7 @@ async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(g
         access_token=access_token,
         refresh_token=refresh_token,
         is_initial_password=hospital.is_initial_password,
+        hospital_name=hospital.hospital_name,
         hospital_number=hospital.hospital_number,
         business_number=hospital.business_number,
     )

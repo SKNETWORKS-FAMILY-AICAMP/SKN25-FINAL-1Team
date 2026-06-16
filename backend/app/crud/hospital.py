@@ -4,7 +4,7 @@ from app.models.hospital import Hospital
 from app.models.doctor import Doctor
 from app.models.hospital_profile import HospitalProfile
 from app.models.doctor_profile import DoctorProfile
-from app.models.vet_schedule import VetSchedule
+from app.models.vet_schedule import HospitalWeeklySchedule
 from app.core.security import hash_password
 
 
@@ -40,17 +40,9 @@ def _fmt_time(t) -> str | None:
 
 
 async def format_hospital_hours(db: AsyncSession, hospitalid: int) -> str | None:
-    """병원 대표 진료시간 문자열. 첫 원장의 주간 템플릿(vet_scheduleDB) 기반.
-    프론트 병원탭이 기대하는 여러 줄 문자열로 조립."""
-    first_doc = await db.execute(
-        select(Doctor.doctorid).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid).limit(1)
-    )
-    did = first_doc.scalar_one_or_none()
-    if not did:
-        return None
-
+    """병원 대표 진료시간 문자열. hospital_weekly_scheduleDB 기반."""
     rows = await db.execute(
-        select(VetSchedule).where(VetSchedule.doctorid == did, VetSchedule.date.is_(None))
+        select(HospitalWeeklySchedule).where(HospitalWeeklySchedule.hospitalid == hospitalid)
     )
     by_day = {v.day_of_week: v for v in rows.scalars().all()}
     if not by_day:

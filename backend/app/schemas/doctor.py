@@ -13,6 +13,7 @@ class DoctorTokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     is_initial_password: bool
+    hospital_name: Optional[str] = None
     license_number: Optional[str] = None
     hospital_number: Optional[str] = None
     business_number: Optional[str] = None

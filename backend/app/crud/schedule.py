@@ -9,7 +9,7 @@ from app.models.schedule import Schedule
 from app.models.master import CategoryMaster
 from app.models.pet import Pet
 from app.models.doctor import Doctor
-from app.models.vet_schedule import VetSchedule
+from app.models.vet_schedule import HospitalClosedDate, HospitalWeeklySchedule, VetWeeklySchedule
 from app.utils.timezone import to_kst, KST
 
 # 병원 휴무일: 주말 + 법정 공휴일 (2026~2027)
@@ -39,50 +39,72 @@ async def _get_hours_for_date(
 ) -> tuple[str, str, str, str] | None:
     """(op_start, op_end, lunch_start, lunch_end) 반환. 휴진이면 None.
 
-    우선순위: 특정일 오버라이드 > 주간 템플릿 > 기본값(평일만 영업)
+    우선순위:
+    1. 병원 특정일 휴진(hospital_closed_datesDB) → None
+    2. 의사 주간 스케줄(vet_weekly_scheduleDB) → 의사 근무 시간
+    3. 병원 주간 스케줄(hospital_weekly_scheduleDB) → 폴백
+    4. 기본값: 평일만 영업
     """
-    # 1. 특정일 오버라이드 확인
-    date_result = await db.execute(
-        select(VetSchedule).where(
-            VetSchedule.doctorid == doctorid,
-            VetSchedule.date == target_date,
-            VetSchedule.day_of_week.is_(None),
-        )
+    # 1. 의사 소속 병원 조회
+    doctor_result = await db.execute(
+        select(Doctor.hospitalid).where(Doctor.doctorid == doctorid)
     )
-    date_record = date_result.scalar_one_or_none()
-    if date_record is not None:
-        if not date_record.is_open:
-            return None
-        if date_record.start_time and date_record.end_time:
-            return (
-                date_record.start_time.strftime("%H:%M"),
-                date_record.end_time.strftime("%H:%M"),
-                date_record.lunch_start.strftime("%H:%M") if date_record.lunch_start else "12:00",
-                date_record.lunch_end.strftime("%H:%M") if date_record.lunch_end else "13:00",
-            )
+    hospitalid = doctor_result.scalar_one_or_none()
 
-    # 2. 주간 템플릿 확인 (0=월 ... 6=일)
+    # 2. 병원 특정일 휴진 확인
+    if hospitalid is not None:
+        closed_result = await db.execute(
+            select(HospitalClosedDate).where(
+                HospitalClosedDate.hospitalid == hospitalid,
+                HospitalClosedDate.date == target_date,
+            )
+        )
+        if closed_result.scalar_one_or_none() is not None:
+            return None
+
     dow = target_date.weekday()
-    dow_result = await db.execute(
-        select(VetSchedule).where(
-            VetSchedule.doctorid == doctorid,
-            VetSchedule.day_of_week == dow,
+
+    # 3. 의사 주간 스케줄 확인
+    vet_result = await db.execute(
+        select(VetWeeklySchedule).where(
+            VetWeeklySchedule.doctorid == doctorid,
+            VetWeeklySchedule.day_of_week == dow,
         )
     )
-    dow_record = dow_result.scalar_one_or_none()
-    if dow_record is not None:
-        if not dow_record.is_open:
+    vet_record = vet_result.scalar_one_or_none()
+    if vet_record is not None:
+        if not vet_record.is_open:
             return None
-        if dow_record.start_time and dow_record.end_time:
+        if vet_record.start_time and vet_record.end_time:
             return (
-                dow_record.start_time.strftime("%H:%M"),
-                dow_record.end_time.strftime("%H:%M"),
-                dow_record.lunch_start.strftime("%H:%M") if dow_record.lunch_start else "12:00",
-                dow_record.lunch_end.strftime("%H:%M") if dow_record.lunch_end else "13:00",
+                vet_record.start_time.strftime("%H:%M"),
+                vet_record.end_time.strftime("%H:%M"),
+                vet_record.lunch_start.strftime("%H:%M") if vet_record.lunch_start else "12:00",
+                vet_record.lunch_end.strftime("%H:%M") if vet_record.lunch_end else "13:00",
             )
 
-    # 3. 기본값: 평일만 영업
-    if target_date.weekday() >= 5:
+    # 4. 병원 주간 스케줄 폴백
+    if hospitalid is not None:
+        hosp_result = await db.execute(
+            select(HospitalWeeklySchedule).where(
+                HospitalWeeklySchedule.hospitalid == hospitalid,
+                HospitalWeeklySchedule.day_of_week == dow,
+            )
+        )
+        hosp_record = hosp_result.scalar_one_or_none()
+        if hosp_record is not None:
+            if not hosp_record.is_open:
+                return None
+            if hosp_record.start_time and hosp_record.end_time:
+                return (
+                    hosp_record.start_time.strftime("%H:%M"),
+                    hosp_record.end_time.strftime("%H:%M"),
+                    hosp_record.lunch_start.strftime("%H:%M") if hosp_record.lunch_start else "12:00",
+                    hosp_record.lunch_end.strftime("%H:%M") if hosp_record.lunch_end else "13:00",
+                )
+
+    # 5. 기본값: 평일만 영업
+    if dow >= 5:
         return None
     return ("09:00", "18:00", "12:00", "13:00")
 
