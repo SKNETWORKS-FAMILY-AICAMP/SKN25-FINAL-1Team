@@ -390,8 +390,7 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
 
     chart_rag_context: list[dict] = []
     try:
-        from ai.triage.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
-        from ai.observability import score_rag_retrieval
+        from ai.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
         rag_query = " ".join(filter(None, [
             triage.chief_complaint or "",
             " ".join(triage.symptom_keywords or []),
@@ -401,7 +400,6 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
             async with AsyncSessionLocal() as db_rag:
                 matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
             chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
-            score_rag_retrieval([m.similarity for m in matches], threshold=RAG_USABLE_THRESHOLD)
             logger.info("[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
                         emrid, rag_query[:60], len(chart_rag_context), len(matches))
     except Exception as exc:
@@ -418,15 +416,10 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
     }
 
 
-def _build_payloads(ctx: dict, duration_min: int) -> tuple[dict, dict, dict]:
-    """컨텍스트 dict → (chart_payload, validation_payload, judge_payload) 조립. 순수 함수."""
+# 컨텍스트 → chart 페이로드 조립 (순수 함수)
+def _build_chart_payload(ctx: dict) -> dict:
     triage = ctx["triage"]
     pet = ctx["pet"]
-    patient_context_data = ctx["patient_context_data"]
-    agent_chat_history = ctx["agent_chat_history"]
-    photo_predictions = ctx["photo_predictions"]
-    chart_rag_context = ctx["chart_rag_context"]
-    is_initial_visit = ctx["is_initial_visit"]
 
     age = (date_type.today().year - pet.birth_date.year) if pet.birth_date else None
     pet_payload = {
@@ -449,86 +442,42 @@ def _build_payloads(ctx: dict, duration_min: int) -> tuple[dict, dict, dict]:
         "suspected_diseases": triage.suspected_diseases or [],
         "symptom_summary": triage.symptom_summary,
         "recommended_action": triage.recommended_action,
-        "is_initial_visit": is_initial_visit,
+        "is_initial_visit": ctx["is_initial_visit"],
     }
-    if photo_predictions:
-        triage_info["photo_predictions"] = photo_predictions
+    if ctx["photo_predictions"]:
+        triage_info["photo_predictions"] = ctx["photo_predictions"]
 
-    _URGENCY_WINDOW_MAP = {
-        1: "immediate", 2: "emergency_today", 3: "urgent_24h",
-        4: "semi_urgent_48h", 5: "routine_72h",
-    }
-    schedule_slot = {
-        "estimated_duration_min": duration_min,
-        "is_initial_visit": is_initial_visit,
-        "slot_window": _URGENCY_WINDOW_MAP.get(triage_info.get("urgency_level_num", 3), "urgent_24h"),
-    }
-
-    chart_payload = {
+    return {
         "pet": pet_payload,
         "triage_result": triage_info,
-        "triage_info": triage_info,
-        "patient_context": patient_context_data,
-        "schedule_slot": schedule_slot,
-        "schedule_result": schedule_slot,
-        "rag_context": chart_rag_context,
-        "chat_history": agent_chat_history,
-    }
-    validation_payload = {
-        "pet": pet_payload,
-        "triage_result": triage_info,
-        "triage_info": triage_info,
-        "patient_context": patient_context_data,
-        "schedule_slot": schedule_slot,
-        "schedule_result": schedule_slot,
-    }
-    judge_payload = {
-        "triage_result": triage_info,
-        "triage_info": triage_info,
-        "chat_history": agent_chat_history,
+        "patient_context": ctx["patient_context_data"],
+        "rag_context": ctx["chart_rag_context"],
+        "chat_history": ctx["agent_chat_history"],
     }
 
-    return chart_payload, validation_payload, judge_payload
 
+# 예약 확정 후 백그라운드 차트 파이프라인 (fire-and-forget)
+async def _run_chart_pipeline(emrid: int, scheduleid: int) -> None:
+    logger.info(f"[PostBooking] chart 시작 emrid={emrid} scheduleid={scheduleid}")
+    try:
+        ctx = await _fetch_booking_context(emrid)
+        if ctx is None:
+            logger.warning(f"[PostBooking] 필수 데이터 없음 emrid={emrid}")
+            return
 
-async def _run_post_booking_agents(
-    emrid: int,
-    scheduleid: int,
-    duration_min: int,
-    user_id: int,
-    chart_task_id: str,
-    validation_task_id: str,
-    judge_task_id: str,
-) -> None:
-    """예약 확정 직후 asyncio.create_task로 실행되는 Chart+Validation+Judge 파이프라인."""
-    logger.info(f"[PostBooking] start emrid={emrid} scheduleid={scheduleid}")
+        # LangGraph(post_booking): chart 노드로 SOAP 초안 생성
+        from ai.graph import run_chart
+        chart_result = await run_chart(_build_chart_payload(ctx))
 
-    ctx = await _fetch_booking_context(emrid)
-    if ctx is None:
-        logger.warning(f"[PostBooking] 필수 데이터 없음 emrid={emrid}")
-        for tid in (chart_task_id, validation_task_id, judge_task_id):
-            _task_store[tid] = {"status": "error", "detail": "트리아지 또는 반려동물 정보 없음"}
-        return
-
-    chart_payload, validation_payload, judge_payload = _build_payloads(ctx, duration_min)
-
-    from ai.graph import post_booking_graph
-    await post_booking_graph.ainvoke({
-        "emrid": emrid,
-        "scheduleid": scheduleid,
-        "user_id": user_id,
-        "chart_payload": chart_payload,
-        "validation_payload": validation_payload,
-        "judge_payload": judge_payload,
-        "chart_task_id": chart_task_id,
-        "validation_task_id": validation_task_id,
-        "judge_task_id": judge_task_id,
-    })
-    _task_store[judge_task_id] = {"status": "done", "result": None}
-
-    logger.info("[PostBooking] pipeline_state=%s emrid=%s", PipelineState.COMPLETED, emrid)
-    for _tid in (chart_task_id, validation_task_id, judge_task_id):
-        safe_create_task(cleanup_task_after_ttl(_tid, ttl=60), name=f"cleanup:{_tid}")
+        # reportDB 저장 + 수의사 알람
+        if chart_result:
+            from app.db.session import AsyncSessionLocal
+            from app.crud.report import save_chart_report
+            async with AsyncSessionLocal() as db:
+                await save_chart_report(db, emrid, scheduleid, chart_result)
+        logger.info(f"[PostBooking] chart 완료 emrid={emrid}")
+    except Exception as exc:
+        logger.error(f"[PostBooking] chart 파이프라인 실패 emrid={emrid}: {exc}", exc_info=True)
 
 
 # 챗봇 예약 확정
@@ -573,9 +522,11 @@ async def confirm_schedule_api(
     except Exception as e:
         logger.warning(f"[Alarm] chatbot confirm alarm failed schedule_id={schedule.scheduleid}: {e}")
 
-    # Phase 3: Chart→Validation→Judge 백그라운드 파이프라인 (재작성 예정 — 현재 임시 비활성)
-    chart_task_id = validation_task_id = judge_task_id = None
-    logger.info(f"[Confirm] emrid={request.emrid} scheduleid={schedule.scheduleid} (post-booking 비활성)")
+    # 백그라운드 차트 파이프라인 (fire-and-forget — 결과는 reportDB에 저장)
+    import asyncio
+    asyncio.create_task(_run_chart_pipeline(request.emrid, schedule.scheduleid))
+    chart_task_id = validation_task_id = judge_task_id = None  # 프론트 미사용(호환용 None)
+    logger.info(f"[Confirm] emrid={request.emrid} scheduleid={schedule.scheduleid} chart 파이프라인 시작")
 
     # 확정 카드(챗봇)용 병원 정보 — confirm 응답에 병원명/주소/담당의 포함
     doctor_row = await db.execute(select(Doctor).where(Doctor.doctorid == schedule.doctorid))
@@ -586,6 +537,35 @@ async def confirm_schedule_api(
     if doctor and doctor.hospitalid:
         hospital_row = await db.execute(select(Hospital).where(Hospital.hospitalid == doctor.hospitalid))
         hospital = hospital_row.scalar_one_or_none()
+
+    # 재진입 복원용: 확정·주의사항 카드를 채팅 메시지(meta.card)로 저장
+    # (로딩 버블은 저장 안 하므로 복원 시 자동 제외)
+    try:
+        from app.crud.chat import add_message
+        from app.models.chat_history import ChatHistory
+        chat_row = await db.execute(
+            select(ChatHistory).where(
+                ChatHistory.emrid == request.emrid, ChatHistory.is_deleted == False  # noqa: E712
+            )
+        )
+        chat = chat_row.scalar_one_or_none()
+        if chat:
+            ckst = schedule.confirmed_time.astimezone(KST)
+            await add_message(db, chat, "assistant", "", meta={"card": {
+                "kind": "confirmation",
+                "petName": pet_name,
+                "date": ckst.date().isoformat(),
+                "time": ckst.strftime("%H:%M"),
+                "durationMin": request.duration_min,
+                "hospitalName": hospital.hospital_name if hospital else None,
+            }})
+            if request.pre_visit_instructions:
+                await add_message(db, chat, "assistant", "", meta={"card": {
+                    "kind": "instructions",
+                    "items": request.pre_visit_instructions,
+                }})
+    except Exception as e:
+        logger.warning(f"[Confirm] 카드 메시지 저장 실패 emrid={request.emrid}: {e}")
 
     return {
         "code": 201,

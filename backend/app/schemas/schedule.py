@@ -27,6 +27,7 @@ class ConfirmScheduleRequest(BaseModel):
     confirmed_time: str
     duration_min: int
     hospitalid: int | None = None  # 다중 병원: 선택된 병원(스코핑·검증용)
+    pre_visit_instructions: list[str] = []  # 재진입 복원용 — 주의사항 카드 저장
 
 # 예약 변경 요청
 class UpdateScheduleRequest(BaseModel):

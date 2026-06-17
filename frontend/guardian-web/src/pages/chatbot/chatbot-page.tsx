@@ -279,15 +279,8 @@ const ChatbotPage = () => {
         pet_name: selectedPet.petname,
         profile_image: getProfileImage(selectedPet),
       });
-      // 저장되지 않는 최초 질문 말풍선을 앞에 복원해 라이브 UX와 맞춘다.
-      setMessages([
-        {
-          id: sessionId * 100000 - 1,
-          role: "assistant",
-          content: t("chatbot.initialQuestion"),
-        },
-        ...restoredMessages,
-      ]);
+      // 인사말은 restoredMessages 맨 앞에 이미 포함됨(복원 매핑에서 prepend)
+      setMessages(restoredMessages);
       setQuickReplies(resumedQuickReplies);
     },
     onResumeSchedule: ({ sessionId, emrid }) => {

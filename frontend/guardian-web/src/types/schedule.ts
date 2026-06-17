@@ -105,6 +105,7 @@ export interface ConfirmSchedulePayload {
   confirmed_time: string;
   duration_min: number;
   hospitalid?: number;
+  pre_visit_instructions?: string[]; // 재진입 복원용 주의사항
 }
 
 export interface ConfirmScheduleResponse {

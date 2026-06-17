@@ -222,6 +222,18 @@ async def get_chat_session_detail(
 
     messages = session.messages or []
 
+    # 이어가기 판정: 문진 미완료 → 문진 재개 / 완료·예약 미확정 → 슬롯 선택 재개
+    resumable_triage = bool(not session.is_complete and messages)
+    resumable_schedule = bool(session.is_complete and emrid and not booking_complete)
+
+    # 재진입 시 pill 복원 — 마지막 챗봇 질문에 저장된 quick_replies
+    resume_quick_replies: list = []
+    if resumable_triage:
+        for m in reversed(messages):
+            if isinstance(m, dict) and m.get("role") == "assistant":
+                resume_quick_replies = (m.get("meta") or {}).get("quick_replies") or []
+                break
+
     return {
         "code": 200,
         "result": {
@@ -231,11 +243,48 @@ async def get_chat_session_detail(
             "messages": messages,
             "keywords": session.keywords or [],
             "is_complete": session.is_complete,
+            "resumable_triage": resumable_triage,
+            "resumable_schedule": resumable_schedule,
+            "resume_quick_replies": resume_quick_replies,
             "can_followup": can_followup,
             "followup_closed": followup_closed,
             "booking_complete": booking_complete,
             "created_at": str(session.created_at),
         },
+    }
+
+
+# 슬롯 선택 재개 — 저장된 TriageResult로 triage_info 복원(프론트가 추천 슬롯 재요청)
+@router.post("/sessions/{session_id}/resume-schedule")
+async def resume_schedule(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    session = await get_chat_session(db, session_id, current_user.userid)
+    if not session:
+        raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
+
+    emrid = session.emrid
+    triage_info: dict = {}
+    if emrid is not None:
+        triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
+        triage = triage_row.scalar_one_or_none()
+        if triage:
+            triage_info = {
+                "urgency": triage.urgency_level,
+                "urgency_level_num": triage.urgency_level_num,
+                "chief_complaint": triage.chief_complaint,
+                "chief_complaints": [triage.chief_complaint] if triage.chief_complaint else [],
+                "suspected_diseases": triage.suspected_diseases or [],
+                "suspected_conditions": triage.suspected_diseases or [],
+                "symptom_summary": triage.symptom_summary,
+                "triage_summary": triage.symptom_summary,
+            }
+
+    return {
+        "code": 200,
+        "result": {"emrid": emrid, "triage_info": triage_info, "schedule_task_id": None},
     }
 
 
@@ -316,16 +365,21 @@ async def send_message(
                     + "\n\n"
                 )
 
-            # 문진 완료 시 제목(주요증상) 실시간 반영용 이벤트
+            # 문진 완료 → emrid(예약용) + 슬롯 추천에 쓸 트리아지 결과 전달
             if result.get("is_complete"):
                 yield (
                     "data: "
                     + json.dumps(
                         {
                             "type": "triage_complete",
+                            "emrid": result.get("emrid"),
                             "data": {
                                 "is_triage_complete": True,
                                 "symptom_keywords": result.get("keywords") or [],
+                                "urgency": result.get("urgency"),
+                                "chief_complaints": result.get("chief_complaints") or [],
+                                "suspected_conditions": result.get("suspected_conditions") or [],
+                                "triage_summary": result.get("triage_summary"),
                             },
                         },
                         ensure_ascii=False,

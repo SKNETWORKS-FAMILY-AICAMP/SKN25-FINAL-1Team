@@ -110,6 +110,10 @@ export const useAgentPipeline = ({
     ]);
   };
 
+  // 로딩 말풍선 제거 — 결과(슬롯/확정)가 나오면 "찾는 중"·"예약 중"을 지운다
+  const removeByPipelineKey = (key: NonNullable<ChatMessage["pipelineKey"]>) =>
+    setMessages((prev) => prev.filter((message) => message.pipelineKey !== key));
+
   const clearScheduleArtifacts = () => {
     setMessages((prev) =>
       prev.filter(
@@ -188,6 +192,7 @@ export const useAgentPipeline = ({
         hospitalid: hospitalId ?? undefined,
       });
       if (requestId !== scheduleRequestRef.current) return;
+      removeByPipelineKey("checking-slots");  // 로딩 버블 제거
 
       const result = resp.result;
       const durationMin = result?.estimated_duration_min || 30;
@@ -221,6 +226,7 @@ export const useAgentPipeline = ({
       }
     } catch {
       if (requestId !== scheduleRequestRef.current) return;
+      removeByPipelineKey("checking-slots");  // 로딩 버블 제거
       appendBotKey("chatbot.slotCheckRetry", "slot-error");
       appendCard({ kind: "slots", slots: [] }, "slot-error");
       setPhase("slot-selection");
@@ -238,10 +244,11 @@ export const useAgentPipeline = ({
 
     setPhase("booking");
     setIsStreaming(true);
-    appendBot(t("chatbot.processingBooking"));
+    appendBotKey("chatbot.processingBooking", "booking-status");  // 로딩 버블
 
     const emrid = emridRef.current;
     if (!emrid) {
+      removeByPipelineKey("booking-status");  // 로딩 버블 제거
       appendBot(t("chatbot.noTriageData"));
       setPhase("chatting");
       setIsStreaming(false);
@@ -258,7 +265,11 @@ export const useAgentPipeline = ({
         confirmed_time: `${slot.date}T${slot.time}:00+09:00`,
         duration_min: duration,
         hospitalid: hospitalId ?? undefined,
+        // 재진입 복원용 — 확정 시 주의사항도 함께 저장
+        pre_visit_instructions:
+          (scheduleResultRef.current?.pre_visit_instructions as string[] | undefined) ?? [],
       });
+      removeByPipelineKey("booking-status");  // 로딩 버블 제거
 
       if (resp.code === 200 || resp.code === 201) {
         const dateText = formatChatDateTimeFull(slot.date, slot.time, lang, t);
@@ -302,6 +313,7 @@ export const useAgentPipeline = ({
         setPhase("slot-selection");
       }
     } catch {
+      removeByPipelineKey("booking-status");  // 로딩 버블 제거
       appendBot(t("chatbot.bookingError"));
       appendCard({ kind: "slots", slots: buildSlotOptions() });
       setPhase("slot-selection");

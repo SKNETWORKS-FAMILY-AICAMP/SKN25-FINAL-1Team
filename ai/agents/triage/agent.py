@@ -24,8 +24,10 @@ from ai.agents.triage.rules import (
     build_sections_guide,
     build_red_flag_guide,
     build_extract_schema,
-    get_red_flag_message,
 )
+
+# 문진 완료 안내 — 응급/일반 구분 없이 동일 문구 (보호자에게 경고문 안 보냄)
+TRIAGE_COMPLETE_REPLY = "증상에 대해 자세히 말씀해 주셔서 감사합니다. 이제 예약을 도와드릴게요. 🐾"
 
 from ai.agents.triage.scoring import (
     calculate_score,
@@ -159,7 +161,7 @@ class TriageAgent:
                 "score": score_result["score"],
                 "is_complete": True,
                 "chief_complaints": [red_flag_chief] if red_flag_chief else [],
-                "reply": get_red_flag_message(self.rules),
+                "reply": TRIAGE_COMPLETE_REPLY,
                 "state": state,
             }
 
@@ -190,7 +192,7 @@ class TriageAgent:
                 "triage_summary": summary.get("triage_summary", ""),
                 "chief_complaints": summary.get("chief_complaints", []),
                 "suspected_conditions": suspected,
-                "reply": "문진이 완료되었습니다.",
+                "reply": TRIAGE_COMPLETE_REPLY,
                 "state": state,
             }
 
