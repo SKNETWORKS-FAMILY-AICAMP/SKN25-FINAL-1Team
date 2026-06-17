@@ -17,6 +17,7 @@ import DashboardPage from "../pages/dashboard/DashboardPage";
 import EmrPage from "../pages/emr/EmrPage";
 import PatientManagementPage from "../pages/patients/PatientManagementPage";
 import ReservationPage from "../pages/reservation/ReservationPage";
+import HospitalManagePage from "../pages/hospital/HospitalManagePage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import { useAuthStore } from "../stores/auth-store";
 import ProtectedRoute from "./protected-route";
@@ -38,6 +39,7 @@ const menuPathMap: Record<AppMenuId, string> = {
   emr: "/emr",
   reservation: "/reservation",
   patients: "/patients",
+  "hospital-manage": "/hospital-manage",
   settings: "/settings",
 };
 
@@ -170,6 +172,10 @@ function VetRoutes() {
         <Route
           path="/patients"
           element={<PatientManagementPage {...protectedPageProps} />}
+        />
+        <Route
+          path="/hospital-manage"
+          element={<HospitalManagePage {...protectedPageProps} />}
         />
         <Route
           path="/settings"

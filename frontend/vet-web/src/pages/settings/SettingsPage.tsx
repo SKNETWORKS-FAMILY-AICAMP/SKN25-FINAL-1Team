@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { CalendarX, Clock3, LockKeyhole, Users } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import type { AuthSession } from "../../api/authApi";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
-import { HospitalHoursModal } from "../../components/settings/HospitalHoursModal";
-import { ClosedDatesModal } from "../../components/settings/ClosedDatesModal";
-import { VetScheduleModal } from "../../components/settings/VetScheduleModal";
-import { VetScheduleDetailModal } from "../../components/settings/VetScheduleDetailModal";
 import { PasswordChangeModal } from "../../components/settings/PasswordChangeModal";
 
 interface SettingsPageProps {
@@ -14,43 +10,15 @@ interface SettingsPageProps {
   onNavigate: (menuId: AppMenuId) => void;
 }
 
-type ModalType =
-  | "hospital-hours"
-  | "closed-dates"
-  | "vet-schedule"
-  | "vet-detail"
-  | "password"
-  | null;
+type ModalType = "password" | null;
 
 export default function SettingsPage({ session, onLogout, onNavigate }: SettingsPageProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [detailInitialVetId, setDetailInitialVetId] = useState<number | undefined>();
-
-  const openVetDetail = (vetId?: number) => {
-    setDetailInitialVetId(vetId);
-    setActiveModal("vet-detail");
-  };
 
   const close = () => setActiveModal(null);
 
   return (
     <AppLayout session={session} activeMenu="settings" onLogout={onLogout} onNavigate={onNavigate}>
-      {activeModal === "hospital-hours" && (
-        <HospitalHoursModal session={session} onClose={close} />
-      )}
-      {activeModal === "closed-dates" && (
-        <ClosedDatesModal session={session} onClose={close} />
-      )}
-      {activeModal === "vet-schedule" && (
-        <VetScheduleModal session={session} onClose={close} onOpenDetail={openVetDetail} />
-      )}
-      {activeModal === "vet-detail" && (
-        <VetScheduleDetailModal
-          session={session}
-          initialVetId={detailInitialVetId}
-          onClose={close}
-        />
-      )}
       {activeModal === "password" && (
         <PasswordChangeModal session={session} onClose={close} />
       )}
@@ -59,40 +27,11 @@ export default function SettingsPage({ session, onLogout, onNavigate }: Settings
         <div className="mb-6">
           <h1 className="text-2xl font-extrabold text-slate-900">설정</h1>
           <p className="mt-1 text-sm font-bold text-slate-500">
-            병원 운영 환경 및 계정 보안을 관리합니다.
+            계정 보안을 관리합니다.
           </p>
         </div>
 
         <div className="space-y-4 max-w-2xl">
-          {/* 병원 운영 */}
-          <SettingSection title="병원 운영" description="병원 운영 시간과 휴진 일정을 관리합니다.">
-            <SettingRow
-              icon={<Clock3 className="h-5 w-5 text-blue-600" strokeWidth={2.2} />}
-              title="병원 운영 시간"
-              description="요일별 기본 운영 시간과 점심 시간을 설정합니다."
-              onAction={() => setActiveModal("hospital-hours")}
-            />
-            <SettingRow
-              icon={<CalendarX className="h-5 w-5 text-blue-600" strokeWidth={2.2} />}
-              title="특정일 휴진"
-              description="공휴일, 대체휴일 등 특정 날짜의 휴진을 관리합니다."
-              onAction={() => setActiveModal("closed-dates")}
-              noBorder
-            />
-          </SettingSection>
-
-          {/* 구성원 근무 */}
-          <SettingSection title="구성원 근무" description="수의사별 근무 시간을 설정합니다.">
-            <SettingRow
-              icon={<Users className="h-5 w-5 text-blue-600" strokeWidth={2.2} />}
-              title="의사별 근무 시간"
-              description="수의사별 출퇴근, 퇴근, 점심 시간을 설정합니다."
-              onAction={() => setActiveModal("vet-schedule")}
-              noBorder
-            />
-          </SettingSection>
-
-          {/* 계정 및 보안 */}
           <SettingSection title="계정 및 보안" description="계정 정보 및 보안을 관리합니다.">
             <SettingRow
               icon={<LockKeyhole className="h-5 w-5 text-blue-600" strokeWidth={2.2} />}
