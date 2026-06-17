@@ -312,3 +312,54 @@ export async function setHospitalActive(hid: number, is_active: boolean): Promis
     await fetch(`${API}/admin/hospitals/${hid}/active`, { method: "PUT", headers: jsonHeaders(), body: JSON.stringify({ is_active }) }),
   );
 }
+
+// ── 홈페이지 문의 (공개) ────────────────────────────────────────
+export interface ContactPayload {
+  name: string;
+  phone: string;
+  email: string;
+  user_type: string;
+  message: string;
+}
+
+export async function submitContact(payload: ContactPayload): Promise<void> {
+  await asJson(
+    await fetch(`${API}/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+// ── 문의 관리 (어드민) ────────────────────────────────────────
+export interface ContactInquiryOut {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  user_type: string;
+  message: string;
+  is_replied: boolean;
+  created_at: string;
+}
+
+export async function listContacts(): Promise<ContactInquiryOut[]> {
+  const data = await asJson(await fetch(`${API}/admin/contacts`, { headers: authHeaders() }));
+  return data.result ?? data ?? [];
+}
+
+export async function getContact(id: number): Promise<ContactInquiryOut> {
+  const data = await asJson(await fetch(`${API}/admin/contacts/${id}`, { headers: authHeaders() }));
+  return data.result ?? data;
+}
+
+export async function replyContact(id: number, reply_message: string): Promise<void> {
+  await asJson(
+    await fetch(`${API}/admin/contacts/${id}/reply`, {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ reply_message }),
+    }),
+  );
+}

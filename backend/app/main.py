@@ -110,6 +110,7 @@ from app.api.vet_hospital import router as vet_hospital_router
 from app.api.hospitals import router as hospitals_router
 from app.api.signup_requests import router as signup_requests_router
 from app.api.admin import router as admin_router
+from app.api.contact import router as contact_router
 from app.core.config import settings
 from app.middleware.request_id import RequestIDMiddleware, get_request_id
 
@@ -236,3 +237,4 @@ app.include_router(vet_hospital_router)
 app.include_router(hospitals_router)
 app.include_router(signup_requests_router)
 app.include_router(admin_router)
+app.include_router(contact_router)
