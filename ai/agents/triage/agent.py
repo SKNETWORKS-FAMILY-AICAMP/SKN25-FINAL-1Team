@@ -21,6 +21,8 @@ from ai.agents.triage.prompts import (
 from ai.agents.triage.rules import (
     load_rules,
     select_next_question,
+    find_question_for_field,
+    get_field_schema,
     build_sections_guide,
     build_red_flag_guide,
     build_extract_schema,
@@ -100,8 +102,11 @@ class TriageAgent:
             extracted.get("observations") or []
         )
 
-        red_flag = bool(extracted.get("red_flag", False))
-        red_flag_chief = (extracted.get("red_flag_chief") or "").strip()
+        # red_flag는 한 번 켜지면 유지 (보충질문 턴에 풀리지 않게)
+        red_flag = bool(extracted.get("red_flag", False)) or bool(prev.get("red_flag"))
+        red_flag_chief = (
+            extracted.get("red_flag_chief") or prev.get("red_flag_chief") or ""
+        ).strip()
 
         asked = list(prev.get("asked_questions", []))
         question_count = prev.get("question_count", 0)
@@ -151,8 +156,69 @@ class TriageAgent:
             "image_analysis": image_analysis,
         }
 
-        # 응급 종료
+        # 응급 — 차트에 필요한 핵심정보만 짧게 보충 후 종료 (보호자에겐 응급 고지 안 함)
         if red_flag:
+
+            state["red_flag"] = True
+            state["red_flag_chief"] = red_flag_chief
+
+            ef = self.rules.get("meta", {}).get("emergency_followup") or {}
+            max_followups = ef.get("max_questions", 1)
+            followup_count = prev.get("red_flag_followup_count", 0)
+
+            missing = self._emergency_missing_fields(
+                section, fields, red_flag_chief, observations
+            )
+
+            # 핵심정보가 비었고 보충 한도가 남았으면 한 가지만 더 묻는다
+            if missing and followup_count < max_followups:
+
+                target_q = find_question_for_field(self.rules, section, missing[0])
+
+                if target_q is not None:
+
+                    generated = await self._generate_question(
+                        fields=fields,
+                        question=target_q,
+                        user_message=user_message,
+                    )
+
+                    asked.append(target_q.get("id"))
+                    state["asked_questions"] = asked
+                    state["red_flag_followup_count"] = followup_count + 1
+
+                    return {
+                        "section": section,
+                        "fields": fields,
+                        "red_flag": True,
+                        "urgency": "RED",
+                        "score": score_result["score"],
+                        "is_complete": False,
+                        "reply": generated["question"],
+                        "quick_replies": generated["quick_replies"],
+                        "state": state,
+                    }
+
+            # 핵심정보 충분/이미 보충함 → 요약 생성 후 종료 (차트 풍부화)
+            summary = await self.finalize(
+                messages=messages,
+                pet_info=pet_info,
+                vet_memo=None,
+                image_analysis=image_analysis,
+            )
+
+            # CNN 소견을 의심질환에 병합 (일반 완료 경로와 동일)
+            suspected = list(summary.get("suspected_conditions", []))
+            _, image_suspected = image_findings(image_analysis)
+            for name in image_suspected:
+                if name not in suspected:
+                    suspected.append(name)
+
+            # 응급 주증상을 chief 맨 앞에 (상담 제목 우선순위)
+            chief = list(summary.get("chief_complaints", []))
+            if red_flag_chief and red_flag_chief not in chief:
+                chief.insert(0, red_flag_chief)
+
             return {
                 "section": section,
                 "fields": fields,
@@ -160,7 +226,9 @@ class TriageAgent:
                 "urgency": "RED",
                 "score": score_result["score"],
                 "is_complete": True,
-                "chief_complaints": [red_flag_chief] if red_flag_chief else [],
+                "triage_summary": summary.get("triage_summary", ""),
+                "chief_complaints": chief,
+                "suspected_conditions": suspected,
                 "reply": TRIAGE_COMPLETE_REPLY,
                 "state": state,
             }
@@ -218,6 +286,39 @@ class TriageAgent:
             "quick_replies": generated["quick_replies"],
             "state": state,
         }
+
+    # 응급 보충질문 대상 = 핵심필드 중 '이 섹션에 있고 + 아직 비어있는' 것
+    def _emergency_missing_fields(
+        self,
+        section: str,
+        fields: dict,
+        red_flag_chief: str,
+        observations: list,
+    ):
+
+        ef = self.rules.get("meta", {}).get("emergency_followup") or {}
+        core = ef.get("core_fields", [])
+        schema = get_field_schema(self.rules, section)
+
+        missing = [f for f in core if f in schema and f not in fields]
+
+        # 의식상태를 이미 말한 경우(레드플래그 주증상/관찰) 중복 질문 방지
+        if "consciousness_level" in missing and self._consciousness_known(
+            red_flag_chief, observations
+        ):
+            missing.remove("consciousness_level")
+
+        return missing
+
+    # 의식상태를 보호자가 이미 언급했는지
+    @staticmethod
+    def _consciousness_known(
+        red_flag_chief: str,
+        observations: list,
+    ):
+
+        blob = (red_flag_chief or "") + " " + " ".join(observations or [])
+        return any(k in blob for k in ("의식", "기절", "무반응", "반응없", "반응 없"))
 
     # 최종 요약
     async def finalize(
@@ -313,7 +414,7 @@ class TriageAgent:
         prompt = QUESTION_PROMPT.format(
             state=json.dumps(fields, ensure_ascii=False),
             user_message=user_message,
-            target_fields=", ".join(remaining),
+            target_fields= remaining[0] if remaining else "",
             goal=question.get("goal", ""),
             example_questions="\n".join(question.get("example_questions", [])),
         )

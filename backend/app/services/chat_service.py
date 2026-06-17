@@ -252,8 +252,8 @@ async def process_chat_message(
         image_analysis=image_analysis,
     )
 
-    # 응급 상황
-    if result.get("red_flag"):
+    # 응급 + 문진 종료일 때만 완료 처리 (응급이어도 보충질문 턴이면 아래 일반 진행으로)
+    if result.get("red_flag") and result.get("is_complete"):
 
         await add_message(
             db,
