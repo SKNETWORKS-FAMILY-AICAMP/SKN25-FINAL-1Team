@@ -1,7 +1,10 @@
-import { FileText, Sparkles } from "lucide-react";
+import { FileText, Play, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { EmrResult } from "../../types/emr";
 import { Panel } from "./EmrShared";
+
+// 영상 첨부 — URL 확장자로 영상/이미지 구분
+const isVideoUrl = (url: string) => /\.(mp4|mov|webm|avi)(\?|$)/i.test(url);
 
 export function IntakePanel({
   emr,
@@ -113,11 +116,27 @@ export function IntakePanel({
                 onClick={() => onPreviewImage(fileUrl, `보호자 첨부 ${index + 1}`)}
                 className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100"
               >
-                <img
-                  src={fileUrl}
-                  alt={`보호자 첨부 ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
+                {/* 영상 첨부 — 영상은 미리보기 프레임 + 재생 아이콘, 클릭 시 모달에서 재생 */}
+                {isVideoUrl(fileUrl) ? (
+                  <>
+                    <video
+                      src={fileUrl}
+                      className="h-full w-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center bg-slate-900/25">
+                      <Play className="h-5 w-5 text-white drop-shadow" fill="currentColor" />
+                    </span>
+                  </>
+                ) : (
+                  <img
+                    src={fileUrl}
+                    alt={`보호자 첨부 ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                )}
                 {index === 3 && hiddenFileCount > 0 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-slate-800/55 text-sm font-extrabold text-white">
                     +{hiddenFileCount}

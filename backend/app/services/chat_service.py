@@ -110,25 +110,64 @@ async def _describe_photo_openai(image_url: str, image_bytes: bytes, user_text: 
         return None
 
 
-# 이미지 첨부 시 3개 모델(피부 CNN · 안구 CNN · OpenAI vision) 모두 실행
+# 영상 판정 — 영상 첨부 여부(확장자 기준)
+def _is_video_url(url: str) -> bool:
+    return url.lower().split("?", 1)[0].endswith((".mp4", ".mov", ".webm", ".avi"))
+
+
+# 영상 판정 — 여러 프레임 CNN 결과 중 대표 1개 선택(비정상·고신뢰 우선)
+def _pick_best_cnn(results: list[dict], normal_values: set[str]) -> dict:
+    valid = [r for r in results if isinstance(r, dict) and not r.get("error")]
+    if not valid:
+        return results[0] if results else {"error": "분석 결과 없음"}
+    # 신뢰도 70%+ 비정상 프레임이 있으면 그중 최고, 없으면 전체 최고신뢰
+    abnormal = [
+        r for r in valid
+        if r.get("top_class") not in normal_values and (r.get("top_confidence") or 0) >= 70.0
+    ]
+    pool = abnormal or valid
+    return max(pool, key=lambda r: r.get("top_confidence") or 0)
+
+
+# 이미지·영상 첨부 시 3개 모델(피부 CNN · 안구 CNN · OpenAI vision) 실행
+# 영상은 프레임을 컷으로 떠서 CNN에 입력(결과 형태는 이미지와 동일 → 하위 흐름 변경 없음)
 async def analyze_image(image_url: str, user_text: str) -> dict | None:
     try:
-        image_bytes = read_object_bytes_from_url(image_url)
+        media_bytes = read_object_bytes_from_url(image_url)
     except Exception as exc:
-        logger.warning("[Vision] 이미지 로드 실패 image_url=%s: %s", image_url, exc)
+        logger.warning("[Vision] 미디어 로드 실패 image_url=%s: %s", image_url, exc)
         return None
+
+    # 영상 판정 — 프레임 추출(없으면 CNN 입력은 0장), 대표 프레임은 OpenAI vision용
+    if _is_video_url(image_url):
+        try:
+            from ai.services.video_frame import extract_frames
+            frames = extract_frames(media_bytes, count=5)
+        except Exception as exc:
+            logger.warning("[Vision] 영상 프레임 추출 건너뜀: %s", exc)
+            frames = []
+        if not frames:
+            return None
+        cnn_inputs = frames
+        vision_bytes = frames[0]  # 가장 선명한 프레임
+    else:
+        cnn_inputs = [media_bytes]
+        vision_bytes = media_bytes
 
     analysis: dict = {}
 
-    # 피부·안구 CNN (torch 미설치 환경에서는 건너뜀)
+    # 피부·안구 CNN (torch 미설치 환경에서는 건너뜀). 영상은 프레임마다 돌려 대표값 채택.
     try:
         from ai.services.vision_model import vision_service
-        analysis["skin"] = vision_service.analyze_skin(image_bytes)
-        analysis["eye"] = vision_service.analyze_eye(image_bytes)
+        skin_results = [vision_service.analyze_skin(b) for b in cnn_inputs]
+        eye_results = [vision_service.analyze_eye(b) for b in cnn_inputs]
+        analysis["skin"] = _pick_best_cnn(skin_results, {"healthy"})
+        analysis["eye"] = _pick_best_cnn(eye_results, {"정상"})
     except Exception as exc:
         logger.warning("[Vision/CNN] 건너뜀: %s", exc)
 
-    observation = await _describe_photo_openai(image_url, image_bytes, user_text)
+    # OpenAI vision 관찰 (영상은 대표 프레임 JPEG로 전달 → .mp4 URL이어도 mime은 jpeg 기본값과 일치)
+    observation = await _describe_photo_openai(image_url, vision_bytes, user_text)
     if observation:
         analysis["visual_observation"] = observation
 
@@ -159,21 +198,22 @@ async def process_chat_message(
     if not session:
         raise ValueError("상담 세션을 찾을 수 없습니다.")
 
-    # 사용자 메시지 저장
+    # 이미지·영상 첨부 시 분석 (피부·안구·OpenAI vision). 메시지 저장 전에 먼저 판정.
+    image_analysis = None
+    if request.image_url:
+        # 진행 상태 알림: 이미지/영상 분석중
+        yield {"type": "status", "phase": "image_analysis"}
+        image_analysis = await analyze_image(request.image_url, request.content or "")
+
+    # 사용자 메시지 저장 (판정 결과를 photo_analysis로 동봉 → EMR/차트에서 재사용)
     await add_message(
         db,
         session,
         "user",
         request.content,
         request.image_url,
+        photo_analysis=image_analysis,
     )
-
-    # 이미지 첨부 시 분석 (피부·안구·OpenAI vision)
-    image_analysis = None
-    if request.image_url:
-        # 진행 상태 알림: 이미지 분석중
-        yield {"type": "status", "phase": "image_analysis"}
-        image_analysis = await analyze_image(request.image_url, request.content or "")
 
     # 최신 대화 다시 조회
     session = await get_chat_session(

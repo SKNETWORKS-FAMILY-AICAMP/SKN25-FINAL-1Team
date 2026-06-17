@@ -1,6 +1,9 @@
 import { X } from "lucide-react";
 import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 
+// 영상 첨부 — URL 확장자로 영상/이미지 구분
+const isVideoUrl = (url: string) => /\.(mp4|mov|webm|avi)(\?|$)/i.test(url);
+
 export function ImagePreviewModal({
   image,
   onClose,
@@ -22,11 +25,22 @@ export function ImagePreviewModal({
           </button>
         </div>
         <div className="bg-slate-950 p-4">
-          <img
-            src={image.url}
-            alt={image.label}
-            className="mx-auto max-h-[70vh] rounded-lg object-contain"
-          />
+          {/* 영상 첨부 — 영상이면 컨트롤 달린 플레이어로 재생 */}
+          {isVideoUrl(image.url) ? (
+            <video
+              src={image.url}
+              controls
+              autoPlay
+              playsInline
+              className="mx-auto max-h-[70vh] rounded-lg object-contain"
+            />
+          ) : (
+            <img
+              src={image.url}
+              alt={image.label}
+              className="mx-auto max-h-[70vh] rounded-lg object-contain"
+            />
+          )}
         </div>
       </div>
     </div>

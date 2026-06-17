@@ -136,6 +136,10 @@ const ChatInputBox = ({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // 첨부만 있고 설명 텍스트가 없으면 엔터 제출 막기
+    if (pendingAttachment && !messageInput.trim()) {
+      return;
+    }
     onSubmitMessage(messageInput);
     setMessageInput("");
   };
@@ -201,7 +205,7 @@ const ChatInputBox = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,video/mp4"
+          accept="image/jpeg,image/png,video/mp4,video/quicktime"
           onChange={onSelectAttachment}
           className="hidden"
         />
@@ -219,7 +223,13 @@ const ChatInputBox = ({
           value={messageInput}
           onChange={(event) => setMessageInput(event.target.value)}
           disabled={isStreaming || isUploadingAttachment || isRecording || isTranscribing}
-          placeholder={isRecording ? t("chatbot.voiceListening") : t("chatbot.inputPlaceholder")}
+          placeholder={
+            isRecording
+              ? t("chatbot.voiceListening")
+              : pendingAttachment
+                ? t("chatbot.attachNeedsText")
+                : t("chatbot.inputPlaceholder")
+          }
           className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400 disabled:text-slate-400"
         />
         <button
@@ -238,7 +248,9 @@ const ChatInputBox = ({
         <button
           type="submit"
           disabled={
+            // 첨부가 있으면 설명 텍스트 필수(영상은 컷 단위라 맥락 보강), 없으면 기존대로
             (!messageInput.trim() && !pendingAttachment) ||
+            (!!pendingAttachment && !messageInput.trim()) ||
             isStreaming ||
             isUploadingAttachment
           }
