@@ -54,7 +54,6 @@ export default function ApplicationDetail() {
   const reqId = Number(id);
   const [app, setApp] = useState<ApplicationOut | null>(null);
   const [loading, setLoading] = useState(true);
-  const [issued, setIssued] = useState<{ loginid: string; temp_password: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = () => {
@@ -74,8 +73,7 @@ export default function ApplicationDetail() {
   const handlePublish = async () => {
     setBusy(true);
     try {
-      const result = await approveApplication(reqId);
-      setIssued({ loginid: result.loginid, temp_password: result.temp_password });
+      await approveApplication(reqId);
       load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "발행 실패");
@@ -137,22 +135,9 @@ export default function ApplicationDetail() {
       {published ? (
         <div className="mt-5 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4">
           <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-          <div className="text-sm font-bold text-green-800">
-            발행 완료 — 계정이 생성되었습니다.
-            {issued ? (
-              <div className="mt-1 font-semibold text-green-700">
-                로그인 아이디: <span className="font-black">{issued.loginid}</span> · 임시 비밀번호:{" "}
-                <span className="font-black">{issued.temp_password}</span>
-              </div>
-            ) : (
-              <div className="mt-1 font-semibold text-green-700">
-                로그인 아이디: <span className="font-black">{app.desiredLoginId}</span> (임시 비밀번호는 발행 시 1회 표시)
-              </div>
-            )}
-            <p className="mt-1 text-xs font-medium text-green-600">
-              실제로는 {app.ownerEmail || "대표 이메일"} 로 자동 발송됩니다.
-            </p>
-          </div>
+          <p className="text-sm font-bold text-green-800">
+            계정 생성 완료 — 로그인 정보가 {app.ownerEmail || "대표 이메일"}으로 발송되었습니다.
+          </p>
         </div>
       ) : null}
       {app.status === "반려" ? (

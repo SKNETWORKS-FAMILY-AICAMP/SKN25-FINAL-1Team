@@ -28,8 +28,9 @@ export default function AccountInquiryPage() {
       });
       setSubmitted(true);
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data?.detail) {
-        setError(err.response.data.detail);
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data;
+        setError(data?.message ?? data?.detail ?? "문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
       } else {
         setError("문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
