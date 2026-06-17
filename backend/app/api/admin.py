@@ -8,7 +8,9 @@ from app.core.dependencies import get_current_admin
 from app.crud.admin import get_admin_by_loginid
 from app.crud import signup_request as sr_crud
 from app.crud import admin_hospital as ah_crud
+from app.crud import contact_inquiry as ci_crud
 from app.schemas.admin import AdminLoginRequest, RejectRequest
+from pydantic import BaseModel as _BaseModel
 from app.schemas.admin_hospital import (
     HospitalProfileUpdate,
     DoctorCreate,
@@ -195,6 +197,57 @@ async def admin_set_doctor_active(
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="원장을 찾을 수 없습니다.")
     return {"code": 200, "message": "변경되었습니다."}
+
+
+# ── 홈페이지 문의 관리 ─────────────────────────────────────
+class ReplyRequest(_BaseModel):
+    reply_message: str
+
+
+@router.get("/contacts")
+async def admin_list_contacts(
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    rows = await ci_crud.list_contacts(db)
+    return {"code": 200, "result": [ci_crud.to_out(r) for r in rows]}
+
+
+@router.get("/contacts/{contact_id}")
+async def admin_get_contact(
+    contact_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    row = await ci_crud.get_contact(db, contact_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="문의를 찾을 수 없습니다.")
+    return {"code": 200, "result": ci_crud.to_out(row)}
+
+
+@router.post("/contacts/{contact_id}/reply")
+async def admin_reply_contact(
+    contact_id: int,
+    body: ReplyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    row = await ci_crud.get_contact(db, contact_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="문의를 찾을 수 없습니다.")
+
+    from app.core.email import send_contact_reply
+    sent = send_contact_reply(
+        to_email=row.email,
+        to_name=row.name,
+        original_message=row.message,
+        reply_message=body.reply_message,
+    )
+    if not sent:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="이메일 발송에 실패했습니다.")
+
+    await ci_crud.mark_replied(db, contact_id)
+    return {"code": 200, "message": "답장이 발송되었습니다."}
 
 
 # ── 모니터링: Validation (validation_resultDB) ─────────────

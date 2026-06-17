@@ -60,6 +60,53 @@ def send_account_credentials(doctor_email: str, doctor_name: str, hospital_name:
         return False
 
 
+def send_contact_reply(to_email: str, to_name: str, original_message: str, reply_message: str) -> bool:
+    """홈페이지 문의 답장 이메일 발송."""
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning("[Email] SMTP 설정 없음 — 이메일 발송 건너뜀")
+        return False
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = settings.SMTP_FROM
+        msg["To"] = to_email
+        msg["Subject"] = "[MediPaw] 문의 답변 안내"
+
+        original_html = original_message.replace("\n", "<br>")
+        reply_html = reply_message.replace("\n", "<br>")
+
+        html = f"""
+        <html><body style="font-family: sans-serif; color: #222; max-width: 520px; margin: 0 auto;">
+          <h2 style="color: #2f6f67;">MediPaw 문의 답변</h2>
+          <p>안녕하세요, <strong>{to_name}</strong>님. 문의해 주셔서 감사합니다.</p>
+
+          <p style="margin-top: 24px; font-size: 13px; font-weight: bold; color: #555;">📩 보내주신 문의</p>
+          <div style="background: #f8f8f8; border-left: 3px solid #ccc; padding: 14px 18px; margin: 8px 0 20px; font-size: 14px; line-height: 1.7; color: #444;">
+            {original_html}
+          </div>
+
+          <p style="font-size: 13px; font-weight: bold; color: #555;">💬 MediPaw 답변</p>
+          <div style="background: #f0f7f6; border-left: 3px solid #2f6f67; padding: 14px 18px; margin: 8px 0; font-size: 14px; line-height: 1.7; color: #222;">
+            {reply_html}
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 28px 0;">
+          <p style="font-size: 12px; color: #999;">추가 문의사항은 <a href="mailto:{settings.SMTP_FROM}" style="color: #2f6f67;">{settings.SMTP_FROM}</a>으로 연락해주세요.</p>
+        </body></html>
+        """
+        msg.attach(MIMEText(html, "html"))
+
+        with _build_smtp_connection() as server:
+            server.sendmail(settings.SMTP_FROM, to_email, msg.as_string())
+
+        logger.info(f"[Email] 문의 답장 발송 완료 → {to_email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"[Email] 문의 답장 발송 실패: {e}")
+        return False
+
+
 def send_account_inquiry_to_cs(doctor_name: str, hospital_name: str, business_number: str, license_number: str, doctor_email: str) -> bool:
     """계정 조회 실패 시 CS팀에 알림 이메일 발송 (Reply-To: 의사 이메일)."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD or not settings.CS_EMAIL:
