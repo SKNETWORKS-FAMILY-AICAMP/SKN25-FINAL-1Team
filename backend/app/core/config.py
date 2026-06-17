@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-5.4-mini"
     OPENAI_VISION_MODEL: str = "gpt-5.4-mini"
+    # 이미지 분석에서 피부/안구 CNN 사용 여부. false면 OpenAI vision 관찰만 사용(실험용).
+    USE_CNN_VISION: bool = True
 
     # STT (Groq Whisper — 음성 입력 전사)
     GROQ_API_KEY: str = ""
