@@ -296,6 +296,30 @@ export const uploadChatAttachment = async (
   return response.data;
 };
 
+// STT — 녹음 오디오를 백엔드(Groq Whisper)로 보내 전사 텍스트 받기
+export interface TranscribeAudioResponse {
+  code: number;
+  result: { text: string };
+}
+
+export const transcribeAudio = async (
+  audio: Blob,
+): Promise<TranscribeAudioResponse> => {
+  const formData = new FormData();
+  formData.append("file", audio, "voice.webm");
+
+  const response = await apiClient.post<TranscribeAudioResponse>(
+    "/chat/stt",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+};
+
 const readStreamingResponseText = (event?: ProgressEvent) => {
   const target = event?.target as XMLHttpRequest | null;
   return typeof target?.responseText === "string" ? target.responseText : "";

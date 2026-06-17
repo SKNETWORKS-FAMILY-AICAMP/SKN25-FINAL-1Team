@@ -45,11 +45,6 @@ STEP 6: 최종 SOAP 차트 초안 생성
   "red_flags_confirmed": ["혈변 의심"],
   "missing_info": ["체온 측정값", "최근 식이 변화 여부"],
   "vet_questions": ["수의사가 내원 시 직접 확인할 질문 3~5개(감별진단 구분·누락정보 해소에 유용하게)"],
-  "prescription_draft": {{
-    "diagnosis": "추정 진단",
-    "medications": [
-      {{"name": "약품명", "dosage": "용량", "frequency": "횟수", "duration": "기간", "route": "경구/주사"}}
-    ],
     "cautions": ["주의사항"]
   }}
 }}"""

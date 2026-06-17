@@ -34,15 +34,10 @@ _CARE_TIPS_SCHEMA = {
 }
 
 # 응급도 라벨 → fallback 기본 시간 (LLM 실패 시에만 사용)
-_FALLBACK_BASE = {"RED": 40, "ORANGE": 40, "YELLOW": 30, "GREEN": 20}
+_FALLBACK_BASE = {"RED": 50, "ORANGE": 40, "YELLOW": 30, "GREEN": 30}
 
 
 class ScheduleAgent:
-    """진료 예상 소요시간 산정 전용 에이전트 (LLM).
-
-    슬롯 추천(어느 날·몇 시)은 결정론 로직(crud.recommend_slots)이 담당하고,
-    이 에이전트는 'estimated_duration_min' 하나만 책임진다.
-    """
 
     # 진료 예상 소요시간 산정 (LLM)
     async def estimate_duration(self, pet: dict, triage: dict) -> dict:

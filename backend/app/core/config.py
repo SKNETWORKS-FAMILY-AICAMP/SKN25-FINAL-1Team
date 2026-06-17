@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-5.4-mini"
     OPENAI_VISION_MODEL: str = "gpt-5.4-mini"
 
+    # STT (Groq Whisper — 음성 입력 전사)
+    GROQ_API_KEY: str = ""
+    GROQ_STT_MODEL: str = "whisper-large-v3-turbo"
+
     # SMTP 이메일 발송
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
