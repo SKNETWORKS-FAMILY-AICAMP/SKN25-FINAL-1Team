@@ -8,7 +8,6 @@ import StatusBadge from "./StatusBadge";
 const FILTERS: (ApplicationStatus | "전체")[] = [
   "전체",
   "접수",
-  "검토중",
   "승인발행",
   "반려",
 ];
