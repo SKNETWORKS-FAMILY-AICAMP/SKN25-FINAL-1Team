@@ -12,6 +12,7 @@ from app.models.doctor_profile import DoctorProfile
 from app.models.vet_schedule import HospitalWeeklySchedule, VetWeeklySchedule
 from app.schemas.onboarding import SignupRequestIn
 from app.core.security import hash_password
+from app.crud.hospital import get_hospital_by_loginid
 
 
 def to_out(r: ClinicSignupRequest) -> dict:
@@ -133,6 +134,10 @@ async def approve_signup_request(db: AsyncSession, req_id: int) -> dict | None:
         return None
 
     temp_password = _gen_temp_password()
+
+    # 1) loginid 중복 사전 체크
+    if await get_hospital_by_loginid(db, r.desired_loginid):
+        raise ValueError(f"이미 사용 중인 로그인 아이디입니다: {r.desired_loginid}")
 
     # 1) 병원 + 로그인 계정
     hospital = Hospital(

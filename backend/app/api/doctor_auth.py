@@ -114,20 +114,20 @@ async def account_inquiry(request: AccountInquiryRequest, db: AsyncSession = Dep
     if not hospital:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="등록된 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해주세요.",
+            detail="병원명 또는 사업자등록번호가 일치하지 않습니다.",
         )
 
     doctor = await get_doctor_by_license(db, hospital.hospitalid, request.license_number)
     if not doctor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="등록된 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해주세요.",
+            detail="의사면허번호가 일치하지 않습니다.",
         )
 
     if not hospital.owner_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="등록된 대표 이메일이 없습니다. 관리자에게 문의해주세요.",
+            detail="등록된 대표 이메일이 없습니다. 관리자(aoj.medipaw@gmail.com)에게 직접 문의해주세요.",
         )
 
     temp = _temp_password()

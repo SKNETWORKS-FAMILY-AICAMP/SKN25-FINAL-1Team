@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, ShieldCheck } from "lucide-react";
+import axios from "axios";
 import { AuthLayout } from "../../components/auth/AuthLayout";
 import { apiClient } from "../../api/client";
 
@@ -27,8 +28,11 @@ export default function AccountInquiryPage() {
       });
       setSubmitted(true);
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(detail ?? "문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
+      if (axios.isAxiosError(err) && err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError("문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setIsLoading(false);
     }
