@@ -71,6 +71,21 @@ def get_questions(
     )
 
 
+# 특정 필드를 묻는 질문 노드 조회 (응급 보충질문용)
+def find_question_for_field(
+    rules: dict,
+    section_id: str,
+    field: str,
+):
+
+    for question in get_questions(rules, section_id):
+
+        if field in question.get("extract_fields", []):
+            return question
+
+    return None
+
+
 # id로 질문 조회
 def get_question(
     rules: dict,
