@@ -25,6 +25,9 @@ langgraph==0.2.50
 langchain==0.3.7
 langchain-openai==0.2.9
 
+# STT (Groq Whisper)
+groq>=0.11.0
+
 # SSE
 sse-starlette==2.1.0
 

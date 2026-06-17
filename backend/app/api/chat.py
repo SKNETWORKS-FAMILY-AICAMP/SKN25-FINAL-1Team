@@ -11,6 +11,7 @@ from app.crud.chat import (
     delete_chat_session,
 )
 from app.core.dependencies import get_current_user
+from app.core.config import settings
 from app.utils.file_validation import validate_file
 from app.models.pet import Pet
 from app.models.triage_result import TriageResult
@@ -109,6 +110,47 @@ async def upload_chat_file(
     except NoCredentialsError:
         raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
     return {"code": 200, "result": result}
+
+
+# STT — 음성 녹음(Blob)을 Groq Whisper로 전사해 텍스트 반환
+@router.post("/stt")
+async def speech_to_text(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+):
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(status_code=500, detail="STT(Groq) 인증 정보가 설정되지 않았습니다.")
+
+    # 오디오 검증 (코덱 파라미터 제거 후 기본 타입만 비교, 최대 10MB)
+    content_type = (file.content_type or "audio/webm").split(";")[0].strip()
+    body = await file.read()
+    validate_file(
+        content_type,
+        len(body),
+        ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg"],
+        10 * 1024 * 1024,
+    )
+
+    # Groq Whisper 호출 (SDK가 동기라 스레드로 분리)
+    import asyncio
+    from groq import Groq
+
+    def _transcribe() -> str:
+        client = Groq(api_key=settings.GROQ_API_KEY)
+        result = client.audio.transcriptions.create(
+            file=(file.filename or "voice.webm", body),
+            model=settings.GROQ_STT_MODEL,
+            language="ko",
+        )
+        return (result.text or "").strip()
+
+    try:
+        text = await asyncio.to_thread(_transcribe)
+    except Exception as exc:
+        logger.warning("[STT] 전사 실패: %s", exc)
+        raise HTTPException(status_code=502, detail="음성 인식에 실패했습니다.")
+
+    return {"code": 200, "result": {"text": text}}
 
 
 # 메시지/추천 일괄 번역 — 언어 변경 시 챗봇 답변·사용자 메시지를 선택 언어로 다시 렌더링
