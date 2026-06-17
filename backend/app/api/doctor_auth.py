@@ -114,20 +114,20 @@ async def account_inquiry(request: AccountInquiryRequest, db: AsyncSession = Dep
     if not hospital:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="등록된 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해주세요.",
+            detail="병원명 또는 사업자등록번호가 일치하지 않습니다.",
         )
 
     doctor = await get_doctor_by_license(db, hospital.hospitalid, request.license_number)
     if not doctor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="등록된 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해주세요.",
+            detail="의사면허번호가 일치하지 않습니다.",
         )
 
-    if not doctor.email:
+    if not hospital.owner_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="등록된 이메일이 없습니다. 관리자에게 문의해주세요.",
+            detail="등록된 대표 이메일이 없습니다. 관리자(aoj.medipaw@gmail.com)에게 직접 문의해주세요.",
         )
 
     temp = _temp_password()
@@ -136,14 +136,14 @@ async def account_inquiry(request: AccountInquiryRequest, db: AsyncSession = Dep
     await db.commit()
 
     send_account_credentials(
-        doctor_email=doctor.email,
+        doctor_email=hospital.owner_email,
         doctor_name=doctor.doctor_name,
         hospital_name=hospital.hospital_name,
         loginid=hospital.loginid,
         temp_password=temp,
     )
 
-    return {"code": 200, "message": "등록된 이메일로 계정 정보를 발송했습니다."}
+    return {"code": 200, "message": "등록된 대표 이메일로 계정 정보를 발송했습니다."}
 
 
 # 같은 병원 소속 수의사 목록

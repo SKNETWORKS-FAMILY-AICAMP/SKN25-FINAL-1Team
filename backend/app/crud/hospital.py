@@ -18,10 +18,11 @@ async def get_hospital_by_id(db: AsyncSession, hospitalid: int):
 
 
 async def get_hospital_by_credentials(db: AsyncSession, hospital_name: str, business_number: str):
+    normalized_bn = business_number.replace("-", "").replace(" ", "")
     result = await db.execute(
         select(Hospital).where(
-            Hospital.hospital_name == hospital_name,
-            Hospital.business_number == business_number,
+            Hospital.hospital_name == hospital_name.strip(),
+            Hospital.business_number == normalized_bn,
         )
     )
     return result.scalar_one_or_none()
