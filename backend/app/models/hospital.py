@@ -10,6 +10,7 @@ class Hospital(Base):
     hospital_address    = Column(String, nullable=True)
     hospital_number     = Column(String, nullable=True)
     business_number     = Column(String, nullable=False)
+    owner_email         = Column(String, nullable=True)
     loginid             = Column(String, nullable=False, unique=True)
     password            = Column(String, nullable=False)
     is_initial_password = Column(Boolean, nullable=False, default=True)

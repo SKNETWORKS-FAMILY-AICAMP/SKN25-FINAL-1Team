@@ -140,6 +140,7 @@ async def approve_signup_request(db: AsyncSession, req_id: int) -> dict | None:
         hospital_address=r.hospital_address,
         hospital_number=r.hospital_phone,
         business_number=r.business_number,
+        owner_email=r.owner_email,
         loginid=r.desired_loginid,
         password=hash_password(temp_password),
         is_initial_password=True,
