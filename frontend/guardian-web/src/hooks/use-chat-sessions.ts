@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "../i18n/language-context";
 import type { Pet } from "../api/pets-api";
 import type { ChatMessage } from "./use-chat-conversation";
+import { isVideoAttachment } from "../utils/chat-attachment";
 
 /** 현재 화면에 떠 있는 라이브 세션의 식별자 + 보호자가 한마디라도 했는지 여부. */
 export interface LiveSessionInfo {
@@ -366,6 +367,9 @@ export const useChatSessions = ({
           role: message.role,
           content: message.content,
           attachmentUrl: message.image_url || undefined,
+          attachmentType: isVideoAttachment(undefined, message.image_url || undefined)
+            ? "video/*"
+            : undefined,
           card: (message.meta as { card?: ChatMessage["card"] } | undefined)?.card,
         })),
       ];

@@ -116,6 +116,8 @@ async def create_checkup(
             "category": category_label,
             "date": request.date,
             "time": request.time,
+            "end_time": schedule.confirmed_end_time.astimezone(KST).strftime("%H:%M") if schedule.confirmed_end_time else None,
+            "duration_min": schedule.duration_min or 30,
             "memo": request.memo,
             "status": schedule.status
         }

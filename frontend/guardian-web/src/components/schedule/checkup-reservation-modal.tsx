@@ -169,7 +169,10 @@ const CheckupReservationModal = ({
                 {t("schedule.completeTitle")}
               </h3>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                {t("schedule.completeDesc")}
+                {t("schedule.completeDesc", {
+                  date: completedReservation.date,
+                  time: `${completedReservation.time} - ${completedReservation.end_time}`,
+                })}
               </p>
             </div>
 
@@ -195,7 +198,7 @@ const CheckupReservationModal = ({
 
             <div className="mt-5 flex justify-end">
               <ActionButton type="button" onClick={onClose} size="lg">
-                {t("schedule.goHome")}
+                {t("schedule.completeConfirm")}
               </ActionButton>
             </div>
           </div>

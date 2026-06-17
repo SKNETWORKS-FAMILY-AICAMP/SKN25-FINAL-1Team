@@ -10,6 +10,7 @@ import {
   formatChatTime,
   weekdayOf,
 } from "../../utils/chat-format";
+import { isVideoAttachment } from "../../utils/chat-attachment";
 import type { Language } from "../../i18n/translations";
 
 interface ChatMessageListProps {
@@ -405,11 +406,12 @@ const ChatMessageList = ({
               return pending ? <TranslatingDots /> : text;
             })()}
             {message.attachmentUrl ? (
-              message.attachmentType === "video/mp4" ? (
+              isVideoAttachment(message.attachmentType, message.attachmentUrl) ? (
                 <video
                   src={message.attachmentUrl}
-                  className="mt-3 max-h-56 rounded-2xl"
+                  className="mt-3 max-h-56 max-w-full rounded-2xl object-contain"
                   controls
+                  playsInline
                 />
               ) : (
                 <img

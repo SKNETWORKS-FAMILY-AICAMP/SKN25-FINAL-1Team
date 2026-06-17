@@ -22,6 +22,19 @@ const formatDateInput = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const addMinutesToTime = (time: string, minutes: number) => {
+  const [hour, minute] = time.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return time;
+  }
+
+  const totalMinutes = hour * 60 + minute + minutes;
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const nextHour = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const nextMinute = String(normalized % 60).padStart(2, "0");
+  return `${nextHour}:${nextMinute}`;
+};
+
 const getErrorMessage = (error: unknown, fallbackMessage: string) => {
   if (isAxiosError<ApiErrorResponse | string>(error)) {
     const responseData = error.response?.data;
@@ -183,7 +196,14 @@ export const useCheckupReservation = ({
         return;
       }
 
-      setCompletedReservation(response.result);
+      setCompletedReservation({
+        ...response.result,
+        end_time:
+          response.result.end_time ||
+          selectedSlot.end_time ||
+          addMinutesToTime(response.result.time, checkupDurationMin),
+        duration_min: response.result.duration_min || checkupDurationMin,
+      });
     } catch (error) {
       setErrorMessage(
         getErrorMessage(error, t("schedule.checkupFailed")),
