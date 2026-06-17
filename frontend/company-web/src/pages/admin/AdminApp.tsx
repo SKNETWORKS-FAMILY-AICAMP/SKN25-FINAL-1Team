@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Building2, ClipboardList, LogOut, ShieldCheck, Stethoscope } from "lucide-react";
+import { Building2, ClipboardList, LogOut, MessageSquare, ShieldCheck, Stethoscope } from "lucide-react";
 
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 import AdminLogin from "./AdminLogin";
@@ -10,6 +10,8 @@ import HospitalsList from "./HospitalsList";
 import HospitalManage from "./HospitalManage";
 import ValidationPanel from "./ValidationPanel";
 import JudgePanel from "./JudgePanel";
+import ContactList from "./ContactList";
+import ContactDetail from "./ContactDetail";
 import { clearAdminToken, isAdminAuthed } from "../../onboarding/api";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -33,6 +35,9 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
           <NavLink to="/admin/hospitals" className={navClass}>
             <Building2 className="h-4 w-4" /> 병원 관리
           </NavLink>
+          <NavLink to="/admin/contacts" className={navClass}>
+            <MessageSquare className="h-4 w-4" /> 문의
+          </NavLink>
           <NavLink to="/admin/validation" className={navClass}>
             <ShieldCheck className="h-4 w-4" /> Validation
           </NavLink>
@@ -55,6 +60,8 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
           <Route path="applications/:id" element={<ApplicationDetail />} />
           <Route path="hospitals" element={<HospitalsList />} />
           <Route path="hospitals/:id" element={<HospitalManage />} />
+          <Route path="contacts" element={<ContactList />} />
+          <Route path="contacts/:id" element={<ContactDetail />} />
           <Route path="validation" element={<ValidationPanel />} />
           <Route path="judge" element={<JudgePanel />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />

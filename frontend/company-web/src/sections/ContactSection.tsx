@@ -1,13 +1,32 @@
 import { FormEvent, ReactNode, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { siteConfig } from "../config/site";
+import { submitContact } from "../onboarding/api";
 
 export default function ContactSection() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitted(true);
+    const fd = new FormData(event.currentTarget);
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await submitContact({
+        name: fd.get("name") as string,
+        phone: fd.get("phone") as string,
+        email: fd.get("email") as string,
+        user_type: fd.get("type") as string,
+        message: fd.get("message") as string,
+      });
+      setSubmitted(true);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "접수 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -29,23 +48,23 @@ export default function ContactSection() {
         >
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="이름" htmlFor="contact-name">
-              <input id="contact-name" name="name" type="text" placeholder="홍길동" className="contact-input" />
+              <input id="contact-name" name="name" type="text" placeholder="홍길동" className="contact-input" required />
             </Field>
 
             <Field label="연락처" htmlFor="contact-phone">
-              <input id="contact-phone" name="phone" type="tel" placeholder="010-1234-5678" className="contact-input" />
+              <input id="contact-phone" name="phone" type="tel" placeholder="010-1234-5678" className="contact-input" required />
             </Field>
           </div>
 
           <div className="mt-4">
             <Field label="이메일" htmlFor="contact-email">
-              <input id="contact-email" name="email" type="email" placeholder="example@email.com" className="contact-input" />
+              <input id="contact-email" name="email" type="email" placeholder="example@email.com" className="contact-input" required />
             </Field>
           </div>
 
           <div className="mt-4">
             <Field label="사용자 유형" htmlFor="contact-type">
-              <select id="contact-type" name="type" defaultValue="보호자" className="contact-input">
+              <select id="contact-type" name="type" defaultValue="보호자" className="contact-input" required>
                 <option>보호자</option>
                 <option>동물병원</option>
                 <option>제휴/협업</option>
@@ -62,6 +81,7 @@ export default function ContactSection() {
                 rows={3}
                 placeholder="궁금한 점을 입력해주세요..."
                 className="contact-input min-h-28 resize-y py-3"
+                required
               />
             </Field>
           </div>
@@ -75,8 +95,18 @@ export default function ContactSection() {
             </div>
           )}
 
-          <button type="submit" className="mt-5 flex h-11 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-base font-black text-white transition hover:bg-blue-700">
-            문의 신청하기
+          {submitError && (
+            <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+              {submitError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting || submitted}
+            className="mt-5 flex h-11 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "접수 중..." : "문의 신청하기"}
           </button>
 
           <p className="mt-3 text-center text-xs font-semibold text-slate-500 sm:text-sm">
