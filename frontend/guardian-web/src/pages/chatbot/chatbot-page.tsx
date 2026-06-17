@@ -72,19 +72,20 @@ const getProfileImage = (pet: Pet) =>
   defaultProfileImages[Math.abs(pet.pet_id) % defaultProfileImages.length];
 
 const getErrorMessage = (error: unknown, fallbackMessage: string) => {
-  if (isAxiosError<{ message?: string } | string>(error)) {
+  if (isAxiosError<{ message?: string; detail?: string } | string>(error)) {
     const responseData = error.response?.data;
 
     if (typeof responseData === "string") {
       try {
-        const parsedData = JSON.parse(responseData) as { message?: string };
-        return parsedData.message || fallbackMessage;
+        const parsedData = JSON.parse(responseData) as { message?: string; detail?: string };
+        return parsedData.message || parsedData.detail || fallbackMessage;
       } catch {
         return fallbackMessage;
       }
     }
 
-    return responseData?.message || fallbackMessage;
+    // FastAPI는 사유를 detail 키로 반환 → message 없으면 detail 사용
+    return responseData?.message || responseData?.detail || fallbackMessage;
   }
 
   return fallbackMessage;
@@ -450,8 +451,9 @@ const ChatbotPage = () => {
   // 통합 메시지 전송 핸들러 — phase에 따라 분기
   const handleSendCombined = async (content: string) => {
     const trimmed = content.trim();
-    // 텍스트가 없어도 첨부파일만 있으면 전송 허용(특히 경과보고에 사진만 올리는 경우).
-    if ((!trimmed && !pendingAttachment) || isStreaming || isUploadingAttachment) return;
+    // 첨부가 있으면 설명 텍스트 필수(영상 컷 단위라 맥락 보강 → off-topic 오인 방지).
+    // 첨부가 없는 일반 메시지도 텍스트가 있어야 전송.
+    if (!trimmed || isStreaming || isUploadingAttachment) return;
 
     if (pipeline.phase === "slot-selection") {
       // 슬롯 버튼 클릭 또는 텍스트 입력
