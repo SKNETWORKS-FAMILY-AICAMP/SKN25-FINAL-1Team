@@ -240,7 +240,13 @@ async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size
             or_(Schedule.status == "CANCELLED", Schedule.deleted_at.isnot(None))
         )
     else:
-        pass  # "all": CONFIRMED + COMPLETED + CANCELLED + soft-deleted 전부 포함
+        # "all": 보호자 예약내역에 표시되는 상태만 페이지네이션한다.
+        conditions.append(
+            or_(
+                Schedule.status.in_(["CONFIRMED", "COMPLETED", "CANCELLED"]),
+                Schedule.deleted_at.isnot(None),
+            )
+        )
 
     # 탭별 정렬 방향: 미래(다가오는 예약)는 임박순(ASC), 과거(지난 상담)는 최신순(DESC)
     if filter == "upcoming":
