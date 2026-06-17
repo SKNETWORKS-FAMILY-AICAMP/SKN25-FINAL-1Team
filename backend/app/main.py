@@ -106,6 +106,7 @@ from app.api.prescriptions import router as prescriptions_router
 from app.api.emr import router as emr_router
 from app.api.alarm import router as alarm_router
 from app.api.settings import router as settings_router
+from app.api.vet_hospital import router as vet_hospital_router
 from app.api.hospitals import router as hospitals_router
 from app.api.signup_requests import router as signup_requests_router
 from app.api.admin import router as admin_router
@@ -232,6 +233,7 @@ app.include_router(prescriptions_router)
 app.include_router(emr_router)
 app.include_router(alarm_router)
 app.include_router(settings_router)
+app.include_router(vet_hospital_router)
 app.include_router(hospitals_router)
 app.include_router(signup_requests_router)
 app.include_router(admin_router)

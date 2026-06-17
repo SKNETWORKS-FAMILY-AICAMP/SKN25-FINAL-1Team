@@ -3,6 +3,7 @@ import { useAlarms } from "../contexts/AlarmContext";
 import { OperatingHoursProvider } from "../contexts/OperatingHoursContext";
 import {
   Bell,
+  Building2,
   CalendarCheck,
   CalendarClock,
   CalendarDays,
@@ -19,7 +20,7 @@ import { AuthSession } from "../api/authApi";
 import { AlarmItem, AlarmType } from "../api/alarmApi";
 import medipawSymbol from "../../../shared/assets/logo/medipaw-symbol.png";
 
-export type AppMenuId = "home" | "emr" | "reservation" | "patients" | "settings";
+export type AppMenuId = "home" | "emr" | "reservation" | "patients" | "hospital-manage" | "settings";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -40,6 +41,7 @@ const navigationItems: Array<{
   { id: "emr", label: "EMR", Icon: ClipboardList },
   { id: "reservation", label: "예약 관리", Icon: CalendarDays },
   { id: "patients", label: "환자 관리", Icon: UsersRound },
+  { id: "hospital-manage", label: "병원 관리", Icon: Building2 },
   { id: "settings", label: "설정", Icon: Settings },
 ];
 
