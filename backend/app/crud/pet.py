@@ -17,6 +17,8 @@ async def create_pet(db: AsyncSession, pet: PetCreate, userid: int):
         weight_kg=pet.weight_kg,
         notes=pet.notes,
         profile_image=pet.profile_image,
+        original_image=pet.original_image,
+        doodle_strokes=pet.doodle_strokes,
     )
     db.add(db_pet)
     await db.commit()
@@ -62,6 +64,10 @@ async def update_pet(db: AsyncSession, pet: Pet, pet_data: PetUpdate):
         pet.notes = pet_data.notes
     if pet_data.profile_image is not None:
         pet.profile_image = pet_data.profile_image
+    if pet_data.original_image is not None:
+        pet.original_image = pet_data.original_image
+    if pet_data.doodle_strokes is not None:
+        pet.doodle_strokes = pet_data.doodle_strokes
 
     await db.commit()
     await db.refresh(pet)

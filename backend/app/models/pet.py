@@ -7,6 +7,10 @@ class Pet(Base):
     petid = Column(Integer, primary_key=True, autoincrement=True)
     userid = Column(Integer, ForeignKey("userDB.userid"), nullable=False)
     profile_image = Column(String, nullable=True)
+    # 사진 꾸미기 비파괴 편집용: 그림 입히기 전 원본 사진 URL + 그림 stroke(JSON).
+    # profile_image는 표시용 합성본, 이 둘은 재편집을 위한 원천 데이터다.
+    original_image = Column(String, nullable=True)
+    doodle_strokes = Column(Text, nullable=True)
     species = Column(String, nullable=True)
     breed = Column(String, nullable=True)
     petname = Column(String, nullable=False)

@@ -23,14 +23,32 @@ interface PetImageUploaderProps {
   isDetailMode: boolean;
   fileInputRef: RefObject<HTMLInputElement>;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onDecorate?: () => void;
   errorMessage?: string;
 }
+
+const BrushIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9.5 14.5 4 20l.5-3.5L15 6l3 3-10.5 5.5Z" />
+    <path d="M15 6l2-2a1.5 1.5 0 0 1 2 2l-2 2" />
+  </svg>
+);
 
 const PetImageUploader = ({
   previewUrl,
   isDetailMode,
   fileInputRef,
   onImageChange,
+  onDecorate,
   errorMessage,
 }: PetImageUploaderProps) => {
   const { t } = useTranslation();
@@ -82,6 +100,17 @@ const PetImageUploader = ({
         )}
       </div>
       
+      {!isDetailMode && previewUrl && onDecorate ? (
+        <button
+          type="button"
+          onClick={onDecorate}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-bold text-[#2F6F67] shadow-sm transition-all hover:border-[#2F6F67]/40 hover:bg-[#2F6F67]/5"
+        >
+          <BrushIcon />
+          {t("pet.decorate")}
+        </button>
+      ) : null}
+
       <div className="mt-6 text-center">
         <p className="text-sm font-medium text-slate-500">
           {t("pet.photoHint")}

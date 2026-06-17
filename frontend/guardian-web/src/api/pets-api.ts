@@ -15,6 +15,8 @@ export interface Pet {
   is_checkup_unknown?: boolean;
   notes?: string;
   profile_image?: string;
+  original_image?: string;
+  doodle_strokes?: string;
 }
 
 export interface CreatePetPayload {
@@ -30,6 +32,8 @@ export interface CreatePetPayload {
   is_checkup_unknown?: boolean;
   notes?: string;
   profile_image?: string;
+  original_image?: string;
+  doodle_strokes?: string;
 }
 
 export interface CreatePetResponse {

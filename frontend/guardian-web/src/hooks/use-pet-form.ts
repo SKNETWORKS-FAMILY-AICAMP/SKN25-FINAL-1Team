@@ -106,9 +106,15 @@ export const getFormFromPet = (pet: Pet): PetFormState => {
   };
 };
 
+interface ImageFields {
+  profileImage?: string;
+  originalImage?: string;
+  doodleStrokes?: string;
+}
+
 export const getPayloadFromForm = (
   formState: PetFormState,
-  profileImage?: string,
+  images: ImageFields = {},
 ): PetPayload => ({
   petname: formState.petname.trim(),
   species:
@@ -130,7 +136,12 @@ export const getPayloadFromForm = (
       : undefined,
   is_checkup_unknown: formState.isCheckupUnknown,
   notes: formState.notes.trim(),
-  ...(profileImage ? { profile_image: profileImage } : {}),
+  ...(images.profileImage ? { profile_image: images.profileImage } : {}),
+  ...(images.originalImage ? { original_image: images.originalImage } : {}),
+  // 빈 문자열("")도 "그림 없음"을 의미하므로 undefined일 때만 생략(변경 감지용).
+  ...(images.doodleStrokes !== undefined
+    ? { doodle_strokes: images.doodleStrokes }
+    : {}),
 });
 
 const getChangedPayload = (
@@ -158,22 +169,38 @@ export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
   const [errors, setErrors] = useState<PetFormErrors>({});
   const [previewUrl, setPreviewUrl] = useState("");
   const [originalPreviewUrl, setOriginalPreviewUrl] = useState("");
+  // 비파괴 편집 영속 데이터: cleanImageUrl=그림 입히기 전 원본(remote URL),
+  // doodleStrokes=그림 stroke JSON 문자열. previewUrl(profile_image)은 표시용 합성본.
+  const [cleanImageUrl, setCleanImageUrl] = useState("");
+  const [originalCleanImageUrl, setOriginalCleanImageUrl] = useState("");
+  const [doodleStrokes, setDoodleStrokes] = useState("");
+  const [originalDoodleStrokes, setOriginalDoodleStrokes] = useState("");
 
   const resetPetFormState = useCallback(() => {
     setForm(initialForm);
     setOriginalForm(null);
     setPreviewUrl("");
     setOriginalPreviewUrl("");
+    setCleanImageUrl("");
+    setOriginalCleanImageUrl("");
+    setDoodleStrokes("");
+    setOriginalDoodleStrokes("");
   }, []);
 
   const applyPetToForm = useCallback((pet: Pet) => {
     const loadedForm = getFormFromPet(pet);
     const loadedProfileImage = pet.profile_image || "";
+    const loadedCleanImage = pet.original_image || "";
+    const loadedStrokes = pet.doodle_strokes || "";
 
     setForm(loadedForm);
     setOriginalForm(loadedForm);
     setPreviewUrl(loadedProfileImage);
     setOriginalPreviewUrl(loadedProfileImage);
+    setCleanImageUrl(loadedCleanImage);
+    setOriginalCleanImageUrl(loadedCleanImage);
+    setDoodleStrokes(loadedStrokes);
+    setOriginalDoodleStrokes(loadedStrokes);
   }, []);
 
   const updateForm = <Key extends keyof PetFormState>(
@@ -234,18 +261,24 @@ export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
   };
 
   const buildPayload = (): CreatePetPayload => {
-    const payload = getPayloadFromForm(form);
+    // 사진 미선택 시 기본 프로필 이미지를 무작위로 부여한다.
+    // (업로드 성공 시 previewUrl엔 CloudFront URL이 들어있다 — handleImageChange 참고.
+    //  data: 미리보기는 백엔드 validator가 거부하므로 방어적으로 함께 처리)
+    const profileImage =
+      !previewUrl || previewUrl.startsWith("data:")
+        ? getRandomDefaultProfileImage()
+        : previewUrl;
+    // 원본(clean)이 따로 없으면 합성본=원본으로 간주한다.
+    const originalImage =
+      !cleanImageUrl || cleanImageUrl.startsWith("data:")
+        ? profileImage
+        : cleanImageUrl;
 
-    if (!previewUrl || previewUrl.startsWith("data:")) {
-      // 사진 미선택 시 기본 프로필 이미지를 무작위로 부여한다.
-      // (업로드 성공 시 previewUrl엔 CloudFront URL이 들어있다 — handleImageChange 참고.
-      //  data: 미리보기는 백엔드 validator가 거부하므로 방어적으로 함께 처리)
-      payload.profile_image = getRandomDefaultProfileImage();
-    } else {
-      payload.profile_image = previewUrl;
-    }
-
-    return payload;
+    return getPayloadFromForm(form, {
+      profileImage,
+      originalImage,
+      doodleStrokes,
+    });
   };
 
   const buildUpdatePayload = (): Partial<CreatePetPayload> => {
@@ -254,13 +287,31 @@ export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
     const safeOriginalPreviewUrl = originalPreviewUrl.startsWith("data:")
       ? ""
       : originalPreviewUrl;
+    const safeCleanUrl = cleanImageUrl.startsWith("data:")
+      ? originalCleanImageUrl
+      : cleanImageUrl;
+    const safeOriginalCleanUrl = originalCleanImageUrl.startsWith("data:")
+      ? ""
+      : originalCleanImageUrl;
 
     if (!originalForm) {
-      return getPayloadFromForm(form, safePreviewUrl);
+      return getPayloadFromForm(form, {
+        profileImage: safePreviewUrl,
+        originalImage: safeCleanUrl,
+        doodleStrokes,
+      });
     }
 
-    const originalPayload = getPayloadFromForm(originalForm, safeOriginalPreviewUrl);
-    const currentPayload = getPayloadFromForm(form, safePreviewUrl);
+    const originalPayload = getPayloadFromForm(originalForm, {
+      profileImage: safeOriginalPreviewUrl,
+      originalImage: safeOriginalCleanUrl,
+      doodleStrokes: originalDoodleStrokes,
+    });
+    const currentPayload = getPayloadFromForm(form, {
+      profileImage: safePreviewUrl,
+      originalImage: safeCleanUrl,
+      doodleStrokes,
+    });
 
     return getChangedPayload(currentPayload, originalPayload);
   };
@@ -269,8 +320,12 @@ export const usePetForm = ({ customSpeciesInputRef, t }: UsePetFormParams) => {
     form,
     errors,
     previewUrl,
+    cleanImageUrl,
+    doodleStrokes,
     setErrors,
     setPreviewUrl,
+    setCleanImageUrl,
+    setDoodleStrokes,
     resetPetFormState,
     applyPetToForm,
     updateForm,

@@ -16,6 +16,8 @@ class PetCreate(BaseModel):
     weight_kg: float
     notes: Optional[str] = None
     profile_image: Optional[str] = None
+    original_image: Optional[str] = None
+    doodle_strokes: Optional[str] = None
 
     @field_validator("birth_date", "checkup_date", mode="before")
     @classmethod
@@ -36,7 +38,7 @@ class PetCreate(BaseModel):
             raise ValueError("특이사항은 최대 200자입니다.")
         return v
 
-    @field_validator("profile_image")
+    @field_validator("profile_image", "original_image")
     @classmethod
     def profile_image_no_base64(cls, v):
         """base64 데이터 URI는 DB VARCHAR(500) 초과 → 명확한 오류 반환.
@@ -48,6 +50,14 @@ class PetCreate(BaseModel):
             )
         if v and len(v) > 500:
             raise ValueError("프로필 이미지 URL은 500자 이내여야 합니다.")
+        return v
+
+    @field_validator("doodle_strokes")
+    @classmethod
+    def doodle_strokes_limit(cls, v):
+        # 그림 stroke(JSON 문자열) 과도 입력 방지.
+        if v and len(v) > 200_000:
+            raise ValueError("그림 데이터가 너무 큽니다.")
         return v
 
 # 목록 응답
@@ -77,6 +87,8 @@ class PetDetailResponse(BaseModel):
     weight_kg: Optional[float]
     notes: Optional[str]
     profile_image: Optional[str]
+    original_image: Optional[str] = None
+    doodle_strokes: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -100,8 +112,10 @@ class PetUpdate(BaseModel):
     is_checkup_unknown: Optional[bool] = None
     notes: Optional[str] = None
     profile_image: Optional[str] = None
+    original_image: Optional[str] = None
+    doodle_strokes: Optional[str] = None
 
-    @field_validator("profile_image")
+    @field_validator("profile_image", "original_image")
     @classmethod
     def profile_image_no_base64(cls, v):
         if v and v.startswith("data:"):
@@ -110,4 +124,11 @@ class PetUpdate(BaseModel):
             )
         if v and len(v) > 500:
             raise ValueError("프로필 이미지 URL은 500자 이내여야 합니다.")
+        return v
+
+    @field_validator("doodle_strokes")
+    @classmethod
+    def doodle_strokes_limit(cls, v):
+        if v and len(v) > 200_000:
+            raise ValueError("그림 데이터가 너무 큽니다.")
         return v

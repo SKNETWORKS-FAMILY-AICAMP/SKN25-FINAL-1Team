@@ -11,10 +11,26 @@ import {
 } from "../../api/pets-api";
 import PetForm from "../../components/pets/pet-form";
 import PetImageUploader from "../../components/pets/pet-image-uploader";
+import PetPhotoEditor, {
+  type Stroke as DoodleStroke,
+} from "../../components/pets/pet-photo-editor";
 import { usePetForm } from "../../hooks/use-pet-form";
 import { useTranslation } from "../../i18n/language-context";
 
 const maxImageSize = 5 * 1024 * 1024;
+
+// DB에 저장된 stroke JSON 문자열을 안전하게 파싱한다(손상/빈값은 빈 배열).
+const parseStrokes = (raw: string): DoodleStroke[] => {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as DoodleStroke[]) : [];
+  } catch {
+    return [];
+  }
+};
 
 // PawIcon removed as requested
 
@@ -35,8 +51,12 @@ const PetRegisterPage = () => {
     form,
     errors,
     previewUrl,
+    cleanImageUrl,
+    doodleStrokes,
     setErrors,
     setPreviewUrl,
+    setCleanImageUrl,
+    setDoodleStrokes,
     resetPetFormState,
     applyPetToForm,
     updateForm,
@@ -53,6 +73,29 @@ const PetRegisterPage = () => {
   const [isLoading, setIsLoading] = useState(Boolean(isDetailMode || isEditMode));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isSavingDoodle, setIsSavingDoodle] = useState(false);
+  // 꾸미기는 항상 "원본(그림 입히기 전) 사진"을 베이스로 편집한다. 저장 시엔
+  // 합성본(profile_image)을 업로드해 표시하되, 원본 URL(cleanImageUrl)과 stroke
+  // (doodleStrokes JSON)는 DB에 영속화돼 다시 열면 이전 그림도 편집·삭제할 수 있다.
+  // baseImageUrlRef는 CORS 오염을 피하기 위한 로컬 사본(object URL)일 뿐이다.
+  const baseImageUrlRef = useRef<string>("");
+
+  const setBaseImageUrl = (next: string) => {
+    if (baseImageUrlRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(baseImageUrlRef.current);
+    }
+    baseImageUrlRef.current = next;
+  };
+
+  useEffect(
+    () => () => {
+      if (baseImageUrlRef.current.startsWith("blob:")) {
+        URL.revokeObjectURL(baseImageUrlRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isPetDataRoute && !isValidPetId) {
@@ -150,7 +193,12 @@ const PetRegisterPage = () => {
     try {
       const { result } = await uploadChatAttachment(file);
       if (result?.cloudfront_url) {
+        // 새 사진 = 새 원본. 합성본·원본 모두 깨끗한 새 URL로, 기존 그림은 초기화.
         setPreviewUrl(result.cloudfront_url);
+        setCleanImageUrl(result.cloudfront_url);
+        setDoodleStrokes("");
+        // CORS 안전한 로컬 사본을 편집 베이스로 보관.
+        setBaseImageUrl(URL.createObjectURL(file));
       } else {
         setErrors((current) => ({
           ...current,
@@ -167,6 +215,37 @@ const PetRegisterPage = () => {
       }));
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const handleDoodleSave = async (blob: Blob, strokes: DoodleStroke[]) => {
+    const file = new File([blob], "pet-doodle.jpg", { type: "image/jpeg" });
+    setIsSavingDoodle(true);
+    try {
+      const { result } = await uploadChatAttachment(file);
+      if (result?.cloudfront_url) {
+        // 합성본은 표시용(profile_image)으로 업로드하되, 원본(cleanImageUrl)은
+        // 그대로 두고 stroke만 갱신한다 → 다시 열면 이전 그림도 지우거나 수정 가능.
+        setPreviewUrl(result.cloudfront_url);
+        setDoodleStrokes(JSON.stringify(strokes));
+        setErrors((current) => ({ ...current, profileImage: undefined }));
+        setIsEditorOpen(false);
+      } else {
+        setErrors((current) => ({
+          ...current,
+          profileImage: t("pet.imageUploadFailed"),
+        }));
+      }
+    } catch (error) {
+      const message = isAxiosError<{ detail?: string }>(error)
+        ? error.response?.data?.detail
+        : undefined;
+      setErrors((current) => ({
+        ...current,
+        profileImage: message || t("pet.imageUploadFailed"),
+      }));
+    } finally {
+      setIsSavingDoodle(false);
     }
   };
 
@@ -258,6 +337,7 @@ const PetRegisterPage = () => {
               isDetailMode={isDetailMode}
               fileInputRef={fileInputRef}
               onImageChange={handleImageChange}
+              onDecorate={() => setIsEditorOpen(true)}
               errorMessage={errors.profileImage}
             />
 
@@ -314,6 +394,21 @@ const PetRegisterPage = () => {
           </form>
         </div>
         )}
+
+        <PetPhotoEditor
+          open={isEditorOpen}
+          imageSrc={baseImageUrlRef.current || cleanImageUrl || previewUrl}
+          // stroke는 "그림 입히기 전 원본"을 베이스로 할 때만 유효하다. 원본이 없으면
+          // (구버전 데이터 등 합성본만 있는 경우) 빈 stroke로 시작해 이중 그리기를 막는다.
+          initialStrokes={
+            baseImageUrlRef.current || cleanImageUrl
+              ? parseStrokes(doodleStrokes)
+              : []
+          }
+          saving={isSavingDoodle}
+          onCancel={() => setIsEditorOpen(false)}
+          onSave={handleDoodleSave}
+        />
       </main>
   );
 };

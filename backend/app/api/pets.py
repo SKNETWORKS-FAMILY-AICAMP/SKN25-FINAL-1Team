@@ -71,6 +71,8 @@ async def get_pet(
         weight_kg=float(pet.weight_kg) if pet.weight_kg else None,
         notes=pet.notes,
         profile_image=pet.profile_image,
+        original_image=pet.original_image,
+        doodle_strokes=pet.doodle_strokes,
     )
 
 
