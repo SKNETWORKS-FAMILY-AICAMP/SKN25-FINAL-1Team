@@ -72,6 +72,14 @@ async def start_chat_session(
 
 
 # 이미지 업로드 URL 발급
+# 첨부 허용 타입 + 용량 한도 (영상은 50MB, 이미지는 5MB)
+_ALLOWED_ATTACHMENT_TYPES = ["image/jpeg", "image/png", "video/mp4", "video/quicktime"]
+
+
+def _attachment_max_bytes(content_type: str) -> int:
+    return 50 * 1024 * 1024 if content_type.startswith("video/") else 5 * 1024 * 1024
+
+
 @router.get("/upload/presigned-url")
 async def get_presigned_url(
     file_name: str = Query(...),
@@ -79,7 +87,7 @@ async def get_presigned_url(
     file_size: int = Query(...),
     current_user=Depends(get_current_user),
 ):
-    validate_file(content_type, file_size, ["image/jpeg", "image/png", "video/mp4"], 5 * 1024 * 1024)
+    validate_file(content_type, file_size, _ALLOWED_ATTACHMENT_TYPES, _attachment_max_bytes(content_type))
 
     from botocore.exceptions import NoCredentialsError
 
@@ -99,7 +107,7 @@ async def upload_chat_file(
 ):
     content_type = file.content_type or "application/octet-stream"
     body = await file.read()
-    validate_file(content_type, len(body), ["image/jpeg", "image/png", "video/mp4"], 5 * 1024 * 1024)
+    validate_file(content_type, len(body), _ALLOWED_ATTACHMENT_TYPES, _attachment_max_bytes(content_type))
 
     from botocore.exceptions import NoCredentialsError
 

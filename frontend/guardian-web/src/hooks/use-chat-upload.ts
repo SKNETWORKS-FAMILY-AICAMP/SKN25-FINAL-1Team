@@ -10,7 +10,7 @@ export interface PendingAttachment {
   previewUrl: string;
 }
 
-const allowedAttachmentTypes = ["image/jpeg", "image/png", "video/mp4"];
+const allowedAttachmentTypes = ["image/jpeg", "image/png", "video/mp4", "video/quicktime"];
 
 interface UseChatUploadParams {
   setErrorMessage: (message: string) => void;
