@@ -213,6 +213,7 @@ class TriageAgent:
             for name in image_suspected:
                 if name not in suspected:
                     suspected.append(name)
+            suspected = suspected[:3]  # 의심질환 최대 3개
 
             # 응급 주증상을 chief 맨 앞에 (상담 제목 우선순위)
             chief = list(summary.get("chief_complaints", []))
@@ -249,6 +250,7 @@ class TriageAgent:
             for name in image_suspected:
                 if name not in suspected:
                     suspected.append(name)
+            suspected = suspected[:3]  # 의심질환 최대 3개
 
             return {
                 "section": section,

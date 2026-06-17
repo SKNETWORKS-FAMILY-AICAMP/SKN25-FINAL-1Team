@@ -94,8 +94,9 @@ async def _describe_photo_openai(image_url: str, image_bytes: bytes, user_text: 
                         "type": "text",
                         "text": (
                             f"보호자 말: {user_text or '첨부 사진만 전달됨'}\n"
-                            "사진에서 명확히 보이는 변화만 적어주세요. "
-                            "붉은 부위, 돌출, 털 빠짐, 상처, 진물/출혈처럼 보이는 흔적이 있으면 포함하세요.\n"
+                            "보호자가 말한 증상·부위와 관련해, 사진에 실제로 보이는 변화만 적어주세요. "
+                            "피부나 특정 부위를 미리 가정하지 말고, 사진에 나타난 그대로만 관찰하세요. "
+                            "명확한 이상이 보이지 않으면 visible_changes는 빈 배열로 두세요.\n"
                             '형식: {"visible_changes":["..."],"lesion_location":"...","question_focus":"..."}'
                         ),
                     },
@@ -157,14 +158,16 @@ async def analyze_image(image_url: str, user_text: str) -> dict | None:
     analysis: dict = {}
 
     # 피부·안구 CNN (torch 미설치 환경에서는 건너뜀). 영상은 프레임마다 돌려 대표값 채택.
-    try:
-        from ai.services.vision_model import vision_service
-        skin_results = [vision_service.analyze_skin(b) for b in cnn_inputs]
-        eye_results = [vision_service.analyze_eye(b) for b in cnn_inputs]
-        analysis["skin"] = _pick_best_cnn(skin_results, {"healthy"})
-        analysis["eye"] = _pick_best_cnn(eye_results, {"정상"})
-    except Exception as exc:
-        logger.warning("[Vision/CNN] 건너뜀: %s", exc)
+    # USE_CNN_VISION=false면 CNN을 끄고 OpenAI vision 관찰만 사용(실험용).
+    if settings.USE_CNN_VISION:
+        try:
+            from ai.services.vision_model import vision_service
+            skin_results = [vision_service.analyze_skin(b) for b in cnn_inputs]
+            eye_results = [vision_service.analyze_eye(b) for b in cnn_inputs]
+            analysis["skin"] = _pick_best_cnn(skin_results, {"healthy"})
+            analysis["eye"] = _pick_best_cnn(eye_results, {"정상"})
+        except Exception as exc:
+            logger.warning("[Vision/CNN] 건너뜀: %s", exc)
 
     # OpenAI vision 관찰 (영상은 대표 프레임 JPEG로 전달 → .mp4 URL이어도 mime은 jpeg 기본값과 일치)
     observation = await _describe_photo_openai(image_url, vision_bytes, user_text)
