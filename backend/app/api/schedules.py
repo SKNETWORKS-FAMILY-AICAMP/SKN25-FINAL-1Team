@@ -168,6 +168,7 @@ async def get_schedules(
         "result": {
             "items": result,
             "page": page,
+            "size": size,
             "has_next": has_next
         }
     }

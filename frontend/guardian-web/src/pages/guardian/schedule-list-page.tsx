@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getSchedules } from "../../api/schedule-api";
@@ -64,8 +64,9 @@ const ScheduleListPage = () => {
   const [cancelTarget, setCancelTarget] = useState<ScheduleListItem | null>(
     null,
   );
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const loadSchedules = async ({
+  const loadSchedules = useCallback(async ({
     filter,
     targetPage,
     append,
@@ -118,27 +119,9 @@ const ScheduleListPage = () => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  };
+  }, [t]);
 
-  useEffect(() => {
-    loadSchedules({
-      filter: selectedFilter,
-      targetPage: 1,
-      append: false,
-    });
-  }, [selectedFilter]);
-
-  const handleSelectFilter = (filter: ScheduleFilter) => {
-    if (filter === selectedFilter) {
-      return;
-    }
-
-    // 리스트를 비우지 않는다 — 새 데이터 도착 전까지 이전 탭 결과를 유지해
-    // 풀 스켈레톤 깜빡임을 막는다. page/hasNext는 loadSchedules가 응답으로 갱신.
-    setSelectedFilter(filter);
-  };
-
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     if (isLoadingMore || !hasNext) {
       return;
     }
@@ -148,6 +131,40 @@ const ScheduleListPage = () => {
       targetPage: page + 1,
       append: true,
     });
+  }, [hasNext, isLoadingMore, loadSchedules, page, selectedFilter]);
+
+  useEffect(() => {
+    loadSchedules({
+      filter: selectedFilter,
+      targetPage: 1,
+      append: false,
+    });
+  }, [loadSchedules, selectedFilter]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !hasNext) {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isLoading && !isLoadingMore) {
+        handleLoadMore();
+      }
+    });
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [handleLoadMore, hasNext, isLoading, isLoadingMore]);
+
+  const handleSelectFilter = (filter: ScheduleFilter) => {
+    if (filter === selectedFilter) {
+      return;
+    }
+
+    // 리스트를 비우지 않는다 — 새 데이터 도착 전까지 이전 탭 결과를 유지해
+    // 풀 스켈레톤 깜빡임을 막는다. page/hasNext는 loadSchedules가 응답으로 갱신.
+    setSelectedFilter(filter);
   };
 
   const handleRefreshAfterMutation = () => {
@@ -249,17 +266,12 @@ const ScheduleListPage = () => {
           )}
 
           {!isLoading && hasNext ? (
-            <div className="mt-6 flex justify-center">
-              <ActionButton
-                type="button"
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                variant="outlineBlue"
-                size="md"
-                className="px-7"
-              >
-                {isLoadingMore ? t("schedule.loadingMore") : t("schedule.more")}
-              </ActionButton>
+            <div ref={loadMoreRef} className="mt-6 flex justify-center py-2">
+              {isLoadingMore ? (
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-100 border-t-blue-600" />
+              ) : (
+                <span className="sr-only">{t("schedule.more")}</span>
+              )}
             </div>
           ) : null}
         </div>
