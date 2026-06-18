@@ -91,7 +91,7 @@ export function IntakePanel({
             </button>
           </div>
           <p className="text-xs font-bold leading-5 text-slate-600">
-            {memo ?? "수의사 메모가 없습니다."}
+            {memo ?? "메모가 없습니다."}
           </p>
         </div>
 

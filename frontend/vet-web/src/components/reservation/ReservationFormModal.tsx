@@ -155,15 +155,15 @@ export function ReservationFormModal({
     });
   }, [timeOptions, bookedTimes, form.dateKey]);
 
-  // 날짜를 바꿔 현재 선택한 시간이 예약 불가해지면 가능한 첫 시간으로 보정
+  // 날짜를 바꿔 현재 선택한 시간이 선택 불가(예약됨 or 오늘 지난 시간)해지면 가능한 첫 시간으로 보정
   useEffect(() => {
-    if (form.time && bookedTimes.has(form.time)) {
+    if (form.time && availableTimeOptions.length > 0 && !availableTimeOptions.includes(form.time)) {
       setForm((current) => ({
         ...current,
         time: availableTimeOptions[0] ?? "",
       }));
     }
-  }, [bookedTimes, availableTimeOptions, form.time]);
+  }, [availableTimeOptions, form.time]);
 
   const handleSelectPatient = async (item: ReservationPatient) => {
     const requestId = patientResolveRequestIdRef.current + 1;
