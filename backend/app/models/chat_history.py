@@ -11,6 +11,8 @@ class ChatHistory(Base):
     emrid = Column(Integer, ForeignKey("guardianDB.emrid"), nullable=True)
     messages = Column(JSON, nullable=True, default=[])
     keywords = Column(JSON, nullable=True, default=[])
+    # v2 오케스트레이터 대화 상태(국면/흐름/문진진행/경과요약). 신규.
+    orch_state = Column(JSON, nullable=True)
     is_complete = Column(Boolean, nullable=False, default=False)
     is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

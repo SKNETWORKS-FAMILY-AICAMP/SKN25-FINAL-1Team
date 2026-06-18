@@ -83,7 +83,6 @@ logging.config.dictConfig({
         "app.api.followup":     {"handlers": ["followup", "app"],  "propagate": False, "level": "INFO"},
         "app.api.schedules":    {"handlers": ["app"],              "propagate": False, "level": "INFO"},
         "ai.agents.validation": {"handlers": ["validation", "app"],"propagate": False, "level": "INFO"},
-        "ai.agents.followup":   {"handlers": ["followup", "app"],  "propagate": False, "level": "INFO"},
         "medipaw.audit":        {"handlers": ["audit"],            "propagate": False, "level": "INFO"},
     },
     "root": {

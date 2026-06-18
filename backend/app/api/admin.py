@@ -273,13 +273,3 @@ async def validation_results(
         for v in rows.scalars().all()
     ]
     return {"code": 200, "result": result}
-
-
-# ── 모니터링: Judge (메모리 링버퍼 — DB 불필요) ──
-@router.get("/judge/results")
-async def judge_results(
-    needs_review_only: bool = Query(False),
-    current_admin=Depends(get_current_admin),
-):
-    from ai.monitoring import recent_judge
-    return {"code": 200, "result": recent_judge(needs_review_only)}
