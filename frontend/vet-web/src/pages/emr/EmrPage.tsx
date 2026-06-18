@@ -262,10 +262,8 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
                   <div className="shrink-0 overflow-hidden flex flex-col">
                     <PatientInfoPanel
                       patient={currentEmr.pet_info}
-                      onEdit={() => {
-                        if (isTodayView) setIsProfileEditOpen(true);
-                      }}
-                      isReadOnly={isReadOnly}
+                      onEdit={() => setIsProfileEditOpen(true)}
+                      isReadOnly={false}
                     />
                   </div>
                 ) : (
@@ -387,7 +385,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
           )}
         </ResizableGroup>
 
-        {currentEmr && isProfileEditOpen && isTodayView && (
+        {currentEmr && isProfileEditOpen && (
           <ProfileEditModal
             patient={currentEmr.pet_info}
             onClose={() => setIsProfileEditOpen(false)}
