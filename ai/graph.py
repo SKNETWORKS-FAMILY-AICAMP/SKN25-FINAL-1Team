@@ -13,6 +13,7 @@ from typing_extensions import TypedDict
 
 from ai.agents.schedule import ScheduleAgent
 from ai.agents.chart import ChartAgent
+from ai.agents.validation import run_validation
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ async def run_schedule_pipeline(
 class PostBookingState(TypedDict, total=False):
     chart_payload: dict
     chart_result: dict
+    validation_result: dict
 
 
 # 차트 작성 노드 (LLM, 예외 격리)
@@ -138,12 +140,29 @@ async def _chart_node(state: PostBookingState) -> dict:
     return {"chart_result": result}
 
 
-# 그래프 컴파일 (모듈 로드 시 1회)
+# 차트 완료 후 품질 평가 노드 (결정론 + 규칙, 내부 모니터링용·예외 격리)
+async def _validation_node(state: PostBookingState) -> dict:
+    payload = dict(state.get("chart_payload") or {})
+    payload["chart_result"] = state.get("chart_result") or {}
+    try:
+        result = await run_validation(
+            payload, lambda _s: None, payload.get("emrid"), payload.get("scheduleid"),
+        )
+    except Exception as e:
+        logger.error("[post_booking] validation 실패: %s", e, exc_info=True)
+        result = {}
+    logger.info("[post_booking] validation 완료")
+    return {"validation_result": result}
+
+
+# 그래프 컴파일 (모듈 로드 시 1회): chart → validation
 def _build_post_booking_graph():
     g = StateGraph(PostBookingState)
     g.add_node("chart", _chart_node)
+    g.add_node("validation", _validation_node)
     g.add_edge(START, "chart")
-    g.add_edge("chart", END)
+    g.add_edge("chart", "validation")
+    g.add_edge("validation", END)
     return g.compile()
 
 

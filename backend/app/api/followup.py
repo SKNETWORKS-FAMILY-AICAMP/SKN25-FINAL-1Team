@@ -13,142 +13,9 @@ from app.models.guardian import Guardian
 router = APIRouter(prefix="/followup", tags=["followup"])
 logger = logging.getLogger(__name__)
 
-
-def _format_followup_report(message: str | None, images: list[str] | None) -> str:
-    parts: list[str] = []
-    if message and message.strip():
-        parts.append(f"보호자 보고: {message.strip()}")
-    if images:
-        parts.append(f"첨부 사진: {len(images)}장")
-    return " / ".join(parts).strip()
-
-
-async def run_followup_sync(followup_id: int, emrid: int, userid: int) -> dict | None:
-    from app.db.session import AsyncSessionLocal
-    from app.models.pet import Pet
-    from app.models.triage_result import TriageResult
-    from app.models.schedule import Schedule
-    from app.models.followup import Followup
-    from ai.agents.followup import run_followup
-    from app.crud.patient import build_patient_context
-
-    async with AsyncSessionLocal() as db:
-        try:
-            # 1. followup 정보 조회
-            f_row = await db.execute(select(Followup).where(Followup.followupid == followup_id))
-            followup = f_row.scalar_one_or_none()
-            if not followup:
-                return
-            current_report = _format_followup_report(followup.message, followup.images)
-            if not current_report:
-                return
-
-            # 같은 문진에서 지금까지 받은 경과 보고 전체를 시간순으로 전달한다.
-            # 원본은 건별 저장하되, 에이전트는 여러 보고를 합친 누적 한 줄을 생성한다.
-            all_f_rows = await db.execute(
-                select(Followup)
-                .where(Followup.emrid == emrid)
-                .order_by(Followup.created_at.asc())
-            )
-            all_reports = [
-                report
-                for row in all_f_rows.scalars().all()
-                if (report := _format_followup_report(row.message, row.images))
-            ]
-
-            # 2. guardian 정보 및 pet 정보 조회
-            g_row = await db.execute(select(Guardian).where(Guardian.emrid == emrid))
-            guardian = g_row.scalar_one_or_none()
-            if not guardian:
-                return
-            
-            pet_row = await db.execute(select(Pet).where(Pet.petid == guardian.petid))
-            pet = pet_row.scalar_one_or_none()
-            if not pet:
-                return
-
-            # 3. Triage 결과 조회
-            t_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
-            triage = t_row.scalar_one_or_none()
-            triage_info = {}
-            if triage:
-                triage_info = {
-                    "chief_complaint": triage.chief_complaint,
-                    "urgency_level": triage.urgency_level,
-                    "urgency_level_num": triage.urgency_level_num,
-                    "symptom_keywords": triage.symptom_keywords or [],
-                    "suspected_diseases": triage.suspected_diseases or [],
-                    "followup_reason": triage.followup_reason or "",
-                }
-
-            # 4. 예약 정보 조회
-            s_row = await db.execute(select(Schedule).where(Schedule.emrid == emrid))
-            sched = s_row.scalar_one_or_none()
-            appointment_slot = {}
-            if sched and sched.confirmed_time:
-                appointment_slot = {"date": sched.confirmed_time.date().isoformat()}
-
-            # 5. 이전 누적 요약 조회
-            prev_f_row = await db.execute(
-                select(Followup)
-                .where(Followup.emrid == emrid, Followup.followupid != followup_id, Followup.ai_summary.isnot(None))
-                .order_by(Followup.created_at.desc())
-            )
-            prev_f = prev_f_row.scalars().first()
-            accumulated_summary = prev_f.ai_summary if prev_f else ""
-
-            # Payload 빌드
-            from datetime import date
-            age = (date.today().year - pet.birth_date.year) if pet.birth_date else None
-            pet_payload = {
-                "name": pet.petname,
-                "species": pet.species or "dog",
-                "breed": pet.breed or "알 수 없음",
-                "age": age,
-                "gender": pet.gender,
-                "weight": float(pet.weight_kg) if pet.weight_kg else None,
-            }
-
-            # 에이전트는 전체 진료 이력 조회(교차병원 포함). 수의사 화면 표시 스코핑은 별도(api/patient.py).
-            patient_context_data = await build_patient_context(db, pet.petid)
-
-            payload = {
-                "pet": pet_payload,
-                "triage_info": triage_info,
-                "triage_result": triage_info,
-                "appointment_slot": appointment_slot,
-                "accumulated_summary": accumulated_summary,
-                "patient_context": patient_context_data,
-                "messages": [{"role": "user", "content": report} for report in all_reports],
-            }
-
-            import asyncio
-            try:
-                result = await asyncio.wait_for(
-                    run_followup(payload, lambda _: None, emrid, None),
-                    timeout=10.0
-                )
-            except asyncio.TimeoutError:
-                logger.warning(f"[FollowupSync] TimeoutError. Using fallback response.")
-                fallback_parts = [part for part in (accumulated_summary, current_report) if part]
-                fallback_summary = " / ".join(fallback_parts)[:100]
-                result = {
-                    "medical_summary": fallback_summary,
-                    "followup_summary": fallback_summary,
-                    "followup_recommended": False,
-                    "guardian_message": "기록되었습니다. 분석이 지연되고 있어요. 증상 변화가 크다면 예약 일정을 다시 확인해주세요.",
-                    "recommended_actions": ["keep_schedule"]
-                }
-            
-            # DB 업데이트
-            followup.ai_summary = result.get("medical_summary") or result.get("followup_summary")
-            followup.emergency_alert = result.get("followup_recommended", False)
-            await db.commit()
-            logger.info(f"[FollowupSync] 완료 followup_id={followup_id} emrid={emrid}")
-            return result
-        except Exception as e:
-            logger.error(f"[FollowupSync] 에이전트 실패 emrid={emrid}: {e}", exc_info=True)
-            return None
+# NOTE: 옛 followup AI 요약(ai/agents/followup.py · run_followup_sync)은 제거됨.
+# 경과 보고의 AI 처리는 v2 챗봇의 followup_filter(대화 내)로 이관. 이 엔드포인트는
+# 경과 '저장/조회/업로드'만 담당한다(수의사 알람 포함).
 
 
 class FollowupCreate(BaseModel):
@@ -176,7 +43,6 @@ async def create_followup(
         raise HTTPException(status_code=403, detail="경과 등록 권한이 없습니다.")
 
     # triage에서 산출·저장한 단일 followup 판정값으로 서버에서도 게이트한다.
-    # 프론트 can_followup 숨김만 믿지 않고 API 직접 호출도 차단한다.
     from app.models.triage_result import TriageResult
     triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == request.emrid))
     triage = triage_row.scalar_one_or_none()
@@ -193,7 +59,7 @@ async def create_followup(
     )
     schedule = sched_row.scalar_one_or_none()
 
-    # 의도: follow-up 채팅은 예약(진료) 시간이 지나면 비활성화한다.
+    # follow-up은 예약(진료) 시간이 지나면 비활성화한다.
     if schedule and schedule.confirmed_time:
         confirmed = schedule.confirmed_time
         if confirmed.tzinfo is None:
@@ -211,7 +77,7 @@ async def create_followup(
     await db.commit()
     await db.refresh(followup)
 
-    # 의도: 경과 보고(사진/메시지)가 오면 수의사에게 바로 알림 → 대시보드에서 즉시 확인
+    # 경과 보고가 오면 수의사에게 바로 알림 → 대시보드에서 즉시 확인
     if schedule:
         try:
             from app.crud.alarm import create_alarm
@@ -224,14 +90,6 @@ async def create_followup(
             )
         except Exception as e:
             logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
-
-    ai_response = None
-    if request.message or request.images:
-        ai_response = await run_followup_sync(
-            followup.followupid,
-            request.emrid,
-            current_user.userid,
-        )
 
     # 경과보고 메시지를 chat_historyDB에도 저장 (재진입 시 기록 유지)
     try:
@@ -250,30 +108,16 @@ async def create_followup(
             if request.images:
                 user_content = (user_content + " " if user_content else "") + f"[사진 {len(request.images)}장 첨부]"
             msgs.append({"role": "user", "content": user_content.strip()})
-            # followup은 개별 응대를 하지 않는다 — assistant 답변은 기록하지 않는다(재진입 시에도
-            # 공감성 답변이 다시 뜨지 않도록). 보호자 보고만 남기고, 분석은 수의사용 medical_summary로만.
             chat_session.messages = msgs
             flag_modified(chat_session, "messages")
             await db.commit()
     except Exception as e:
         logger.warning(f"[Followup] chat_history 업데이트 실패 emrid={request.emrid}: {e}")
 
-    response_payload = {
-        "followup_id": followup.followupid,
-    }
-
-    if ai_response:
-        response_payload.update({
-            "offtopic": ai_response.get("offtopic", False),
-            "followup_recommended": ai_response.get("followup_recommended", False),
-            "guardian_message": ai_response.get("guardian_message", "기록되었습니다."),
-            "recommended_actions": ai_response.get("recommended_actions", ["keep_schedule"]),
-        })
-
     return {
         "code": 201,
         "message": "경과 사진이 등록되었습니다.",
-        "result": response_payload
+        "result": {"followup_id": followup.followupid},
     }
 
 

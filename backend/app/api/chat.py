@@ -20,9 +20,7 @@ from app.models.schedule import Schedule
 from app.schemas.chat import ChatMessageRequest
 from app.crud.chat import add_message
 
-from app.services.chat_service import (
-    process_chat_message,
-)
+from app.services.orchestrator_service import process_turn
 from app.services.translation import translate_batch
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -420,7 +418,7 @@ async def send_message(
             # 진행 단계(status) 이벤트는 즉시 전달, 최종 결과(result)는 보관
             result = None
             async with AsyncSessionLocal() as db:
-                async for event in process_chat_message(
+                async for event in process_turn(
                     db=db,
                     session_id=session_id,
                     userid=current_user.userid,
