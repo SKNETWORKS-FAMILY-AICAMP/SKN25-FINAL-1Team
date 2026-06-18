@@ -23,7 +23,7 @@ Thumbs.db
 frontend/**/node_modules/
 frontend/**/dist/
 frontend/**/.env
-frontend/vet-web/tsconfig.tsbuildinfo 
+*.tsbuildinfo
 
 # Python virtual env
 venv/
