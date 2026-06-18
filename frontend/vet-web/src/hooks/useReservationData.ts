@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { logger } from "../utils/logger";
 import {
   fetchDoctorPatientDetail,
   fetchDoctorPatientList,
@@ -35,7 +36,7 @@ export function useReservationData(accessToken: string) {
       setReservations(mapped.reservations);
       setPatientsById(mapped.patientsById);
     } catch (error) {
-      console.error("예약 목록 조회 실패:", error);
+      logger.error("예약 목록 조회 실패:", error);
       setReservations([]);
       setPatientsById({});
     } finally {
@@ -75,7 +76,7 @@ export function useReservationData(accessToken: string) {
 
       setPatientOptionsById(optionsById);
     } catch (error) {
-      console.error("예약 환자 검색 목록 조회 실패:", error);
+      logger.error("예약 환자 검색 목록 조회 실패:", error);
       alert(getPatientApiErrorMessage(error, "환자 검색 목록 조회에 실패했습니다."));
     }
   }, [accessToken]);
@@ -99,7 +100,7 @@ export function useReservationData(accessToken: string) {
 
         return resolvedPatient;
       } catch (error) {
-        console.error("예약 환자 상세 조회 실패:", error);
+        logger.error("예약 환자 상세 조회 실패:", error);
         return patient;
       }
     },
@@ -113,7 +114,7 @@ export function useReservationData(accessToken: string) {
     loadPatientOptions();
     fetchHospitalDoctors(accessToken)
       .then(setDoctors)
-      .catch((err) => console.error("[Reservation] doctor fetch failed:", err));
+      .catch((err) => logger.error("[Reservation] doctor fetch failed:", err));
   }, [accessToken, loadPatientOptions, loadReservations]);
 
   const patientOptions = useMemo(

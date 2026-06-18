@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchEmrQueue, fetchHospitalDoctors } from "../api/emrApi";
 import type { DoctorInfo } from "../api/emrApi";
 import type { QueuePatient, QueueTab } from "../types/emr";
+import { logger } from "../utils/logger";
 
 const DATE_MS = 24 * 60 * 60 * 1000;
 
@@ -69,7 +70,7 @@ export function useEmrQueue(accessToken: string) {
           setSelectedDoctorId(list[0].doctorid);
         }
       })
-      .catch((err: unknown) => console.error("[HospitalDoctors] fetch failed:", err));
+      .catch((err: unknown) => logger.error("[HospitalDoctors] fetch failed:", err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
@@ -86,7 +87,7 @@ export function useEmrQueue(accessToken: string) {
         return result.waiting[0]?.schedule_id ?? result.completed[0]?.schedule_id;
       });
     } catch (err) {
-      console.error("[EMR Queue] fetch failed:", err);
+      logger.error("[EMR Queue] fetch failed:", err);
     } finally {
       setIsLoadingQueue(false);
       setLastRefreshText(

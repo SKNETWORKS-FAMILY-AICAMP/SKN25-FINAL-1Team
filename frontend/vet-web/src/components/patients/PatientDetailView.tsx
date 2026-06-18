@@ -9,6 +9,7 @@ import type {
 } from "../../types/patient";
 import { editableSpeciesOptions, speciesOptions } from "../../utils/patientUtils";
 import { EmptyState } from "../common/EmptyState";
+import { logger } from "../../utils/logger";
 
 interface PatientDetailViewProps {
   accessToken: string;
@@ -76,7 +77,7 @@ export function PatientDetailView({
       onSaved(displayPatient);
       setIsEditing(false);
     } catch (error) {
-      console.error("환자 수정 실패:", error);
+      logger.error("환자 수정 실패:", error);
       alert("환자 정보 수정에 실패했습니다.");
     } finally {
       setIsSaving(false);
