@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
-from app.db.session import get_db
+from app.db.session import get_db, AsyncSessionLocal
 from app.schemas.chat import ChatSessionCreate, TranslateRequest
 from app.crud.chat import (
     create_chat_session, get_chat_session, get_chat_sessions_by_petid,
@@ -118,6 +118,54 @@ async def upload_chat_file(
     except NoCredentialsError:
         raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
     return {"code": 200, "result": result}
+
+
+def _is_allowed_image_url(url: str) -> bool:
+    """우리 CloudFront/S3 호스트에서 온 URL만 프록시 대상으로 허용한다(SSRF 방지)."""
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).netloc or "").lower()
+    if not host:
+        return False
+
+    allowed = {
+        f"{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com",
+        f"s3.{settings.AWS_REGION}.amazonaws.com",
+    }
+    cdn_host = (urlparse(settings.CLOUDFRONT_URL or "").netloc or "").lower()
+    if cdn_host:
+        allowed.add(cdn_host)
+    return host in allowed
+
+
+# 원격 이미지를 동일 출처로 중계해 캔버스 오염(taint) 없이 편집/저장 가능하게 한다.
+# (CloudFront/S3가 브라우저 origin에 CORS 헤더를 주지 않아도 동작한다.)
+@router.get("/upload/proxy")
+async def proxy_image(
+    url: str = Query(...),
+    current_user=Depends(get_current_user),
+):
+    if not _is_allowed_image_url(url):
+        raise HTTPException(status_code=400, detail="허용되지 않은 이미지 URL입니다.")
+
+    from botocore.exceptions import ClientError, NoCredentialsError
+
+    from app.utils.s3 import read_object_from_url
+
+    try:
+        obj = read_object_from_url(url)
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="S3 인증 정보가 설정되지 않았습니다.")
+    except (ClientError, ValueError):
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+
+    import io
+
+    return StreamingResponse(
+        io.BytesIO(obj["body"]),
+        media_type=obj["content_type"],
+        headers={"Cache-Control": "private, max-age=300"},
+    )
 
 
 # STT — 음성 녹음(Blob)을 Groq Whisper로 전사해 텍스트 반환
@@ -361,33 +409,34 @@ async def delete_session(
 async def send_message(
     session_id: int,
     request: ChatMessageRequest,
-    db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-
+    # SSE: event_stream()은 엔드포인트 함수가 리턴된 뒤 실행되므로 Depends(get_db) 세션을
+    # 쓰면 스트리밍 시작 전에 세션이 닫혀 커넥션 누수("non-checked-in connection ...
+    # will be terminated")가 난다. 제너레이터가 자체 세션을 열어 끝까지 소유하게 한다.
     async def event_stream():
 
         try:
-
             # 진행 단계(status) 이벤트는 즉시 전달, 최종 결과(result)는 보관
             result = None
-            async for event in process_chat_message(
-                db=db,
-                session_id=session_id,
-                userid=current_user.userid,
-                request=request,
-            ):
-                # 진행 상태 알림(이미지 분석중/응답 생성중) 그대로 흘려보냄
-                if event["type"] == "status":
-                    yield (
-                        "data: "
-                        + json.dumps(event, ensure_ascii=False)
-                        + "\n\n"
-                    )
-                    continue
-                # 최종 결과 보관
-                if event["type"] == "result":
-                    result = event["result"]
+            async with AsyncSessionLocal() as db:
+                async for event in process_chat_message(
+                    db=db,
+                    session_id=session_id,
+                    userid=current_user.userid,
+                    request=request,
+                ):
+                    # 진행 상태 알림(이미지 분석중/응답 생성중) 그대로 흘려보냄
+                    if event["type"] == "status":
+                        yield (
+                            "data: "
+                            + json.dumps(event, ensure_ascii=False)
+                            + "\n\n"
+                        )
+                        continue
+                    # 최종 결과 보관
+                    if event["type"] == "result":
+                        result = event["result"]
 
             message_payload = {
                 "type": "message",

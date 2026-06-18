@@ -6,8 +6,11 @@ import axios, {
 
 import { useAuthStore } from "../stores/auth-store";
 
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? "/api";
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -46,7 +49,7 @@ const setAuthorizationHeader = (
 
 const requestNewAccessToken = async (refreshToken: string) => {
   const response = await axios.post<RefreshTokenResponse>(
-    `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+    `${API_BASE_URL}/auth/refresh`,
     undefined,
     {
       headers: {

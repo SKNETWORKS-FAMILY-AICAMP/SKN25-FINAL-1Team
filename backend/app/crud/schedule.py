@@ -216,12 +216,16 @@ async def get_emrid_owner_userid(db: AsyncSession, emrid: int) -> int | None:
 
 
 # 예약 목록 조회 (페이지네이션)
-async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size: int, filter: str = "all"):
+async def get_schedules_by_userid(db: AsyncSession, userid: int, page: int, size: int, filter: str = "all", pet_id: int | None = None):
     offset = (page - 1) * size
 
     now = datetime.now(timezone.utc)
 
     conditions = [Pet.userid == userid]
+
+    # 반려동물별 필터: 보호자가 특정 반려동물의 예약만 보고 싶을 때
+    if pet_id is not None:
+        conditions.append(Pet.petid == pet_id)
 
     if filter == "upcoming":
         conditions.append(Schedule.status == "CONFIRMED")
