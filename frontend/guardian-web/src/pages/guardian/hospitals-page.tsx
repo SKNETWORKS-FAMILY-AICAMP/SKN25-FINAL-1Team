@@ -69,7 +69,7 @@ const HospitalSwitcher = ({
       {isOpen ? (
         <div
           role="listbox"
-          className="absolute right-0 z-10 mt-2 max-h-72 w-full min-w-[220px] overflow-auto rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80"
+          className="absolute right-0 z-10 mt-2 max-h-72 w-full min-w-[220px] overflow-auto rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5"
         >
           {hospitals.map((hospital) => {
             const isActive = hospital.hospitalid === selectedId;

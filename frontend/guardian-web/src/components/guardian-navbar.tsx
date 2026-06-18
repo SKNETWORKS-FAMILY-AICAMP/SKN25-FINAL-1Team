@@ -82,7 +82,7 @@ const GuardianNavbar = ({
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 backdrop-blur">
       <div
         className={[
           "mx-auto flex h-16 items-center justify-between",
@@ -137,7 +137,7 @@ const GuardianNavbar = ({
               <GlobeIcon />
             </button>
             {isLangMenuOpen && (
-              <div className="absolute right-0 mt-2 w-36 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80">
+              <div className="absolute right-0 mt-2 w-36 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5">
                 {LANGUAGES.map((option) => (
                   <button
                     key={option.code}
@@ -177,7 +177,7 @@ const GuardianNavbar = ({
               </span>
             </button>
             {isAccountMenuOpen && (
-              <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80">
+              <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5">
                 <Link
                   to="/mypage"
                   onClick={() => setIsAccountMenuOpen(false)}
