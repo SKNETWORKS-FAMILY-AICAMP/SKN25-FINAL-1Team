@@ -13,7 +13,6 @@ from typing_extensions import TypedDict
 
 from ai.agents.schedule import ScheduleAgent
 from ai.agents.chart import ChartAgent
-from ai.agents.validation import run_validation
 
 logger = logging.getLogger(__name__)
 
@@ -145,9 +144,14 @@ async def _validation_node(state: PostBookingState) -> dict:
     payload = dict(state.get("chart_payload") or {})
     payload["chart_result"] = state.get("chart_result") or {}
     try:
+        from ai.agents.validation import run_validation
+
         result = await run_validation(
             payload, lambda _s: None, payload.get("emrid"), payload.get("scheduleid"),
         )
+    except ModuleNotFoundError as e:
+        logger.warning("[post_booking] validation 모듈 없음, 건너뜀: %s", e)
+        result = {}
     except Exception as e:
         logger.error("[post_booking] validation 실패: %s", e, exc_info=True)
         result = {}
