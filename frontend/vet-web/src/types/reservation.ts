@@ -36,6 +36,7 @@ export interface ReservationFormState {
   date: string;
   dateKey: string;
   time: string;
+  doctorid: number | null;
   doctorName: string;
   memo: string;
   categoryCode: number | null;

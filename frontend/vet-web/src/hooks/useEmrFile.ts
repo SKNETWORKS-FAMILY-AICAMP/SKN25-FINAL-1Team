@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { uploadEmrFile } from "../api/emrApi";
 import type { UploadedFile } from "../types/emr";
+import { logger } from "../utils/logger";
 
 export function useEmrFile(accessToken: string, isTodayView: boolean) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -29,7 +30,7 @@ export function useEmrFile(accessToken: string, isTodayView: boolean) {
           { id: Date.now(), label: file.name, url: cloudfront_url },
         ]);
       } catch (err: unknown) {
-        console.error("[UploadEmrFile] failed:", err);
+        logger.error("[UploadEmrFile] failed:", err);
         const status = (err as { response?: { status?: number } })?.response?.status;
         setUploadError(
           status === 413

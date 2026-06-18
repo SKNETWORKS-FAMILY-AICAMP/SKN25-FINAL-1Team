@@ -3,6 +3,7 @@ import type { DrugSearchResult } from "../api/prescriptionApi";
 import { fetchEmrReport, generateAutoPrescription } from "../api/emrApi";
 import { FORM_OPTIONS, DOSAGE_OPTIONS, FREQUENCY_OPTIONS, DURATION_OPTIONS } from "../components/emr/EditorPanels";
 import type { Prescription } from "../types/emr";
+import { logger } from "../utils/logger";
 
 let prescriptionClientIdSeq = 0;
 
@@ -68,7 +69,7 @@ export function useEmrPrescription(
         }))
       );
     } catch (err) {
-      console.error("[AutoPrescription] fetch failed:", err);
+      logger.error("[AutoPrescription] fetch failed:", err);
       setPrescriptions([]);
       setAutoPrescriptionError("처방전 자동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -97,7 +98,7 @@ export function useEmrPrescription(
         }))
       );
     } catch (err) {
-      console.error("[GeneratePrescription] failed:", err);
+      logger.error("[GeneratePrescription] failed:", err);
       setPrescriptions([]);
       setAutoPrescriptionError("처방전 자동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
