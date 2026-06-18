@@ -20,7 +20,6 @@ const defaultProfileImages = [
 ];
 
 export const scheduleTabs: Array<{ filter: ScheduleFilter; labelKey: string }> = [
-  { filter: "all", labelKey: "schedule.tabAll" },
   { filter: "upcoming", labelKey: "schedule.tabUpcoming" },
   { filter: "past", labelKey: "schedule.tabPast" },
   { filter: "cancelled", labelKey: "schedule.tabCancelled" },

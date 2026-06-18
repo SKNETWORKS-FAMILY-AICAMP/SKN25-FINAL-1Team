@@ -1,6 +1,6 @@
 import ActionButton from "../common/action-button";
 import ListItemCard from "../common/list-item-card";
-import type { ScheduleFilter, ScheduleListItem } from "../../types/schedule";
+import type { ScheduleListItem } from "../../types/schedule";
 import {
   canManageSchedule,
   formatScheduleTimeRange,
@@ -14,14 +14,12 @@ import { translateKnownText } from "../../i18n/known-text";
 
 interface ScheduleCardProps {
   schedule: ScheduleListItem;
-  selectedFilter: ScheduleFilter;
   onOpenChange: (schedule: ScheduleListItem) => void;
   onOpenCancel: (schedule: ScheduleListItem) => void;
 }
 
 const ScheduleCard = ({
   schedule,
-  selectedFilter,
   onOpenChange,
   onOpenCancel,
 }: ScheduleCardProps) => {
@@ -29,11 +27,6 @@ const ScheduleCard = ({
   const canManage = canManageSchedule(schedule);
   const normalizedStatus = normalizeScheduleStatus(schedule.status);
 
-  // 확정 예약은 시간이 지나도 흐리게 처리하지 않는다.
-  // 수의사가 실제로 진료완료(COMPLETED) 처리하기 전까지는 활성(예약 확정)으로 유지한다.
-  const isInactive =
-    selectedFilter === "all" &&
-    (normalizedStatus === "COMPLETED" || normalizedStatus === "CANCELLED");
   const statusLabel = t(getScheduleStatusLabelKey(schedule.status));
 
   const badgeClassName =
@@ -48,7 +41,6 @@ const ScheduleCard = ({
       className={[
         "grid gap-4 transition hover:border-blue-100 hover:shadow-lg hover:shadow-blue-100/50",
         "lg:grid-cols-[88px_1fr_auto] lg:items-center lg:gap-6",
-        isInactive ? "opacity-45 grayscale" : "",
       ].join(" ")}
     >
       <div className="h-20 w-20 overflow-hidden rounded-lg bg-slate-100">

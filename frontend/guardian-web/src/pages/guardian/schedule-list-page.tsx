@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getSchedules } from "../../api/schedule-api";
+import { getPets, type Pet } from "../../api/pets-api";
 import ActionButton from "../../components/common/action-button";
 import PageHeader from "../../components/common/page-header";
 import CancelScheduleModal from "../../components/schedule/cancel-schedule-modal";
@@ -51,7 +52,9 @@ const CalendarIcon = () => (
 const ScheduleListPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [selectedFilter, setSelectedFilter] = useState<ScheduleFilter>("all");
+  const [selectedFilter, setSelectedFilter] = useState<ScheduleFilter>("upcoming");
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [schedules, setSchedules] = useState<ScheduleListItem[]>([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
@@ -68,10 +71,12 @@ const ScheduleListPage = () => {
 
   const loadSchedules = useCallback(async ({
     filter,
+    petId,
     targetPage,
     append,
   }: {
     filter: ScheduleFilter;
+    petId: number | null;
     targetPage: number;
     append: boolean;
   }) => {
@@ -86,6 +91,7 @@ const ScheduleListPage = () => {
 
       const response = await getSchedules({
         filter,
+        petId,
         page: targetPage,
         size: pageSize,
       });
@@ -128,18 +134,27 @@ const ScheduleListPage = () => {
 
     loadSchedules({
       filter: selectedFilter,
+      petId: selectedPetId,
       targetPage: page + 1,
       append: true,
     });
-  }, [hasNext, isLoadingMore, loadSchedules, page, selectedFilter]);
+  }, [hasNext, isLoadingMore, loadSchedules, page, selectedFilter, selectedPetId]);
 
   useEffect(() => {
     loadSchedules({
       filter: selectedFilter,
+      petId: selectedPetId,
       targetPage: 1,
       append: false,
     });
-  }, [loadSchedules, selectedFilter]);
+  }, [loadSchedules, selectedFilter, selectedPetId]);
+
+  useEffect(() => {
+    // 드롭다운 옵션용 반려동물 목록. 실패해도 예약 목록 자체는 동작하므로 조용히 무시.
+    getPets()
+      .then((result) => setPets(result))
+      .catch(() => setPets([]));
+  }, []);
 
   useEffect(() => {
     const sentinel = loadMoreRef.current;
@@ -173,6 +188,7 @@ const ScheduleListPage = () => {
 
     loadSchedules({
       filter: selectedFilter,
+      petId: selectedPetId,
       targetPage: 1,
       append: false,
     });
@@ -191,10 +207,31 @@ const ScheduleListPage = () => {
           onSelectFilter={handleSelectFilter}
         />
 
-        <p className="mt-4 flex items-center gap-1.5 text-xs font-medium text-slate-400">
-          <InfoIcon />
-          <span>{t("schedule.timeDisclaimer")}</span>
-        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+            <InfoIcon />
+            <span>{t("schedule.timeDisclaimer")}</span>
+          </p>
+
+          {pets.length > 0 ? (
+            <select
+              aria-label={t("schedule.petFilterAria")}
+              value={selectedPetId ?? ""}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSelectedPetId(value === "" ? null : Number(value));
+              }}
+              className="h-9 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">{t("schedule.allPets")}</option>
+              {pets.map((pet) => (
+                <option key={pet.pet_id} value={pet.pet_id}>
+                  {pet.petname}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </div>
 
         <div className="py-6">
           {errorMessage ? (
@@ -216,10 +253,9 @@ const ScheduleListPage = () => {
                   {selectedFilter === "upcoming" && t("schedule.emptyUpcoming")}
                   {selectedFilter === "past" && t("schedule.emptyPast")}
                   {selectedFilter === "cancelled" && t("schedule.emptyCancelled")}
-                  {selectedFilter === "all" && t("schedule.emptyAll")}
                 </h2>
 
-                {(selectedFilter === "all" || selectedFilter === "upcoming") ? (
+                {selectedFilter === "upcoming" ? (
                   <>
                     <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
                       {t("schedule.emptyHint")}
@@ -250,7 +286,6 @@ const ScheduleListPage = () => {
                   <ScheduleCard
                     key={schedule.schedule_id}
                     schedule={schedule}
-                    selectedFilter={selectedFilter}
                     onOpenChange={setChangeTarget}
                     onOpenCancel={setCancelTarget}
                   />
