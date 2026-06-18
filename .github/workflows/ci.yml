@@ -1,0 +1,53 @@
+name: CI (PR 빌드 검사)
+
+# main / integrate 로 가는 PR에서 "머지 전에" 빌드를 돌려
+# 컴파일(tsc) 에러가 main에 들어가 자동배포를 깨뜨리는 걸 막는다.
+# (배포 파이프라인 docker-build.yml / deploy.yml 과는 독립적으로 동작)
+on:
+  pull_request:
+    branches: [main, integrate]
+
+# 같은 PR에 연속 push 시 이전 실행은 취소(러너 절약)
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 프론트 빌드 = 배포 Dockerfile의 builder 단계(node:20 + npm ci + npm run build)와 동일.
+  # 오늘 main을 깨뜨린 TS2305 같은 tsc 에러가 여기서 잡힌다.
+  frontend-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # guardian 실패가 vet 검사를 가리지 않도록
+      matrix:
+        app: [guardian-web, vet-web]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/${{ matrix.app }}/package-lock.json
+
+      - name: Install (npm ci)
+        working-directory: frontend/${{ matrix.app }}
+        run: npm ci
+
+      - name: Build (tsc + vite)
+        working-directory: frontend/${{ matrix.app }}
+        run: npm run build
+
+  # 백엔드는 Docker 빌드가 파이썬을 실행하지 않아 문법 에러를 못 잡으므로,
+  # 무거운 AI 의존성 설치 없이 바이트컴파일만으로 빠르게 문법 검사.
+  backend-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile check (syntax)
+        run: python -m compileall -q backend/app
