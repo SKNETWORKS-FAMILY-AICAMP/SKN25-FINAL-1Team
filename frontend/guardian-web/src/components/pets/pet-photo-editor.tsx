@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { fetchImageBlobViaProxy } from "../../api/chat-api";
 import { useTranslation } from "../../i18n/language-context";
 
 type Tool = "pen" | "eraser";
@@ -93,6 +94,17 @@ interface LoadedImage {
 const loadEditableImage = async (src: string): Promise<LoadedImage> => {
   if (src.startsWith("blob:") || src.startsWith("data:")) {
     return { image: await loadImg(src, false), exportable: true, revoke: () => {} };
+  }
+
+  // 1순위: 동일 출처 백엔드 프록시. 원격(S3/CloudFront)이 브라우저 origin에 CORS
+  // 헤더를 주지 않아도 같은 출처 blob이라 캔버스가 절대 오염되지 않아 저장이 보장된다.
+  // (기존 펫 수정 시 저장 실패의 근본 원인 — CloudFront 직접 fetch의 CORS 의존 제거.)
+  try {
+    const objectUrl = URL.createObjectURL(await fetchImageBlobViaProxy(src));
+    const image = await loadImg(objectUrl, false);
+    return { image, exportable: true, revoke: () => URL.revokeObjectURL(objectUrl) };
+  } catch {
+    // 프록시 실패(구버전 백엔드 등) 시 아래 CORS 경로로 폴백.
   }
 
   // 미리보기 <img>가 CORS 없이 캐시해둔 응답을 재사용하지 않도록 캐시 키를 분리한다.

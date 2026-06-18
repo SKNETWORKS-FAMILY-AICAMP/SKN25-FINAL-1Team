@@ -1,4 +1,4 @@
-import { apiClient } from "./api-client";
+import { API_BASE_URL, apiClient } from "./api-client";
 
 export interface CreateChatSessionPayload {
   pet_id: number;
@@ -229,7 +229,7 @@ export const deleteChatSessionKeepalive = (
 ): void => {
   try {
     void fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/chat/sessions/${sessionId}`,
+      `${API_BASE_URL}/chat/sessions/${sessionId}`,
       {
         method: "DELETE",
         keepalive: true,
@@ -275,6 +275,16 @@ export const getChatUploadPresignedUrl = async (
       },
     },
   );
+  return response.data;
+};
+
+// 원격(S3/CloudFront) 이미지를 동일 출처 백엔드 프록시로 받아 Blob으로 돌려준다.
+// 사진 꾸미기 편집기가 캔버스 오염(taint) 없이 toBlob 저장을 보장하려면 필수.
+export const fetchImageBlobViaProxy = async (url: string): Promise<Blob> => {
+  const response = await apiClient.get<Blob>("/chat/upload/proxy", {
+    params: { url },
+    responseType: "blob",
+  });
   return response.data;
 };
 

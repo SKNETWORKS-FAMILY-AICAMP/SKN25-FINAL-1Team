@@ -83,18 +83,28 @@ def upload_object(file_name: str, content_type: str, body: bytes, prefix: str) -
     return {"cloudfront_url": _create_read_url(key)}
 
 
+def _key_from_url(file_url: str) -> str:
+    """S3/CloudFront 읽기 URL에서 버킷 내 객체 key를 추출한다."""
+    parsed = urlparse(file_url)
+    if not parsed.path:
+        raise ValueError("파일 URL에서 S3 key를 찾을 수 없습니다.")
+    return unquote(parsed.path.lstrip("/"))
+
+
 def read_object_bytes_from_url(file_url: str) -> bytes:
     """S3/CloudFront 읽기 URL에서 객체 key를 추출해 bytes를 읽는다."""
     _ensure_credentials()
 
-    parsed = urlparse(file_url)
-    if not parsed.path:
-        raise ValueError("파일 URL에서 S3 key를 찾을 수 없습니다.")
-
-    key = unquote(parsed.path.lstrip("/"))
-    bucket_host_prefix = f"{settings.S3_BUCKET_NAME}."
-    if parsed.netloc.startswith(bucket_host_prefix):
-        key = unquote(parsed.path.lstrip("/"))
-
-    response = _s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=key)
+    response = _s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=_key_from_url(file_url))
     return response["Body"].read()
+
+
+def read_object_from_url(file_url: str) -> dict:
+    """읽기 URL의 객체를 bytes + content_type 으로 반환한다(동일 출처 프록시용)."""
+    _ensure_credentials()
+
+    response = _s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=_key_from_url(file_url))
+    return {
+        "body": response["Body"].read(),
+        "content_type": response.get("ContentType") or "application/octet-stream",
+    }
