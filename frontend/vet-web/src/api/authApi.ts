@@ -14,6 +14,7 @@ export interface HospitalUser {
 
 export interface AuthSession {
   accessToken: string;
+  refreshToken: string;
   user: HospitalUser;
   lastLoginAt?: string;
 }
@@ -111,6 +112,7 @@ export async function loginDoctor(loginid: string, password: string) {
 
     const session: AuthSession = {
       accessToken: data.access_token,
+      refreshToken: data.refresh_token,
       lastLoginAt: new Date().toISOString(),
       user: {
         id: loginid,

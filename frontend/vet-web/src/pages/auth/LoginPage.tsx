@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Eye, EyeOff, TriangleAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthLayout } from "../../components/auth/AuthLayout";
@@ -7,6 +7,8 @@ import { AuthSession, loginDoctor } from "../../api/authApi";
 interface LoginPageProps {
   onLoginSuccess: (session: AuthSession) => void;
 }
+
+const REMEMBERED_ID_KEY = "medipaw_vet_remembered_id";
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const navigate = useNavigate();
@@ -17,10 +19,23 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBERED_ID_KEY);
+    if (saved) {
+      setId(saved);
+      setKeepLogin(true);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    if (keepLogin) {
+      localStorage.setItem(REMEMBERED_ID_KEY, id);
+    } else {
+      localStorage.removeItem(REMEMBERED_ID_KEY);
+    }
     try {
       const session = await loginDoctor(id, password);
       onLoginSuccess(session);
@@ -94,7 +109,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               onChange={(e) => setKeepLogin(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300"
             />
-            로그인 상태 유지
+            아이디 기억
           </label>
 
           <button

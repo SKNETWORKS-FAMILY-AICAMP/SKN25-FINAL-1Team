@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 import { useAlarms } from "../contexts/AlarmContext";
 import { OperatingHoursProvider } from "../contexts/OperatingHoursContext";
 import {
@@ -21,6 +22,15 @@ import { AlarmItem, AlarmType } from "../api/alarmApi";
 import medipawSymbol from "../../../shared/assets/logo/medipaw-symbol.png";
 
 export type AppMenuId = "home" | "emr" | "reservation" | "patients" | "hospital-manage" | "settings";
+
+const menuPathMap: Record<AppMenuId, string> = {
+  home: "/home",
+  emr: "/emr",
+  reservation: "/reservation",
+  patients: "/patients",
+  "hospital-manage": "/hospital-manage",
+  settings: "/settings",
+};
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -148,9 +158,9 @@ function formatAlarmTime(dateStr: string) {
 export default function AppLayout({
   children,
   session,
-  activeMenu = "home",
+  activeMenu: _activeMenu = "home",
   compact = false,
-  serviceName = "동물병원 의료 보조 시스템",
+  serviceName: _serviceName = "동물병원 의료 보조 시스템",
   onLogout,
   onNavigate,
 }: AppLayoutProps) {
@@ -197,14 +207,13 @@ export default function AppLayout({
       <header
         className={`fixed inset-x-0 top-0 z-30 flex ${headerHeightClass} items-center justify-between border-b border-slate-200 bg-white px-3`}
       >
-        <button
-          type="button"
-          onClick={() => onNavigate?.("home")}
+        <Link
+          to="/home"
           className="flex items-center rounded-lg p-1"
           aria-label="홈으로 이동"
         >
           <PawLogo />
-        </button>
+        </Link>
 
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden items-center gap-2 text-xs font-bold tabular-nums text-slate-700 md:flex">
@@ -283,26 +292,23 @@ export default function AppLayout({
           className={`fixed bottom-0 left-0 ${topOffsetClass} z-20 flex ${sidebarWidthClass} flex-col justify-between border-r border-slate-200 bg-white px-2.5 py-3`}
         >
           <nav className="space-y-1.5" aria-label="주요 메뉴">
-            {navigationItems.map(({ id, label, Icon }) => {
-              const isActive = id === activeMenu;
-
-              return (
-                <button
-                  type="button"
-                  key={id}
-                  onClick={() => onNavigate?.(id)}
-                  className={[
+            {navigationItems.map(({ id, label, Icon }) => (
+              <NavLink
+                key={id}
+                to={menuPathMap[id]}
+                className={({ isActive }) =>
+                  [
                     "flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-extrabold transition",
                     isActive
                       ? "bg-blue-50 text-blue-600"
                       : "text-slate-800 hover:bg-slate-50 hover:text-blue-600",
-                  ].join(" ")}
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-blue-600" strokeWidth={2.2} />
-                  <span className="truncate">{label}</span>
-                </button>
-              );
-            })}
+                  ].join(" ")
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0 text-blue-600" strokeWidth={2.2} />
+                <span className="truncate">{label}</span>
+              </NavLink>
+            ))}
           </nav>
 
           <section className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
