@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { logger } from "../../utils/logger";
 import axios from "axios";
 import { AuthSession } from "../../api/authApi";
 import {
@@ -160,6 +161,7 @@ export default function ReservationPage({
         await updateReservation(selectedReservation.id, {
           date: form.dateKey,
           time: form.time,
+          doctorid: form.doctorid ?? undefined,
           doctor_name: form.doctorName || undefined,
           memo: form.memo,
         });
@@ -168,6 +170,7 @@ export default function ReservationPage({
           pet_id: patient.id,
           date: form.dateKey,
           time: form.time,
+          doctorid: form.doctorid ?? undefined,
           doctor_name: form.doctorName || undefined,
           memo: form.memo,
           category_code: form.categoryCode ?? 1,
@@ -177,7 +180,7 @@ export default function ReservationPage({
       setModalMode(null);
       await loadReservations();
     } catch (error) {
-      console.error("예약 저장 실패:", error);
+      logger.error("예약 저장 실패:", error);
       const message =
         (axios.isAxiosError(error) && (error.response?.data?.message || error.response?.data?.detail)) ||
         "예약 저장에 실패했습니다.";
@@ -196,7 +199,7 @@ export default function ReservationPage({
       setIsCancelOpen(false);
       await loadReservations();
     } catch (error) {
-      console.error("예약 취소 실패:", error);
+      logger.error("예약 취소 실패:", error);
       alert("예약 취소에 실패했습니다.");
     }
   };

@@ -2,6 +2,7 @@ import axios from "axios";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { AlarmItem, fetchAlarmList, markAllAlarmsRead } from "../api/alarmApi";
 import { AuthSession } from "../api/authApi";
+import { logger } from "../utils/logger";
 
 // 알림 폴링 주기. 실패가 이어지면 BASE → MAX 로 점진 백오프했다가 성공 시 BASE 복귀.
 const POLL_INTERVAL_MS = 30_000;
@@ -86,11 +87,11 @@ export function AlarmProvider({
         // (실제 로그아웃은 사용자 액션 API의 기존 401 처리에 위임)
         if (axios.isAxiosError(err) && err.response?.status === 401) {
           stopped = true;
-          console.warn("[Alarm] 인증 만료 — 폴링 중단");
+          logger.warn("[Alarm] 인증 만료 — 폴링 중단");
           return;
         }
         // 일시적 오류: 기존 알림을 유지(빈 배열로 덮지 않음)하고 백오프 후 재시도.
-        console.error("[Alarm] fetch 실패:", err);
+        logger.error("[Alarm] fetch 실패:", err);
         failures += 1;
         schedule(Math.min(POLL_INTERVAL_MS * 2 ** (failures - 1), POLL_MAX_INTERVAL_MS));
       }

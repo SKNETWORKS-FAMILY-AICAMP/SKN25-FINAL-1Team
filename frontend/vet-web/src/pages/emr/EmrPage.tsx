@@ -27,6 +27,7 @@ import { QueuePanel } from "../../components/emr/QueuePanel";
 import { useEmrData } from "../../hooks/useEmrData";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
 import { buildPrescriptionDocument } from "./prescriptionDocumentBuilder";
+import { logger } from "../../utils/logger";
 
 interface EmrPageProps {
   session: AuthSession;
@@ -190,7 +191,7 @@ export default function EmrPage({ session, onLogout, onNavigate }: EmrPageProps)
       );
       setIsPrescriptionPreviewOpen(true);
     } catch (err) {
-      console.error("[PrescriptionPreview] open failed:", err);
+      logger.error("[PrescriptionPreview] open failed:", err);
       const message = "미리보기할 처방전 초안이 없습니다.";
       setPrescriptionPreviewError(message);
     }

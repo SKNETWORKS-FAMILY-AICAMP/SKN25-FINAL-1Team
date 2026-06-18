@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { logger } from "../utils/logger";
 import {
   fetchDoctorPatientDetail,
   fetchDoctorPatientList,
@@ -49,7 +50,7 @@ export function usePatientManagement(accessToken: string) {
         setTotalCount(result.total_count ?? result.patient_list.length);
         setTotalPages(result.pagination?.total_page ?? 1);
       } catch (error) {
-        console.error(error);
+        logger.error(error);
 
         setPagePatients([]);
         setTotalCount(0);
@@ -88,7 +89,7 @@ export function usePatientManagement(accessToken: string) {
       setSelectedPatient(mapDetailToPatient(detail));
       setSelectedHistory(mapDetailToHistory(detail));
     } catch (error) {
-      console.error("환자 상세 조회 실패:", error);
+      logger.error("환자 상세 조회 실패:", error);
     }
   }, [accessToken]);
 

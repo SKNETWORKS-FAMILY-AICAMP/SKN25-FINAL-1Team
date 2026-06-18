@@ -7,6 +7,7 @@ import { useHospitalStore } from "../../stores/hospital-store";
 import ActionButton from "../common/action-button";
 import { useCheckupReservation } from "../../hooks/use-checkup-reservation";
 import { useTranslation } from "../../i18n/language-context";
+import { logger } from "../../utils/logger";
 
 interface CheckupReservationModalProps {
   pet: Pet;
@@ -134,7 +135,7 @@ const CheckupReservationModal = ({
         }
       }
     } catch (error) {
-      console.warn("showPicker failed, falling back to focus:", error);
+      logger.warn("showPicker failed, falling back to focus:", error);
       dateInputRef.current?.focus();
     }
   };

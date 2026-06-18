@@ -20,6 +20,7 @@ import {
   formatSelectedDate,
 } from "../../utils/dashboardUtils";
 import { getHolidayName } from "../../utils/reservationUtils";
+import { logger } from "../../utils/logger";
 
 interface DashboardPageProps {
   session: AuthSession;
@@ -75,7 +76,7 @@ export default function DashboardPage({
         setScheduleItems(result.schedules);
       })
       .catch((err) => {
-        console.error("[dashboard] load failed", err);
+        logger.error("[dashboard] load failed", err);
         if (!cancelled) {
           const status = getDashboardApiErrorStatus(err);
 

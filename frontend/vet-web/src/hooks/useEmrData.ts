@@ -9,6 +9,7 @@ import type { IntakeApplyTarget, PreviewImage, QueuePatient, EmrResult } from ".
 import { useEmrQueue, toDateInputValue, addDays } from "./useEmrQueue";
 import { useEmrFile } from "./useEmrFile";
 import { useEmrPrescription } from "./useEmrPrescription";
+import { logger } from "../utils/logger";
 
 export function useEmrData() {
   const session = useAuthStore((s: AuthState) => s.session);
@@ -90,7 +91,7 @@ export function useEmrData() {
         }
       })
       .catch((err: unknown) => {
-        console.error("[EMR Detail] fetch failed:", err);
+        logger.error("[EMR Detail] fetch failed:", err);
         if (!cancelled) {
           setCurrentEmr(undefined);
           setValidationResult(null);
@@ -134,7 +135,7 @@ export function useEmrData() {
             : undefined,
       });
     } catch (err) {
-      console.error("[CompleteVisit] status update failed:", err);
+      logger.error("[CompleteVisit] status update failed:", err);
       setCompleteVisitError("진료 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.");
       return;
     }
@@ -196,7 +197,7 @@ export function useEmrData() {
         queue.setSelectedScheduleId(nextId);
       }
     } catch (err) {
-      console.error("[ResetToWaiting] failed:", err);
+      logger.error("[ResetToWaiting] failed:", err);
     }
   }, [selectedScheduleId, completedQueue, waitingQueue, accessToken, isTodayView, queue, prescription]);
 

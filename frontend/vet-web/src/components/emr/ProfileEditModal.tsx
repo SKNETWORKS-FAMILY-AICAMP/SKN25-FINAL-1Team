@@ -5,6 +5,7 @@ import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import { useAuthStore } from "../../stores/auth-store";
 import type { AuthState } from "../../stores/auth-store";
 import type { PetInfo } from "../../types/emr";
+import { logger } from "../../utils/logger";
 
 const GENDER_OPTIONS = [
   { label: "수컷", value: "male" },
@@ -73,7 +74,7 @@ export function ProfileEditModal({
       });
       onClose();
     } catch (err) {
-      console.error("[ProfileEdit] save failed:", err);
+      logger.error("[ProfileEdit] save failed:", err);
     } finally {
       setIsSaving(false);
     }
