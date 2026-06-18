@@ -611,7 +611,9 @@ async def recommend_slots(
     # 수의사별: 병원 전체 조회일 때만 원장 각각에 추천 분배 적용
     if hospitalid and not doctorid:
         docs = (await db.execute(
-            select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+            select(Doctor)
+            .where(Doctor.hospitalid == hospitalid, Doctor.is_active == True)  # noqa: E712
+            .order_by(Doctor.doctorid)
         )).scalars().all()
         for doc in docs:
             slots = await _collect_by_day_quota(db, rec_quota, duration_min, None, doc.doctorid)
@@ -624,6 +626,12 @@ async def recommend_slots(
 async def confirm_schedule(db: AsyncSession, emrid: int, doctorid: int, confirmed_time: str, duration_min: int):
     new_time = datetime.fromisoformat(confirmed_time)
     new_end_time = new_time + timedelta(minutes=duration_min)
+
+    doctor_result = await db.execute(
+        select(Doctor).where(Doctor.doctorid == doctorid, Doctor.is_active == True)  # noqa: E712
+    )
+    if doctor_result.scalar_one_or_none() is None:
+        return None
 
     # 슬롯 충돌 체크 — INSERT 전 구간 겹침 검증 (챗봇 추천 후 confirm 직전 선점 방지)
     # 소요시간(50분 등)을 반영한 구간 겹침으로 판정해 30분 격자에 어긋난 이중 예약 방지

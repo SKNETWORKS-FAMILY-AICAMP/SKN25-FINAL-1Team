@@ -5,7 +5,7 @@ from app.models.doctor import Doctor
 
 async def get_doctors_by_hospital(db: AsyncSession, hospitalid: int) -> list[Doctor]:
     result = await db.execute(
-        select(Doctor).where(Doctor.hospitalid == hospitalid).order_by(Doctor.doctorid)
+        select(Doctor).where(Doctor.hospitalid == hospitalid, Doctor.is_active == True).order_by(Doctor.doctorid)
     )
     return list(result.scalars().all())
 
@@ -34,6 +34,8 @@ async def get_first_doctor(db: AsyncSession, hospitalid: int):
 
 
 async def get_doctor_ids_by_hospital(db: AsyncSession, hospitalid: int) -> list[int]:
-    """병원 소속 전체 doctorid 목록 반환"""
-    doctors = await get_doctors_by_hospital(db, hospitalid)
-    return [d.doctorid for d in doctors]
+    """병원 소속 전체 doctorid 목록 반환 (비활성 포함 — 환자·알람 조회 보안 범위용)"""
+    result = await db.execute(
+        select(Doctor.doctorid).where(Doctor.hospitalid == hospitalid)
+    )
+    return list(result.scalars().all())
