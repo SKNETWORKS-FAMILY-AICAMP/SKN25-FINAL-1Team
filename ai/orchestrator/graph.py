@@ -28,7 +28,7 @@ class OrchState(TypedDict, total=False):
 
 
 async def _route_node(state: OrchState) -> dict:
-    target = route(state["ctx"])
+    target = await route(state["ctx"])
     logger.info("[orch] route → %s (flow=%s phase=%s)",
                 target, state["ctx"].active_flow, state["ctx"].phase)
     return {"target": target}
