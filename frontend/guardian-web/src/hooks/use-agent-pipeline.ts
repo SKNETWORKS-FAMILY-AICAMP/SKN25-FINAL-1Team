@@ -70,7 +70,6 @@ export const useAgentPipeline = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Mutable refs — no re-render needed
-  const triageResultRef = useRef<Record<string, unknown> | null>(null);
   const scheduleResultRef = useRef<Record<string, unknown> | null>(null);
   const currentPetRef = useRef<Pet | null>(null);
   const slotMapRef = useRef<Record<string, { date: string; time: string; doctorid: number; doctorName?: string }>>({});
@@ -178,7 +177,6 @@ export const useAgentPipeline = ({
     emrid?: number,
     _scheduleTaskId?: string, // (구) 서버 선실행 task_id — 현재 미사용
   ) => {
-    triageResultRef.current = collectedInfo;
     currentPetRef.current = pet;
     emridRef.current = emrid ?? null;
     bookingLockRef.current = false;  // 새 슬롯 조회 → 예약 잠금 해제
@@ -266,7 +264,6 @@ export const useAgentPipeline = ({
     }
 
     try {
-      const triage = triageResultRef.current;
       const duration = (scheduleResultRef.current?.estimated_duration_min as number) || 30;
 
       const resp = await confirmSchedule({
@@ -304,18 +301,10 @@ export const useAgentPipeline = ({
           appendCard({ kind: "instructions", items: instructions });
         }
 
-        // followup 활성 기준은 백엔드 can_followup(= triage.need_followup, '동적 증상군'
-        // 단일 판정)과 일치시킨다. 예전 urgency<=2 fallback을 두면 라이브에선 켜지고
-        // 재진입(can_followup)에선 꺼져 "나갔다 들어오면 막히는" 불일치가 생긴다.
-        const needFollowup = Boolean(triage?.need_followup);
-        if (needFollowup) {
-          appendBot(
-            t("chatbot.monitoring"),
-          );
-          setPhase("followup");
-        } else {
-          setPhase("confirmed");
-        }
+        // 예약 확정 후에는 항상 경과 보고(followup) 모드를 켠다.
+        // need_followup 게이팅 폐기 — 라이브/재진입 모두 '예약 있으면 followup'으로 일관.
+        appendBot(t("chatbot.monitoring"));
+        setPhase("followup");
       } else {
         appendBot(
           t("chatbot.bookingError"),
@@ -350,22 +339,31 @@ export const useAgentPipeline = ({
     setIsStreaming(true);
 
     try {
-      // followup은 관련 보고에는 개별 응대를 하지 않는다 — 활성화 시 1회 안내만 남기고,
-      // 이후 보고는 조용히 기록만 한다(수의사용 medical_summary는 서버에서 갱신).
-      // 단, 경과와 무관한 입력(offtopic)에만 "관련 내용을 보내달라"는 안내를 띄운다.
+      // 경과 메시지는 서버에서 followup_filter가 분류·누적요약·이미지저장하고
+      // 자연스러운 응답(reply)을 돌려준다. 그 응답을 말풍선으로 노출한다.
       const resp = await createFollowup({ emrid, message: content, images });
 
       if (requestId !== lastRequestRef.current) {
         return; // Stale request, ignore
       }
 
-      if (resp.result?.offtopic) {
+      // followup_filter가 만든 자연스러운 응답을 말풍선으로 노출.
+      if (resp.result?.reply) {
+        appendBot(resp.result.reply);
+      } else if (resp.result?.offtopic) {
         appendBot(t("chatbot.followupOfftopic"));
       }
     } catch (err) {
       if (requestId === lastRequestRef.current) {
-        setMessages(messagesBackup); // Rollback to backup state
-        appendBot(t("chatbot.recordFailed"));
+        // 진료 1시간 전이 지나면 서버가 403으로 마감 → '마감' 상태로 자연스럽게 전환.
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          setPhase("followup-closed");
+          appendBot(t("chatbot.followupClosed"));
+        } else {
+          setMessages(messagesBackup); // Rollback to backup state
+          appendBot(t("chatbot.recordFailed"));
+        }
       }
     } finally {
       if (requestId === lastRequestRef.current) {
@@ -411,7 +409,6 @@ export const useAgentPipeline = ({
     setShowDatePicker(false);
     bookingLockRef.current = false;  // 새 상담 → 예약 잠금 해제
     scheduleRequestRef.current += 1;
-    triageResultRef.current = null;
     scheduleResultRef.current = null;
     currentPetRef.current = null;
     slotMapRef.current = {};

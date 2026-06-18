@@ -10,8 +10,12 @@ export interface FollowupResponse {
   code: number;
   message: string;
   result: {
-    followup_id: number;
-    /** 경과와 무관한 입력 — 이때만 안내 응답을 띄운다. */
+    followup_id?: number;
+    /** followup_filter가 만든 자연스러운 응답 — 말풍선으로 노출. */
+    reply?: string;
+    /** 실제로 경과로 저장됐는지(잡담/병원질문 등은 false). */
+    saved?: boolean;
+    /** 경과와 무관한 입력 — 저장 안 됨. */
     offtopic?: boolean;
     followup_recommended?: boolean;
     guardian_message?: string;
