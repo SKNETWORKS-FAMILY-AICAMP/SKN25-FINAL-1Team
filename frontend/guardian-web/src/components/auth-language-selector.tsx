@@ -44,7 +44,7 @@ const AuthLanguageSelector = () => {
         <GlobeIcon />
       </button>
       {isOpen && (
-        <div className="absolute right-0 z-20 mt-2 w-36 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-xl shadow-slate-200/80">
+        <div className="absolute right-0 z-20 mt-2 w-36 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5">
           {LANGUAGES.map((option) => (
             <button
               key={option.code}
