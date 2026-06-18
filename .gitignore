@@ -49,3 +49,6 @@ backend/data/triage/*.jsonl
 backend/data/triage/*.jsonl.gz
 backend/data/triage/*.gz
 
+# Evaluation/Validation 개발 전용 파일 — 로컬 전용, 커밋 금지
+ai/agents/test_data/
+
