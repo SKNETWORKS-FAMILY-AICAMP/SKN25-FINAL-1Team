@@ -43,6 +43,10 @@ class DoctorPasswordResetRequest(BaseModel):
     loginid: str
     license_number: str
 
+# 토큰 갱신 요청
+class DoctorTokenRefreshRequest(BaseModel):
+    refresh_token: str
+
 # 계정 문의 요청
 class AccountInquiryRequest(BaseModel):
     hospital_name: str

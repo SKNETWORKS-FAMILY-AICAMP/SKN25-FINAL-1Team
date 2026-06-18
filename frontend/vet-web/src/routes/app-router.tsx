@@ -24,6 +24,7 @@ import ProtectedRoute from "./protected-route";
 
 const devSession: AuthSession = {
   accessToken: "dev-preview-token",
+  refreshToken: "dev-preview-refresh-token",
   lastLoginAt: new Date().toISOString(),
   user: {
     id: "dev-vet",

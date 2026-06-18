@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { MessageCircleMore, CalendarDays, ClipboardCheck, HeartPulse, Eye, EyeOff } from "lucide-react";
@@ -37,6 +37,8 @@ const inputClassName = (hasError: boolean) =>
       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100",
   ].join(" ");
 
+const REMEMBERED_ID_KEY = "medipaw_guardian_remembered_id";
+
 const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -49,6 +51,13 @@ const LoginPage = () => {
     password: "",
     remember: false,
   });
+
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBERED_ID_KEY);
+    if (saved) {
+      setForm((current) => ({ ...current, loginid: saved, remember: true }));
+    }
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -86,6 +95,12 @@ const LoginPage = () => {
     try {
       setIsSubmitting(true);
       setErrorMessage("");
+
+      if (form.remember) {
+        localStorage.setItem(REMEMBERED_ID_KEY, form.loginid.trim());
+      } else {
+        localStorage.removeItem(REMEMBERED_ID_KEY);
+      }
 
       const response = await loginGuardian({
         loginid: form.loginid.trim(),

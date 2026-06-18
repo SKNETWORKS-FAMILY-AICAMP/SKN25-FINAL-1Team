@@ -2,11 +2,15 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from jose import JWTError, jwt
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.dependencies import get_current_hospital
 from app.core.email import send_account_credentials
 from app.core.security import verify_password, create_access_token, create_refresh_token
+from app.models.hospital import Hospital
 from app.crud.hospital import (
     get_hospital_by_loginid,
     get_hospital_by_credentials,
@@ -17,6 +21,7 @@ from app.db.session import get_db
 from app.schemas.doctor import (
     DoctorLoginRequest,
     DoctorTokenResponse,
+    DoctorTokenRefreshRequest,
     DoctorPasswordChangeRequest,
     DoctorPasswordResetRequest,
     AccountInquiryRequest,
@@ -57,6 +62,27 @@ async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(g
         hospital_number=hospital.hospital_number,
         business_number=hospital.business_number,
     )
+
+
+# 수의사(병원) 토큰 갱신
+@router.post("/refresh")
+async def doctor_refresh_token(request: DoctorTokenRefreshRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = jwt.decode(request.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        hospital_id: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if hospital_id is None or token_type != "hospital":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 토큰입니다.")
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="토큰이 만료되었거나 유효하지 않습니다.")
+
+    result = await db.execute(select(Hospital).where(Hospital.hospitalid == int(hospital_id)))
+    hospital = result.scalar_one_or_none()
+    if not hospital:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="존재하지 않는 병원입니다.")
+
+    new_access_token = create_access_token({"sub": hospital_id, "type": "hospital"})
+    return {"code": 200, "message": "토큰이 갱신되었습니다.", "result": {"access_token": new_access_token}}
 
 
 # 비밀번호 변경

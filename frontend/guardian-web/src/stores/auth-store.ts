@@ -52,9 +52,7 @@ const getActiveStorage = (): Storage => {
     throw new Error("Storage is unavailable.");
   }
 
-  return window.localStorage.getItem(storageKey)
-    ? window.localStorage
-    : window.sessionStorage;
+  return window.localStorage;
 };
 
 const storedAuth = readStoredAuth();
@@ -62,14 +60,8 @@ const storedAuth = readStoredAuth();
 export const useAuthStore = create<AuthState>((set) => ({
   guardian: storedAuth,
   isAuthenticated: Boolean(storedAuth),
-  setAuth: ({ remember, ...guardian }) => {
-    if (remember) {
-      window.localStorage.setItem(storageKey, JSON.stringify(guardian));
-      window.sessionStorage.removeItem(storageKey);
-    } else {
-      window.sessionStorage.setItem(storageKey, JSON.stringify(guardian));
-      window.localStorage.removeItem(storageKey);
-    }
+  setAuth: ({ remember: _remember, ...guardian }) => {
+    window.localStorage.setItem(storageKey, JSON.stringify(guardian));
 
     // 로그인 계정이 바뀌었을 수 있으므로(SPA, 새로고침 없음) 병원 store를 초기화 →
     // 온보딩 게이트가 새 사용자 기준으로 다시 로드한다.
