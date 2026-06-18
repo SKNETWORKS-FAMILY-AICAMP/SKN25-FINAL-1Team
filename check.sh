@@ -160,14 +160,77 @@ if [ "$MODE" = "deep" ]; then
     warn "deep DB 점검은 dev 스택이 떠 있어야 합니다 (./dev.sh fast)"
   fi
 
-  hdr "프론트 타입체크 (tsc --noEmit) — 삭제/깨진 import 감지"
+  # ── 프론트 API 경로 ↔ 백엔드 라우트 일치 (best-effort) ───
+  # 프론트가 부르는 경로가 백엔드에 실제로 있는지 검사(없으면 404 — reset-password 사례).
+  # 정답지는 백엔드 /openapi.json. 동적/외부 URL은 검사 못 하므로 best-effort 경고.
+  if [ "$BACKEND_UP" = true ]; then
+    hdr "프론트 API 경로 ↔ 백엔드 라우트 일치 (best-effort)"
+    if curl -fs http://localhost:8000/openapi.json -o /tmp/medipaw_openapi.json 2>/dev/null; then
+      cat > /tmp/medipaw_apicheck.py <<'PYEOF'
+import json, re, sys, os
+spec = json.load(open(sys.argv[1]))
+backend = [[s for s in p.split("?")[0].strip("/").split("/") if s] for p in spec.get("paths", {})]
+IGNORE = ("/uploads",)  # 정적 서빙(라우트 아님)
+def isparam(s): return s.startswith("{") or "${" in s
+def matches(fp):
+    fs = [s for s in fp.strip("/").split("/") if s]
+    if not fs: return False
+    for bs in backend:
+        if len(bs) != len(fs): continue
+        if all(isparam(a) or isparam(b) or a == b for a, b in zip(fs, bs)): return True
+    return False
+def norm(r):
+    r = r.split("?")[0].split("#")[0]
+    return r[4:] if r.startswith("/api/") else r
+STR = r'["\'`]([^"\'`]*)["\'`]'
+api_re = re.compile(r'apiClient\.(?:get|post|put|delete|patch)\b[^()]*?\(\s*' + STR, re.S)
+fetch_re = re.compile(r'fetch\(\s*[`"\']\s*(?:\$\{API\})?([^`"\']*)', re.S)
+found = {}
+for d in sys.argv[2:]:
+    for root, _, files in os.walk(d):
+        if "node_modules" in root: continue
+        for fn in files:
+            if not fn.endswith((".ts", ".tsx")): continue
+            fp = os.path.join(root, fn)
+            try: txt = open(fp, encoding="utf-8").read()
+            except Exception: continue
+            for m in list(api_re.finditer(txt)) + list(fetch_re.finditer(txt)):
+                found.setdefault(m.group(1), fp)
+chk = 0; mism = []
+for raw, fp in sorted(found.items()):
+    p = norm(raw)
+    if not p.startswith("/") or p.startswith("//") or p == "/": continue
+    if any(p == ig or p.startswith(ig + "/") for ig in IGNORE): continue
+    chk += 1
+    if not matches(p): mism.append((p, fp))
+for p, fp in mism: print("MISMATCH\t%s\t%s" % (p, fp))
+print("RESULT\t%d\t%d" % (len(mism), chk))
+PYEOF
+      OUT=$(python3 /tmp/medipaw_apicheck.py /tmp/medipaw_openapi.json \
+            frontend/guardian-web/src frontend/vet-web/src frontend/company-web/src 2>/dev/null)
+      MIS=$(printf '%s\n' "$OUT" | grep -c '^MISMATCH')
+      CHK=$(printf '%s\n' "$OUT" | awk -F'\t' '/^RESULT/{print $3}')
+      if [ "${MIS:-0}" = "0" ]; then
+        ok "프론트 호출 ${CHK:-0}개 경로 전부 백엔드 라우트와 일치"
+      else
+        warn "백엔드에 없는 프론트 호출 ${MIS}개 (404 위험 — 오타/삭제된 라우트?):"
+        printf '%s\n' "$OUT" | awk -F'\t' '/^MISMATCH/{print "      ✗ "$2"   ("$3")"}'
+        echo "      ${DIM}* best-effort: 정적 경로만, 동적/외부 URL 제외 — 오탐이면 무시${RST}"
+      fi
+    else
+      warn "openapi.json을 못 받아 API 계약 검사 건너뜀 (backend 확인)"
+    fi
+  fi
+
+  # ── 프론트 실제 빌드 (tsc + vite build) — 타입오류 + 번들 에러 ──
+  hdr "프론트 실제 빌드 (npm run build = tsc + vite) — 타입+번들 에러"
   for app in guardian-web vet-web company-web; do
     DIR="frontend/$app"
     [ -d "$DIR/node_modules" ] || { warn "$app: node_modules 없음 → (cd $DIR && npm i) 후 재시도"; continue; }
-    if (cd "$DIR" && npx tsc --noEmit >/tmp/medipaw_tsc.log 2>&1); then
-      ok "$app 타입체크 통과"
+    if (cd "$DIR" && npm run build >/tmp/medipaw_build.log 2>&1); then
+      ok "$app 빌드 성공"
     else
-      bad "$app 타입체크 실패:"; tail -12 /tmp/medipaw_tsc.log | sed 's/^/      /'
+      bad "$app 빌드 실패:"; tail -15 /tmp/medipaw_build.log | sed 's/^/      /'
     fi
   done
 fi
@@ -184,6 +247,6 @@ elif [ "$WARNS" -gt 0 ]; then
   exit 0
 else
   echo "${GRN}✓ 전부 통과! 안심하고 작업하세요.${RST}"
-  [ "$MODE" = "fast" ] && echo "${DIM}  더 깊게: ./check.sh deep (임시DB 마이그레이션 + 프론트 타입체크)${RST}"
+  [ "$MODE" = "fast" ] && echo "${DIM}  더 깊게: ./check.sh deep (임시DB 마이그레이션 + API계약 + 프론트 실제빌드)${RST}"
   exit 0
 fi
