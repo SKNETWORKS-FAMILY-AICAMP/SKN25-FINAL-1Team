@@ -2,7 +2,12 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import CtaButtons from "../components/common/CtaButtons";
 import HeroVisual from "../components/hero/HeroVisual";
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  onGuardianClick?: () => void;
+  onVetClick?: () => void;
+}
+
+export default function HeroSection({ onGuardianClick, onVetClick }: HeroSectionProps) {
   return (
     <section className="relative bg-white">
       <div className="absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,#eef5f4_0%,rgba(238,245,244,0)_100%)]" />
@@ -22,7 +27,7 @@ export default function HeroSection() {
           </p>
 
           <div className="mt-9">
-            <CtaButtons size="large" />
+            <CtaButtons size="large" onGuardianClick={onGuardianClick} onVetClick={onVetClick} />
           </div>
 
           <div className="mt-10 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
