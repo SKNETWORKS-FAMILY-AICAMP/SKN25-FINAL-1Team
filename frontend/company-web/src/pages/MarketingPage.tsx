@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import Footer from "../components/layout/Footer";
 import Header from "../components/layout/Header";
 import ContactSection from "../sections/ContactSection";
@@ -9,11 +10,19 @@ import TeamSection from "../sections/TeamSection";
 import WorkflowSection from "../sections/WorkflowSection";
 
 export default function MarketingPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-800">
-      <Header />
+      <Header
+        onGuardianClick={() => navigate("/demo/guardian")}
+        onVetClick={() => navigate("/demo/vet")}
+      />
       <main className="pt-16">
-        <HeroSection />
+        <HeroSection
+          onGuardianClick={() => navigate("/demo/guardian")}
+          onVetClick={() => navigate("/demo/vet")}
+        />
         <MarqueeSection />
         <ServiceSection />
         <WorkflowSection />

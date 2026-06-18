@@ -1,9 +1,14 @@
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
-import { navItems, siteConfig } from "../../config/site";
+import { navItems } from "../../config/site";
 
-export default function Header() {
+interface HeaderProps {
+  onGuardianClick?: () => void;
+  onVetClick?: () => void;
+}
+
+export default function Header({ onGuardianClick, onVetClick }: HeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -26,23 +31,21 @@ export default function Header() {
           >
             동물병원 입점 신청
           </Link>
-          <a
-            href={siteConfig.guardianWebUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={onGuardianClick}
             className="hidden sm:inline-flex mp-btn-secondary"
           >
             보호자 웹 보기
-          </a>
-          <a
-            href={siteConfig.vetWebUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          </button>
+          <button
+            type="button"
+            onClick={onVetClick}
             className="mp-btn-primary"
           >
             수의사 웹 보기
             <ArrowRight className="ml-2 h-4 w-4" />
-          </a>
+          </button>
         </div>
       </div>
     </header>
