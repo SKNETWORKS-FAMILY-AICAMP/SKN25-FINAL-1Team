@@ -333,10 +333,38 @@ const ChatMessageList = ({
   const { t } = useTranslation();
   const { translate, translateWithStatus, ensureTranslated, lang } =
     useDynamicTranslation();
-  const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  // 바닥 센티넬. scrollIntoView로 '맨 아래로'를 일반화한다 —
+  // 화면이 lg 미만으로 좁아지면 스크롤 주체가 내부 div→창(window)으로 바뀌는데,
+  // scrollIntoView는 어느 쪽이든 알아서 스크롤하므로 두 경우 모두 따라간다.
+  const endRef = useRef<HTMLDivElement | null>(null);
+  // 센티넬이 보이면 '하단에 있는' 상태(위로 스크롤해 과거를 보는 중이면 끌어올리지 않음).
+  const atBottomRef = useRef(true);
 
   useEffect(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const end = endRef.current;
+    if (!end) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        atBottomRef.current = entry.isIntersecting;
+      },
+      { rootMargin: "0px 0px 120px 0px" }, // 바닥 120px 여유까지 '하단'으로 간주
+    );
+    io.observe(end);
+    return () => io.disconnect();
+  }, []);
+
+  // 새 메시지·스트리밍·리사이즈·이미지 로드 시 하단에 있으면 '즉시' 맨 아래로.
+  // smooth는 연속 갱신/리사이즈에서 애니메이션이 겹쳐 진동을 만들어 instant(기본값)로 둔다.
+  useEffect(() => {
+    const end = endRef.current;
+    if (!end) return;
+    const pin = () => {
+      if (atBottomRef.current) end.scrollIntoView({ block: "end" });
+    };
+    pin();
+    const ro = new ResizeObserver(pin);
+    if (end.parentElement) ro.observe(end.parentElement); // 리사이즈·내용 높이 변화
+    return () => ro.disconnect();
   }, [messages, quickReplies, isStreaming]);
 
   // 언어 변경 시 메시지 본문·추천(pill)·준비사항을 선택 언어로 번역(req2/3).
@@ -439,7 +467,7 @@ const ChatMessageList = ({
           ))}
         </div>
       ) : null}
-      <div ref={scrollAnchorRef} />
+      <div ref={endRef} />
     </div>
   );
 };

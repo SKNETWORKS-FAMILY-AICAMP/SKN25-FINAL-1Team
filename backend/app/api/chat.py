@@ -233,34 +233,28 @@ async def get_chat_sessions(
     has_more = len(sessions) > limit
     sessions = sessions[:limit]
 
-    # 경과보고(followup)가 '활성'인 세션 표시용 — need_followup이고 진료 시작 시간 전인 emrid.
-    # 상세의 can_followup과 동일 기준. 목록에 작은 마커를 달아 보호자가 식별할 수 있게 한다.
-    from datetime import datetime, timezone
+    # 경과보고(followup)가 '활성'인 세션 표시용 — 예약(확정)이 있고 진료 시작 1시간 전까지인 emrid.
+    # need_followup 게이팅 폐기 → 상세의 can_followup과 동일하게 예약 기준만 본다.
+    from datetime import datetime, timezone, timedelta
     emrids = [s.emrid for s in sessions if s.emrid is not None]
     followup_active_emrids: set[int] = set()
     if emrids:
-        triage_rows = await db.execute(
-            select(TriageResult.emrid).where(
-                TriageResult.emrid.in_(emrids), TriageResult.need_followup.is_(True)
+        sched_rows = await db.execute(
+            select(Schedule).where(
+                Schedule.emrid.in_(emrids),
+                Schedule.deleted_at.is_(None),
+                Schedule.status != "COMPLETED",
+                Schedule.confirmed_time.isnot(None),
             )
         )
-        need_emrids = {row[0] for row in triage_rows.all()}
-        if need_emrids:
-            sched_rows = await db.execute(
-                select(Schedule).where(
-                    Schedule.emrid.in_(need_emrids),
-                    Schedule.deleted_at.is_(None),
-                    Schedule.status != "COMPLETED",
-                    Schedule.confirmed_time.isnot(None),
-                )
-            )
-            now = datetime.now(timezone.utc)
-            for sched in sched_rows.scalars().all():
-                confirmed = sched.confirmed_time
-                if confirmed.tzinfo is None:
-                    confirmed = confirmed.replace(tzinfo=timezone.utc)
-                if now <= confirmed:
-                    followup_active_emrids.add(sched.emrid)
+        now = datetime.now(timezone.utc)
+        for sched in sched_rows.scalars().all():
+            confirmed = sched.confirmed_time
+            if confirmed.tzinfo is None:
+                confirmed = confirmed.replace(tzinfo=timezone.utc)
+            # 진료 시작 1시간 전까지만 활성.
+            if now <= confirmed - timedelta(hours=1):
+                followup_active_emrids.add(sched.emrid)
 
     return {
         "code": 200,
@@ -295,26 +289,25 @@ async def get_chat_session_detail(
     followup_closed = False
     emrid = session.emrid
     if emrid is not None:
-        from datetime import datetime, timezone
-        triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == emrid))
-        triage = triage_row.scalar_one_or_none()
+        from datetime import datetime, timezone, timedelta
         schedule_row = await db.execute(
             select(Schedule).where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
         )
         schedule = schedule_row.scalar_one_or_none()
-        need_followup = bool(triage and triage.need_followup)
-        appointment_not_passed = True
+        # follow-up은 진료 시작 1시간 전에 마감 → 그 전까지만 '열림'.
+        followup_open_time = True
         if schedule and schedule.confirmed_time:
             confirmed = schedule.confirmed_time
             if confirmed.tzinfo is None:
                 confirmed = confirmed.replace(tzinfo=timezone.utc)
-            appointment_not_passed = datetime.now(timezone.utc) <= confirmed
-        can_followup = bool(need_followup and schedule and schedule.status != "COMPLETED" and appointment_not_passed)
+            followup_open_time = datetime.now(timezone.utc) <= confirmed - timedelta(hours=1)
+        # need_followup 게이팅 폐기 — 예약(확정)만 있으면 경과보고 가능(라이브=재진입 일관).
+        can_followup = bool(schedule and schedule.confirmed_time and schedule.status != "COMPLETED" and followup_open_time)
         # 예약 확정 = 취소되지 않은 schedule에 확정 시각이 존재.
         booking_complete = bool(schedule and schedule.confirmed_time and schedule.status != "CANCELLED")
-        # 경과보고 마감 = followup 대상이었으나 진료 시작 시간이 지났거나(또는 완료) 더는 보낼 수 없는 상태.
-        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.  
-        followup_closed = bool(need_followup and schedule and schedule.confirmed_time and not can_followup)
+        # 경과보고 마감 = 예약은 있으나 진료 시작 시간이 지났거나 완료된 상태.
+        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.
+        followup_closed = bool(schedule and schedule.confirmed_time and not can_followup)
 
     messages = session.messages or []
 

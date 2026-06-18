@@ -62,8 +62,6 @@ const knownTextKey: Record<string, string> = {
     "chatbot.monitoring",
   "예약 중 오류가 발생했어요. 아래 시간에서 다시 선택해주세요.":
     "chatbot.bookingError",
-  "경과가 기록되었어요. 담당 수의사에게 전달됩니다.":
-    "chatbot.followupRecorded",
   "기록에 실패했어요. 다시 시도해주세요.": "chatbot.recordFailed",
   "문진 데이터가 없습니다. 처음부터 상담을 다시 진행해주세요.":
     "chatbot.noTriageDataRestart",
