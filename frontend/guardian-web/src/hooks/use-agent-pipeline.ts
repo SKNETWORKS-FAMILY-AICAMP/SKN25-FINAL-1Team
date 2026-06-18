@@ -77,6 +77,9 @@ export const useAgentPipeline = ({
   const emridRef = useRef<number | null>(null);
   const lastRequestRef = useRef<number>(0);
   const scheduleRequestRef = useRef<number>(0);
+  // 예약 확정 잠금 — 확정 진행 중/완료 시 중복 예약(슬롯·날짜피커 재클릭)을 막는다.
+  // 새 슬롯 조회(runSchedule)나 새 상담(resetPipeline)에서만 다시 풀린다.
+  const bookingLockRef = useRef(false);
 
   const appendBot = (content: string) => {
     setMessages((prev) => [
@@ -178,6 +181,7 @@ export const useAgentPipeline = ({
     triageResultRef.current = collectedInfo;
     currentPetRef.current = pet;
     emridRef.current = emrid ?? null;
+    bookingLockRef.current = false;  // 새 슬롯 조회 → 예약 잠금 해제
     setPhase("scheduling");
     setIsStreaming(true);
     const requestId = ++scheduleRequestRef.current;
@@ -237,10 +241,15 @@ export const useAgentPipeline = ({
   };
 
   const handleSlotSelect = async (label: string, _petId: number) => {
+    // 이미 예약을 확정했거나 확정 진행 중이면 중복 생성 차단(슬롯/날짜피커 재클릭·더블클릭).
+    if (bookingLockRef.current) {
+      return false;
+    }
     const slot = slotMapRef.current[label];
     if (!slot) {
       return false;
     }
+    bookingLockRef.current = true;
 
     setPhase("booking");
     setIsStreaming(true);
@@ -252,6 +261,7 @@ export const useAgentPipeline = ({
       appendBot(t("chatbot.noTriageData"));
       setPhase("chatting");
       setIsStreaming(false);
+      bookingLockRef.current = false;  // 확정 못 했으니 잠금 해제(재시도 허용)
       return false;
     }
 
@@ -272,6 +282,7 @@ export const useAgentPipeline = ({
       removeByPipelineKey("booking-status");  // 로딩 버블 제거
 
       if (resp.code === 200 || resp.code === 201) {
+        setShowDatePicker(false);  // 확정됐으니 날짜 피커 닫기(중복 선택 방지)
         const dateText = formatChatDateTimeFull(slot.date, slot.time, lang, t);
 
         // ① 예약 확정 카드
@@ -311,12 +322,14 @@ export const useAgentPipeline = ({
         );
         appendCard({ kind: "slots", slots: buildSlotOptions() });
         setPhase("slot-selection");
+        bookingLockRef.current = false;  // 확정 실패 → 잠금 해제(다시 선택 허용)
       }
     } catch {
       removeByPipelineKey("booking-status");  // 로딩 버블 제거
       appendBot(t("chatbot.bookingError"));
       appendCard({ kind: "slots", slots: buildSlotOptions() });
       setPhase("slot-selection");
+      bookingLockRef.current = false;  // 확정 실패 → 잠금 해제(다시 선택 허용)
     } finally {
       setIsStreaming(false);
     }
@@ -396,6 +409,7 @@ export const useAgentPipeline = ({
   const resetPipeline = () => {
     setPhase("chatting");
     setShowDatePicker(false);
+    bookingLockRef.current = false;  // 새 상담 → 예약 잠금 해제
     scheduleRequestRef.current += 1;
     triageResultRef.current = null;
     scheduleResultRef.current = null;

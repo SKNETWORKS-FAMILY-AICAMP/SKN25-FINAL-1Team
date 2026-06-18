@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
-from app.db.session import get_db
+from app.db.session import get_db, AsyncSessionLocal
 from app.schemas.chat import ChatSessionCreate, TranslateRequest
 from app.crud.chat import (
     create_chat_session, get_chat_session, get_chat_sessions_by_petid,
@@ -361,33 +361,34 @@ async def delete_session(
 async def send_message(
     session_id: int,
     request: ChatMessageRequest,
-    db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-
+    # SSE: event_stream()은 엔드포인트 함수가 리턴된 뒤 실행되므로 Depends(get_db) 세션을
+    # 쓰면 스트리밍 시작 전에 세션이 닫혀 커넥션 누수("non-checked-in connection ...
+    # will be terminated")가 난다. 제너레이터가 자체 세션을 열어 끝까지 소유하게 한다.
     async def event_stream():
 
         try:
-
             # 진행 단계(status) 이벤트는 즉시 전달, 최종 결과(result)는 보관
             result = None
-            async for event in process_chat_message(
-                db=db,
-                session_id=session_id,
-                userid=current_user.userid,
-                request=request,
-            ):
-                # 진행 상태 알림(이미지 분석중/응답 생성중) 그대로 흘려보냄
-                if event["type"] == "status":
-                    yield (
-                        "data: "
-                        + json.dumps(event, ensure_ascii=False)
-                        + "\n\n"
-                    )
-                    continue
-                # 최종 결과 보관
-                if event["type"] == "result":
-                    result = event["result"]
+            async with AsyncSessionLocal() as db:
+                async for event in process_chat_message(
+                    db=db,
+                    session_id=session_id,
+                    userid=current_user.userid,
+                    request=request,
+                ):
+                    # 진행 상태 알림(이미지 분석중/응답 생성중) 그대로 흘려보냄
+                    if event["type"] == "status":
+                        yield (
+                            "data: "
+                            + json.dumps(event, ensure_ascii=False)
+                            + "\n\n"
+                        )
+                        continue
+                    # 최종 결과 보관
+                    if event["type"] == "result":
+                        result = event["result"]
 
             message_payload = {
                 "type": "message",

@@ -18,6 +18,7 @@ from app.models.pet import Pet
 from app.models.doctor import Doctor
 from app.models.guardian import Guardian
 from app.models.triage_result import TriageResult
+from app.models.schedule import Schedule
 from app.crud.alarm import create_alarm
 
 logger = logging.getLogger(__name__)
@@ -492,6 +493,18 @@ async def confirm_schedule_api(
 ):
     # 소유권 검증: 본인 반려동물의 문진(emrid)에 대해서만 예약 확정 가능
     await _verify_emrid_owner(db, request.emrid, current_user.userid)
+
+    # 중복 예약 방지: 같은 상담(emrid)에 이미 활성 예약이 있으면 차단.
+    # (챗봇에서 슬롯/날짜를 다시 눌러 같은 상담으로 여러 건이 생기던 문제)
+    existing = await db.execute(
+        select(Schedule).where(
+            Schedule.emrid == request.emrid,
+            Schedule.deleted_at.is_(None),
+            Schedule.status != "CANCELLED",
+        )
+    )
+    if existing.scalars().first() is not None:
+        raise HTTPException(status_code=409, detail="이미 이 상담으로 예약이 확정되어 있습니다.")
 
     schedule = await confirm_schedule(
         db=db,
