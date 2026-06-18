@@ -35,6 +35,7 @@ export interface ReservationCreatePayload {
   pet_id: number
   date: string
   time: string
+  doctorid?: number
   doctor_name?: string
   memo?: string
   category_code?: number
@@ -43,6 +44,7 @@ export interface ReservationCreatePayload {
 export interface ReservationUpdatePayload {
   date?: string
   time?: string
+  doctorid?: number
   doctor_name?: string
   memo?: string
 }

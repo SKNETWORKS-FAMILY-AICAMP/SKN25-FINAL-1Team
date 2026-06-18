@@ -91,6 +91,7 @@ export function ReservationFormModal({
     date: formatDateWithWeekday(selectedDate),
     dateKey: getDateKey(selectedDate),
     time: reservation?.start ?? "17:00",
+    doctorid: reservation?.doctorid ?? doctors[0]?.doctorid ?? null,
     doctorName: reservation?.doctorName ?? doctors[0]?.doctor_name ?? "",
     memo: reservation?.memo ?? "",
     categoryCode: null,
@@ -377,11 +378,19 @@ export function ReservationFormModal({
               />
               <SelectField
                 label="담당 수의사"
-                value={form.doctorName}
-                options={doctors.map((d) => d.doctor_name)}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, doctorName: value }))
-                }
+                value={form.doctorid ? String(form.doctorid) : ""}
+                options={doctors.map((d) => ({
+                  label: d.doctor_name,
+                  value: String(d.doctorid),
+                }))}
+                onChange={(value) => {
+                  const selected = doctors.find((d) => String(d.doctorid) === value);
+                  setForm((current) => ({
+                    ...current,
+                    doctorid: selected?.doctorid ?? null,
+                    doctorName: selected?.doctor_name ?? "",
+                  }));
+                }}
               />
             </div>
             {isClosedDay && (
@@ -594,7 +603,7 @@ function SelectField({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: Array<string | { label: string; value: string }>;
   onChange: (value: string) => void;
 }) {
   return (
@@ -607,11 +616,15 @@ function SelectField({
           className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-8 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"
         >
           <option value="">선택</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
+          {options.map((option) => {
+            const optionValue = typeof option === "string" ? option : option.value;
+            const optionLabel = typeof option === "string" ? option : option.label;
+            return (
+              <option key={optionValue} value={optionValue}>
+                {optionLabel}
+              </option>
+            );
+          })}
         </select>
         <ChevronDown className="pointer-events-none absolute right-2.5 top-2 h-4 w-4 text-slate-600" />
       </span>
