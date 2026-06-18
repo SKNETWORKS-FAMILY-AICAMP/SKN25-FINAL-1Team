@@ -16,6 +16,7 @@ export interface GetSchedulesParams {
   filter: ScheduleFilter;
   page: number;
   size: number;
+  petId?: number | null;
 }
 
 export interface GetAvailableScheduleSlotsParams {
@@ -29,12 +30,15 @@ export const getSchedules = async ({
   filter,
   page,
   size,
+  petId,
 }: GetSchedulesParams): Promise<ScheduleListResponse> => {
   const response = await apiClient.get<ScheduleListResponse>("/schedules", {
     params: {
       filter,
       page,
       size,
+      // 특정 반려동물만 조회할 때만 전송 (없으면 전체)
+      ...(petId != null ? { pet_id: petId } : {}),
     },
   });
 

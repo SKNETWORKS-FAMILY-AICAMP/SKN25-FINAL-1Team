@@ -131,10 +131,11 @@ async def get_schedules(
     filter: str = Query("all"),
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
+    pet_id: int = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    rows, has_next = await get_schedules_by_userid(db, current_user.userid, page, size, filter)
+    rows, has_next = await get_schedules_by_userid(db, current_user.userid, page, size, filter, pet_id)
 
     from datetime import date
     result = []
