@@ -282,8 +282,8 @@ async def run_validation_endpoint(
     db: AsyncSession = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    from ai.agents.evaluation import run_evaluation
-    result = await run_evaluation(schedule_id, db)
+    from ai.agents.evaluation import run_case_evaluation
+    result = await run_case_evaluation(schedule_id, db)
     return {"code": 200, "result": result}
 
 
