@@ -3,7 +3,7 @@ AGENT_SPECS '공통 동작 규칙 A/B'.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
@@ -35,7 +35,8 @@ async def _compute_phase(db, session) -> Phase:
     confirmed = sched.confirmed_time
     if confirmed.tzinfo is None:
         confirmed = confirmed.replace(tzinfo=timezone.utc)
-    return Phase.BOOKED if datetime.now(timezone.utc) <= confirmed else Phase.CLOSED
+    # 진료 1시간 전에 경과 마감 → chat.py/followup.py(can_followup)와 동일 기준
+    return Phase.BOOKED if datetime.now(timezone.utc) <= confirmed - timedelta(hours=1) else Phase.CLOSED
 
 
 async def _pet_info(db, petid: int) -> dict:
