@@ -201,7 +201,7 @@ const ScheduleListPage = () => {
         description={t("schedule.description")}
       />
 
-      <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-8 pb-8 shadow-sm">
+      <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-4 pb-6 shadow-sm sm:px-8 sm:pb-8">
         <ScheduleTabs
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}
@@ -249,7 +249,7 @@ const ScheduleListPage = () => {
                   <CalendarIcon />
                 </div>
 
-                <h2 className="mt-6 text-2xl font-bold text-slate-800">
+                <h2 className="mt-6 text-xl font-bold text-slate-800 sm:text-2xl">
                   {selectedFilter === "upcoming" && t("schedule.emptyUpcoming")}
                   {selectedFilter === "past" && t("schedule.emptyPast")}
                   {selectedFilter === "cancelled" && t("schedule.emptyCancelled")}

@@ -69,7 +69,7 @@ const ChatSessionList = ({
   }, [hasMoreHistories, isLoadingMoreHistories, onLoadMoreHistories]);
 
   return (
-    <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-white lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
+    <aside className="flex min-h-0 flex-1 flex-col bg-white lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-4">
         <h2 className="text-center text-[15px] font-bold text-slate-900">
           {t("chatbot.history")}
