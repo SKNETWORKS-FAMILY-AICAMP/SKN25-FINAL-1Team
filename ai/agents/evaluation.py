@@ -657,17 +657,29 @@ async def run_followup_filter_eval(
 
     checks = []
 
-    # ── 1. 분류 Recall / Precision ─────────────────────────────
+    # ── 1. 분류 Recall / Precision + 카테고리별 통계 ──────────
     tp = fp = fn = 0
+    kw_predictions: list[bool] = []
+    category_stats: dict[str, dict] = {}
+
     for case in cases:
         expected = case.get("expected_is_followup", False)
         predicted = keyword_fallback(case["message"]).is_followup
+        kw_predictions.append(predicted)
         if expected and predicted:
             tp += 1
         elif not expected and predicted:
             fp += 1
         elif expected and not predicted:
             fn += 1
+        # 경과 케이스만 카테고리별 집계
+        if expected:
+            cat = case.get("expected_category", "unknown")
+            if cat not in category_stats:
+                category_stats[cat] = {"kw_hit": 0, "total": 0}
+            category_stats[cat]["total"] += 1
+            if predicted:
+                category_stats[cat]["kw_hit"] += 1
 
     recall = tp / (tp + fn) if (tp + fn) > 0 else None
     precision = tp / (tp + fp) if (tp + fp) > 0 else None
@@ -725,7 +737,8 @@ async def run_followup_filter_eval(
             *[_run_one(c) for c in cases], return_exceptions=True
         )
 
-        for case, res in zip(cases, results):
+        missed_samples: list[dict] = []
+        for i, (case, res) in enumerate(zip(cases, results)):
             if isinstance(res, Exception):
                 llm_errors += 1
                 continue
@@ -737,6 +750,12 @@ async def run_followup_filter_eval(
                 llm_fp += 1
             elif expected and not predicted:
                 llm_fn += 1
+            # keyword MISS + LLM HIT → 오분류 샘플
+            if expected and not kw_predictions[i] and predicted and len(missed_samples) < 5:
+                missed_samples.append({
+                    "message": case["message"][:60],
+                    "category": case.get("expected_category", "unknown"),
+                })
 
         llm_recall = llm_tp / (llm_tp + llm_fn) if (llm_tp + llm_fn) > 0 else None
         llm_precision = llm_tp / (llm_tp + llm_fp) if (llm_tp + llm_fp) > 0 else None
@@ -757,6 +776,7 @@ async def run_followup_filter_eval(
             })
     except ImportError:
         llm_recall = llm_precision = None
+        missed_samples = []
         checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "classify_followup import 실패"})
 
     statuses = {c["status"] for c in checks}
@@ -773,6 +793,8 @@ async def run_followup_filter_eval(
             "llm_precision": round(llm_precision, 3) if llm_precision is not None else None,
             "urgent_recall": f"{urgent_detected}/{len(urgent_cases)}" if urgent_cases else "N/A",
             "total_cases": len(cases),
+            "category_stats": category_stats,
+            "missed_samples": missed_samples,
         },
     }
 

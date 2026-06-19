@@ -13,6 +13,14 @@ interface AgentCheck {
   status: CheckStatus;
   detail: string;
 }
+interface CategoryStat {
+  kw_hit: number;
+  total: number;
+}
+interface MissedSample {
+  message: string;
+  category: string;
+}
 interface AgentMetrics {
   keyword_recall?: number | null;
   keyword_precision?: number | null;
@@ -20,6 +28,8 @@ interface AgentMetrics {
   llm_precision?: number | null;
   urgent_recall?: string;
   total_cases?: number;
+  category_stats?: Record<string, CategoryStat>;
+  missed_samples?: MissedSample[];
   [key: string]: unknown;
 }
 interface AgentEvalResult {
@@ -40,12 +50,21 @@ interface MonitoringLog {
   has_media?: boolean;
   [key: string]: unknown;
 }
+interface ModuleResult {
+  status: CheckStatus;
+  checks: AgentCheck[];
+}
+interface ValidationChecks {
+  triage?: ModuleResult;
+  schedule?: ModuleResult;
+  chart?: ModuleResult;
+}
 interface ValidationRow {
   emrid: number;
   createdAt: string | null;
   overall: OverallStatus;
   completeness: number | null;
-  checks: AgentCheck[];
+  checks: ValidationChecks | AgentCheck[];
   summary: string;
 }
 
@@ -89,44 +108,160 @@ function ComingSoon({ label, desc }: { label: string; desc: string }) {
   );
 }
 
-// ── 벤치마크 리포트 ───────────────────────────────────────────
+// ── 리포트 공통 헤더 ─────────────────────────────────────────
+function ReportHeader({ result }: { result: AgentEvalResult }) {
+  const m = result.metrics;
+  return (
+    <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
+      <span className="font-sans text-base font-bold text-slate-800">
+        {result.agent} 벤치마크 결과
+        {m.total_cases != null && (
+          <span className="ml-2 text-sm font-normal text-slate-400">(케이스: {m.total_cases}개)</span>
+        )}
+      </span>
+      <span className="text-xs text-slate-400">{result.ran_at ?? new Date().toLocaleString("ko-KR")}</span>
+    </div>
+  );
+}
+
+// ── followup_filter 전용 리포트 ───────────────────────────────
+function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
+  const m = result.metrics;
+  const kwRecall = m.keyword_recall as number | null;
+  const kwPrec   = m.keyword_precision as number | null;
+  const llmRecall = m.llm_recall as number | null;
+  const llmPrec   = m.llm_precision as number | null;
+  const urgentRaw = m.urgent_recall as string | undefined;
+
+  const kwRecallWarn  = kwRecall  != null && kwRecall  < 0.9;
+  const kwPrecWarn    = kwPrec    != null && kwPrec    < 0.8;
+  const llmRecallWarn = llmRecall != null && llmRecall < 0.9;
+  const llmPrecWarn   = llmPrec   != null && llmPrec   < 0.8;
+
+  let urgentDetected = 0, urgentTotal = 0;
+  if (urgentRaw && urgentRaw !== "N/A") {
+    const parts = urgentRaw.split("/");
+    urgentDetected = parseInt(parts[0]);
+    urgentTotal    = parseInt(parts[1]);
+  }
+  const urgentWarn = urgentTotal > 0 && urgentDetected < urgentTotal;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+      <ReportHeader result={result} />
+
+      {/* 분류 정확도 비교표 */}
+      <div className="mt-10">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">분류 정확도</p>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-slate-100 text-slate-400">
+              <th className="pb-2 text-left font-medium w-40"></th>
+              <th className="pb-2 text-center font-medium">Recall</th>
+              <th className="pb-2 text-center font-medium">Precision</th>
+              <th className="pb-2 text-center font-medium">판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-slate-50">
+              <td className="py-3 font-semibold text-slate-800">Keyword (fallback)</td>
+              <td className={`py-3 text-center text-base font-bold ${kwRecallWarn ? "text-amber-600" : "text-slate-800"}`}>
+                {pct(kwRecall)}
+              </td>
+              <td className={`py-3 text-center text-base font-bold ${kwPrecWarn ? "text-amber-600" : "text-slate-800"}`}>
+                {pct(kwPrec)}
+              </td>
+              <td className="py-3 text-center">
+                <StatusText status={kwRecallWarn || kwPrecWarn ? "WARN" : "PASS"} />
+              </td>
+            </tr>
+            <tr>
+              <td className="py-3 font-semibold text-slate-800">LLM (classify)</td>
+              <td className={`py-3 text-center text-base font-bold ${llmRecallWarn ? "text-amber-600" : "text-slate-800"}`}>
+                {pct(llmRecall)}
+              </td>
+              <td className={`py-3 text-center text-base font-bold ${llmPrecWarn ? "text-amber-600" : "text-slate-800"}`}>
+                {pct(llmPrec)}
+              </td>
+              <td className="py-3 text-center">
+                <StatusText status={llmRecallWarn || llmPrecWarn ? "WARN" : "PASS"} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* 악화 신호 감지 */}
+      {urgentTotal > 0 && (
+        <div className="mt-10 flex items-center gap-4 border-t border-slate-100 pt-6">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            악화 신호 감지 <span className="normal-case font-normal text-slate-400">(urgent, 100% 필수)</span>
+          </span>
+          <span className={`text-base font-bold ${urgentWarn ? "text-amber-600" : "text-slate-800"}`}>
+            {urgentDetected} / {urgentTotal}
+          </span>
+          <StatusText status={urgentWarn ? "WARN" : "PASS"} />
+        </div>
+      )}
+
+      {/* 카테고리별 Keyword recall */}
+      {m.category_stats && Object.keys(m.category_stats).length > 0 && (
+        <div className="mt-10 border-t border-slate-100 pt-6">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">카테고리별 Keyword recall</p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400">
+                <th className="pb-2 text-left font-medium">카테고리</th>
+                <th className="pb-2 text-center font-medium">감지</th>
+                <th className="pb-2 text-center font-medium">전체</th>
+                <th className="pb-2 text-center font-medium">Recall</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(m.category_stats as Record<string, CategoryStat>).map(([cat, stat]) => {
+                const r = stat.total > 0 ? stat.kw_hit / stat.total : 0;
+                const warn = r < 0.9;
+                return (
+                  <tr key={cat} className="border-b border-slate-100">
+                    <td className="py-2.5 font-semibold text-slate-700">{cat}</td>
+                    <td className="py-2.5 text-center text-slate-800 font-semibold">{stat.kw_hit}</td>
+                    <td className="py-2.5 text-center text-slate-400">{stat.total}</td>
+                    <td className={`py-2.5 text-center font-bold ${warn ? "text-amber-600" : "text-slate-800"}`}>
+                      {Math.round(r * 100)}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ── 벤치마크 리포트 (범용) ────────────────────────────────────
 function BenchmarkReport({ result }: { result: AgentEvalResult }) {
+  if (result.agent === "followup_filter") {
+    return <FollowupBenchmarkReport result={result} />;
+  }
+
   const m = result.metrics;
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm text-slate-700">
-      {/* 헤더 */}
-      <div className="flex items-baseline justify-between border-b border-slate-200 pb-3">
-        <span className="font-sans text-base font-bold text-slate-800">
-          {result.agent} 벤치마크 결과
-        </span>
-        <span className="text-xs text-slate-400">{result.ran_at ?? new Date().toLocaleString("ko-KR")}</span>
-      </div>
+      <ReportHeader result={result} />
 
-      {/* 종합 판정 */}
-      <div className="mt-4 text-xs text-slate-400">
-        종합 판정:{" "}
-        <StatusText status={result.overall} />
-        {m.total_cases != null && (
-          <span className="ml-4 text-slate-400">케이스 {m.total_cases}개</span>
-        )}
-      </div>
-
-      {/* 체크 목록 */}
       <div className="mt-5 space-y-4">
         {result.checks.map((c, i) => (
           <div key={c.item}>
-            <div className="text-xs text-slate-500">
-              [{i + 1}] {c.item}
-            </div>
-            <div className="mt-0.5 pl-4 text-xs">
-              결과: <StatusText status={c.status} />
-            </div>
+            <div className="text-xs text-slate-500">[{i + 1}] {c.item}</div>
+            <div className="mt-0.5 pl-4 text-xs">결과: <StatusText status={c.status} /></div>
             <div className="mt-0.5 pl-4 text-xs text-slate-400">{c.detail}</div>
           </div>
         ))}
       </div>
 
-      {/* 메트릭 */}
       <div className="mt-6 border-t border-slate-200 pt-3 text-xs text-slate-400">
         {[
           m.keyword_recall != null && `keyword_recall ${pct(m.keyword_recall)}`,
@@ -449,10 +584,12 @@ function OverallTab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((row) => {
-                const checks: AgentCheck[] = Array.isArray(row.checks) ? row.checks : [];
-                const trg = checks.find((c) => /^1|triage|응급/i.test(c.item));
-                const sch = checks.find((c) => /^2|예약|schedule/i.test(c.item));
-                const cht = checks.find((c) => /^3|차트|chart/i.test(c.item));
+                const checksDict = (!Array.isArray(row.checks) && row.checks && typeof row.checks === "object")
+                  ? (row.checks as ValidationChecks)
+                  : {};
+                const trgStatus = checksDict.triage?.status ?? null;
+                const schStatus = checksDict.schedule?.status ?? null;
+                const chtStatus = checksDict.chart?.status ?? null;
                 return (
                   <tr key={row.emrid} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono font-bold text-slate-700">#{row.emrid}</td>
@@ -460,13 +597,13 @@ function OverallTab() {
                       <StatusText status={row.overall as CheckStatus} />
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
-                      {trg ? <StatusText status={trg.status} /> : "—"}
+                      {trgStatus ? <StatusText status={trgStatus} /> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
-                      {sch ? <StatusText status={sch.status} /> : "—"}
+                      {schStatus ? <StatusText status={schStatus} /> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
-                      {cht ? <StatusText status={cht.status} /> : "—"}
+                      {chtStatus ? <StatusText status={chtStatus} /> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">{fmtTime(row.createdAt)}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{row.summary}</td>
