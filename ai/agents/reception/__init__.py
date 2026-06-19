@@ -1,4 +1,4 @@
 """응대 AI 묶음. (담당: A)"""
-from .agent import reception
+from .agent import ReceptionAgent, reception
 
-__all__ = ["reception"]
+__all__ = ["ReceptionAgent", "reception"]

@@ -14,7 +14,7 @@ from sqlalchemy import and_, select
 from ai.llm import call_llm_json
 from ai.orchestrator.contracts import AgentResult, SessionContext
 
-from .prompts import RECEPTION_SYSTEM
+from .prompts import build_reception_prompt
 
 _CLOSING_QUESTIONS = [
     "또 궁금한 점 있으신가요?",
@@ -177,24 +177,14 @@ class ReceptionAgent:
         pet_name = ctx.pet_info.get("name") or "아이"
         streak = (ctx.reception_streak or 0) + 1
 
-        # 최근 대화 히스토리 (최대 6개 turn)
-        history_lines = []
-        for m in (ctx.history or [])[-6:]:
-            role = "보호자" if m.get("role") == "user" else "봇"
-            history_lines.append(f"{role}: {m.get('content', '')}")
+        history_lines = [
+            f"{'보호자' if m.get('role') == 'user' else '봇'}: {m.get('content', '')}"
+            for m in (ctx.history or [])[-6:]
+        ]
         history_block = "\n[이전 대화]\n" + "\n".join(history_lines) + "\n" if history_lines else ""
-
         streak_hint = f"\n[현재 안내 횟수: {streak}회 — 이미 안내한 적 있음]" if streak >= 2 else ""
 
-        prompt = (
-            f"{RECEPTION_SYSTEM}\n"
-            f"반려동물 이름은 '{pet_name}'야. 이름에 맞는 조사를 자연스럽게 써줘."
-            f"{streak_hint}\n\n"
-            f"[우리 병원 정보]\n{facts}"
-            f"{history_block}\n"
-            f"[보호자 말]\n{ctx.user_message}\n\n"
-            '반드시 JSON으로만 답해: {"reply": "답변 텍스트", "pills": ["버튼1", "버튼2"]}'
-        )
+        prompt = build_reception_prompt(facts, pet_name, history_block, streak_hint, ctx.user_message)
 
         try:
             out = await call_llm_json(prompt)
