@@ -393,22 +393,24 @@ async def _fetch_booking_context(emrid: int) -> dict | None:
     emr_history = patient_context_data.get("patient_context", {}).get("emr_history") or []
     is_initial_visit = len(emr_history) == 0
 
-    chart_rag_context: list[dict] = []
-    try:
-        from ai.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
-        rag_query = " ".join(filter(None, [
-            triage.chief_complaint or "",
-            " ".join(triage.symptom_keywords or []),
-            triage.symptom_summary or "",
-        ])).strip()
-        if rag_query:
-            async with AsyncSessionLocal() as db_rag:
-                matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
-            chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
-            logger.info("[PostBooking] chart RAG emrid=%s query=%r usable=%d/%d",
-                        emrid, rag_query[:60], len(chart_rag_context), len(matches))
-    except Exception as exc:
-        logger.warning(f"[PostBooking] chart RAG skipped emrid={emrid}: {exc}")
+    # RAG는 문진 단계에서 이미 검색해 triage_result.rag_context 에 저장함 → 재검색 없이 재사용.
+    chart_rag_context: list[dict] = list(triage.rag_context or [])
+    if not chart_rag_context:
+        # 구버전 기록 등으로 비어있으면 폴백 검색(하위호환).
+        try:
+            from ai.rag import RAG_USABLE_THRESHOLD, search_similar_triage_cases
+            rag_query = " ".join(filter(None, [
+                triage.chief_complaint or "",
+                " ".join(triage.symptom_keywords or []),
+                triage.symptom_summary or "",
+            ])).strip()
+            if rag_query:
+                async with AsyncSessionLocal() as db_rag:
+                    matches = await search_similar_triage_cases(db_rag, rag_query, top_k=3)
+                chart_rag_context = [m.to_dict() for m in matches if m.similarity >= RAG_USABLE_THRESHOLD]
+                logger.info("[PostBooking] chart RAG fallback emrid=%s usable=%d", emrid, len(chart_rag_context))
+        except Exception as exc:
+            logger.warning(f"[PostBooking] chart RAG fallback skipped emrid={emrid}: {exc}")
 
     return {
         "triage": triage,

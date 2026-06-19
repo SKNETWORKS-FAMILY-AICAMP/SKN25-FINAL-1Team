@@ -83,6 +83,67 @@ JSON으로만 답해:
   "onset":"발병 시점(알면)"}}"""
 
 
+# ───────────────────────── 완료: 의심질환 안내 + 예약 확인 ─────────────────────────
+_DISCLAIMER = (
+    "다만 이건 **확정 진단이 아니라 참고**일 뿐이에요. 정확한 의학적 판단은 "
+    "반드시 수의사 선생님의 진료를 받으셔야 해요."
+)
+
+
+def build_suspected_confirm_message(pet_name: str, rag_diseases: list[str]) -> str:
+    """RAG 유사사례 기반 의심질환 안내 + 강한 디스클레이머 + 예약 확인 멘트."""
+    name = pet_name or "아이"
+    diseases = list(dict.fromkeys(d for d in (rag_diseases or []) if d))[:3]
+    if diseases:
+        dz = " · ".join(diseases)
+        head = (f"말씀 주신 증상으로는 비슷한 사례에서 **{dz}** 같은 가능성을 참고할 수 있어요. "
+                f"{_DISCLAIMER}")
+    else:
+        head = (f"{name}의 증상은 잘 확인했어요. {_DISCLAIMER}")
+    return f"{head}\n\n예약을 도와드릴까요?"
+
+
+# 의심질환 안내 멘트 — LLM 생성(자연스럽게, 템플릿 느낌 제거). 위 함수는 폴백.
+_SUSPECT_GEN_SYSTEM = """너는 동물병원 문진 도우미야. 방금 보호자와 증상 문진을 마쳤어.
+아래 정보로 보호자에게 보낼 '한 메시지'를 사람처럼 따뜻하고 자연스럽게 만들어(매번 다른 표현, 템플릿처럼 X).
+
+반드시 지켜:
+1) 의심 가능성이 있으면 부드럽게 언급해(아래 목록에서 자연스러운 만큼). "~일 수 있어요/가능성도 있어요" 톤, 절대 단정 X.
+   목록이 비었으면 증상은 잘 들었다고만 하고 질환 언급은 생략해.
+2) 이건 '확정 진단이 아니라 참고'이며, 정확한 의학적 판단은 반드시 수의사 선생님의 진료가 필요하다고 분명히 안내.
+3) 마지막은 자연스럽게 "예약을 도와드릴까요?" 로 마무리.
+4) '응급·위험·큰일'처럼 겁주는 말 금지. 아이는 이름({pet_name})으로 불러.
+
+[의심 가능성(참고)] {diseases}
+[비슷한 사례 메모(톤만 참고, 그대로 인용 X)]
+{snippets}
+
+메시지 본문만 출력(따옴표·머리말·JSON 없이)."""
+
+
+def build_suspected_confirm_prompt(pet_name: str, diseases: list[str],
+                                   snippets: list[str] | None = None) -> str:
+    dz = " · ".join(list(dict.fromkeys(d for d in (diseases or []) if d))[:3]) or "(없음)"
+    snip = "\n".join(f"- {s}" for s in (snippets or []) if s) or "(없음)"
+    return _SUSPECT_GEN_SYSTEM.format(pet_name=pet_name or "아이", diseases=dz, snippets=snip)
+
+
+# 예/아니오 분류 (확인 단계)
+_CONFIRM_PROMPT = """보호자에게 '예약을 도와드릴까요?'라고 물었고, 아래는 그 답이야.
+예약을 원하는지 한 단어로 분류해:
+- yes : 원함(예, 네, 응, 그래, 해줘, 부탁, 좋아 등)
+- no  : 원치 않음(아니, 괜찮아, 나중에, 안 할래 등)
+- unclear : 애매하거나 다른 말
+
+JSON으로만: {"answer": "yes"}
+
+[보호자 답] """
+
+
+def build_confirm_prompt(user_message: str) -> str:
+    return f"{_CONFIRM_PROMPT}{user_message}"
+
+
 def build_extraction_prompt(history: list[dict], user_message: str,
                             section_id: str | None, collected: dict,
                             vision_note: str = "") -> str:

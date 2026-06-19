@@ -22,6 +22,7 @@ class Flow(str, Enum):
     IDLE = "idle"
     TRIAGING = "triaging"         # 문진 진행 중 (끼어들어도 여기로 복귀)
     SCHEDULING = "scheduling"     # 슬롯 고르는 중
+    AWAITING_BOOKING_CONFIRM = "awaiting_booking_confirm"  # 의심질환 안내 후 예약 여부(예/아니오) 대기
 
 
 class Intent(str, Enum):

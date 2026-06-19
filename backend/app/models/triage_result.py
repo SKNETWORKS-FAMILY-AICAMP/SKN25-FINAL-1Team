@@ -21,4 +21,5 @@ class TriageResult(Base):
     matched_discriminators = Column(JSON, nullable=True)  # [{section,label,urgency}]
     extracted_variables = Column(JSON, nullable=True)     # {섹션:{변수:값}}
     vision_evidence = Column(JSON, nullable=True)         # {region,cnn,vlm_description}
+    rag_context = Column(JSON, nullable=True)             # 문진 단계 RAG 유사사례(차트가 재사용)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -29,4 +29,5 @@ def build_triage_result(emrid: int, info: dict) -> TriageResult:
         matched_discriminators=info.get("matched_discriminators"),
         extracted_variables=info.get("extracted_variables"),
         vision_evidence=info.get("vision_evidence"),
+        rag_context=info.get("rag_context"),
     )
