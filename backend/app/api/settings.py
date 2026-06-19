@@ -320,6 +320,54 @@ async def _update_vet_weekly_schedule(
                         detail=f"{dow_label}: 의사 근무 종료 시간({day.end_time})이 병원 운영 종료 시간({_fmt(hosp.end_time)})을 초과할 수 없습니다.",
                     )
 
+        # 변경 후 의사 전체 합이 병원 운영시간을 커버하는지 확인
+        other_docs = (await db.execute(
+            select(Doctor).where(
+                Doctor.hospitalid == doctor.hospitalid,
+                Doctor.doctorid != doctorid,
+                Doctor.is_active == True,
+            )
+        )).scalars().all()
+
+        other_scheds: dict[int, dict[int, VetWeeklySchedule]] = {}
+        for od in other_docs:
+            rows = (await db.execute(
+                select(VetWeeklySchedule).where(VetWeeklySchedule.doctorid == od.doctorid)
+            )).scalars().all()
+            other_scheds[od.doctorid] = {r.day_of_week: r for r in rows}
+
+        new_by_dow = {day.day_of_week: day for day in days}
+
+        for dow, hosp in hosp_by_dow.items():
+            if not hosp.is_open or not hosp.start_time or not hosp.end_time:
+                continue
+            all_starts, all_ends = [], []
+            # 현재 의사의 새 스케줄 반영
+            if dow in new_by_dow:
+                nd = new_by_dow[dow]
+                if nd.is_open and nd.start_time and nd.end_time:
+                    all_starts.append(_parse_time(nd.start_time))
+                    all_ends.append(_parse_time(nd.end_time))
+            # 다른 의사들의 기존 스케줄
+            for od_scheds in other_scheds.values():
+                od_row = od_scheds.get(dow)
+                if od_row and od_row.is_open and od_row.start_time and od_row.end_time:
+                    all_starts.append(od_row.start_time)
+                    all_ends.append(od_row.end_time)
+            if not all_starts:
+                continue
+            dow_label = _DAY_KR[dow]
+            if min(all_starts) > hosp.start_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{dow_label}: 변경 시 병원 운영 시작 시간({_fmt(hosp.start_time)})을 커버하는 의사가 없어집니다.",
+                )
+            if max(all_ends) < hosp.end_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{dow_label}: 변경 시 병원 운영 종료 시간({_fmt(hosp.end_time)})을 커버하는 의사가 없어집니다.",
+                )
+
     for day in days:
         result = await db.execute(
             select(VetWeeklySchedule).where(
