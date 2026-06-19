@@ -50,4 +50,5 @@ jobs:
           python-version: "3.11"
 
       - name: Compile check (syntax)
-        run: python -m compileall -q backend/app
+        # ai/ 도 포함 — Docker 빌드가 파이썬을 실행하지 않아 ai/ 문법오류가 그냥 prod 로 샌다.
+        run: python -m compileall -q backend/app ai
