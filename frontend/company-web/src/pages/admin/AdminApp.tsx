@@ -38,7 +38,7 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
             <MessageSquare className="h-4 w-4" /> 문의
           </NavLink>
           <NavLink to="/admin/eval" className={navClass}>
-            <FlaskConical className="h-4 w-4" /> AI 평가
+            <FlaskConical className="h-4 w-4" /> 평가
           </NavLink>
         </nav>
         <button

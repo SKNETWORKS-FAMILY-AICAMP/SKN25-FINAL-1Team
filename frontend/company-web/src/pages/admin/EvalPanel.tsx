@@ -271,7 +271,7 @@ function AgentBenchmarkTab({
     <div className="space-y-8">
       {/* ── 벤치마크 ── */}
       <div className="space-y-4">
-        <p className="text-xs font-semibold text-slate-500">벤치마크 (고정 테스트셋)</p>
+        <p className="text-xs font-semibold text-slate-500">벤치마크 (테스트셋)</p>
 
         {!endpoint ? (
           <ComingSoon label={`${label} 벤치마크`} desc={description} />
@@ -449,9 +449,10 @@ function OverallTab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((row) => {
-                const trg = row.checks.find((c) => /^1|triage|응급/i.test(c.item));
-                const sch = row.checks.find((c) => /^2|예약|schedule/i.test(c.item));
-                const cht = row.checks.find((c) => /^3|차트|chart/i.test(c.item));
+                const checks: AgentCheck[] = Array.isArray(row.checks) ? row.checks : [];
+                const trg = checks.find((c) => /^1|triage|응급/i.test(c.item));
+                const sch = checks.find((c) => /^2|예약|schedule/i.test(c.item));
+                const cht = checks.find((c) => /^3|차트|chart/i.test(c.item));
                 return (
                   <tr key={row.emrid} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono font-bold text-slate-700">#{row.emrid}</td>
