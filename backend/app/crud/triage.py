@@ -26,7 +26,7 @@ def build_triage_result(emrid: int, info: dict) -> TriageResult:
         suspected_diseases=info.get("suspected_diseases"),
         symptom_summary=info.get("symptom_summary"),
         recommended_action=info.get("recommended_action"),
-        need_photo=info.get("need_photo", False),
-        need_followup=info.get("need_followup", False),
-        followup_reason=info.get("followup_reason"),
+        matched_discriminators=info.get("matched_discriminators"),
+        extracted_variables=info.get("extracted_variables"),
+        vision_evidence=info.get("vision_evidence"),
     )

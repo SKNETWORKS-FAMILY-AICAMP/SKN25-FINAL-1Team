@@ -147,7 +147,9 @@ async def emr_triage(
             "suspected_diseases": triage.suspected_diseases,
             "symptom_summary": triage.symptom_summary,
             "recommended_action": triage.recommended_action,
-            "need_photo": triage.need_photo,
+            "matched_discriminators": triage.matched_discriminators,
+            "extracted_variables": triage.extracted_variables,
+            "vision_evidence": triage.vision_evidence,
             "created_at": triage.created_at.isoformat() if triage.created_at else None,
         },
     }
