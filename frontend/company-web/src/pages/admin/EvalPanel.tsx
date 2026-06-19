@@ -42,6 +42,7 @@ interface AgentEvalResult {
 interface MonitoringLog {
   ts: string;
   agent: string;
+  emrid?: number | null;
   scheduleid?: number | null;
   message?: string;
   category?: string;
@@ -288,9 +289,12 @@ function MonitoringTable({
   onRefresh: () => void;
 }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-500">실시간 운영 로그 (최근 10건)</p>
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+      <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
+        <span className="font-sans text-base font-bold text-slate-800">
+          실시간 운영 로그
+          <span className="ml-2 text-sm font-normal text-slate-400">(최근 10건)</span>
+        </span>
         <button
           onClick={onRefresh}
           disabled={loading}
@@ -302,28 +306,32 @@ function MonitoringTable({
       </div>
 
       {logs.length === 0 && !loading ? (
-        <p className="py-6 text-center text-xs text-slate-400">
+        <p className="py-8 text-center text-xs text-slate-400">
           아직 로그가 없습니다. 채팅으로 경과 메시지를 보내면 기록됩니다.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200">
-          <table className="w-full font-mono text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-400">
+        <div className="mt-5 overflow-hidden rounded-lg border border-slate-100">
+          <table className="w-full text-xs">
+            <thead className="border-b border-slate-100 bg-slate-50 text-slate-400">
               <tr>
-                <th className="px-3 py-2 text-left">시간</th>
-                <th className="px-3 py-2 text-left">메시지</th>
-                <th className="px-3 py-2 text-left">카테고리</th>
-                <th className="px-3 py-2 text-left">심각도</th>
-                <th className="px-3 py-2 text-left">저장</th>
+                <th className="px-3 py-2 text-left font-medium">EMR</th>
+                <th className="px-3 py-2 text-left font-medium">시간</th>
+                <th className="px-3 py-2 text-left font-medium">메시지</th>
+                <th className="px-3 py-2 text-left font-medium">카테고리</th>
+                <th className="px-3 py-2 text-left font-medium">심각도</th>
+                <th className="px-3 py-2 text-left font-medium">저장</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {logs.map((log, i) => (
                 <tr key={i} className="hover:bg-slate-50">
+                  <td className="px-3 py-2 font-mono font-bold text-slate-700">
+                    {log.emrid != null ? `#${log.emrid}` : "—"}
+                  </td>
                   <td className="px-3 py-2 text-slate-400 whitespace-nowrap">
                     {log.ts?.slice(11, 16) ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-slate-600 max-w-xs truncate">
+                  <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">
                     {log.message ?? "—"}
                   </td>
                   <td className="px-3 py-2 text-slate-500">{log.category ?? "—"}</td>
@@ -334,7 +342,7 @@ function MonitoringTable({
                   </td>
                   <td className="px-3 py-2">
                     {log.is_saved ? (
-                      <span className="text-slate-700 font-bold">Y</span>
+                      <span className="font-bold text-slate-700">Y</span>
                     ) : (
                       <span className="text-slate-300">N</span>
                     )}
@@ -404,6 +412,11 @@ function AgentBenchmarkTab({
 
   return (
     <div className="space-y-8">
+      {/* ── 운영 모니터링 (logsEndpoint 있을 때만) ── */}
+      {logsEndpoint && (
+        <MonitoringTable logs={logs} loading={logsLoading} onRefresh={fetchLogs} />
+      )}
+
       {/* ── 벤치마크 ── */}
       <div className="space-y-4">
         <p className="text-xs font-semibold text-slate-500">벤치마크 (테스트셋)</p>
@@ -441,13 +454,6 @@ function AgentBenchmarkTab({
           </>
         )}
       </div>
-
-      {/* ── 운영 모니터링 (logsEndpoint 있을 때만) ── */}
-      {logsEndpoint && (
-        <div className="border-t border-slate-200 pt-6">
-          <MonitoringTable logs={logs} loading={logsLoading} onRefresh={fetchLogs} />
-        </div>
-      )}
     </div>
   );
 }
