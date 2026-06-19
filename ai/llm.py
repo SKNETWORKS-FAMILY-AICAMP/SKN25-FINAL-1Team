@@ -29,6 +29,17 @@ async def call_llm(
     return response.content
 
 
+def _coerce_json_text(text: str) -> str:
+    """LLM 출력에서 JSON 본문만 뽑아낸다(코드펜스/앞뒤 잡설 제거)."""
+    t = (text or "").strip()
+    # ```json ... ``` 또는 ``` ... ``` 펜스 제거
+    if t.startswith("```"):
+        t = t.strip("`").strip()
+        if t[:4].lower() == "json":
+            t = t[4:].strip()
+    return t
+
+
 async def call_llm_json(
     prompt: str,
     temperature: float = 0,
@@ -38,7 +49,15 @@ async def call_llm_json(
         temperature=temperature,
     )
 
-    return json.loads(text)
+    cleaned = _coerce_json_text(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # 앞뒤에 설명이 붙은 경우: 첫 '{' ~ 마지막 '}' 만 잘라 재시도
+        start, end = cleaned.find("{"), cleaned.rfind("}")
+        if start != -1 and end > start:
+            return json.loads(cleaned[start:end + 1])
+        raise
 
 
 # 구조화 출력 — JSON 스키마로 형식·enum 강제 (누락/오염 방지)

@@ -13,9 +13,10 @@ from app.models.guardian import Guardian
 router = APIRouter(prefix="/followup", tags=["followup"])
 logger = logging.getLogger(__name__)
 
-# NOTE: 옛 followup AI 요약(ai/agents/followup.py · run_followup_sync)은 제거됨.
-# 경과 보고의 AI 처리는 v2 챗봇의 followup_filter(대화 내)로 이관. 이 엔드포인트는
-# 경과 '저장/조회/업로드'만 담당한다(수의사 알람 포함).
+# NOTE: 경과 보고의 AI 처리는 v2 followup_filter 에이전트가 담당한다.
+# create_followup은 followup_filter를 호출해 분류·누적요약·이미지저장·자연스러운 응답을
+# 만들고(매 메시지 응답), 저장/조회/업로드 + 수의사 알람을 담당한다.
+# (옛 ai/agents/followup.py · run_followup_sync는 제거됨)
 
 
 class FollowupCreate(BaseModel):
@@ -42,43 +43,55 @@ async def create_followup(
     if owner_id != current_user.userid:
         raise HTTPException(status_code=403, detail="경과 등록 권한이 없습니다.")
 
-    # triage에서 산출·저장한 단일 followup 판정값으로 서버에서도 게이트한다.
-    from app.models.triage_result import TriageResult
-    triage_row = await db.execute(select(TriageResult).where(TriageResult.emrid == request.emrid))
-    triage = triage_row.scalar_one_or_none()
-    if not triage:
-        raise HTTPException(status_code=404, detail="문진 결과를 찾을 수 없습니다.")
-    if not triage.need_followup:
-        raise HTTPException(status_code=403, detail="이 문진은 경과 보고 대상이 아닙니다.")
-
     # 예약 정보 조회 — 시간 가드 + 수의사 알람에 사용
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     from app.models.schedule import Schedule
     sched_row = await db.execute(
         select(Schedule).where(Schedule.emrid == request.emrid, Schedule.deleted_at.is_(None))
     )
     schedule = sched_row.scalar_one_or_none()
 
-    # follow-up은 예약(진료) 시간이 지나면 비활성화한다.
+    # follow-up은 진료 시작 'FOLLOWUP_CLOSE_BEFORE'(1시간) 전에 마감한다.
+    # (chat.py의 can_followup/active 목록 판정과 동일 기준)
     if schedule and schedule.confirmed_time:
         confirmed = schedule.confirmed_time
         if confirmed.tzinfo is None:
             confirmed = confirmed.replace(tzinfo=timezone.utc)
-        if datetime.now(timezone.utc) > confirmed:
-            raise HTTPException(status_code=403, detail="진료 시간이 지나 경과 보고가 마감되었습니다.")
+        if datetime.now(timezone.utc) > confirmed - timedelta(hours=1):
+            raise HTTPException(status_code=403, detail="진료 시작 1시간 전이 되어 경과 보고가 마감되었습니다.")
 
-    followup = Followup(
-        emrid=request.emrid,
-        userid=current_user.userid,
-        images=request.images,
-        message=request.message
+    # ── 경과 처리는 v2 followup_filter 에이전트가 담당(분류·누적요약·이미지저장·응답).
+    #    옛 단순 저장 대신 실제 에이전트를 태운다. (need_followup 게이팅은 폐기)
+    from ai.agents.followup_filter.agent import followup_filter
+    from ai.orchestrator.contracts import Phase, SessionContext
+
+    # 직전 누적 경과 메모(같은 emrid의 마지막 followup ai_summary)를 이어붙임 기준으로 전달.
+    prior_row = await db.execute(
+        select(Followup)
+        .where(Followup.emrid == request.emrid)
+        .order_by(Followup.created_at.desc())
     )
-    db.add(followup)
-    await db.commit()
-    await db.refresh(followup)
+    prior = prior_row.scalars().first()
 
-    # 경과 보고가 오면 수의사에게 바로 알림 → 대시보드에서 즉시 확인
-    if schedule:
+    ctx = SessionContext(
+        session_id=0,
+        userid=current_user.userid,
+        petid=guardian.petid,
+        pet_info={},
+        hospitalid=None,
+        emrid=request.emrid,
+        scheduleid=getattr(schedule, "scheduleid", None),
+        user_message=request.message or "",
+        attachments=request.images or [],
+        phase=Phase.BOOKED,
+        followup_summary=(prior.ai_summary if prior else "") or "",
+        db=db,
+    )
+    agent_result = await followup_filter.run(ctx, {})
+    saved = any(ev.get("type") == "followup_saved" for ev in (agent_result.events or []))
+
+    # 실제로 경과가 저장됐을 때만 수의사에게 알림(잡담/병원질문 등은 저장 안 됨).
+    if saved and schedule:
         try:
             from app.crud.alarm import create_alarm
             await create_alarm(
@@ -91,7 +104,7 @@ async def create_followup(
         except Exception as e:
             logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
 
-    # 경과보고 메시지를 chat_historyDB에도 저장 (재진입 시 기록 유지)
+    # 대화 기록(chat_historyDB)에 보호자 메시지 + 챗봇 응답을 남겨 재진입 시 복원.
     try:
         from app.models.chat_history import ChatHistory
         from sqlalchemy.orm.attributes import flag_modified
@@ -108,6 +121,8 @@ async def create_followup(
             if request.images:
                 user_content = (user_content + " " if user_content else "") + f"[사진 {len(request.images)}장 첨부]"
             msgs.append({"role": "user", "content": user_content.strip()})
+            if agent_result.reply:
+                msgs.append({"role": "assistant", "content": agent_result.reply})
             chat_session.messages = msgs
             flag_modified(chat_session, "messages")
             await db.commit()
@@ -116,8 +131,13 @@ async def create_followup(
 
     return {
         "code": 201,
-        "message": "경과 사진이 등록되었습니다.",
-        "result": {"followup_id": followup.followupid},
+        "message": "경과 보고가 접수되었습니다.",
+        "result": {
+            "reply": agent_result.reply,
+            "saved": saved,
+            # 경과로 저장되지 않은 입력(잡담/병원 질문 등) — 프론트 안내용.
+            "offtopic": not saved,
+        },
     }
 
 
