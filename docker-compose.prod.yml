@@ -29,7 +29,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
-      SECRET_KEY: ${SECRET_KEY}
+      # fail-fast: EC2 ~/medipaw/.env 에 SECRET_KEY 가 없으면 컨테이너가 아예 안 뜸.
+      # (빈 키로 JWT 서명되어 토큰 위조가 가능해지는 사고 방지)
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in ~/medipaw/.env}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 120
       REFRESH_TOKEN_EXPIRE_DAYS: 14

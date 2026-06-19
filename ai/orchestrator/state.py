@@ -23,8 +23,12 @@ async def _compute_phase(db, session) -> Phase:
     """예약 상태로 국면 판정 (기존 chat.py 로직과 동일 기준)."""
     if session.emrid is None:
         return Phase.PRE_BOOKING
+    # deleted_at 필터 — chat.py/followup.py와 동일 기준(soft-delete된 예약은 무시).
     sched = (await db.execute(
-        select(Schedule).where(Schedule.emrid == session.emrid)
+        select(Schedule).where(
+            Schedule.emrid == session.emrid,
+            Schedule.deleted_at.is_(None),
+        )
     )).scalars().first()
     if not sched or not sched.confirmed_time or sched.status == "CANCELLED":
         return Phase.PRE_BOOKING
