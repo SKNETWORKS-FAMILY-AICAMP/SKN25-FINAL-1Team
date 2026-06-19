@@ -139,19 +139,15 @@ user가 실제로 답한 항목만 기준 — 에이전트가 물었지만 보�
 
 | 라벨 | 질문 |
 |---|---|
-| 2A 진료 시간 | duration_min이 None/0 이하거나 240분 초과면 비정상 |
-| 2B 예약 타이밍 | 응급도 대비 confirmed_time까지 걸린 일수가 기준 이내인가 (당일 슬롯 가용성 고려) |
-| 2C 근무시간 | 의사/병원 근무표 안에 예약됐나 |
-| 2D 빈 슬롯 | has_time_overlap 재사용해 실제 충돌 여부 사후 감사 |
-| 2E 핸드오프 수신 | 문진 완료 신호를 받아 정상 실행됐나 |
+| 2A 예약 타이밍 | 응급도 대비 confirmed_time까지 걸린 일수가 기준 이내인가 (당일 슬롯 가용성 고려) |
+| 2B 근무시간 | 의사/병원 근무표 안에 예약됐나 |
+| 2C 빈 슬롯 | has_time_overlap 재사용해 실제 충돌 여부 사후 감사 |
+| 2D 핸드오프 수신 | 문진 완료 신호를 받아 정상 실행됐나 |
 
-confirmed_time이 없으면 2B/2C/2D는 일괄 SKIPPED. 2A는 confirmed_time 유무와 무관하게 항상 실행.
+confirmed_time이 없으면 2A/2B/2C는 일괄 SKIPPED. 
 
-### 2A 진료 시간
 
-`duration_min ≤ 0` 또는 `> 240` → WARN. 그 외 → PASS.
-
-### 2B 예약 타이밍
+### 2A 예약 타이밍
 
 | urgency_level_num | 기준 |
 |---|---|
@@ -167,17 +163,17 @@ confirmed_time이 없으면 2B/2C/2D는 일괄 SKIPPED. 2A는 confirmed_time 유
 `_has_same_day_slots` 로직: `VetWeeklySchedule → HospitalWeeklySchedule` fallback →
 총 근무 분 계산 → 당일 확정 예약 합산(현 schedule 제외) → 여유 분 ≥ duration_min이면 True.
 
-### 2C 근무시간
+### 2B 근무시간
 
 `VetWeeklySchedule → HospitalWeeklySchedule` fallback. 근무표 없음 → SKIPPED.
 휴무일 / 근무 시작 전 / 종료 후 넘어감 / 점심 겹침 → WARN.
 
-### 2D 빈 슬롯
+### 2C 빈 슬롯
 
 `has_time_overlap(db, doctorid, confirmed_time, end, exclude_schedule_id=scheduleid)` 재사용.
 겹치면 WARN.
 
-### 2E 핸드오프 수신 (MCP 후)
+### 2D 핸드오프 수신 (MCP 후)
 
 신호 수신 기록 / emrid 일치 / 에이전트 실행 기록 확인. MCP 미구현이면 SKIPPED.
 
@@ -185,21 +181,58 @@ confirmed_time이 없으면 2B/2C/2D는 일괄 SKIPPED. 2A는 confirmed_time 유
 
 ## 4. Check 3 — Chart (1~5단계)
 
-변경 없음.
+차트 AI가 `reportDB.ai_draft_json`에 저장하는 실제 구조:
+
+```json
+{
+  "thinking": "...",
+  "intake_summary": {
+    "guardian_report": "보호자 호소 요약",
+    "key_symptoms": ["가려움", "피부 이상"],
+    "suspected_diseases": ["알레르기성 피부염", "외부기생충 감염"]
+  },
+  "soap": {
+    "S": "보호자 호소 정리",
+    "O": "내원 시 확인할 객관적 소견",
+    "A": "감별진단 및 임상 판단",
+    "P": "진료 계획"
+  },
+  "differential_diagnosis": [
+    {
+      "disease": "알레르기성 피부염",
+      "probability": "높음",
+      "reasoning": "근거",
+      "against": "반증"
+    }
+  ],
+  "recommended_tests": [...],
+  "red_flags_confirmed": [],
+  "missing_info": [...],
+  "vet_questions": [...],
+  "cautions": [...]
+}
+```
 
 **1~4단계: Rule-based 구조 체크 (앞 단계 실패 시 즉시 반환)**
 
 ```
-1단계: report 자체가 없는가?          → SKIPPED (차트 미생성)
-2단계: ai_draft_json이 dict가 아닌가? → WARN (차트 형식 오류)
-3단계: intake_summary가 없는가?       → WARN (차트 구조 이상)
-4단계: key_symptoms가 비어있는가?      → WARN (증상 미기록)
+1단계: report 자체가 없는가?                       → SKIPPED (차트 미생성)
+2단계: ai_draft_json이 dict가 아닌가?              → WARN (차트 형식 오류)
+3단계: intake_summary가 없거나 dict가 아닌가?       → WARN (차트 구조 이상)
+4단계: intake_summary.key_symptoms가 비어있는가?   → WARN (증상 미기록)
 ```
 
-**5단계: LLM — 임상 품질 평가 (추후)**
+**3단계: LLM — 임상 품질 평가 (추후)**
 
 triage 결과 기준으로 AI 차트가 임상적으로 일관되는지 Sonnet으로 평가.
 tool_use로 JSON 강제, 결과는 `{"result": "PASS"|"WARN", "detail": "..."}`.
+
+LLM에 전달하는 필드 (필요한 것만):
+- `intake_summary` (guardian_report, key_symptoms, suspected_diseases)
+- `soap.S`, `soap.A`
+- `differential_diagnosis` (disease, reasoning, against)
+
+제외 필드 (평가 불필요): `thinking`, `soap.O`, `soap.P`, `recommended_tests`, `missing_info`, `vet_questions`, `cautions`
 
 ---
 
@@ -348,7 +381,7 @@ Part B 탭은 MCP·테스트 자산 준비 전엔 빈 상태로 둬도 된다.
 **완료 (Part A)**
 ```
 1A 응급도 정합성, 1B 응급도 판단
-2A 진료시간, 2B 예약타이밍, 2C 근무시간, 2D 빈슬롯
+2A 예약타이밍, 2B 근무시간, 2C 빈슬롯
 Chart 1~4단계
 POST /admin/validation/run 엔드포인트
 ```
