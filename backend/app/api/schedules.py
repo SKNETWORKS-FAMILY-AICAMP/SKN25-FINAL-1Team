@@ -474,7 +474,10 @@ async def _run_chart_pipeline(emrid: int, scheduleid: int) -> None:
 
         # LangGraph(post_booking): chart 노드로 SOAP 초안 생성
         from ai.graph import run_chart
-        chart_result = await run_chart(_build_chart_payload(ctx))
+        chart_payload = _build_chart_payload(ctx)
+        chart_payload["emrid"] = emrid
+        chart_payload["scheduleid"] = scheduleid
+        chart_result = await run_chart(chart_payload)
 
         # reportDB 저장 + 수의사 알람
         if chart_result:

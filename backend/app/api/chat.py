@@ -491,9 +491,11 @@ async def send_message(
 
         except Exception as e:
 
+            # 내부 예외 원문을 클라이언트에 노출하지 않는다(스택/구현 정보 누출 방지).
+            logger.exception("[Chat] send_message 스트림 처리 실패 session_id=%s", session_id)
             error_payload = {
                 "type": "error",
-                "message": str(e),
+                "message": "응답 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             }
 
             yield (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Building2, ClipboardList, LogOut, MessageSquare, ShieldCheck, Stethoscope } from "lucide-react";
+import { Building2, ClipboardList, FlaskConical, LogOut, MessageSquare } from "lucide-react";
 
 import medipawSymbol from "../../../../shared/assets/logo/medipaw-symbol.png";
 import AdminLogin from "./AdminLogin";
@@ -8,8 +8,7 @@ import ApplicationsList from "./ApplicationsList";
 import ApplicationDetail from "./ApplicationDetail";
 import HospitalsList from "./HospitalsList";
 import HospitalManage from "./HospitalManage";
-import ValidationPanel from "./ValidationPanel";
-import JudgePanel from "./JudgePanel";
+import EvalPanel from "./EvalPanel";
 import ContactList from "./ContactList";
 import ContactDetail from "./ContactDetail";
 import { clearAdminToken, isAdminAuthed } from "../../onboarding/api";
@@ -38,11 +37,8 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
           <NavLink to="/admin/contacts" className={navClass}>
             <MessageSquare className="h-4 w-4" /> 문의
           </NavLink>
-          <NavLink to="/admin/validation" className={navClass}>
-            <ShieldCheck className="h-4 w-4" /> Validation
-          </NavLink>
-          <NavLink to="/admin/judge" className={navClass}>
-            <Stethoscope className="h-4 w-4" /> Judge
+          <NavLink to="/admin/eval" className={navClass}>
+            <FlaskConical className="h-4 w-4" /> 평가
           </NavLink>
         </nav>
         <button
@@ -62,8 +58,7 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
           <Route path="hospitals/:id" element={<HospitalManage />} />
           <Route path="contacts" element={<ContactList />} />
           <Route path="contacts/:id" element={<ContactDetail />} />
-          <Route path="validation" element={<ValidationPanel />} />
-          <Route path="judge" element={<JudgePanel />} />
+          <Route path="eval" element={<EvalPanel />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </main>

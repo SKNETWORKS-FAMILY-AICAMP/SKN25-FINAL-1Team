@@ -141,21 +141,20 @@ async def _chart_node(state: PostBookingState) -> dict:
 
 # 차트 완료 후 품질 평가 노드 (결정론 + 규칙, 내부 모니터링용·예외 격리)
 async def _validation_node(state: PostBookingState) -> dict:
-    payload = dict(state.get("chart_payload") or {})
-    payload["chart_result"] = state.get("chart_result") or {}
+    payload = state.get("chart_payload") or {}
+    scheduleid = payload.get("scheduleid")
+    if not scheduleid:
+        logger.warning("[post_booking] validation 건너뜀: scheduleid 없음")
+        return {"validation_result": {}}
     try:
-        from ai.agents.validation import run_validation
-
-        result = await run_validation(
-            payload, lambda _s: None, payload.get("emrid"), payload.get("scheduleid"),
-        )
-    except ModuleNotFoundError as e:
-        logger.warning("[post_booking] validation 모듈 없음, 건너뜀: %s", e)
-        result = {}
+        from app.db.session import AsyncSessionLocal
+        from ai.agents.evaluation import run_case_evaluation
+        async with AsyncSessionLocal() as db:
+            result = await run_case_evaluation(scheduleid, db)
     except Exception as e:
         logger.error("[post_booking] validation 실패: %s", e, exc_info=True)
         result = {}
-    logger.info("[post_booking] validation 완료")
+    logger.info("[post_booking] validation 완료 scheduleid=%s", scheduleid)
     return {"validation_result": result}
 
 

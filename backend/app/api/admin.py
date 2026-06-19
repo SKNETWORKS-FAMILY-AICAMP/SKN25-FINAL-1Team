@@ -282,8 +282,8 @@ async def run_validation_endpoint(
     db: AsyncSession = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    from ai.agents.evaluation import run_evaluation
-    result = await run_evaluation(schedule_id, db)
+    from ai.agents.evaluation import run_case_evaluation
+    result = await run_case_evaluation(schedule_id, db)
     return {"code": 200, "result": result}
 
 
@@ -295,3 +295,15 @@ async def judge_results(
 ):
     from ai.monitoring import recent_judge
     return {"code": 200, "result": recent_judge(needs_review_only)}
+
+
+@router.post("/eval/followup")
+async def eval_followup(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_followup_filter_eval
+    return await run_followup_filter_eval()
+
+
+@router.get("/eval/followup/logs")
+async def followup_logs(current_admin=Depends(get_current_admin)):
+    from ai.monitoring import recent_logs
+    return {"code": 200, "result": recent_logs("followup_filter")}
