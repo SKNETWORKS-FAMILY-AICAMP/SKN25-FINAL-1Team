@@ -295,3 +295,9 @@ async def judge_results(
 ):
     from ai.monitoring import recent_judge
     return {"code": 200, "result": recent_judge(needs_review_only)}
+
+
+@router.post("/eval/followup")
+async def eval_followup(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_followup_filter_eval
+    return await run_followup_filter_eval()

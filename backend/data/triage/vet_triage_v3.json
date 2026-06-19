@@ -1,0 +1,473 @@
+{
+  "meta": {
+    "version": "3.1-discriminator",
+    "model": "Modified VTL (discriminator-based)",
+    "source": "Ruys et al. 2012 (VTL) + CVJ Basic Triage in dogs & cats I–III (2024) Fig.1; 'extended'/추가 항목은 프로젝트 자체 확장(임상 합리성 기준, 수의사 검수 권장).",
+    "scoring": "점수 가산 없음. 추출된 variables로 when의 모든 키가 일치하는 discriminator를 찾아 가장 높은 등급을 채택(RED>ORANGE>YELLOW>GREEN).",
+    "design": "goal=질문LLM용(트리·잎 비노출) / variables=추출LLM용(사실값) / discriminators=엔진용(결정론 판정)."
+  },
+
+  "urgency_order": ["RED", "ORANGE", "YELLOW", "GREEN"],
+
+  "urgency_labels": {
+    "RED": { "vtl": "Immediate", "display": "응급", "twt_minutes": 0 },
+    "ORANGE": { "vtl": "Very urgent", "display": "준응급", "twt_minutes": 15 },
+    "YELLOW": { "vtl": "Urgent", "display": "준응급", "twt_minutes": 45 },
+    "GREEN": { "vtl": "Standard", "display": "일반", "twt_minutes": 120 }
+  },
+
+  "red_flag_guidance": "생명을 위협하는 즉시-응급 신호(사용자에겐 '응급'이라 말하지 말 것): 심한 호흡곤란·청색증·개구호흡(특히 고양이), 지금 발작 중·연속 발작·의식 없음, 쇼크·대량 출혈, 복부가 갑자기 빵빵하게 부풀어오름(위염전), 체온 과고(>40.8℃)/과저(<37℃), 저혈당 의심, 독성물질 섭취, 난산·자궁축농증·산후 경련(자간), 요도폐색(소변 전혀 못 봄), 열사병·익수·감전·기도이물(질식). 이 신호가 보이면 해당 섹션의 RED discriminator로 즉시 분류된다.",
+
+  "sections": [
+    {
+      "id": "RESPIRATORY",
+      "label": "호흡 문제",
+      "origin": "paper",
+      "goal": "호흡곤란 정도와 특이 징후(협착음·피하기종·청색증), 기침·콧물·재채기·코피 양상을 파악한다.",
+      "variables": {
+        "breathing_severity": { "concept": "숨쉬기를 힘들어하는 정도(편함/약간/중간/심함)", "values": ["none", "mild", "moderate", "severe"] },
+        "cyanosis": { "concept": "잇몸·혀가 파랗게 보임(산소부족)", "values": ["no", "yes"] },
+        "breathing_rate": { "concept": "쉬는데도 숨이 빠르고 얕음(빈호흡)", "values": ["normal", "fast"] },
+        "stridor": { "concept": "숨 쉴 때 끽-/그렁대는 상기도 협착음", "values": ["no", "yes"] },
+        "subq_emphysema": { "concept": "피부 밑 공기로 만지면 바스락(피하기종)", "values": ["no", "yes"] },
+        "cough": { "concept": "기침(없음/가끔/잦음/컹컹 거위소리)", "values": ["none", "occasional", "frequent", "honking"] },
+        "nasal_discharge": { "concept": "콧물(없음/맑음/누렇고 끈적/피섞임)", "values": ["none", "clear", "purulent", "bloody"] },
+        "sneezing": { "concept": "재채기·코막힘", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Severe respiratory distress", "urgency": "RED", "when": { "breathing_severity": "severe" } },
+        { "label": "Cyanosis", "urgency": "RED", "when": { "cyanosis": "yes" } },
+        { "label": "Acute stridor", "urgency": "ORANGE", "when": { "stridor": "yes" } },
+        { "label": "Subcutaneous emphysema", "urgency": "ORANGE", "when": { "subq_emphysema": "yes" } },
+        { "label": "Moderate respiratory distress", "urgency": "ORANGE", "when": { "breathing_severity": "moderate" } },
+        { "label": "Epistaxis (bloody nasal discharge)", "urgency": "ORANGE", "when": { "nasal_discharge": "bloody" } },
+        { "label": "Tachypnea at rest", "urgency": "YELLOW", "when": { "breathing_rate": "fast" } },
+        { "label": "Mild respiratory distress", "urgency": "YELLOW", "when": { "breathing_severity": "mild" } },
+        { "label": "Purulent nasal discharge (URI)", "urgency": "YELLOW", "when": { "nasal_discharge": "purulent" } },
+        { "label": "Honking cough (tracheal collapse)", "urgency": "YELLOW", "when": { "cough": "honking" } },
+        { "label": "Frequent cough", "urgency": "YELLOW", "when": { "cough": "frequent" } },
+        { "label": "Occasional cough", "urgency": "GREEN", "when": { "cough": "occasional" } },
+        { "label": "Sneezing / clear nasal (mild URI)", "urgency": "GREEN", "when": { "sneezing": "yes" } },
+        { "label": "Clear nasal discharge", "urgency": "GREEN", "when": { "nasal_discharge": "clear" } }
+      ]
+    },
+
+    {
+      "id": "NEUROLOGIC",
+      "label": "신경 증상",
+      "origin": "paper",
+      "goal": "발작 양상·의식, 평형(머리기울임/돌기), 마비·진전·운동실조, 목 통증, 인지장애를 파악한다.",
+      "variables": {
+        "seizure_status": { "concept": "발작 상태(없음/최근 1회 끝남/연달아/지금 진행 중)", "values": ["none", "recent_single", "cluster", "active"] },
+        "consciousness": { "concept": "의식 수준(정상/멍함/매우 처짐/무반응)", "values": ["normal", "dull", "stupor", "unresponsive"] },
+        "vestibular": { "concept": "평형 이상(머리기울임/빙빙 돔·안구떨림)", "values": ["none", "head_tilt", "circling_nystagmus"] },
+        "limb_function": { "concept": "다리 움직임(정상/약함/마비)", "values": ["normal", "paresis", "paralysis"] },
+        "tremor": { "concept": "온몸 떨림·경련 같은 진전", "values": ["no", "yes"] },
+        "ataxia": { "concept": "취한 듯 비틀비틀 걸음(운동실조)", "values": ["no", "yes"] },
+        "neck_back_pain": { "concept": "목·등을 아파하며 안 움직이려 함", "values": ["no", "yes"] },
+        "behavior": { "concept": "갑작스런 이상행동·끊임없는 비명", "values": ["normal", "acute_abnormal"] },
+        "cognitive": { "concept": "노령견 멍하니 헤맴·방향감각 상실(인지장애)", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Actively seizuring", "urgency": "RED", "when": { "seizure_status": "active" } },
+        { "label": "Cluster seizures", "urgency": "RED", "when": { "seizure_status": "cluster" } },
+        { "label": "Unresponsive", "urgency": "RED", "when": { "consciousness": "unresponsive" } },
+        { "label": "Acute abnormal behavior", "urgency": "RED", "when": { "behavior": "acute_abnormal" } },
+        { "label": "Altered consciousness (dull)", "urgency": "ORANGE", "when": { "consciousness": "dull" } },
+        { "label": "Stupor", "urgency": "ORANGE", "when": { "consciousness": "stupor" } },
+        { "label": "Acute paralysis", "urgency": "ORANGE", "when": { "limb_function": "paralysis" } },
+        { "label": "Generalized tremor", "urgency": "ORANGE", "when": { "tremor": "yes" } },
+        { "label": "Acute paresis / spinal deficit", "urgency": "YELLOW", "when": { "limb_function": "paresis" } },
+        { "label": "Vestibular / head tilt", "urgency": "YELLOW", "when": { "vestibular": "head_tilt" } },
+        { "label": "Circling / nystagmus", "urgency": "YELLOW", "when": { "vestibular": "circling_nystagmus" } },
+        { "label": "Ataxia", "urgency": "YELLOW", "when": { "ataxia": "yes" } },
+        { "label": "Neck / back pain (IVDD suspect)", "urgency": "YELLOW", "when": { "neck_back_pain": "yes" } },
+        { "label": "Recent single seizure (recovered)", "urgency": "GREEN", "when": { "seizure_status": "recent_single" } },
+        { "label": "Cognitive dysfunction (senior)", "urgency": "GREEN", "when": { "cognitive": "yes" } }
+      ]
+    },
+
+    {
+      "id": "CARDIOVASCULAR",
+      "label": "순환/심장 문제",
+      "origin": "paper",
+      "goal": "쇼크·실신·출혈 정도, 심장 이상(심잡음·운동불내성·복수)을 파악한다. 잇몸색·기력·실신이 핵심.",
+      "variables": {
+        "perfusion": { "concept": "순환(정상/잇몸 창백/쇼크-차고 처지고 맥약함)", "values": ["normal", "pale_mm", "shock"] },
+        "collapse": { "concept": "쓰러짐(없음/쓰러졌다 회복/지금 쓰러져 있음)", "values": ["none", "syncope_recovered", "collapsed_now"] },
+        "hemorrhage": { "concept": "출혈(없음/소량/조절 안 되는 다량/분출성)", "values": ["none", "minor", "major", "profuse"] },
+        "ate_signs": { "concept": "갑자기 뒷다리 마비+차갑고 극심한 통증(혈전색전)", "values": ["no", "yes"] },
+        "exercise_intolerance": { "concept": "조금만 움직여도 헥헥대고 지침(운동불내성)", "values": ["no", "yes"] },
+        "ascites": { "concept": "배에 물이 차 늘어짐(복수)", "values": ["no", "yes"] },
+        "heart_sign": { "concept": "심잡음·불규칙 심박(주로 검진서 발견)", "values": ["none", "murmur"] }
+      },
+      "discriminators": [
+        { "label": "Shock", "urgency": "RED", "when": { "perfusion": "shock" } },
+        { "label": "Collapsed now", "urgency": "RED", "when": { "collapse": "collapsed_now" } },
+        { "label": "Profuse hemorrhage", "urgency": "RED", "when": { "hemorrhage": "profuse" } },
+        { "label": "Aortic thromboembolism signs", "urgency": "RED", "when": { "ate_signs": "yes" } },
+        { "label": "Uncontrolled major bleeding", "urgency": "ORANGE", "when": { "hemorrhage": "major" } },
+        { "label": "Pale mucous membranes (no shock)", "urgency": "ORANGE", "when": { "perfusion": "pale_mm" } },
+        { "label": "Syncope recovered", "urgency": "ORANGE", "when": { "collapse": "syncope_recovered" } },
+        { "label": "Ascites (fluid wave)", "urgency": "ORANGE", "when": { "ascites": "yes" } },
+        { "label": "Uncontrollable minor bleeding", "urgency": "YELLOW", "when": { "hemorrhage": "minor" } },
+        { "label": "Exercise intolerance", "urgency": "YELLOW", "when": { "exercise_intolerance": "yes" } },
+        { "label": "Heart murmur (incidental)", "urgency": "GREEN", "when": { "heart_sign": "murmur" } }
+      ]
+    },
+
+    {
+      "id": "GASTROINTESTINAL",
+      "label": "소화기 증상",
+      "origin": "paper",
+      "goal": "복부 팽만(특히 급성), 구토·설사·변비 양상, 이물 섭취, 식욕·복통·황달·흑변을 파악한다.",
+      "variables": {
+        "abdominal_distension": { "concept": "배가 부풂(없음/있음/갑자기 빵빵-위염전)", "values": ["none", "present", "rapid_onset"] },
+        "vomiting": { "concept": "구토(없음/가끔/계속/피 섞임)", "values": ["none", "occasional", "persistent", "hematemesis"] },
+        "diarrhea": { "concept": "설사(없음/약간/심함/혈변)", "values": ["none", "mild", "severe", "bloody"] },
+        "foreign_body": { "concept": "이물 삼킴(아니오/가능성/24시간 넘고 식욕없음·구토)", "values": ["no", "possible", "likely_over_24h"] },
+        "appetite": { "concept": "식욕(정상/줄음/하루 이상 전혀 안 먹음)", "values": ["normal", "reduced", "anorexic"] },
+        "abdominal_pain": { "concept": "배를 만지면 아파하거나 기도자세(복통)", "values": ["none", "mild", "severe"] },
+        "constipation": { "concept": "변을 못 보고 힘만 줌(변비)", "values": ["no", "yes"] },
+        "regurgitation": { "concept": "먹자마자 소화 안 된 채 게워냄(역류)", "values": ["no", "yes"] },
+        "jaundice": { "concept": "잇몸·눈·피부가 노래짐(황달)", "values": ["no", "yes"] },
+        "melena": { "concept": "검은 타르색 변(흑변)", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Rapid onset abdominal distension (GDV)", "urgency": "RED", "when": { "abdominal_distension": "rapid_onset" } },
+        { "label": "Severe abdominal pain", "urgency": "ORANGE", "when": { "abdominal_pain": "severe" } },
+        { "label": "Hematemesis", "urgency": "ORANGE", "when": { "vomiting": "hematemesis" } },
+        { "label": "Possible foreign body >24h + signs", "urgency": "ORANGE", "when": { "foreign_body": "likely_over_24h" } },
+        { "label": "Bloody diarrhea", "urgency": "ORANGE", "when": { "diarrhea": "bloody" } },
+        { "label": "Jaundice", "urgency": "ORANGE", "when": { "jaundice": "yes" } },
+        { "label": "Persistent vomiting", "urgency": "YELLOW", "when": { "vomiting": "persistent" } },
+        { "label": "Melena", "urgency": "YELLOW", "when": { "melena": "yes" } },
+        { "label": "Possible foreign body ingestion", "urgency": "YELLOW", "when": { "foreign_body": "possible" } },
+        { "label": "Severe diarrhea", "urgency": "YELLOW", "when": { "diarrhea": "severe" } },
+        { "label": "Abdominal distension (non-acute)", "urgency": "YELLOW", "when": { "abdominal_distension": "present" } },
+        { "label": "Anorexia (>24h)", "urgency": "YELLOW", "when": { "appetite": "anorexic" } },
+        { "label": "Constipation / obstipation", "urgency": "YELLOW", "when": { "constipation": "yes" } },
+        { "label": "Regurgitation", "urgency": "YELLOW", "when": { "regurgitation": "yes" } },
+        { "label": "Occasional vomiting", "urgency": "GREEN", "when": { "vomiting": "occasional" } },
+        { "label": "Mild diarrhea", "urgency": "GREEN", "when": { "diarrhea": "mild" } },
+        { "label": "Reduced appetite", "urgency": "GREEN", "when": { "appetite": "reduced" } }
+      ]
+    },
+
+    {
+      "id": "TOXIN",
+      "label": "중독(독성물질 섭취)",
+      "origin": "extended",
+      "goal": "무엇을 얼마나 언제 먹었는지 파악한다. 알려진 독성물질이면 무증상이라도 시간이 생명이다.",
+      "variables": {
+        "substance": { "concept": "섭취 의심 물질", "values": ["none", "chocolate", "xylitol", "grapes_raisins", "onion_garlic", "rodenticide", "human_medication", "nsaid_acetaminophen", "antifreeze", "lily_cat", "toxic_plant", "marijuana_thc", "alcohol", "caffeine", "snail_bait", "essential_oil", "household_chemical", "battery", "unknown"] },
+        "symptom_onset": { "concept": "증상 동반(없음/구토/신경증상/출혈)", "values": ["none", "vomiting", "neuro", "bleeding"] }
+      },
+      "discriminators": [
+        { "label": "Xylitol ingestion", "urgency": "RED", "when": { "substance": "xylitol" } },
+        { "label": "Rodenticide ingestion", "urgency": "RED", "when": { "substance": "rodenticide" } },
+        { "label": "Antifreeze ingestion", "urgency": "RED", "when": { "substance": "antifreeze" } },
+        { "label": "Grapes/raisins ingestion", "urgency": "RED", "when": { "substance": "grapes_raisins" } },
+        { "label": "Lily ingestion (cat)", "urgency": "RED", "when": { "substance": "lily_cat" } },
+        { "label": "NSAID / acetaminophen ingestion", "urgency": "RED", "when": { "substance": "nsaid_acetaminophen" } },
+        { "label": "Pesticide / snail bait ingestion", "urgency": "RED", "when": { "substance": "snail_bait" } },
+        { "label": "Battery ingestion", "urgency": "RED", "when": { "substance": "battery" } },
+        { "label": "Chocolate ingestion", "urgency": "ORANGE", "when": { "substance": "chocolate" } },
+        { "label": "Onion/garlic ingestion", "urgency": "ORANGE", "when": { "substance": "onion_garlic" } },
+        { "label": "Human medication ingestion", "urgency": "ORANGE", "when": { "substance": "human_medication" } },
+        { "label": "Marijuana/THC ingestion", "urgency": "ORANGE", "when": { "substance": "marijuana_thc" } },
+        { "label": "Alcohol ingestion", "urgency": "ORANGE", "when": { "substance": "alcohol" } },
+        { "label": "Caffeine ingestion", "urgency": "ORANGE", "when": { "substance": "caffeine" } },
+        { "label": "Toxic plant ingestion", "urgency": "ORANGE", "when": { "substance": "toxic_plant" } },
+        { "label": "Essential oil exposure", "urgency": "ORANGE", "when": { "substance": "essential_oil" } },
+        { "label": "Household chemical ingestion", "urgency": "ORANGE", "when": { "substance": "household_chemical" } },
+        { "label": "Unknown substance ingestion", "urgency": "ORANGE", "when": { "substance": "unknown" } }
+      ]
+    },
+
+    {
+      "id": "ENVIRONMENTAL",
+      "label": "환경/사고성 응급",
+      "origin": "extended",
+      "goal": "열사병·저체온·익수·감전·기도이물(질식)·연기흡입 같은 환경·사고성 위급을 가른다.",
+      "variables": {
+        "heatstroke": { "concept": "더운 환경 후 헥헥+쓰러짐·축 늘어짐(열사병)", "values": ["no", "suspected"] },
+        "hypothermia": { "concept": "추위 노출 후 몸이 차고 떨림·처짐(저체온)", "values": ["no", "suspected"] },
+        "frostbite": { "concept": "귀끝·발끝·꼬리 동상(창백·검게 변함)", "values": ["no", "yes"] },
+        "drowning": { "concept": "물에 빠짐(익수)", "values": ["no", "yes"] },
+        "electric_burn": { "concept": "감전·전기화상", "values": ["no", "yes"] },
+        "smoke_inhalation": { "concept": "화재·연기 흡입", "values": ["no", "yes"] },
+        "choking": { "concept": "목에 걸려 숨 못 쉼·캑캑·청색증(기도이물)", "values": ["no", "yes"] },
+        "insect_sting": { "concept": "벌·곤충 쏘임으로 붓고 가려움", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Heatstroke", "urgency": "RED", "when": { "heatstroke": "suspected" } },
+        { "label": "Drowning / near-drowning", "urgency": "RED", "when": { "drowning": "yes" } },
+        { "label": "Choking / airway foreign body", "urgency": "RED", "when": { "choking": "yes" } },
+        { "label": "Electric shock / burn", "urgency": "RED", "when": { "electric_burn": "yes" } },
+        { "label": "Smoke inhalation", "urgency": "RED", "when": { "smoke_inhalation": "yes" } },
+        { "label": "Hypothermia", "urgency": "ORANGE", "when": { "hypothermia": "suspected" } },
+        { "label": "Frostbite", "urgency": "ORANGE", "when": { "frostbite": "yes" } },
+        { "label": "Insect sting (localized)", "urgency": "YELLOW", "when": { "insect_sting": "yes" } }
+      ]
+    },
+
+    {
+      "id": "TRAUMA",
+      "label": "외상/사고",
+      "origin": "paper",
+      "goal": "사고 종류와 상처 심각도를 파악한다. 교통사고·추락·동물 공격 직후엔 겉이 멀쩡해도 내부 손상 위험.",
+      "variables": {
+        "trauma_event": { "concept": "큰 사고(없음/교통사고·추락 등 고에너지/동물에 물림)", "values": ["none", "high_impact", "animal_attack"] },
+        "wound": { "concept": "상처(없음/작고 얕음/크고 깊음/장기 노출(적출)/관통)", "values": ["none", "minor", "large", "evisceration", "penetrating"] },
+        "fracture": { "concept": "골절 의심(없음/폐쇄/개방-뼈 노출)", "values": ["none", "closed", "open"] },
+        "envenomation": { "concept": "뱀·독충 물림(독)", "values": ["no", "yes"] },
+        "burn": { "concept": "화상(없음/경미/넓거나 깊음)", "values": ["none", "minor", "severe"] },
+        "nail_tail": { "concept": "발톱 부러짐·꼬리 다침 등 경미 외상", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Evisceration", "urgency": "RED", "when": { "wound": "evisceration" } },
+        { "label": "Penetrating injury", "urgency": "RED", "when": { "wound": "penetrating" } },
+        { "label": "Envenomation", "urgency": "RED", "when": { "envenomation": "yes" } },
+        { "label": "High-impact trauma (HBC/fall)", "urgency": "RED", "when": { "trauma_event": "high_impact" } },
+        { "label": "Severe burn", "urgency": "RED", "when": { "burn": "severe" } },
+        { "label": "Animal attack / bite wound", "urgency": "ORANGE", "when": { "trauma_event": "animal_attack" } },
+        { "label": "Open fracture", "urgency": "ORANGE", "when": { "fracture": "open" } },
+        { "label": "Closed fracture", "urgency": "YELLOW", "when": { "fracture": "closed" } },
+        { "label": "Large/deep wound", "urgency": "YELLOW", "when": { "wound": "large" } },
+        { "label": "Minor burn", "urgency": "YELLOW", "when": { "burn": "minor" } },
+        { "label": "Minor superficial wound", "urgency": "GREEN", "when": { "wound": "minor" } },
+        { "label": "Broken nail / minor tail injury", "urgency": "GREEN", "when": { "nail_tail": "yes" } }
+      ]
+    },
+
+    {
+      "id": "ORTHOPEDIC",
+      "label": "근골격/보행 문제",
+      "origin": "paper",
+      "goal": "다리를 못 디디는지·절뚝이는지, 갑작스런 마비, 관절 종창·뻣뻣함을 파악한다.",
+      "variables": {
+        "ambulation": { "concept": "보행(정상/절뚝임/한쪽 못 디딤/아예 못 일어섬)", "values": ["normal", "limping", "non_weight_bearing", "cannot_stand"] },
+        "onset": { "concept": "발생(서서히/갑자기)", "values": ["gradual", "acute"] },
+        "pain_on_move": { "concept": "움직일 때 통증(없음/약간/심함)", "values": ["none", "mild", "severe"] },
+        "joint_swelling": { "concept": "관절이 붓고 열감(관절염·감염)", "values": ["no", "yes"] },
+        "stiffness": { "concept": "특히 아침에 뻣뻣하고 굳음", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Acute inability to stand (both hindlimbs)", "urgency": "ORANGE", "when": { "ambulation": "cannot_stand", "onset": "acute" } },
+        { "label": "Non-weight-bearing lameness", "urgency": "YELLOW", "when": { "ambulation": "non_weight_bearing" } },
+        { "label": "Severe pain on movement", "urgency": "YELLOW", "when": { "pain_on_move": "severe" } },
+        { "label": "Swollen joint", "urgency": "YELLOW", "when": { "joint_swelling": "yes" } },
+        { "label": "Chronic inability to stand", "urgency": "YELLOW", "when": { "ambulation": "cannot_stand" } },
+        { "label": "Mild limping", "urgency": "GREEN", "when": { "ambulation": "limping" } },
+        { "label": "Stiffness (arthritis)", "urgency": "GREEN", "when": { "stiffness": "yes" } }
+      ]
+    },
+
+    {
+      "id": "UROGENITAL",
+      "label": "배뇨 문제",
+      "origin": "paper",
+      "goal": "소변을 아예 못 보는지(요도폐색)부터 가른다. 혈뇨·배뇨통·다음다뇨·요실금도 파악.",
+      "variables": {
+        "urination": { "concept": "배뇨(정상/조금씩 자주·힘줌/아예 못 봄)", "values": ["normal", "stranguria", "obstruction"] },
+        "hematuria": { "concept": "혈뇨(소변에 피)", "values": ["no", "yes"] },
+        "pain_urinate": { "concept": "배뇨 시 통증·울음", "values": ["no", "yes"] },
+        "polyuria": { "concept": "물 많이 마시고 소변 많이 봄(다음다뇨)", "values": ["no", "yes"] },
+        "incontinence": { "concept": "자기도 모르게 소변 샘(요실금)", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Urethral obstruction (cannot urinate)", "urgency": "RED", "when": { "urination": "obstruction" } },
+        { "label": "Hematuria with straining", "urgency": "YELLOW", "when": { "hematuria": "yes", "urination": "stranguria" } },
+        { "label": "Hematuria without straining", "urgency": "YELLOW", "when": { "hematuria": "yes" } },
+        { "label": "Painful urination", "urgency": "YELLOW", "when": { "pain_urinate": "yes" } },
+        { "label": "Polyuria/polydipsia", "urgency": "YELLOW", "when": { "polyuria": "yes" } },
+        { "label": "Stranguria / pollakiuria", "urgency": "GREEN", "when": { "urination": "stranguria" } },
+        { "label": "Urinary incontinence", "urgency": "GREEN", "when": { "incontinence": "yes" } }
+      ]
+    },
+
+    {
+      "id": "REPRODUCTIVE",
+      "label": "생식기/산과",
+      "origin": "paper",
+      "goal": "난산·자궁축농증·산후 자간·고환 종창·유선염 같은 생식기 응급과 일반 생식기 증상을 가른다.",
+      "variables": {
+        "dystocia": { "concept": "분만 곤란(없음/정상 진통/30분 이상 힘줘도 안 나옴·태아 일부 보임)", "values": ["none", "active_labor", "prolonged_or_stuck"] },
+        "pyometra_signs": { "concept": "중성화 안 한 암컷이 음부서 고름·기력저하·다음다뇨(자궁축농증)", "values": ["no", "suspected"] },
+        "eclampsia": { "concept": "출산·수유 중 암컷이 떨고 경련(자간·산후 저칼슘)", "values": ["no", "suspected"] },
+        "mastitis": { "concept": "유선이 붓고 뜨겁고 아픔(유선염)", "values": ["no", "yes"] },
+        "testicular": { "concept": "고환이 갑자기 붓고 아파함", "values": ["no", "acute_swelling"] },
+        "paraphimosis": { "concept": "수컷 생식기가 안 들어가고 부음", "values": ["no", "yes"] },
+        "vaginal_discharge": { "concept": "비정상 질 분비물·출혈", "values": ["none", "abnormal"] }
+      },
+      "discriminators": [
+        { "label": "Dystocia (prolonged labor / presenting parts)", "urgency": "RED", "when": { "dystocia": "prolonged_or_stuck" } },
+        { "label": "Pyometra suspected", "urgency": "RED", "when": { "pyometra_signs": "suspected" } },
+        { "label": "Eclampsia (postpartum)", "urgency": "RED", "when": { "eclampsia": "suspected" } },
+        { "label": "Active labor", "urgency": "ORANGE", "when": { "dystocia": "active_labor" } },
+        { "label": "Acute testicular swelling/pain", "urgency": "ORANGE", "when": { "testicular": "acute_swelling" } },
+        { "label": "Paraphimosis", "urgency": "ORANGE", "when": { "paraphimosis": "yes" } },
+        { "label": "Mastitis", "urgency": "YELLOW", "when": { "mastitis": "yes" } },
+        { "label": "Abnormal vaginal discharge", "urgency": "YELLOW", "when": { "vaginal_discharge": "abnormal" } }
+      ]
+    },
+
+    {
+      "id": "SKIN",
+      "label": "피부 문제",
+      "origin": "extended",
+      "goal": "얼굴 부종 같은 알레르기 급성 반응부터 가렵고 긁음·발진·농양·상처·혹·탈모·기생충을 파악한다.",
+      "variables": {
+        "facial_swelling": { "concept": "얼굴·주둥이·눈두덩이 갑자기 부음(두드러기·알레르기)", "values": ["no", "yes"] },
+        "hives": { "concept": "몸 전체 두드러기·발진이 확 올라옴", "values": ["no", "yes"] },
+        "itch": { "concept": "가려움(없음/약간/심하게 긁고 물어뜯음)", "values": ["none", "mild", "severe"] },
+        "lesion_extent": { "concept": "병변 범위(없음/한 부위/넓게 퍼짐)", "values": ["none", "localized", "widespread"] },
+        "abscess": { "concept": "곪아서 부어오른 농양·고름", "values": ["no", "yes"] },
+        "skin_wound": { "concept": "피부 상처(없음/얕음/깊거나 큼)", "values": ["none", "superficial", "deep"] },
+        "hot_spot": { "concept": "핥아서 빨갛게 짓무른 부위(핫스팟)", "values": ["no", "yes"] },
+        "lump": { "concept": "피부에 혹·멍울이 만져짐", "values": ["no", "yes"] },
+        "hair_loss": { "concept": "털 빠짐·탈모", "values": ["no", "yes"] },
+        "parasite": { "concept": "벼룩·진드기 등 기생충", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Facial swelling (allergic reaction)", "urgency": "ORANGE", "when": { "facial_swelling": "yes" } },
+        { "label": "Generalized hives", "urgency": "ORANGE", "when": { "hives": "yes" } },
+        { "label": "Abscess", "urgency": "YELLOW", "when": { "abscess": "yes" } },
+        { "label": "Severe pruritus", "urgency": "YELLOW", "when": { "itch": "severe" } },
+        { "label": "Widespread lesion", "urgency": "YELLOW", "when": { "lesion_extent": "widespread" } },
+        { "label": "Deep skin wound", "urgency": "YELLOW", "when": { "skin_wound": "deep" } },
+        { "label": "Hot spot (acute moist dermatitis)", "urgency": "YELLOW", "when": { "hot_spot": "yes" } },
+        { "label": "Localized lesion", "urgency": "GREEN", "when": { "lesion_extent": "localized" } },
+        { "label": "Mild itch", "urgency": "GREEN", "when": { "itch": "mild" } },
+        { "label": "Superficial wound", "urgency": "GREEN", "when": { "skin_wound": "superficial" } },
+        { "label": "Skin lump/mass", "urgency": "GREEN", "when": { "lump": "yes" } },
+        { "label": "Hair loss / alopecia", "urgency": "GREEN", "when": { "hair_loss": "yes" } },
+        { "label": "Parasites (fleas/ticks)", "urgency": "GREEN", "when": { "parasite": "yes" } }
+      ]
+    },
+
+    {
+      "id": "EYE",
+      "label": "눈 문제",
+      "origin": "extended",
+      "goal": "안구 돌출·화학적 손상 같은 응급부터 통증·시력저하·충혈·분비물·각막·이물·체리아이를 파악한다.",
+      "variables": {
+        "globe": { "concept": "안구 상태(정상/튀어나옴(돌출)/터짐)", "values": ["normal", "proptosis", "ruptured"] },
+        "chemical_injury": { "concept": "화학물질·세제가 눈에 들어감", "values": ["no", "yes"] },
+        "vision": { "concept": "시력(정상/감소/갑자기 안 보임)", "values": ["normal", "reduced", "sudden_loss"] },
+        "eye_pain": { "concept": "눈 통증(없음/약간/심하게 못 뜸·비빔)", "values": ["none", "mild", "severe"] },
+        "corneal": { "concept": "각막 흐림·궤양·표면 손상", "values": ["no", "yes"] },
+        "foreign_body_eye": { "concept": "눈에 이물(풀씨 등)", "values": ["no", "yes"] },
+        "discharge": { "concept": "눈곱·분비물(없음/맑음/고름같이 누렇고 끈적)", "values": ["none", "clear", "purulent"] },
+        "redness": { "concept": "충혈(없음/약간/심함)", "values": ["none", "mild", "severe"] },
+        "cherry_eye": { "concept": "눈 안쪽에 빨간 살덩이 튀어나옴(체리아이)", "values": ["no", "yes"] },
+        "epiphora": { "concept": "눈물 많이 흘러 눈가가 젖음", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Proptosis (eye out of socket)", "urgency": "RED", "when": { "globe": "proptosis" } },
+        { "label": "Ruptured globe", "urgency": "RED", "when": { "globe": "ruptured" } },
+        { "label": "Chemical ocular injury", "urgency": "RED", "when": { "chemical_injury": "yes" } },
+        { "label": "Sudden vision loss", "urgency": "ORANGE", "when": { "vision": "sudden_loss" } },
+        { "label": "Severe eye pain", "urgency": "ORANGE", "when": { "eye_pain": "severe" } },
+        { "label": "Ocular foreign body", "urgency": "ORANGE", "when": { "foreign_body_eye": "yes" } },
+        { "label": "Corneal ulcer / damage", "urgency": "YELLOW", "when": { "corneal": "yes" } },
+        { "label": "Purulent discharge", "urgency": "YELLOW", "when": { "discharge": "purulent" } },
+        { "label": "Severe redness", "urgency": "YELLOW", "when": { "redness": "severe" } },
+        { "label": "Cherry eye", "urgency": "YELLOW", "when": { "cherry_eye": "yes" } },
+        { "label": "Mild redness", "urgency": "GREEN", "when": { "redness": "mild" } },
+        { "label": "Clear discharge / epiphora", "urgency": "GREEN", "when": { "discharge": "clear" } },
+        { "label": "Tearing (epiphora)", "urgency": "GREEN", "when": { "epiphora": "yes" } }
+      ]
+    },
+
+    {
+      "id": "EAR",
+      "label": "귀 문제",
+      "origin": "extended",
+      "goal": "평형 이상 동반 귀 문제(전정), 통증·분비물·악취 정도, 귀 혈종·이물·귀진드기를 파악한다.",
+      "variables": {
+        "head_tilt": { "concept": "머리를 한쪽으로 기울임+비틀거림(전정 이상)", "values": ["no", "yes"] },
+        "ear_pain": { "concept": "귀 통증(없음/약간/심하게 만지면 비명)", "values": ["none", "mild", "severe"] },
+        "discharge_ear": { "concept": "귀 분비물·냄새(없음/있음/심한 악취)", "values": ["none", "present", "foul"] },
+        "aural_hematoma": { "concept": "귓바퀴가 빵빵하게 부음(혈종)", "values": ["no", "yes"] },
+        "ear_foreign_body": { "concept": "귀에 이물(풀씨 등)로 갑자기 긁고 흔듦", "values": ["no", "yes"] },
+        "ear_mites": { "concept": "검은 귀지·심한 가려움(귀 진드기)", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Head tilt with vestibular signs", "urgency": "YELLOW", "when": { "head_tilt": "yes" } },
+        { "label": "Severe otitis (pain)", "urgency": "YELLOW", "when": { "ear_pain": "severe" } },
+        { "label": "Aural hematoma", "urgency": "YELLOW", "when": { "aural_hematoma": "yes" } },
+        { "label": "Foul ear discharge", "urgency": "YELLOW", "when": { "discharge_ear": "foul" } },
+        { "label": "Ear foreign body", "urgency": "YELLOW", "when": { "ear_foreign_body": "yes" } },
+        { "label": "Mild otitis (discharge)", "urgency": "GREEN", "when": { "discharge_ear": "present" } },
+        { "label": "Mild ear discomfort", "urgency": "GREEN", "when": { "ear_pain": "mild" } },
+        { "label": "Ear mites", "urgency": "GREEN", "when": { "ear_mites": "yes" } }
+      ]
+    },
+
+    {
+      "id": "ORAL_DENTAL",
+      "label": "구강/치아 문제",
+      "origin": "extended",
+      "goal": "삼킴·호흡을 막는 구강 이물(질식)부터 구강 출혈·치아 골절·구내염·잇몸질환·구강 종괴를 파악한다.",
+      "variables": {
+        "oral_obstruction": { "concept": "입·목에 뭔가 걸려 캑캑대고 못 삼킴(질식 위험)", "values": ["no", "yes"] },
+        "drooling": { "concept": "침 흘림(없음/약간/갑자기 많이)", "values": ["none", "mild", "severe"] },
+        "oral_bleeding": { "concept": "입안 출혈", "values": ["no", "yes"] },
+        "fractured_tooth": { "concept": "이가 부러짐(통증 동반 여부)", "values": ["no", "yes"] },
+        "eating_difficulty": { "concept": "아파서 못 먹음·한쪽으로만 씹음", "values": ["no", "yes"] },
+        "oral_mass": { "concept": "입안·잇몸에 혹·종괴", "values": ["no", "yes"] },
+        "stomatitis": { "concept": "잇몸·입안이 빨갛게 헐고 염증(구내염)", "values": ["no", "yes"] },
+        "halitosis_tartar": { "concept": "입냄새·치석(치주질환)", "values": ["no", "yes"] }
+      },
+      "discriminators": [
+        { "label": "Oral/airway obstruction (choking)", "urgency": "RED", "when": { "oral_obstruction": "yes" } },
+        { "label": "Sudden profuse drooling (foreign body)", "urgency": "ORANGE", "when": { "drooling": "severe" } },
+        { "label": "Oral trauma / bleeding", "urgency": "YELLOW", "when": { "oral_bleeding": "yes" } },
+        { "label": "Fractured tooth", "urgency": "YELLOW", "when": { "fractured_tooth": "yes" } },
+        { "label": "Difficulty eating", "urgency": "YELLOW", "when": { "eating_difficulty": "yes" } },
+        { "label": "Oral mass", "urgency": "YELLOW", "when": { "oral_mass": "yes" } },
+        { "label": "Stomatitis / gingivitis", "urgency": "YELLOW", "when": { "stomatitis": "yes" } },
+        { "label": "Mild oral discomfort", "urgency": "GREEN", "when": { "drooling": "mild" } },
+        { "label": "Halitosis / tartar (dental disease)", "urgency": "GREEN", "when": { "halitosis_tartar": "yes" } }
+      ]
+    },
+
+    {
+      "id": "GENERAL",
+      "label": "전신/기타 증상",
+      "origin": "paper",
+      "goal": "체온 이상·저혈당·전신 통증·기력저하·탈수·발열·식욕·체중·림프절·아나필락시스 등 전신 신호를 파악한다.",
+      "variables": {
+        "body_temp": { "concept": "체온(정상/높음/매우 높음>40.8℃/낮음<37℃)", "values": ["normal", "high", "very_high", "low"] },
+        "hypoglycemia": { "concept": "저혈당 의심(소형·어린 동물이 축 처지고 떨고 비틀)", "values": ["no", "suspected"] },
+        "anaphylaxis": { "concept": "갑자기 무너지듯 처지고 붓고 토함(전신 알레르기 쇼크)", "values": ["no", "suspected"] },
+        "pain": { "concept": "전신 통증(없음/약간/중간/심함)", "values": ["none", "mild", "moderate", "severe"] },
+        "lethargy": { "concept": "기력(정상/축 늘어지고 반응 둔함)", "values": ["none", "marked"] },
+        "dehydration": { "concept": "탈수(없음/약간/심함>8%-피부 안 돌아옴·눈 꺼짐)", "values": ["none", "mild", "severe"] },
+        "fever_signs": { "concept": "열나 보임·떨림·기운 없음", "values": ["no", "yes"] },
+        "lymph_nodes": { "concept": "턱밑·겨드랑이 등 림프절이 부음", "values": ["no", "yes"] },
+        "weight_loss": { "concept": "최근 체중이 눈에 띄게 빠짐", "values": ["no", "yes"] },
+        "appetite_general": { "concept": "전반적 식욕 저하", "values": ["normal", "reduced"] }
+      },
+      "discriminators": [
+        { "label": "Hyperthermia (>40.8C)", "urgency": "RED", "when": { "body_temp": "very_high" } },
+        { "label": "Hypothermia (<37C)", "urgency": "RED", "when": { "body_temp": "low" } },
+        { "label": "Suspected hypoglycemia", "urgency": "RED", "when": { "hypoglycemia": "suspected" } },
+        { "label": "Anaphylaxis", "urgency": "RED", "when": { "anaphylaxis": "suspected" } },
+        { "label": "Severe pain", "urgency": "ORANGE", "when": { "pain": "severe" } },
+        { "label": "Marked lethargy", "urgency": "ORANGE", "when": { "lethargy": "marked" } },
+        { "label": "Severe dehydration (>8%)", "urgency": "ORANGE", "when": { "dehydration": "severe" } },
+        { "label": "Elevated temperature", "urgency": "YELLOW", "when": { "body_temp": "high" } },
+        { "label": "Moderate pain", "urgency": "YELLOW", "when": { "pain": "moderate" } },
+        { "label": "Mild dehydration", "urgency": "YELLOW", "when": { "dehydration": "mild" } },
+        { "label": "Fever signs", "urgency": "YELLOW", "when": { "fever_signs": "yes" } },
+        { "label": "Weight loss", "urgency": "YELLOW", "when": { "weight_loss": "yes" } },
+        { "label": "Mild pain / local inflammation", "urgency": "GREEN", "when": { "pain": "mild" } },
+        { "label": "Swollen lymph nodes", "urgency": "GREEN", "when": { "lymph_nodes": "yes" } },
+        { "label": "Reduced appetite (general)", "urgency": "GREEN", "when": { "appetite_general": "reduced" } }
+      ]
+    }
+  ]
+}

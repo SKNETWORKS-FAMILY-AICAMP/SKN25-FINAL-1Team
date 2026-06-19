@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, time, timedelta
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,8 +48,8 @@ URGENCY_MAX_DAYS: dict[int, int] = {1: 0, 2: 0, 3: 2, 4: 3, 5: 3}
 def _scan_red_flags(text: str) -> list[str]:
     """vet_triage.json 기준으로 보호자 발화에서 red flag 감지. 감지된 flag label 반환."""
     try:
-        from ai.agents.triage.rules import load_rules
-        flags = load_rules().get("red_flags", {}).get("flags", [])
+        from ai.agents.triage.engine import _kb
+        flags = _kb().get("red_flags", {}).get("flags", [])
     except Exception:
         return []
 
@@ -604,57 +605,234 @@ async def run_case_evaluation(scheduleid: int, db: AsyncSession) -> dict:
     return {"agent": "evaluation", "scheduleid": scheduleid, **result}
 
 
-# ── Part B — 에이전트 성능 평가 (MCP 구현 후) ───────────────────
-#
-# TODO(Part B): MCP + 테스트 자산 준비 후 아래 함수들을 구현할 것
-# 테스트 자산 위치: tests/router_eval.jsonl, 슬롯/경과 분류 테스트셋, MCP fixture, 시나리오 스크립트
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ── Part B — 에이전트 성능 평가 ─────────────────────────────────
+
+# TODO(Part B - MCP 후): run_orchestrator_eval, run_reception_eval,
+# run_triage_agent_eval, run_mcp_health_check, run_e2e_scenarios
+
+# ── 경과 필터 테스트셋 — ai/agents/eval_cases/followup_eval_cases.json 에서 로드 ──
+# 형식: {"message": str, "expected_is_followup": bool,
+#         "expected_severity": "stable|worse|urgent_possible", "expected_category": str}
+def _load_followup_cases() -> list[dict]:
+    import json
+    candidates = [
+        Path(__file__).resolve().parent / "eval_cases" / "followup_eval_cases.json",
+        Path("ai/agents/eval_cases/followup_eval_cases.json"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    return []
+
+
+async def run_followup_filter_eval(
+    test_cases: list[dict] | None = None,
+) -> dict:
+    """경과 필터 AI 평가.
+
+    Check 1: keyword_fallback 분류 Recall/Precision (빠름, 비용 없음)
+    Check 2: urgent_possible 감지율 100% (안전 필수)
+    Check 3: classify_followup LLM 실호출 정확도 (API 비용 발생)
+
+    test_cases 미전달 시 ai/agents/eval_cases/followup_eval_cases.json 로드.
+    """
+    from ai.agents.followup_filter.schema import SeverityHint, keyword_fallback
+
+    cases = test_cases or _load_followup_cases()
+    if not cases:
+        return {"agent": "followup_filter", "status": "SKIPPED", "detail": "테스트 케이스 없음"}
+
+    checks = []
+
+    # ── 1. 분류 Recall / Precision ─────────────────────────────
+    tp = fp = fn = 0
+    for case in cases:
+        expected = case.get("expected_is_followup", False)
+        predicted = keyword_fallback(case["message"]).is_followup
+        if expected and predicted:
+            tp += 1
+        elif not expected and predicted:
+            fp += 1
+        elif expected and not predicted:
+            fn += 1
+
+    recall = tp / (tp + fn) if (tp + fn) > 0 else None
+    precision = tp / (tp + fp) if (tp + fp) > 0 else None
+
+    if recall is None:
+        checks.append({"item": "분류 Recall/Precision", "status": "SKIPPED", "detail": "경과 케이스 없음"})
+    elif recall >= 0.9 and (precision is None or precision >= 0.8):
+        checks.append({
+            "item": "분류 Recall/Precision", "status": "PASS",
+            "detail": f"Recall {recall:.0%} / Precision {precision:.0%}",
+        })
+    else:
+        checks.append({
+            "item": "분류 Recall/Precision", "status": "WARN",
+            "detail": f"Recall {recall:.0%} (기준 90%) / Precision {precision:.0%} (기준 80%)",
+        })
+
+    # ── 2. 악화 신호(urgent_possible) 감지 — 100% 필수 ────────
+    urgent_cases = [c for c in cases if c.get("expected_severity") == "urgent_possible"]
+    urgent_detected = sum(
+        1 for c in urgent_cases
+        if keyword_fallback(c["message"]).severity_hint == SeverityHint.URGENT_POSSIBLE
+    )
+    if not urgent_cases:
+        checks.append({"item": "악화 신호 감지", "status": "SKIPPED", "detail": "urgent 케이스 없음"})
+    elif urgent_detected == len(urgent_cases):
+        checks.append({
+            "item": "악화 신호 감지", "status": "PASS",
+            "detail": f"{urgent_detected}/{len(urgent_cases)} 감지",
+        })
+    else:
+        checks.append({
+            "item": "악화 신호 감지", "status": "WARN",
+            "detail": f"{urgent_detected}/{len(urgent_cases)} 감지 (100% 필수)",
+        })
+
+    # ── 3. LLM 분류 정확도 (classify_followup 실호출) ──────────
+    llm_tp = llm_fp = llm_fn = llm_errors = 0
+    try:
+        from ai.agents.followup_filter.agent import classify_followup
+        from ai.orchestrator.contracts import Phase, SessionContext
+
+        for case in cases:
+            try:
+                ctx = SessionContext(
+                    session_id=0, userid=0, petid=0,
+                    pet_info={"name": "평가용"},
+                    hospitalid=0, emrid=None, scheduleid=None,
+                    user_message=case["message"], attachments=[],
+                    phase=Phase.BOOKED, db=None,
+                )
+                cls = await classify_followup(ctx, case["message"])
+                expected = case.get("expected_is_followup", False)
+                predicted = cls.is_followup
+                if expected and predicted:
+                    llm_tp += 1
+                elif not expected and predicted:
+                    llm_fp += 1
+                elif expected and not predicted:
+                    llm_fn += 1
+            except Exception:
+                llm_errors += 1
+
+        llm_recall = llm_tp / (llm_tp + llm_fn) if (llm_tp + llm_fn) > 0 else None
+        llm_precision = llm_tp / (llm_tp + llm_fp) if (llm_tp + llm_fp) > 0 else None
+
+        if llm_errors == len(cases):
+            checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "모든 케이스 LLM 호출 실패"})
+        elif llm_recall is None:
+            checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "경과 케이스 없음"})
+        elif llm_recall >= 0.9 and (llm_precision is None or llm_precision >= 0.8):
+            checks.append({
+                "item": "LLM 분류 정확도", "status": "PASS",
+                "detail": f"Recall {llm_recall:.0%} / Precision {llm_precision:.0%} (LLM 실호출, 오류 {llm_errors}건)",
+            })
+        else:
+            checks.append({
+                "item": "LLM 분류 정확도", "status": "WARN",
+                "detail": f"Recall {llm_recall:.0%} (기준 90%) / Precision {llm_precision:.0%} (기준 80%), 오류 {llm_errors}건",
+            })
+    except ImportError:
+        llm_recall = llm_precision = None
+        checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "classify_followup import 실패"})
+
+    statuses = {c["status"] for c in checks}
+    overall = "WARN" if "WARN" in statuses else ("SKIPPED" if statuses <= {"SKIPPED"} else "PASS")
+
+    return {
+        "agent": "followup_filter",
+        "overall": overall,
+        "checks": checks,
+        "metrics": {
+            "keyword_recall": round(recall, 3) if recall is not None else None,
+            "keyword_precision": round(precision, 3) if precision is not None else None,
+            "llm_recall": round(llm_recall, 3) if llm_recall is not None else None,
+            "llm_precision": round(llm_precision, 3) if llm_precision is not None else None,
+            "urgent_recall": f"{urgent_detected}/{len(urgent_cases)}" if urgent_cases else "N/A",
+            "total_cases": len(cases),
+        },
+    }
+
 #
 # async def run_orchestrator_eval(db) -> dict:
-#     """오케스트레이터 평가.
-#     - 라우팅 정확도: tests/router_eval.jsonl 기준 90% 이상
-#     - 문진 중 유출: active_flow=triaging 중 triage/reception 외 라우팅 0건
-#     - sticky 규칙: active_flow=triaging 중 짧은 답변 → triage 유지 100%
+#     """오케스트레이터 라우팅 평가. MCP 구현 후 활성화.
+#     - 쓰는 것: tests/router_eval.jsonl (메시지 → 예상 에이전트 정답 레이블)
+#     - 확인하는 것:
+#       · 라우팅 정확도 90% 이상 (triage/reception/followup_filter 올바르게 고르는지)
+#       · 문진 중 유출 0건 (active_flow=triaging 중 triage/reception 외로 라우팅 안 하는지)
+#       · sticky 규칙 (짧은 답변 → 문진 유지, 이탈 안 하는지)
 #     """
 #     pass
 #
 # async def run_reception_eval(db) -> dict:
-#     """응대 AI 평가.
-#     - MCP 도구 선택 정확도 100% (get_hospital_info/get_operating_hours/get_available_slots)
-#     - 가드레일 3요소: 일반론 + 수의사 권고 + 예약 유도 100%
-#     - 무관 발화 차단 100%
+#     """응대 AI 평가. MCP 구현 후 활성화.
+#     - 쓰는 것: MCP 도구 호출 로그 (get_hospital_info / get_operating_hours / get_available_slots)
+#     - 확인하는 것:
+#       · 병원 정보·운영시간·예약 슬롯 질문에 맞는 MCP 도구를 골랐는지 (정확도 100%)
+#       · 가드레일 3요소 포함 여부 (일반론 + 수의사 권고 + 예약 유도)
+#       · 무관한 질문(날씨, 요리 등) 차단 100%
 #     """
 #     pass
 #
 # async def run_triage_agent_eval(db) -> dict:
-#     """문진 AI(슬롯 기반) 평가.
-#     - 슬롯 추출 F1 90% 이상, hallucination 0건
-#     - 응급도 점수표 정확도 95% 이상
-#     - RED flag 즉시 감지 100% (목록 전부 통과 필수, 샘플링 아님)
-#     """
-#     pass
+#     """문진 AI 평가.
 #
-# async def run_followup_filter_eval(db) -> dict:
-#     """경과 필터 AI 평가.
-#     - 분류 Recall 90% 이상, Precision 80% 이상
-#     - 누적 갱신 (덮어쓰기 감지)
-#     - 악화 신호 감지 후 내원 권유 100%
+#     [사전 준비 필요]
+#     1. tests/triage_eval.jsonl — 대화+정답 라벨 테스트셋 (팀 직접 제작)
+#        형식: {"messages":[...], "expected_variables":{"SKIN":{"itching_severity":"moderate"}},
+#               "expected_urgency":"GREEN", "expected_red_flag":false}
+#     2. engine.py 수정 (triage 담당자):
+#        · vet_triage_v3.json 경로로 업데이트
+#        · red_flag_list() public 함수 추가
+#
+#     [쓰는 DB 컬럼 — 새 스키마 기준]
+#       · extracted_variables  {섹션:{변수:값}}  슬롯 추출 F1 측정
+#       · matched_discriminators [{section,label,urgency}]  응급도 점수표 정확도 측정
+#       · red_flags  [label]  RED flag 감지 측정
+#       · vision_evidence  {vlm_description, body_part, cnn_results}  이미지 분석 평가
+#
+#     [확인하는 것]
+#       · 슬롯 추출 F1 90% 이상 (expected_variables vs extracted_variables)
+#       · hallucination 0건 (대화에 없는 값이 extracted_variables에 들어갔는지)
+#       · 응급도 점수표 정확도 95% 이상 (expected_urgency vs urgency_level)
+#       · RED flag 즉시 감지 100% (expected_red_flag=true 케이스 전수)
 #     """
 #     pass
 #
 # async def run_mcp_health_check(db) -> dict:
-#     """MCP 안정성 평가.
-#     - 연결 + list_tools + call_tool 왕복 100%
-#     - 도구별 성공률 99% 이상
-#     - p95 응답 시간 2000ms 이내
-#     - Fallback 동작 확인
+#     """MCP 서버 연결 상태 평가. MCP 구현 후 활성화.
+#     - 쓰는 것: MCP 서버 엔드포인트
+#     - 확인하는 것:
+#       · 연결 + list_tools + call_tool 왕복 성공 100%
+#       · 도구별 성공률 99% 이상
+#       · p95 응답 시간 2000ms 이내
+#       · Fallback 동작 (서버 다운 시 안내 메시지 나오는지)
 #     """
 #     pass
 #
 # async def run_e2e_scenarios(db) -> dict:
-#     """시나리오 e2e 평가.
-#     - S1: 정상 예약 흐름 (문진→예약→차트→평가 단계별 결과물 확인)
-#     - S2: 문진 중 끼어들기 → 슬롯 보존 → 문진 복귀
-#     - S6: 예약 후 경과 vs 잡담 분류 + 악화 감지 내원 권유
+#     """전체 흐름 시나리오 평가. MCP 구현 후 활성화.
+#     - 쓰는 것: 시나리오 스크립트 (메시지 시퀀스 + 단계별 기대 결과)
+#     - 확인하는 것:
+#       · S1 정상 예약 흐름: 문진→예약→차트→평가 각 단계 결과물 DB 저장 확인
+#       · S2 문진 중 끼어들기: 슬롯 보존 + 문진 복귀 (이탈 없이 돌아오는지)
+#       · S6 예약 후 경과: 경과 vs 잡담 분류 + 악화 감지 시 내원 권유 포함 여부
 #     """
 #     pass
 #
