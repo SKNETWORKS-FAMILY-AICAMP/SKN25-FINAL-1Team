@@ -7,11 +7,27 @@ from langchain_openai import ChatOpenAI
 load_dotenv()
 
 
+def _resolve_model() -> str:
+    """모델명 단일 결정: env(OPENAI_MODEL) → backend settings 기본값 → 최후 하드코딩.
+
+    예전엔 os.getenv 만 봐서 env 미설정 시 model=None 으로 LLM 호출이 깨질 수 있었다.
+    settings import 는 standalone 실행(테스트)에서 backend 경로가 없을 수 있어 lazy + try.
+    """
+    model = os.getenv("OPENAI_MODEL")
+    if model:
+        return model
+    try:
+        from app.core.config import settings
+        return settings.OPENAI_MODEL
+    except Exception:
+        return "gpt-5.4-mini"
+
+
 def get_llm(
     temperature: float = 0.3,
 ):
     return ChatOpenAI(
-        model=os.getenv("OPENAI_MODEL"),
+        model=_resolve_model(),
         temperature=temperature,
     )
 

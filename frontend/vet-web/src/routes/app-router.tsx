@@ -79,6 +79,11 @@ function VetRoutes() {
   const { session, setSession, clearAuth } = useAuthStore();
 
   useEffect(() => {
+    // dev 미리보기 백도어(?devPage=)는 개발 빌드에서만 동작 — prod 번들엔 무효.
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
     const devPath = getDevPath(location.search);
 
     if (!devPath) {
