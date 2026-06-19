@@ -40,6 +40,9 @@ from app.crud.emr_queue import (
     get_triage_by_schedule,
     get_validation_by_schedule,
 )
+from app.crud.tenant_guard import schedule_in_hospital, guardian_emrid_in_hospital
+from app.crud.patient import is_pet_in_hospital
+from app.crud.doctor import get_doctor_ids_by_hospital
 
 router = APIRouter(prefix="/doctor/emr", tags=["doctor-emr"])
 
@@ -85,6 +88,8 @@ async def emr_detail(
     환자 정보 + 트리아지 요약 (증상 키워드, 첨부 이미지, 메모)
     + 과거 진료 기록(doctorEMRDB + prescriptionDB) 반환.
     """
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="해당 예약을 찾을 수 없습니다.")
     detail = await get_emr_detail(db, schedule_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="해당 예약을 찾을 수 없습니다.")
@@ -102,6 +107,8 @@ async def emr_report(
     current_hospital=Depends(get_current_hospital),
 ):
     """AI Chart 에이전트가 생성한 SOAP 초안을 반환한다."""
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
     report = await get_report_by_schedule(db, schedule_id)
     if report is None:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
@@ -129,6 +136,8 @@ async def emr_triage(
     current_hospital=Depends(get_current_hospital),
 ):
     """보호자 문진 AI 트리아지 결과를 반환한다."""
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="트리아지 결과를 찾을 수 없습니다.")
     triage = await get_triage_by_schedule(db, schedule_id)
     if triage is None:
         raise HTTPException(status_code=404, detail="트리아지 결과를 찾을 수 없습니다.")
@@ -166,6 +175,8 @@ async def emr_validation(
     current_hospital=Depends(get_current_hospital),
 ):
     """Validation + Judge 에이전트 결과를 반환한다."""
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="검증 결과를 찾을 수 없습니다.")
     validation = await get_validation_by_schedule(db, schedule_id)
     if validation is None:
         raise HTTPException(status_code=404, detail="검증 결과를 찾을 수 없습니다.")
@@ -207,6 +218,8 @@ async def generate_auto_prescription(
     """사전 문진 정보를 바탕으로 AI 처방 초안을 생성한다.
     triage + drugsDB 후보 약품을 바탕으로 OpenAI로 실시간 생성한다.
     """
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="환자 정보를 찾을 수 없습니다.")
     # triage + pet + guardian 정보 조회
     row = (await db.execute(
         select(Schedule, Guardian, Pet)
@@ -370,6 +383,8 @@ async def doctor_followup(
     current_hospital=Depends(get_current_hospital),
 ):
     """보호자가 등록한 전체 경과를 하나의 누적 보고로 묶어 반환한다."""
+    if not await guardian_emrid_in_hospital(db, emrid, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="경과 기록을 찾을 수 없습니다.")
     result = await db.execute(
         select(Followup)
         .where(Followup.emrid == emrid)
@@ -449,6 +464,10 @@ async def update_pet_by_doctor(
 ):
     """수의사가 진료 중 체중·특이사항을 업데이트한다."""
     from app.models.pet import Pet
+    # 병원 스코프: 자기 병원에서 진료/예약 이력이 있는 환자만 수정 가능.
+    doctor_ids = await get_doctor_ids_by_hospital(db, current_hospital.hospitalid)
+    if not await is_pet_in_hospital(db, pet_id, doctor_ids):
+        raise HTTPException(status_code=404, detail="반려동물 정보를 찾을 수 없습니다.")
     result = await db.execute(select(Pet).where(Pet.petid == pet_id))
     pet = result.scalar_one_or_none()
     if not pet:
@@ -484,6 +503,8 @@ async def reset_visit(
     from app.models.emr import EMR
     from app.models.prescription import Prescription
 
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="예약을 찾을 수 없습니다.")
     schedule_row = await db.execute(
         select(Schedule).where(Schedule.scheduleid == schedule_id)
     )

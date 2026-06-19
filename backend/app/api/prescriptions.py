@@ -17,6 +17,7 @@ from app.schemas.prescription import (
 )
 from app.schemas.common import MessageResponse
 from app.core.dependencies import get_current_hospital
+from app.crud.tenant_guard import emr_in_hospital, prescription_in_hospital
 
 router = APIRouter(tags=["prescriptions"])
 
@@ -40,8 +41,11 @@ async def search_drug(
 async def add_prescription(
     payload: PrescriptionCreate,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_current_hospital),
+    current_hospital=Depends(get_current_hospital),
 ):
+    # 병원 스코프: 자기 병원 EMR 에만 처방을 생성할 수 있다.
+    if not await emr_in_hospital(db, payload.doctor_emrid, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="진료 기록을 찾을 수 없습니다.")
     prescription = await create_prescription(
         db,
         doctor_emrid=payload.doctor_emrid,
@@ -57,8 +61,11 @@ async def add_prescription(
 async def get_prescriptions(
     doctor_emrid: int,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_current_hospital),
+    current_hospital=Depends(get_current_hospital),
 ):
+    # 병원 스코프: 자기 병원 EMR 의 처방만 조회할 수 있다.
+    if not await emr_in_hospital(db, doctor_emrid, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="진료 기록을 찾을 수 없습니다.")
     rows = await get_prescriptions_by_emrid(db, doctor_emrid)
     result = [
         PrescriptionResponse(
@@ -79,8 +86,11 @@ async def get_prescriptions(
 async def remove_prescription(
     prescription_id: int,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_current_hospital),
+    current_hospital=Depends(get_current_hospital),
 ):
+    # 병원 스코프: 자기 병원 처방만 삭제할 수 있다.
+    if not await prescription_in_hospital(db, prescription_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="처방전을 찾을 수 없습니다.")
     deleted = await delete_prescription(db, prescription_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="처방전을 찾을 수 없습니다.")
