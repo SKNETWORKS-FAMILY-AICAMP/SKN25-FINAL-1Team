@@ -36,7 +36,9 @@ def _triage_to_dict(row: TriageResult | None) -> dict[str, Any] | None:
         "suspected_diseases": row.suspected_diseases,
         "symptom_summary": row.symptom_summary,
         "recommended_action": row.recommended_action,
-        "need_photo": row.need_photo,
+        "matched_discriminators": row.matched_discriminators,
+        "extracted_variables": row.extracted_variables,
+        "vision_evidence": row.vision_evidence,
         "created_at": row.created_at,
     }
 
