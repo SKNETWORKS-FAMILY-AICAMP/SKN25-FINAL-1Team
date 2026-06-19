@@ -704,32 +704,39 @@ async def run_followup_filter_eval(
             "detail": f"{urgent_detected}/{len(urgent_cases)} 감지 (100% 필수)",
         })
 
-    # ── 3. LLM 분류 정확도 (classify_followup 실호출) ──────────
+    # ── 3. LLM 분류 정확도 (classify_followup 병렬 실호출) ──────────
     llm_tp = llm_fp = llm_fn = llm_errors = 0
     try:
+        import asyncio
         from ai.agents.followup_filter.agent import classify_followup
         from ai.orchestrator.contracts import Phase, SessionContext
 
-        for case in cases:
-            try:
-                ctx = SessionContext(
-                    session_id=0, userid=0, petid=0,
-                    pet_info={"name": "평가용"},
-                    hospitalid=0, emrid=None, scheduleid=None,
-                    user_message=case["message"], attachments=[],
-                    phase=Phase.BOOKED, db=None,
-                )
-                cls = await classify_followup(ctx, case["message"])
-                expected = case.get("expected_is_followup", False)
-                predicted = cls.is_followup
-                if expected and predicted:
-                    llm_tp += 1
-                elif not expected and predicted:
-                    llm_fp += 1
-                elif expected and not predicted:
-                    llm_fn += 1
-            except Exception:
+        async def _run_one(case: dict):
+            ctx = SessionContext(
+                session_id=0, userid=0, petid=0,
+                pet_info={"name": "평가용"},
+                hospitalid=0, emrid=None, scheduleid=None,
+                user_message=case["message"], attachments=[],
+                phase=Phase.BOOKED, db=None,
+            )
+            return await classify_followup(ctx, case["message"])
+
+        results = await asyncio.gather(
+            *[_run_one(c) for c in cases], return_exceptions=True
+        )
+
+        for case, res in zip(cases, results):
+            if isinstance(res, Exception):
                 llm_errors += 1
+                continue
+            expected = case.get("expected_is_followup", False)
+            predicted = res.is_followup
+            if expected and predicted:
+                llm_tp += 1
+            elif not expected and predicted:
+                llm_fp += 1
+            elif expected and not predicted:
+                llm_fn += 1
 
         llm_recall = llm_tp / (llm_tp + llm_fn) if (llm_tp + llm_fn) > 0 else None
         llm_precision = llm_tp / (llm_tp + llm_fp) if (llm_tp + llm_fp) > 0 else None
