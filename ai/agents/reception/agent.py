@@ -22,7 +22,17 @@ _PHONE_KW    = ("전화", "번호", "연락", "문의")
 _ADDRESS_KW  = ("주소", "위치", "어디", "찾아", "오시는", "길")
 
 
-async def _hospital_facts(db, hospitalid: int | None, question: str) -> str:
+def _prev_was_vet_intro(history: list) -> bool:
+    """직전 봇 답변이 수의사 소개였는지 확인."""
+    for m in reversed(history or []):
+        if m.get("role") == "assistant":
+            content = m.get("content", "")
+            return any(k in content for k in ("수의사", "선생님이 계세요", "전문으로"))
+    return False
+
+
+async def _hospital_facts(db, hospitalid: int | None, question: str,
+                          history: list | None = None) -> str:
     """질문 키워드에 맞는 병원 정보만 조합해 반환."""
     if not db or not hospitalid:
         return "등록된 병원 정보가 없습니다."
@@ -84,29 +94,51 @@ async def _hospital_facts(db, hospitalid: int | None, question: str) -> str:
     # 운영시간 관련 질문
     if any(k in q for k in _SCHEDULE_KW):
         today = datetime.now().weekday()
-        schedules = (await db.execute(
-            select(HospitalWeeklySchedule).where(HospitalWeeklySchedule.hospitalid == hospitalid)
-        )).scalars().all()
-        lines.append("운영시간:")
-        for wk in sorted(schedules, key=lambda x: x.day_of_week):
-            day = day_names[wk.day_of_week]
-            mark = "(오늘)" if wk.day_of_week == today else ""
-            if not wk.is_open:
-                lines.append(f"{day}요일{mark}: 휴진")
-            elif wk.start_time and wk.end_time:
-                lunch = f" / 점심 {wk.lunch_start}~{wk.lunch_end}" if wk.lunch_start and wk.lunch_end else ""
-                lines.append(f"{day}요일{mark}: {wk.start_time}~{wk.end_time}{lunch}")
-        upcoming = (await db.execute(
-            select(HospitalClosedDate).where(
-                and_(
-                    HospitalClosedDate.hospitalid == hospitalid,
-                    HospitalClosedDate.date >= date.today(),
-                    HospitalClosedDate.date <= date.today() + timedelta(days=30),
+        # 직전 봇 답변이 수의사 소개였으면 수의사별 진료시간, 아니면 병원 전체 운영시간
+        if _prev_was_vet_intro(history):
+            doctors = (await db.execute(
+                select(Doctor).where(Doctor.hospitalid == hospitalid, Doctor.is_active == True)
+            )).scalars().all()
+            lines.append("수의사별 진료시간:")
+            for d in doctors:
+                vet_scheds = (await db.execute(
+                    select(VetWeeklySchedule).where(VetWeeklySchedule.doctorid == d.doctorid)
+                )).scalars().all()
+                if not vet_scheds:
+                    continue
+                lines.append(f"{d.doctor_name} 선생님:")
+                for vs in sorted(vet_scheds, key=lambda x: x.day_of_week):
+                    day = day_names[vs.day_of_week]
+                    mark = "(오늘)" if vs.day_of_week == today else ""
+                    if not vs.is_open:
+                        lines.append(f"  {day}{mark}: 휴진")
+                    elif vs.start_time and vs.end_time:
+                        lunch = f" / 점심 {vs.lunch_start}~{vs.lunch_end}" if vs.lunch_start and vs.lunch_end else ""
+                        lines.append(f"  {day}{mark}: {vs.start_time}~{vs.end_time}{lunch}")
+        else:
+            schedules = (await db.execute(
+                select(HospitalWeeklySchedule).where(HospitalWeeklySchedule.hospitalid == hospitalid)
+            )).scalars().all()
+            lines.append("운영시간:")
+            for wk in sorted(schedules, key=lambda x: x.day_of_week):
+                day = day_names[wk.day_of_week]
+                mark = "(오늘)" if wk.day_of_week == today else ""
+                if not wk.is_open:
+                    lines.append(f"{day}요일{mark}: 휴진")
+                elif wk.start_time and wk.end_time:
+                    lunch = f" / 점심 {wk.lunch_start}~{wk.lunch_end}" if wk.lunch_start and wk.lunch_end else ""
+                    lines.append(f"{day}요일{mark}: {wk.start_time}~{wk.end_time}{lunch}")
+            upcoming = (await db.execute(
+                select(HospitalClosedDate).where(
+                    and_(
+                        HospitalClosedDate.hospitalid == hospitalid,
+                        HospitalClosedDate.date >= date.today(),
+                        HospitalClosedDate.date <= date.today() + timedelta(days=30),
+                    )
                 )
-            )
-        )).scalars().all()
-        if upcoming:
-            lines.append("임시 휴진일: " + ", ".join(str(c.date) for c in upcoming))
+            )).scalars().all()
+            if upcoming:
+                lines.append("임시 휴진일: " + ", ".join(str(c.date) for c in upcoming))
 
     # 병원 소개·특징 관련 질문
     if any(k in q for k in _PROFILE_KW):
@@ -129,7 +161,7 @@ class ReceptionAgent:
     description = "병원 정보 안내 담당. 진단·처방 같은 진료 얘기는 '수의사께'로 넘긴다."
 
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
-        facts = await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message)
+        facts = await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message, ctx.history)
         pet_name = ctx.pet_info.get("name") or "아이"
         streak = (ctx.reception_streak or 0) + 1
 
@@ -153,7 +185,7 @@ class ReceptionAgent:
             out = await call_llm_json(prompt)
             reply = out.get("reply") or ""
             raw_pills = out.get("pills") or []
-            quick_replies = [p for p in raw_pills if isinstance(p, str) and p.strip()][:2]
+            quick_replies = [p for p in raw_pills if isinstance(p, str) and p.strip()][:4]
         except Exception:
             reply = "지금 정보를 불러오지 못했어요. 잠시 후 다시 시도하거나 병원에 직접 문의해 주세요."
             quick_replies = []

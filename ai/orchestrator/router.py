@@ -29,6 +29,9 @@ _HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전
                 "의사", "선생님", "수의사", "원장", "소개", "특징")
 _BOOKING_KW = ("예약",)
 
+# 시스템이 직접 제공한 pill 텍스트 — LLM 분류 없이 결정론적으로 처리
+_RECEPTION_PILLS = {"궁금한 게 있어요"}
+
 
 def _heuristic(text: str) -> str:
     t = text or ""
@@ -54,6 +57,10 @@ async def _classify(text: str) -> str:
 
 async def route(ctx: SessionContext) -> str:
     """반환: 처리 노드 이름 {reception|triage|schedule|followup_filter|redirect}."""
+    # 0) 시스템 pill 텍스트 — 결정론적으로 처리 (LLM 호출 없음)
+    if ctx.user_message in _RECEPTION_PILLS:
+        return "reception"
+
     # 1) sticky: 문진 중 / 예약확인(예·아니오) 대기 중이면 문진 에이전트가 받는다
     if ctx.active_flow in (Flow.TRIAGING, Flow.AWAITING_BOOKING_CONFIRM):
         return "triage"

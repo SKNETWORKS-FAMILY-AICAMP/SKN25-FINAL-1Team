@@ -36,7 +36,7 @@ INITIAL_MESSAGE = (
 
 INITIAL_PILLS = [
     "증상을 말하고 예약할래요",
-    "궁금한 게 있어요"
+    "궁금한 게 있어요",
 ]
 
 
