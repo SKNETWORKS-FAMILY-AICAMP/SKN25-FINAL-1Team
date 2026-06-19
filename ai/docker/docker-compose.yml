@@ -86,7 +86,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-medipaw-bucket}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-medipaw-images}
       CLOUDFRONT_URL: ${CLOUDFRONT_URL:-http://localhost}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy}
     depends_on:
