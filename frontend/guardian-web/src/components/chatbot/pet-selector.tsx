@@ -23,7 +23,7 @@ const PetSelector = ({
   const { t } = useTranslation();
 
   return (
-    <aside className="flex h-[220px] flex-col border-b border-slate-100 bg-slate-50/70 lg:h-auto lg:min-h-0 lg:border-b-0 lg:border-r">
+    <aside className="flex min-h-0 flex-1 flex-col bg-slate-50/70 lg:border-r">
       <div className="flex h-14 shrink-0 items-center justify-center border-b border-slate-100 px-3">
         <h2 className="text-center text-[15px] font-bold text-slate-900">
           {t("chatbot.pets")}
