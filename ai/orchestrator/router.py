@@ -30,7 +30,7 @@ _HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전
 _BOOKING_KW = ("예약",)
 
 # 시스템이 직접 제공한 pill 텍스트 — LLM 분류 없이 결정론적으로 처리
-_RECEPTION_PILLS = {"궁금한 게 있어요"}
+_RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
 
 
 def _heuristic(text: str) -> str:
