@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -13,14 +13,17 @@ import AccountInquiryPage from "../pages/auth/AccountInquiryPage";
 import FindPasswordPage from "../pages/auth/FindPasswordPage";
 import FirstPasswordChangePage from "../pages/auth/FirstPasswordChangePage";
 import LoginPage from "../pages/auth/LoginPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-import EmrPage from "../pages/emr/EmrPage";
-import PatientManagementPage from "../pages/patients/PatientManagementPage";
-import ReservationPage from "../pages/reservation/ReservationPage";
-import HospitalManagePage from "../pages/hospital/HospitalManagePage";
-import SettingsPage from "../pages/settings/SettingsPage";
 import { useAuthStore } from "../stores/auth-store";
 import ProtectedRoute from "./protected-route";
+
+// 인증 후 페이지는 지연 로딩(코드 스플리팅) — 초기 번들에서 분리해 첫 로딩을 단축한다.
+// (로그인/비밀번호 등 진입 경로 페이지는 정적 import 유지)
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
+const EmrPage = lazy(() => import("../pages/emr/EmrPage"));
+const PatientManagementPage = lazy(() => import("../pages/patients/PatientManagementPage"));
+const ReservationPage = lazy(() => import("../pages/reservation/ReservationPage"));
+const HospitalManagePage = lazy(() => import("../pages/hospital/HospitalManagePage"));
+const SettingsPage = lazy(() => import("../pages/settings/SettingsPage"));
 
 const devSession: AuthSession = {
   accessToken: "dev-preview-token",
@@ -120,6 +123,7 @@ function VetRoutes() {
   };
 
   return (
+    <Suspense fallback={<div style={{ padding: 24 }}>불러오는 중…</div>}>
     <Routes>
       <Route
         path="/"
@@ -189,6 +193,7 @@ function VetRoutes() {
         element={<Navigate to={session ? "/home" : "/login"} replace />}
       />
     </Routes>
+    </Suspense>
   );
 }
 

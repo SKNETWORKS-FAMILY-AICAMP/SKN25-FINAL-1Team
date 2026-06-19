@@ -7,6 +7,6 @@ graph.py 가 이 표를 보고 알맞은 AI를 부른다.
 from ai.agents.followup_filter import followup_filter
 from ai.agents.reception import reception
 from ai.agents.schedule.node import schedule
-from ai.agents.triage.node import triage
+from ai.agents.triage.agent import triage
 
 REGISTRY = {a.name: a for a in (reception, triage, schedule, followup_filter)}

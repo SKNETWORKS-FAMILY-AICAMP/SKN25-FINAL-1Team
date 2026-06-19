@@ -77,6 +77,10 @@ async def route(ctx: SessionContext) -> str:
     # PRE_BOOKING
     if ctx.active_flow == Flow.SCHEDULING and label in ("booking", "symptom"):
         return "schedule"            # 문진 끝나고 시간 고르는 중
+    # 문진 완료(emrid 발급) 후엔 같은 세션에서 재문진 안 함 (응급도→예약 한 플로우).
+    # 증상/예약 발화가 또 와도 새 문진을 시작하지 않고 가볍게 응대로 받는다.
+    if ctx.emrid is not None and label in ("symptom", "booking"):
+        return "reception"
     if label in ("symptom", "booking"):
         return "triage"              # 증상·예약 → 문진부터 (예약은 문진 경유)
     if label in ("hospital", "care"):
