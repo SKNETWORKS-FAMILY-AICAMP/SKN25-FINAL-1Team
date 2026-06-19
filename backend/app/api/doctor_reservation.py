@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.core.dependencies import get_current_hospital
+from app.crud.tenant_guard import schedule_in_hospital
 from app.utils.age import calculate_age
 from app.utils.timezone import to_kst
 
@@ -155,6 +156,9 @@ async def edit_reservation(
     db: AsyncSession = Depends(get_db),
     current_hospital=Depends(get_current_hospital),
 ):
+    # 병원 스코프: 자기 병원 예약만 수정 가능.
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
     try:
         updated = await update_reservation(
             db,
@@ -191,6 +195,10 @@ async def remove_reservation(
     current_hospital=Depends(get_current_hospital),
 ):
     logger.info(f"[DELETE reservation] schedule_id={schedule_id}")
+
+    # 병원 스코프: 자기 병원 예약만 취소 가능.
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
 
     # 존재 여부 선확인
     from app.crud.doctor_reservation import get_schedule as _get_schedule
@@ -236,6 +244,9 @@ async def change_reservation_status(
     db: AsyncSession = Depends(get_db),
     current_hospital=Depends(get_current_hospital),
 ):
+    # 병원 스코프: 자기 병원 예약 상태만 변경 가능.
+    if not await schedule_in_hospital(db, schedule_id, current_hospital.hospitalid):
+        raise HTTPException(status_code=404, detail="예약 정보를 찾을 수 없습니다.")
     updated = await update_reservation_status(
         db,
         schedule_id,
