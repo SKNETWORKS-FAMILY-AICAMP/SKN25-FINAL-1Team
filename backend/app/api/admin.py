@@ -301,3 +301,9 @@ async def judge_results(
 async def eval_followup(current_admin=Depends(get_current_admin)):
     from ai.agents.evaluation import run_followup_filter_eval
     return await run_followup_filter_eval()
+
+
+@router.get("/eval/followup/logs")
+async def followup_logs(current_admin=Depends(get_current_admin)):
+    from ai.monitoring import recent_logs
+    return {"code": 200, "result": recent_logs("followup_filter")}
