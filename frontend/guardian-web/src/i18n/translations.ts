@@ -40,7 +40,7 @@ const ko: TranslationTree = {
   },
   myHospitals: {
     title: "내 병원",
-    description: "다니는 동물병원을 등록하고 기본 병원을 설정하세요.",
+    description: "동물병원을 등록하고 기본 병원을 설정하세요.",
     empty: "등록된 병원이 없습니다.",
     primaryBadge: "기본",
     closedBadge: "폐업",
@@ -542,7 +542,7 @@ const en: TranslationTree = {
   },
   myHospitals: {
     title: "My hospitals",
-    description: "Register the clinics you visit and set a default.",
+    description: "Add your clinics and set a default.",
     empty: "No hospitals registered.",
     primaryBadge: "Default",
     closedBadge: "Closed",
@@ -1044,7 +1044,7 @@ const ja: TranslationTree = {
   },
   myHospitals: {
     title: "マイ病院",
-    description: "通っている動物病院を登録し、基本病院を設定しましょう。",
+    description: "動物病院を登録して基本病院を設定しましょう。",
     empty: "登録された病院がありません。",
     primaryBadge: "基本",
     closedBadge: "閉院",
@@ -1544,7 +1544,7 @@ const zh: TranslationTree = {
   },
   myHospitals: {
     title: "我的医院",
-    description: "登记您就诊的动物医院并设置默认医院。",
+    description: "登记动物医院并设置默认医院。",
     empty: "尚未登记医院。",
     primaryBadge: "默认",
     closedBadge: "停业",

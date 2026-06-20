@@ -8,6 +8,18 @@
   }
 }
 
+/* iOS Safari는 글자 16px 미만인 입력 요소에 포커스하면 화면을 확대(auto-zoom)하고
+   자동으로 되돌리지 않아, 페이지가 '커진 채' 오른쪽이 잘려 보인다. 작은 화면에서
+   폼 컨트롤의 글자를 최소 16px로 보장해 이 확대를 원천 차단한다(핀치 줌은 그대로 허용).
+   Tailwind 유틸리티(text-sm 등)보다 우선해야 하므로 @layer 밖 + !important. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer components {
   /* Card — consistent padding + shadow across pages */
   .mp-card {
