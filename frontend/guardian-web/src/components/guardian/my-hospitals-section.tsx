@@ -158,9 +158,9 @@ const MyHospitalsSection = () => {
               }
             }}
             placeholder={t("myHospitals.searchPlaceholder")}
-            className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
           />
-          <ActionButton type="button" onClick={() => void handleSearch()} disabled={isSearching}>
+          <ActionButton type="button" onClick={() => void handleSearch()} disabled={isSearching} className="shrink-0 whitespace-nowrap">
             {t("myHospitals.search")}
           </ActionButton>
         </div>

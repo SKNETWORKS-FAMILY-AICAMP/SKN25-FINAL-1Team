@@ -333,9 +333,11 @@ const ChatMessageList = ({
   const { t } = useTranslation();
   const { translate, translateWithStatus, ensureTranslated, lang } =
     useDynamicTranslation();
-  // 바닥 센티넬. scrollIntoView로 '맨 아래로'를 일반화한다 —
-  // 화면이 lg 미만으로 좁아지면 스크롤 주체가 내부 div→창(window)으로 바뀌는데,
-  // scrollIntoView는 어느 쪽이든 알아서 스크롤하므로 두 경우 모두 따라간다.
+  // 스크롤 컨테이너(overflow-y-auto). main이 고정 높이(100dvh-4rem)라 모바일에서도
+  // 창이 아니라 이 내부 div가 스크롤 주체다(측정으로 확인). 그래서 scrollIntoView로
+  // 창까지 끌어당기지 않고 이 컨테이너의 scrollTop만 조정해 페이지/네비바 흔들림을 막는다.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  // 바닥 센티넬(하단 여부 감지용 IntersectionObserver 타깃).
   const endRef = useRef<HTMLDivElement | null>(null);
   // 센티넬이 보이면 '하단에 있는' 상태(위로 스크롤해 과거를 보는 중이면 끌어올리지 않음).
   const atBottomRef = useRef(true);
@@ -354,16 +356,17 @@ const ChatMessageList = ({
   }, []);
 
   // 새 메시지·스트리밍·리사이즈·이미지 로드 시 하단에 있으면 '즉시' 맨 아래로.
-  // smooth는 연속 갱신/리사이즈에서 애니메이션이 겹쳐 진동을 만들어 instant(기본값)로 둔다.
+  // 컨테이너의 scrollTop만 직접 조정한다(창은 건드리지 않아 흔들림 없음).
+  // 연속 갱신/리사이즈에서 애니메이션이 겹쳐 진동을 만드므로 instant로 둔다.
   useEffect(() => {
-    const end = endRef.current;
-    if (!end) return;
+    const container = scrollRef.current;
+    if (!container) return;
     const pin = () => {
-      if (atBottomRef.current) end.scrollIntoView({ block: "end" });
+      if (atBottomRef.current) container.scrollTop = container.scrollHeight;
     };
     pin();
     const ro = new ResizeObserver(pin);
-    if (end.parentElement) ro.observe(end.parentElement); // 리사이즈·내용 높이 변화
+    ro.observe(container); // 내용 높이 변화·리사이즈 추적
     return () => ro.disconnect();
   }, [messages, quickReplies, isStreaming]);
 
@@ -383,7 +386,10 @@ const ChatMessageList = ({
   }, [messages, quickReplies, ensureTranslated, lang]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-7">
+    <div
+      ref={scrollRef}
+      className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-7"
+    >
       <div className="flex-1" />
       {messages.map((message) => {
         if (message.card) {

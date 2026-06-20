@@ -183,6 +183,9 @@ const PetPhotoEditor = ({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null); // 그림 레이어(오프스크린)
   const strokesRef = useRef<Stroke[]>([]);
+  // 되돌리기 히스토리: 각 변경(획 추가/전체 지우기) 직전의 strokes 스냅샷을 쌓아,
+  // 전체 지우기까지 한 단계씩 되돌릴 수 있게 한다.
+  const historyRef = useRef<Stroke[][]>([]);
   const drawingRef = useRef<Stroke | null>(null);
   const revokeRef = useRef<() => void>(() => {});
   // 최신 initialStrokes를 reload 트리거 없이 참조하기 위한 ref.
@@ -192,7 +195,8 @@ const PetPhotoEditor = ({
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState(COLORS[0]);
   const [thickness, setThickness] = useState(6);
-  const [canUndo, setCanUndo] = useState(false);
+  const [canUndo, setCanUndo] = useState(false); // 되돌릴 히스토리가 있는지
+  const [hasStrokes, setHasStrokes] = useState(false); // 지울 그림이 있는지
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -247,7 +251,11 @@ const PetPhotoEditor = ({
       points: stroke.points.map((point) => ({ ...point })),
     }));
     drawingRef.current = null;
-    setCanUndo(strokesRef.current.length > 0);
+    // 복원된 그림은 이번 세션의 시작 상태이므로 되돌리기 히스토리는 비운다.
+    // (지우기는 그림이 있으면 가능, 되돌리기는 이번 세션 편집이 있어야 가능)
+    historyRef.current = [];
+    setCanUndo(false);
+    setHasStrokes(strokesRef.current.length > 0);
 
     loadEditableImage(imageSrc)
       .then(({ image, revoke }) => {
@@ -349,26 +357,49 @@ const PetPhotoEditor = ({
     redrawOverlay();
   };
 
+  // 변경 직전의 strokes를 깊은 복사로 히스토리에 쌓는다.
+  const pushHistory = () => {
+    historyRef.current.push(
+      strokesRef.current.map((stroke) => ({
+        ...stroke,
+        points: stroke.points.map((point) => ({ ...point })),
+      })),
+    );
+    setCanUndo(true);
+  };
+
   const finishStroke = () => {
     if (!drawingRef.current) {
       return;
     }
+    pushHistory();
     strokesRef.current.push(drawingRef.current);
     drawingRef.current = null;
-    setCanUndo(true);
+    setHasStrokes(true);
     redrawOverlay();
   };
 
   const handleUndo = () => {
-    strokesRef.current.pop();
-    setCanUndo(strokesRef.current.length > 0);
+    const previous = historyRef.current.pop();
+    if (!previous) {
+      return;
+    }
+    strokesRef.current = previous;
+    drawingRef.current = null;
+    setCanUndo(historyRef.current.length > 0);
+    setHasStrokes(strokesRef.current.length > 0);
     redrawOverlay();
   };
 
   const handleClear = () => {
+    if (strokesRef.current.length === 0) {
+      return;
+    }
+    // 전체 지우기도 되돌릴 수 있도록 직전 상태를 히스토리에 남긴다.
+    pushHistory();
     strokesRef.current = [];
     drawingRef.current = null;
-    setCanUndo(false);
+    setHasStrokes(false);
     redrawOverlay();
   };
 
@@ -412,7 +443,7 @@ const PetPhotoEditor = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2937]/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
           <h2 className="text-base font-extrabold text-[#1F2937]">
             {t("pet.decorateTitle")}
@@ -445,7 +476,7 @@ const PetPhotoEditor = ({
               onPointerUp={finishStroke}
               onPointerLeave={finishStroke}
               onPointerCancel={finishStroke}
-              className={`max-h-[52vh] max-w-full rounded-2xl ${
+              className={`max-h-[52dvh] max-w-full rounded-2xl ${
                 isLoading || loadError ? "hidden" : "block"
               }`}
               style={{
@@ -486,7 +517,7 @@ const PetPhotoEditor = ({
               <button
                 type="button"
                 onClick={handleClear}
-                disabled={!canUndo}
+                disabled={!hasStrokes}
                 className={`${toolButtonClass(false)} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 🗑️ {t("pet.decorateClear")}
