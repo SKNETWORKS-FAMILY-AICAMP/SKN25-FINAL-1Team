@@ -9,29 +9,13 @@
 
 ## **1. 팀원 소개**
 
-<table style="background-color: #fafafa; border-radius: 8px;">
-  <tr>
-    <td align="center" style="color: #4A90E2;"><b>Frontend</b></td>
-    <td align="center" style="color: #4A90E2;"><b>Frontend</b></td>
-    <td align="center" style="color: #F5A623;"><b>Backend / DB</b></td>
-    <td align="center" style="color: #F5A623;"><b>Backend / DB</b></td>
-    <td align="center" style="color: #7F8C8D;"><b>AI Agent</b></td>
-  </tr>
-  <tr>
-    <td align="center"><b>김지현</b></td>
-    <td align="center"><b>박지현</b></td>
-    <td align="center"><b>조민서</b></td>
-    <td align="center"><b>이채림</b></td>
-    <td align="center"><b>김찬영</b></td>
-  </tr>
-  <tr>
-    <td align="center">보호자/수의사 UI 구현</td>
-    <td align="center">보호자/수의사 UI 구현</td>
-    <td align="center">API / DB 설계</td>
-    <td align="center">API / DB 설계</td>
-    <td align="center">Multi-Agent 설계</td>
-  </tr>
-</table>
+| 이름 | 주요 역할 | 핵심 기술 |
+| :--- | :--- | :--- |
+| 김지현 | Frontend / UI·UX | React · TypeScript · TailwindCSS |
+| 박지현 | Frontend / UI·UX / Backend | React · TypeScript · FastAPI |
+| 조민서 | Backend / DB / API / Finetuning | Python · FastAPI · PostgreSQL · PyTorch |
+| 이채림 | Backend / DB / AI Agent / RAG / Finetuning | LangGraph · RAG · pgvector · Langfuse |
+| 김찬영 | AI Agent / Backend / Frontend / DevOps / 서비스 통합 / 배포 | LangGraph · FastAPI · Docker · AWS |
 
 ---
 
@@ -138,11 +122,15 @@ MediPaw는 보호자 웹과 수의사 웹을 분리하여 각 사용자의 업�
 ## **5. 프로젝트 구조**
 
 ```text
-SKN25-FINAL-1Team/
-    ├── ai/                         # AI Agent 및 비동기 작업 구조
-    │   ├── agents/                 # Agent 엔트리 포인트
-    │   ├── tasks/                  # Celery Task 모듈
-    │   └── data/                   # RAG / 원천 데이터 저장 영역
+MediPaw/
+    ├── ai/                         # AI 멀티에이전트 (LangGraph) 파이프라인
+    │   ├── agents/                 # 에이전트별 모듈(프롬프트+로직): reception · triage ·
+    │   │                           #   schedule · chart · prescription · followup_filter
+    │   ├── orchestrator/           # LangGraph 오케스트레이터(router/registry/state/graph) + MCP
+    │   ├── services/               # 에이전트 공용 서비스
+    │   ├── graph.py / llm.py / rag.py   # 그래프 배선 · LLM 클라이언트 · RAG(pgvector)
+    │   ├── docker/                 # Dockerfile + nginx conf + docker-compose (인프라 정의)
+    │   └── README.md
     │
     ├── backend/                    # FastAPI 백엔드
     │   ├── app/
@@ -150,42 +138,26 @@ SKN25-FINAL-1Team/
     │   │   ├── core/               # 환경 설정, 보안, 의존성
     │   │   ├── crud/               # DB CRUD 로직
     │   │   ├── db/                 # DB 세션 및 Base
+    │   │   ├── middleware/         # 미들웨어
     │   │   ├── models/             # SQLAlchemy ORM 모델
+    │   │   ├── prompts/            # 에이전트 프롬프트
     │   │   ├── schemas/            # Pydantic 요청/응답 스키마
-    │   │   └── utils/              # 공통 유틸
+    │   │   ├── services/           # 도메인 서비스(오케스트레이션 등)
+    │   │   └── utils/              # 공통 유틸(s3 등)
     │   ├── migrations/             # Alembic 마이그레이션
+    │   ├── scripts/                # seed / 평가 스크립트
     │   ├── alembic.ini
     │   └── requirements.txt
     │
     ├── frontend/
-    │   ├── guardian-web/           # 보호자용 React 웹
-    │   │   ├── src/
-    │   │   │   ├── api/            # 보호자 API 클라이언트
-    │   │   │   ├── components/     # 공통/기능 컴포넌트
-    │   │   │   ├── hooks/          # 커스텀 훅
-    │   │   │   ├── pages/          # 보호자 화면
-    │   │   │   ├── routes/         # 라우팅
-    │   │   │   └── stores/         # 상태 관리
-    │   │   └── package.json
-    │   │
-    │   ├── vet-web/                # 수의사용 React 웹
-    │   │   ├── src/
-    │   │   │   ├── api/            # 수의사 API 클라이언트
-    │   │   │   ├── components/     # 대시보드/예약/EMR 컴포넌트
-    │   │   │   ├── hooks/          # 커스텀 훅
-    │   │   │   ├── pages/          # 수의사 화면
-    │   │   │   ├── routes/         # 라우팅
-    │   │   │   └── stores/         # 상태 관리
-    │   │   └── package.json
-    │   │
+    │   ├── guardian-web/           # 보호자용 React 웹 (5173)
+    │   ├── vet-web/                # 수의사용 React 웹 (5174)
+    │   ├── company-web/            # 소개·입점신청·운영진 admin 웹 (5175)
     │   └── shared/                 # 공통 자산 및 shared 리소스
+    │       └── src/{api,components,hooks,pages,routes,stores}  # 각 앱 공통 구조
     │
-    ├── infra/                      # 인프라 설정
-    │   ├── aws/
-    │   ├── nginx/
-    │   ├── rabbitmq/
-    │   └── scripts/
-    │
+    ├── dev.sh / dev.ps1            # 로컬 실행 스크립트 (mac·linux / windows)
+    ├── docker-compose.prod.yml     # 운영 배포 compose
     └── README.md
 ```
 
@@ -223,7 +195,7 @@ Veterinarian Web
 
 ### **6-2. Multi-Agent Architecture**
 
-MediPaw는 보호자의 문진 데이터와 이미지 분석 결과를 기반으로 수의사의 진료 의사결정을 보조하는 Multi-Agent 구조를 목표로 합니다.
+MediPaw는 보호자의 문진 데이터와 이미지 분석 결과를 기반으로 수의사의 진료 의사결정을 보조하는 Multi-Agent 구조를 **LangGraph 오케스트레이터**로 구현해 운영합니다.
 
 | Agent | 역할 |
 | :--- | :--- |
@@ -234,7 +206,7 @@ MediPaw는 보호자의 문진 데이터와 이미지 분석 결과를 기반으
 | **Judge Agent** | 최종 응답 품질 및 의료 안전성 평가 |
 | **Follow-up Agent** | 진료 이후 경과 기록 요약 및 위험 상황 감지 |
 
-> 현재 브랜치에서는 `ai/` 디렉터리 구조가 준비되어 있으며, Agent 세부 구현은 확장 대상입니다.
+> 에이전트는 [`ai/`](./ai/) 에 LangGraph 오케스트레이터(`ai/orchestrator/`)와 에이전트별 모듈(`ai/agents/`)로 구현되어 있습니다. 위 표는 역할 기준 요약이며, 실제 에이전트 구성(응대·문진·예약·차트·처방·경과필터, validation/judge 평가 계층)은 현재 리팩토링 중이라 세부 아키텍처는 정리 후 갱신 예정입니다.
 
 ### **6-3. Backend Architecture**
 

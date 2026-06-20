@@ -10,6 +10,20 @@ __pycache__/
 backend/.env
 ai/docker/.env
 
+# 내부 공유 문서 (PUBLIC 레포 비공개 — 로컬에만 보관)
+# 발표 대비 심화/방어·내부 평가 보고·주간 보고·리팩토링 계획·결정 기록.
+# 실제 보안 약점 서술이 포함돼 있어 공개 레포에 두지 않는다.
+/DECISIONS.md
+/TASK_LOGIC.md
+/TASK_LOGIC_DEEP.md
+/CHART_FOLLOWUP_DEEP.md
+/AGENT_IMPROVEMENTS.md
+/SERVICE_TEST_REPORT.md
+/TRIAGE_REFACTOR_PLAN.md
+/WEEKLY_REPORT_2026-0615_0619.md
+/PRESENTATION_DEFENSE.md
+/ai/agents/EVALUATION_PLAN.md
+
 # IDE
 .vscode/
 .idea/
