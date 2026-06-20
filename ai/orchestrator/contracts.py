@@ -59,6 +59,7 @@ class SessionContext:
     # --- 런타임 핸들 (저장 안 함) ---
     db: Any = None
     session: Any = None       # chat_historyDB ORM row (DB 적재용)
+    status_queue: Any = None  # 진행 상태(예: 증상 검색중) SSE 푸시용 asyncio.Queue (없을 수 있음)
 
 
 @dataclass

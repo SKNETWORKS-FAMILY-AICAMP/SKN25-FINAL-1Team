@@ -25,7 +25,7 @@
     },
     "YELLOW": {
       "vtl": "Urgent",
-      "display": "준응급",
+      "display": "일반",
       "twt_minutes": 45
     },
     "GREEN": {
@@ -668,7 +668,7 @@
         },
         {
           "label": "Recent single seizure (recovered)",
-          "urgency": "GREEN",
+          "urgency": "RED",
           "when": {
             "seizure_status": "recent_single"
           }

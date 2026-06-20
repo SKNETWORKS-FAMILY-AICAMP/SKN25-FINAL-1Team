@@ -65,8 +65,8 @@ async def route(ctx: SessionContext) -> str:
     if ctx.active_flow in (Flow.TRIAGING, Flow.AWAITING_BOOKING_CONFIRM):
         return "triage"
 
-    # 2) LLM 분류
-    label = await _classify(ctx.user_message)
+    # 2) LLM 분류 — 단, 사진/영상 첨부는 '증상 신호'로 간주(텍스트가 비거나 "."이어도 비전 문진이 돌게).
+    label = "symptom" if ctx.attachments else await _classify(ctx.user_message)
 
     # 3) phase별 매핑
     if ctx.phase == Phase.BOOKED:
