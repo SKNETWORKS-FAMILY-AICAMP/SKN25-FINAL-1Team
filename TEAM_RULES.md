@@ -7,15 +7,15 @@
 ## 1. Branch 전략
 
 ```
-main          ← production-ready. 직접 push 절대 금지.
-develop       ← 통합 브랜치. PR 리뷰 후만 merge.
-feature/<이름> ← 기능 단위. 예: feature/emr-queue-api
-fix/<이름>     ← 버그 수정.   예: fix/timezone-kst
-hotfix/<이름>  ← 긴급 수정.   main 기준 분기, develop에도 merge.
+main          ← production-ready. 직접 push 절대 금지. 배포는 main 머지로만(수동 EC2 빌드 금지).
+feat/<이름>   ← 기능 단위.   예: feat/hospital-onboarding
+fix/<이름>    ← 버그 수정.    예: fix/doctor-login-500
+chore/<이름>  ← 설정/정리.    예: chore/config-cleanup
 ```
 
-- `main`에는 반드시 `develop` 경유 후 merge.
-- feature 브랜치는 1인 1브랜치. 공유 브랜치는 `develop`뿐.
+- 모든 변경은 `main` 기준으로 분기한 브랜치에서 작업 후 **PR로만** merge(`main` 직접 push 금지).
+- `main`은 브랜치 보호 + CI(ci.yml) 통과 필수. merge 시 자동 배포(docker-build → deploy)된다.
+- feature 브랜치는 1인 1브랜치. 별도 통합 브랜치(`develop`)는 두지 않는다.
 - 브랜치 수명: merge 완료 후 즉시 삭제.
 
 ---
@@ -25,8 +25,7 @@ hotfix/<이름>  ← 긴급 수정.   main 기준 분기, develop에도 merge.
 - PR 생성 시: 변경 파일 목록 + 영향 범위 + 테스트 방법 명시.
 - **최소 1인 리뷰** 승인 후 merge.
 - CI(TypeScript 타입체크 + Python ast 검사) 통과 필수.
-- `git merge --no-ff` 사용 (merge commit 남기기).
-- squash merge 금지 (commit history 보존).
+- merge commit 남기기 (`--no-ff`/Merge PR). commit history 보존.
 
 ---
 
