@@ -25,6 +25,7 @@ from .prompts import (
     build_confirm_prompt,
     build_extraction_prompt,
     build_question_prompt,
+    build_redirect_reply_prompt,
     build_suspected_confirm_message,
     build_suspected_confirm_prompt,
 )
@@ -156,6 +157,24 @@ class TriageAgent:
             logger.warning("[triage] 추출 콜 실패: %s", e)
             out = {}
 
+        # 1.5) 의도 분기 — '증상 정보가 아닌 발화'(메타·잡담·막연한 도움요청)는
+        #      추출/완료판정/턴카운트에 넣지 않고, 그 발화에 응대한 뒤 본론으로 데려온다.
+        #      ⚠️ 안전: 이미지 첨부거나 임상 위급(critical/high)이면 의도와 무관하게 정상 문진으로.
+        intent = (out.get("intent") or "symptom").lower()
+        tier_signal = (out.get("urgency_tier") or "normal").lower()
+        if ctx.attachments or tier_signal in ("critical", "high"):
+            intent = "symptom"
+        if intent == "vague_help" and turn_count > 0:
+            intent = "chitchat"   # 막연한 도움요청은 '진입 시점'에만 의미 — 진행 중엔 잡담으로
+        if intent == "closing":
+            # '괜찮아요/됐어요' 등 마무리 신호 → 응대처럼 깔끔히 종료(다시 캐묻지 않음).
+            return AgentResult(
+                reply="알겠습니다. 추가로 궁금한 점이 있거나 예약을 원하시면 언제든 편하게 말씀해 주세요. 🐾",
+                state_patch={"triage_state": state, "active_flow": "idle"},
+            )
+        if intent in ("meta", "chitchat", "vague_help"):
+            return await self._nonsymptom_turn(ctx, intent, history, prev_section, pet_name, state)
+
         section = out.get("section") or prev_section or "GENERAL"
         # LLM이 값에 대괄호/따옴표를 붙이거나("[recent_single]") 없는 변수를 지어내도 엔진 매칭이
         # 깨지지 않게 정규화: 대괄호·공백 제거 + '정의된 변수만' 통과(플레이스홀더 unknown 무시).
@@ -205,6 +224,7 @@ class TriageAgent:
             except Exception:
                 q = {}
             # pill은 최대 5개로 하드캡(LLM이 더 줘도 잘라냄). 최소 3은 프롬프트로 유도.
+            # 막연한 포괄/회피성 보기('기타·여기저기' 등)는 프롬프트에서 안 만들게 지시.
             pills = [p for p in (q.get("quick_replies") or []) if p][:5]
             return AgentResult(
                 reply=image_notice + (q.get("reply") or "조금 더 자세히 알려주시겠어요?"),
@@ -306,6 +326,32 @@ class TriageAgent:
                 "active_flow": "awaiting_booking_confirm",
             },
             events=events,
+        )
+
+    # ── 비증상 발화(메타·잡담·막연한 도움요청) → 응대 후 본론 복귀 ──────────────
+    #    상태(extracted·turn_count·section)는 그대로 둔다 = 노이즈가 종료 보험을 깎지 않음.
+    async def _nonsymptom_turn(self, ctx: SessionContext, intent: str, history: list[dict],
+                               prev_section: str | None, pet_name: str, state: dict) -> AgentResult:
+        try:
+            r = await call_llm_json(
+                build_redirect_reply_prompt(pet_name, history, ctx.user_message, intent, prev_section),
+                temperature=0.7,
+            )
+        except Exception:
+            r = {}
+        fallback = {
+            "meta": f"방금까지 {pet_name} 얘기를 나누고 있었어요. 지금 가장 신경 쓰이는 증상을 "
+                    "한 가지만 더 알려주시면 이어서 살펴볼게요.",
+            "chitchat": f"{pet_name}의 증상을 조금 더 들려주시면 살펴보고 도와드릴게요. "
+                        "어디가 불편해 보이는지 편하게 알려주실래요?",
+            "vague_help": f"많이 걱정되시겠어요. {pet_name}가 어떤 상태인지 조금 더 들려주시면 "
+                          "살펴보고, 필요하면 예약까지 도와드릴게요.",
+        }.get(intent, "")
+        # pill은 응대 에이전트처럼 고정 2지선다 — 증상 더 들을지 / 여기서 마칠지.
+        return AgentResult(
+            reply=r.get("reply") or fallback,
+            quick_replies=["증상 더 말할게요", "괜찮아요"],
+            state_patch={"triage_state": state, "active_flow": "triaging"},
         )
 
     # ── 예약 확인(예/아니오) ──────────────────────────────────────

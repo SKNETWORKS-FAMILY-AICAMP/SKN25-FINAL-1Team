@@ -44,9 +44,25 @@ def _heuristic(text: str) -> str:
     return "care"
 
 
-async def _classify(text: str) -> str:
+def _recent_convo(ctx: SessionContext, n: int = 5) -> str:
+    msgs = [m for m in (ctx.history or []) if isinstance(m, dict) and m.get("content")][-n:]
+    return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in msgs)
+
+
+async def _classify(text: str, ctx: SessionContext | None = None) -> str:
+    """발화 분류 — '맨몸 발화'가 아니라 '최근 대화 맥락'까지 보고 라벨을 고른다.
+    문진 중엔 직전 질문의 답·증상·잡담을 hospital로 오인하지 않게 강하게 편향시킨다."""
+    flow_hint = ""
+    if ctx is not None and ctx.active_flow == Flow.TRIAGING:
+        flow_hint = ("\n[지금 상황] 보호자는 '증상 문진' 중이다. 직전 봇 질문에 대한 답이거나 "
+                     "증상·걱정·되묻기·잡담이면 'symptom'으로 본다. "
+                     "'hospital'은 보호자가 분명히 병원 운영시간·위치·전화·휴진 같은 '병원 정보'로 "
+                     "화제를 바꿀 때만 골라라(증상 얘기 중 병원을 스쳐 언급한 정도면 symptom).")
+    convo = _recent_convo(ctx) if ctx is not None else ""
+    prompt = (f"{_CLASSIFY_PROMPT}{flow_hint}\n\n"
+              f"[최근 대화]\n{convo}\n[분류할 발화] {text}")
     try:
-        out = await call_llm_json(f"{_CLASSIFY_PROMPT}\n\n발화: {text}")
+        out = await call_llm_json(prompt)
         label = (out.get("label") or "").strip().lower()
         if label in {"hospital", "symptom", "booking", "care", "followup", "other"}:
             return label
@@ -61,12 +77,20 @@ async def route(ctx: SessionContext) -> str:
     if ctx.user_message in _RECEPTION_PILLS:
         return "reception"
 
-    # 1) sticky: 문진 중 / 예약확인(예·아니오) 대기 중이면 문진 에이전트가 받는다
-    if ctx.active_flow in (Flow.TRIAGING, Flow.AWAITING_BOOKING_CONFIRM):
+    # 1) 예약확인(예/아니오) 대기 = 짧은 결정 게이트라 결정론적으로 triage가 받는다.
+    #    (여기서 LLM 라우팅을 돌리면 "예"가 엉뚱하게 분류될 수 있어 의도적으로 고정)
+    if ctx.active_flow == Flow.AWAITING_BOOKING_CONFIRM:
         return "triage"
 
-    # 2) LLM 분류 — 단, 사진/영상 첨부는 '증상 신호'로 간주(텍스트가 비거나 "."이어도 비전 문진이 돌게).
-    label = "symptom" if ctx.attachments else await _classify(ctx.user_message)
+    # 2) LLM 분류(맥락 인식) — 사진/영상 첨부는 '증상 신호'로 간주.
+    label = "symptom" if ctx.attachments else await _classify(ctx.user_message, ctx)
+
+    # 2.5) 동적 라우팅(문진 중) — 매 턴 LLM이 화제를 보고 에이전트를 고른다.
+    #   기본은 triage가 이어받되(증상답·되묻기·잡담·종료는 triage가 내부에서 응대),
+    #   '명확한 병원 정보'로 화제를 바꾸면 그 턴만 응대로 우회 → 응대는 active_flow를 안 건드리므로
+    #   다음 증상 발화에서 문진이 자동 복귀(turn_count·수집정보 그대로 보존).
+    if ctx.active_flow == Flow.TRIAGING:
+        return "reception" if label == "hospital" else "triage"
 
     # 3) phase별 매핑
     if ctx.phase == Phase.BOOKED:
