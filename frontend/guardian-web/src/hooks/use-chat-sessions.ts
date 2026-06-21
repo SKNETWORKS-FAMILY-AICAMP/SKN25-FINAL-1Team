@@ -471,6 +471,15 @@ export const useChatSessions = ({
     );
   };
 
+  // 문진 완료 시 생성된 요약 제목으로 목록 제목 실시간 갱신
+  const updateChatHistoryTitle = (sessionId: number, title: string) => {
+    setChatHistories((currentHistories) =>
+      currentHistories.map((history) =>
+        history.session_id === sessionId ? { ...history, title } : history,
+      ),
+    );
+  };
+
   return {
     chatHistories,
     selectedHistoryId,
@@ -489,6 +498,7 @@ export const useChatSessions = ({
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    updateChatHistoryTitle,
     discardEmptyLiveSession,
   };
 };

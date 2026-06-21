@@ -21,12 +21,12 @@ from app.utils.timezone import KST, to_kst
 
 
 def _urgency_to_triage_status(urgency_num: Optional[int]) -> str:
-    # VTL 4단계(urgency_level_num) → 화면 표시 3버킷
+    # 4단계 → 3버킷: RED(num1)=응급 / ORANGE(num2)=준응급 / YELLOW(num3)·GREEN(num4)=일반
     if urgency_num == 1:
         return "emergency"      # 응급
-    if urgency_num in (2, 3):
-        return "semiEmergency"  # 준응급
-    return "normal"             # 일반
+    if urgency_num == 2:
+        return "semiEmergency"  # 준응급(ORANGE)
+    return "normal"             # 일반(YELLOW·GREEN)
 
 
 def _calc_age(birth_date) -> int:

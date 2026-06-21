@@ -21,6 +21,8 @@ export interface CreateChatSessionResponse {
 
 export interface ChatSessionHistory {
   session_id: number;
+  /** 문진 완료 시 생성된 대화 요약 제목(있으면 목록 제목으로 우선 사용). */
+  title?: string | null;
   keywords: string[];
   created_at: string;
   status: string;
@@ -112,10 +114,10 @@ export type ChatStreamEvent =
       type: "message";
       content: string;
     }
-  // 진행 단계 알림 (image_analysis: 이미지 분석중 / generating: 응답 생성중)
+  // 진행 단계 알림 (image_analysis: 이미지 분석중 / generating: 응답 생성중 / searching: 증상 검색중)
   | {
       type: "status";
-      phase: "image_analysis" | "generating";
+      phase: "image_analysis" | "generating" | "searching";
     }
   | {
       type: "quick_replies";
@@ -127,6 +129,10 @@ export type ChatStreamEvent =
       type: "message_meta";
       source: string;
       lang: string;
+    }
+  | {
+      type: "chat_title";
+      title: string;
     }
   | {
       type: "triage_complete";

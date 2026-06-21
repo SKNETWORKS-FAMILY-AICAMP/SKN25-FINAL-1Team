@@ -427,11 +427,14 @@ const ChatMessageList = ({
           >
             {(() => {
               if (message.i18nKey) return t(message.i18nKey, message.i18nVars);
-              // 빈 말풍선 로딩 문구: 이미지 분석중이면 카메라+전용 문구, 그 외엔 말풍선+응답 작성중
-              if (!message.content)
-                return message.statusPhase === "image_analysis"
-                  ? `📷 ${t("chatbot.analyzingImage")}`
-                  : `💬 ${t("chatbot.writingResponse")}`;
+              // 빈 말풍선 로딩 문구: 이미지 분석중📷 / 증상 검색중🔍 / 그 외 응답 작성중💬
+              if (!message.content) {
+                if (message.statusPhase === "image_analysis")
+                  return `📷 ${t("chatbot.analyzingImage")}`;
+                if (message.statusPhase === "searching")
+                  return `🔍 ${t("chatbot.searchingSymptoms")}`;
+                return `💬 ${t("chatbot.writingResponse")}`;
+              }
 
               // 백엔드가 이미 현재 언어로 보내준 본문은 그대로 노출(플래시 없음).
               if (message.contentLang === lang) return message.content;

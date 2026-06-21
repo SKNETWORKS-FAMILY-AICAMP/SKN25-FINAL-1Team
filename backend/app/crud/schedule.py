@@ -484,18 +484,18 @@ async def get_available_slots(
 # 응급도 3버킷 → 탐색 시작 오프셋(영업일). 급할수록 이른 날부터 스캔하여
 # 응급 환자에게 가장 빠른 시간을 우선 추천한다. 일반은 뒤로 미뤄 이른 슬롯을 비워둠
 #   응급(RED, num1)        → 오늘부터
-#   준응급(num2~3)         → +1 영업일부터
-#   일반(num4~5)           → +2 영업일부터
+#   준응급(ORANGE, num2)   → +1 영업일부터
+#   일반(YELLOW·GREEN, num3~) → +2 영업일부터
 _URGENCY_START_OFFSET_DAYS = {"emergency": 0, "semi": 1, "normal": 2}
 
 
 def _urgency_bucket(urgency_level_num: int) -> str:
-    """urgency_level_num(1~5) → 3버킷. (표시 라벨 3버킷과 동일 기준)"""
+    """urgency_level_num → 3버킷. RED(1)=응급 / ORANGE(2)=준응급 / YELLOW(3)·GREEN(4)=일반. (표시 라벨과 동일)"""
     if urgency_level_num <= 1:
         return "emergency"   # 응급
-    if urgency_level_num <= 3:
-        return "semi"        # 준응급
-    return "normal"          # 일반
+    if urgency_level_num == 2:
+        return "semi"        # 준응급(ORANGE)
+    return "normal"          # 일반(YELLOW·GREEN)
 
 
 async def find_earliest_slots(

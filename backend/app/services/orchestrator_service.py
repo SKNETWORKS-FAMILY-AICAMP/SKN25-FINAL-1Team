@@ -29,8 +29,21 @@ async def process_turn(db, session_id: int, userid: int, request):
     await add_message(db, session, "user", content, image_url=image_url)
 
     # 2) 현재 상황(SessionContext) 만들기 + 한 턴 실행
+    #    실행 중 에이전트가 푸시하는 진행 상태(예: 증상 검색중)를 큐로 받아 그때그때 흘려보낸다.
+    import asyncio
+
     ctx = await build_context(db, session, content, attachments)
-    result = await run_turn(ctx)
+    status_queue: asyncio.Queue = asyncio.Queue()
+    ctx.status_queue = status_queue
+    run_task = asyncio.create_task(run_turn(ctx))
+    while not run_task.done():
+        try:
+            yield await asyncio.wait_for(status_queue.get(), timeout=0.05)
+        except asyncio.TimeoutError:
+            continue
+    result = await run_task
+    while not status_queue.empty():
+        yield status_queue.get_nowait()
 
     # 3) 바뀐 상태 저장 (orch_state)
     apply_patch(ctx, result.state_patch)
@@ -59,5 +72,8 @@ async def process_turn(db, session_id: int, userid: int, request):
                 "triage_summary": data.get("triage_summary"),
                 "keywords": data.get("symptom_keywords") or [],
             })
+        elif ev.get("type") == "chat_title":
+            # 채팅 목록 제목 실시간 갱신용
+            payload["title"] = ev.get("title")
 
     yield {"type": "result", "result": payload}

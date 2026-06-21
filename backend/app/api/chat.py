@@ -262,6 +262,7 @@ async def get_chat_sessions(
         "result": [
             {
                 "session_id": session.id,
+                "title": session.title,
                 "keywords": session.keywords or [],
                 "created_at": str(session.created_at.date()),
                 "status": "진료완료" if session.is_complete else "상담중",
@@ -449,6 +450,17 @@ async def send_message(
                     "data: "
                     + json.dumps(
                         {"type": "quick_replies", "options": quick_replies},
+                        ensure_ascii=False,
+                    )
+                    + "\n\n"
+                )
+
+            # 채팅 목록 제목 실시간 갱신 (문진 완료 시점)
+            if result.get("title"):
+                yield (
+                    "data: "
+                    + json.dumps(
+                        {"type": "chat_title", "title": result["title"]},
                         ensure_ascii=False,
                     )
                     + "\n\n"

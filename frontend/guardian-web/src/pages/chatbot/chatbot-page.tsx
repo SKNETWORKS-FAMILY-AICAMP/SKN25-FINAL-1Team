@@ -235,6 +235,7 @@ const ChatbotPage = () => {
     getErrorMessage,
     onTriageComplete: (sessionId, keywords, collectedInfo, emrid, scheduleTaskId) =>
       onTriageCompleteRef.current?.(sessionId, keywords, collectedInfo, emrid, scheduleTaskId),
+    onTitleUpdate: (sessionId, title) => updateChatHistoryTitle(sessionId, title),
   });
 
   const pipeline = useAgentPipeline({
@@ -266,6 +267,7 @@ const ChatbotPage = () => {
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    updateChatHistoryTitle,
     discardEmptyLiveSession,
   } = useChatSessions({
     selectedPet,
@@ -401,9 +403,11 @@ const ChatbotPage = () => {
 
   const todayChatTitle = useMemo(() => formatDateToYyyyMmDd(new Date()), []);
 
-  // 상담 제목 = 저장된 keywords 그대로 표시 (완료 시점 언어로 박제됨 → 재번역하지 않음)
+  // 상담 제목 = 완료 시 생성된 요약 title 우선, 없으면 기존 keywords 표시(하위호환).
   const getHistoryTitle = useCallback(
     (history: ChatSessionHistory) => {
+      const title = history.title?.trim();
+      if (title) return title;
       const keywords = history.keywords
         .map((keyword) => keyword.trim())
         .filter((keyword) => keyword && keyword.length <= 24)
