@@ -60,10 +60,22 @@ async def create_followup(
         if datetime.now(timezone.utc) > confirmed - timedelta(hours=1):
             raise HTTPException(status_code=403, detail="진료 시작 1시간 전이 되어 경과 보고가 마감되었습니다.")
 
-    # ── 경과 처리는 v2 followup_filter 에이전트가 담당(분류·누적요약·이미지저장·응답).
-    #    옛 단순 저장 대신 실제 에이전트를 태운다. (need_followup 게이팅은 폐기)
-    from ai.agents.followup_filter.agent import followup_filter
-    from ai.orchestrator.contracts import Phase, SessionContext
+    # ── 경과 메시지도 메인 챗과 동일하게 오케스트레이터 라우터를 거친다.
+    #    예약 후(BOOKED)엔 LLM이 reception ⇄ followup_filter 를 판단:
+    #      "토한다"→경과 저장 / "병원 언제까지해?"→reception(MCP)으로 진짜 안내.
+    #    (옛날엔 followup_filter 직행 → 병원 질문에 캔드 멘트만 나가던 버그)
+    from ai.orchestrator.graph import run_turn
+    from ai.orchestrator.state import build_context
+
+    # 재진입 복원 + 라우팅 맥락(history)·hospitalid 확보를 위해 chat 세션을 먼저 로드.
+    from app.models.chat_history import ChatHistory
+    chat_row = await db.execute(
+        select(ChatHistory).where(
+            ChatHistory.emrid == request.emrid,
+            ChatHistory.is_deleted == False,  # noqa: E712
+        )
+    )
+    chat_session = chat_row.scalar_one_or_none()
 
     # 직전 누적 경과 메모(같은 emrid의 마지막 followup ai_summary)를 이어붙임 기준으로 전달.
     prior_row = await db.execute(
@@ -73,21 +85,32 @@ async def create_followup(
     )
     prior = prior_row.scalars().first()
 
-    ctx = SessionContext(
-        session_id=0,
-        userid=current_user.userid,
-        petid=guardian.petid,
-        pet_info={},
-        hospitalid=None,
-        emrid=request.emrid,
-        scheduleid=getattr(schedule, "scheduleid", None),
-        user_message=request.message or "",
-        attachments=request.images or [],
-        phase=Phase.BOOKED,
-        followup_summary=(prior.ai_summary if prior else "") or "",
-        db=db,
-    )
-    agent_result = await followup_filter.run(ctx, {})
+    if chat_session is not None:
+        # build_context: phase(BOOKED) 계산 + hospitalid·pet_info·history 채움.
+        ctx = await build_context(db, chat_session, request.message or "", request.images or [])
+        # 경과 누적요약은 followupDB 기준(orch_state보다 우선)으로 맞춘다.
+        ctx.followup_summary = (prior.ai_summary if prior else "") or ""
+    else:
+        # 챗 세션이 없으면(드문 경우) 최소 ctx로 구성.
+        from ai.orchestrator.contracts import Flow, Phase, SessionContext
+        from ai.orchestrator.state import _primary_hospitalid, _pet_info
+        ctx = SessionContext(
+            session_id=0,
+            userid=current_user.userid,
+            petid=guardian.petid,
+            pet_info=await _pet_info(db, guardian.petid),
+            hospitalid=await _primary_hospitalid(db, current_user.userid),
+            emrid=request.emrid,
+            scheduleid=getattr(schedule, "scheduleid", None),
+            user_message=request.message or "",
+            attachments=request.images or [],
+            phase=Phase.BOOKED,
+            active_flow=Flow.IDLE,
+            followup_summary=(prior.ai_summary if prior else "") or "",
+            db=db,
+        )
+
+    agent_result = await run_turn(ctx)
     saved = any(ev.get("type") == "followup_saved" for ev in (agent_result.events or []))
 
     # 실제로 경과가 저장됐을 때만 수의사에게 알림(잡담/병원질문 등은 저장 안 됨).
@@ -105,16 +128,9 @@ async def create_followup(
             logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
 
     # 대화 기록(chat_historyDB)에 보호자 메시지 + 챗봇 응답을 남겨 재진입 시 복원.
+    # (chat_session 은 위에서 이미 로드함)
     try:
-        from app.models.chat_history import ChatHistory
         from sqlalchemy.orm.attributes import flag_modified
-        chat_row = await db.execute(
-            select(ChatHistory).where(
-                ChatHistory.emrid == request.emrid,
-                ChatHistory.is_deleted == False,
-            )
-        )
-        chat_session = chat_row.scalar_one_or_none()
         if chat_session:
             msgs = list(chat_session.messages or [])
             user_content = request.message or ""
