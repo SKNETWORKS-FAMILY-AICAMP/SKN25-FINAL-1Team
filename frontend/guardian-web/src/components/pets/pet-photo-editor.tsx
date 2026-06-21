@@ -442,7 +442,7 @@ const PetPhotoEditor = ({
     ].join(" ");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2937]/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1F2937]/50 p-4 backdrop-blur-sm sm:items-center">
       <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
           <h2 className="text-base font-extrabold text-[#1F2937]">
@@ -460,7 +460,7 @@ const PetPhotoEditor = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="relative mx-auto flex min-h-[240px] items-center justify-center rounded-2xl bg-[#F8FAFC] ring-1 ring-[#E5E7EB]">
             {isLoading ? (
               <div className="h-10 w-10 animate-spin rounded-full border-4 border-teal-100 border-t-teal-700" />

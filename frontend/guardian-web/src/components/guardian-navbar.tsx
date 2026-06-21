@@ -212,7 +212,7 @@ const GuardianNavbar = ({
 
       {/* 모바일 메뉴 — 햄버거 클릭 시 아래로 펼쳐짐(가로 배치, 좁으면 줄바꿈) */}
       {isMobileMenuOpen && (
-        <nav className="flex flex-wrap items-center justify-center gap-1.5 border-t border-slate-100 bg-white px-3 py-2.5 lg:hidden">
+        <nav className="flex flex-nowrap items-center justify-center gap-1 border-t border-slate-100 bg-white px-2 py-2.5 lg:hidden">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -220,7 +220,7 @@ const GuardianNavbar = ({
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
                 [
-                  "whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold transition",
+                  "whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-bold transition",
                   isActive
                     ? "bg-blue-50 text-blue-600"
                     : "text-slate-600 hover:bg-slate-50 hover:text-blue-600",

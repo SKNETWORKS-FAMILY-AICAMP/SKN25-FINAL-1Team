@@ -62,8 +62,8 @@ const ko: TranslationTree = {
   nav: {
     home: "홈",
     hospitals: "병원",
-    chatbot: "챗봇 상담",
-    reservations: "예약 내역",
+    chatbot: "상담",
+    reservations: "예약",
     mypage: "마이페이지",
     accountSuffix: "님",
     accountManage: "계정 관리",
@@ -565,8 +565,8 @@ const en: TranslationTree = {
   nav: {
     home: "Home",
     hospitals: "Hospitals",
-    chatbot: "Chat Consult",
-    reservations: "Reservations",
+    chatbot: "Chat",
+    reservations: "Bookings",
     mypage: "My Page",
     accountSuffix: "",
     accountManage: "Account",
@@ -1068,8 +1068,8 @@ const ja: TranslationTree = {
   nav: {
     home: "ホーム",
     hospitals: "病院",
-    chatbot: "チャット相談",
-    reservations: "予約履歴",
+    chatbot: "相談",
+    reservations: "予約",
     mypage: "マイページ",
     accountSuffix: "様",
     accountManage: "アカウント管理",
@@ -1569,8 +1569,8 @@ const zh: TranslationTree = {
   nav: {
     home: "首页",
     hospitals: "医院",
-    chatbot: "聊天咨询",
-    reservations: "预约记录",
+    chatbot: "咨询",
+    reservations: "预约",
     mypage: "我的页面",
     accountSuffix: "",
     accountManage: "账户管理",
