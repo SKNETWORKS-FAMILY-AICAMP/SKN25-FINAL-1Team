@@ -13,7 +13,6 @@ import sqlalchemy as sa
 from app.db.base import Base
 
 # Import all models so Base.metadata contains the full current schema.
-from app.models.agent_pipeline_result import AgentPipelineResult  # noqa: F401
 from app.models.alarm import DoctorAlarm  # noqa: F401
 from app.models.chat_history import ChatHistory  # noqa: F401
 from app.models.doctor import Doctor  # noqa: F401
@@ -24,7 +23,6 @@ from app.models.guardian import Guardian  # noqa: F401
 from app.models.hospital import Hospital  # noqa: F401
 from app.models.master import CategoryMaster, TriageMaster  # noqa: F401
 from app.models.pet import Pet  # noqa: F401
-from app.models.photo_analysis import PhotoAnalysis  # noqa: F401
 from app.models.prescription import Prescription  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.schedule import Schedule  # noqa: F401
@@ -43,16 +41,24 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     bind = op.get_bind()
 
+    # scheduleDB 의 no_overlap_schedule(GiST EXCLUDE) 제약이 모델에 정의돼 있어
+    # create_all 이 이를 생성하려면 btree_gist 확장이 먼저 있어야 한다.
+    # (a65b35 에서도 동일하게 보장하지만, 빈 DB 의 create_all 단계에서 필요)
+    bind.execute(sa.text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
+
     # 제외 목록:
     #   triage_rag_documents  → vector 확장이 없어 VECTOR 타입 생성 실패 (160babc 가 처리)
     #   hospital_weekly_scheduleDB / hospital_closed_datesDB / vet_weekly_scheduleDB
     #     → j1b2c3d4e5f6 에서 vet_scheduleDB 를 분리해 생성. 여기서 미리 만들면
     #       해당 마이그레이션과 'already exists' 충돌.
+    #   contact_inquiryDB → n1a2b3c4d5e6 가 전용으로 생성. 모델이 env.py 에 등록돼
+    #       metadata 에는 있으나, 여기서 미리 만들면 해당 마이그레이션과 충돌.
     _EXCLUDE = {
         "triage_rag_documents",
         "hospital_weekly_scheduleDB",
         "hospital_closed_datesDB",
         "vet_weekly_scheduleDB",
+        "contact_inquiryDB",
     }
     tables = [t for t in Base.metadata.sorted_tables if t.name not in _EXCLUDE]
     Base.metadata.create_all(bind=bind, tables=tables)

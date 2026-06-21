@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { uploadEmrFile } from "../api/emrApi";
 import type { UploadedFile } from "../types/emr";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 export function useEmrFile(accessToken: string, isTodayView: boolean) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);

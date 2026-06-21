@@ -9,7 +9,7 @@ import type { IntakeApplyTarget, PreviewImage, QueuePatient, EmrResult } from ".
 import { useEmrQueue, toDateInputValue, addDays } from "./useEmrQueue";
 import { useEmrFile } from "./useEmrFile";
 import { useEmrPrescription } from "./useEmrPrescription";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 export function useEmrData() {
   const session = useAuthStore((s: AuthState) => s.session);
