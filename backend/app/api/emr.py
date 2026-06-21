@@ -8,20 +8,16 @@
 6순위: GET  /doctor/emr/followup/{emrid} - 경과 모니터링 (수의사 뷰)
 7순위: POST /doctor/emr/{id}/auto-prescription - AI 처방전 자동 생성
 """
-import json
-import re
 from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import or_
 
-from app.core.config import settings
 from app.core.dependencies import get_current_hospital
 from app.crud.doctor import get_first_doctor
 from app.utils.file_validation import validate_file
@@ -291,85 +287,31 @@ async def generate_auto_prescription(
                 if len(candidate_drugs) >= 40:
                     break
 
-    drug_list_str = "\n".join(
-        f"- {d.name} (성분: {d.ingredient_kr})"
+    # 보호자 메모도 문진 컨텍스트로 함께 전달(기존 동작 보존)
+    if guardian.memo:
+        symptoms = symptoms + [f"보호자 메모: {guardian.memo}"]
+
+    candidate_dicts = [
+        {"name": d.name, "ingredient_kr": d.ingredient_kr, "ingredient_en": d.ingredient_en}
         for d in candidate_drugs[:40]
+    ]
+
+    # AI 처방 초안 생성은 에이전트에 위임 (프롬프트·LLM 호출은 ai/agents/prescription).
+    from ai.agents.prescription import PrescriptionAgent
+    meds = await PrescriptionAgent().generate(
+        pet={
+            "species": pet.species,
+            "breed": pet.breed,
+            "weight_kg": float(pet.weight_kg) if pet.weight_kg else 0,
+            "age": age,
+        },
+        drug_candidates=candidate_dicts,
+        symptoms=symptoms,
+        suspected_diseases=suspected_diseases,
+        doctor_notes=body.doctor_notes,
     )
 
-    prompt = f"""수의사 AI 보조입니다. 환자 문진 정보와 아래 약품 목록을 바탕으로 처방전을 작성하세요.
-수의사 진료 메모가 있는 경우 이를 가장 우선적으로 참고하여 처방을 결정하세요.
-
-[수의사 진료 메모] ← 최우선 참고
-{body.doctor_notes.strip() or "없음"}
-
-[환자 정보]
-종류/품종: {pet.species or "강아지"} / {pet.breed or ""}
-체중: {float(pet.weight_kg) if pet.weight_kg else 0}kg, 나이: {age}살
-
-[사전 문진]
-주요 증상: {", ".join(symptoms) if symptoms else "정보 없음"}
-의심 질환: {", ".join(suspected_diseases) if suspected_diseases else "정보 없음"}
-보호자 메모: {guardian.memo or "없음"}
-
-[사용 가능한 약품 목록]
-{drug_list_str}
-
-위 약품 목록에서 증상에 적합한 2~4가지를 선택하고, 각 약품의 투여 형태·용량·빈도·기간을 작성하세요.
-반드시 아래 허용값 중에서만 선택하세요 (목록 외 값 사용 금지):
-- form(투여형태): PO(경구), IV(정맥), SC(피하), IM(근육), 외용, 점안, 흡입
-- dosage(용량): 0.5mg/kg, 1mg/kg, 2mg/kg, 5mg/kg, 10mg/kg, 0.5ml, 1ml, 2ml, 5ml, 1정, 1/2정, 2정
-- frequency(빈도): SID(하루 1회), BID(하루 2회), TID(하루 3회), QID(하루 4회), 필요 시
-- duration(기간, 정수): 3, 5, 7, 10, 14, 30
-반드시 아래 JSON 형식으로만 응답하세요 (duration은 반드시 정수):
-
-{{
-  "medications": [
-    {{
-      "name": "폴리펜젝트 20(POLYPENJECT 20)",
-      "form": "SC(피하)",
-      "dosage": "10mg/kg",
-      "frequency": "SID(하루 1회)",
-      "duration": 5
-    }}
-  ]
-}}"""
-
-    llm = ChatOpenAI(
-        model=settings.OPENAI_MODEL or "gpt-4o",
-        api_key=settings.OPENAI_API_KEY,
-        temperature=0.3,
-        model_kwargs={"response_format": {"type": "json_object"}},
-    )
-    response = await llm.ainvoke(
-        [
-            {
-                "role": "system",
-                "content": "당신은 전문 수의사 AI 보조입니다. 반드시 JSON 형식으로만 응답하고, duration 필드는 반드시 숫자(정수)만 사용하세요.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-    )
-
-    data = json.loads(response.content if isinstance(response.content, str) else "{}")
-    meds = data.get("medications", [])
-
-    def _to_int(val) -> int:
-        m = re.search(r"\d+", str(val or ""))
-        return int(m.group()) if m else 0
-
-    return {
-        "code": 200,
-        "result": [
-            {
-                "drug_name": m.get("name", ""),
-                "form": m.get("form", ""),
-                "dosage": m.get("dosage", ""),
-                "frequency": m.get("frequency", ""),
-                "duration_days": _to_int(m.get("duration", 0)),
-            }
-            for m in meds
-        ],
-    }
+    return {"code": 200, "result": meds}
 
 
 # ──────────────────────────────────────────────

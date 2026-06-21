@@ -70,7 +70,7 @@ async def _recommend_slots_node(state: ScheduleState) -> dict:
             )
     except Exception as e:
         logger.error("[schedule_graph] recommend_slots 실패: %s", e, exc_info=True)
-        recs = {"bucket": "standard", "recommended": [], "earliest": [], "by_doctor": {}}
+        recs = {"bucket": "normal", "recommended": [], "earliest": [], "by_doctor": {}}
     return {"recommendations": recs}
 
 

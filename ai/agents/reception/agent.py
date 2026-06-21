@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import logging
 import random
 from datetime import date, datetime, timedelta
 
@@ -15,6 +16,8 @@ from ai.llm import call_llm_json
 from ai.orchestrator.contracts import AgentResult, Flow, SessionContext
 
 from .prompts import build_reception_prompt
+
+logger = logging.getLogger(__name__)
 
 _CLOSING_QUESTIONS = [
     "또 궁금한 점 있으신가요?",
@@ -173,7 +176,8 @@ class ReceptionAgent:
     description = "병원 정보 안내 담당. 진단·처방 같은 진료 얘기는 '수의사께'로 넘긴다."
 
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
-        facts = await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message, ctx.history)
+        # 병원 정보 수집 — MCP 도구를 LLM이 골라 호출(우선), 실패 시 키워드 DB 조회로 폴백.
+        facts = await self._collect_facts(ctx)
         pet_name = ctx.pet_info.get("name") or "아이"
         streak = (ctx.reception_streak or 0) + 1
 
@@ -215,6 +219,59 @@ class ReceptionAgent:
             quick_replies=quick_replies,
             state_patch={"reception_streak": streak},
         )
+
+    # 병원 정보 수집: MCP 도구(LLM tool-calling) 우선, 실패/미가동 시 키워드 DB 조회 폴백.
+    async def _collect_facts(self, ctx: SessionContext) -> str:
+        try:
+            from ai.orchestrator.mcp.client import get_mcp_tools
+            tools = await get_mcp_tools()
+        except Exception as e:
+            logger.warning("[reception] MCP 도구 로드 실패, 폴백: %s", e)
+            tools = []
+        if tools:
+            try:
+                # MCP 가동 중이면 LLM이 고른 도구 결과(없으면 빈 문자열)를 그대로 사용.
+                return await self._gather_via_tools(ctx, tools)
+            except Exception as e:
+                logger.warning("[reception] MCP gather 실패, 폴백: %s", e)
+        return await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message, ctx.history)
+
+    # LLM이 질문을 보고 필요한 MCP 도구를 스스로 호출 → 수집한 사실 텍스트 반환.
+    async def _gather_via_tools(self, ctx: SessionContext, tools: list) -> str:
+        from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+        from langchain_openai import ChatOpenAI
+
+        from ai.llm import _resolve_model
+
+        by_name = {t.name: t for t in tools}
+        llm = ChatOpenAI(model=_resolve_model(), temperature=0).bind_tools(tools)
+        sys = (
+            "너는 동물병원 안내를 위한 '정보 수집기'야. 보호자 질문에 답하는 데 필요한 사실만 "
+            "제공된 도구를 호출해 모아라. 진단·처방·증상 판단은 도구로 모으지 마(수의사 몫). "
+            f"현재 병원 ID는 {ctx.hospitalid}, 반려동물 ID는 {ctx.petid}야. 도구 인자에 이 ID를 써. "
+            "병원 정보가 필요 없는 질문이면 도구를 호출하지 마."
+        )
+        messages = [SystemMessage(content=sys), HumanMessage(content=ctx.user_message or "")]
+        collected: list[str] = []
+        for _ in range(3):  # 도구 호출 루프 (무한루프 방지)
+            ai = await llm.ainvoke(messages)
+            messages.append(ai)
+            tool_calls = getattr(ai, "tool_calls", None) or []
+            if not tool_calls:
+                break
+            for tc in tool_calls:
+                tool = by_name.get(tc["name"])
+                if tool is None:
+                    continue
+                try:
+                    out = await tool.ainvoke(tc["args"])
+                except Exception as e:
+                    out = f"(도구 실패: {e})"
+                collected.append(f"[{tc['name']}] {out}")
+                messages.append(ToolMessage(content=str(out)[:2000], tool_call_id=tc["id"]))
+        if collected:
+            logger.info("[reception] MCP 도구 %s회 호출", len(collected))
+        return "\n".join(collected)
 
 
 reception = ReceptionAgent()

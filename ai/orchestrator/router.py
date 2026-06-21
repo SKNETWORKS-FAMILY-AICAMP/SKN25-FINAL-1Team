@@ -1,5 +1,10 @@
-"""라우팅 — "이 발화는 누가 답할지" 결정. 담당: 리드.
-설계서 §4 / AGENT_SPECS '공통 동작 규칙'. 규칙 먼저(결정론) → LLM 분류.
+"""라우팅 — "이 발화는 누가 답할지" 결정. 담당: 리드. 설계서 §4.
+
+phase로 '후보 에이전트'를 정하고(하드 제약), 그 안에서 누가 답할지는 LLM이 직접 고른다.
+  - 예약 전(PRE_BOOKING): reception ⇄ triage  (followup 불가 — 경과는 예약 후에만)
+  - 예약 후(BOOKED)     : reception ⇄ followup_filter  (triage 불가 — 재문진 안 함)
+라벨→if 매핑이 아니라, 각 에이전트 description을 LLM에 주고 직접 담당을 고르게 한다.
+버튼 클릭·예약확정(예/아니오)·첨부 같은 '확정 입력'만 LLM 없이 결정론으로 처리.
 """
 from __future__ import annotations
 
@@ -11,37 +16,31 @@ from .contracts import Flow, Phase, SessionContext
 
 logger = logging.getLogger(__name__)
 
-# 분류기에 주는 지시문 — 발화를 한 라벨로 분류
-_CLASSIFY_PROMPT = """다음 보호자 발화를 한 단어 라벨로만 분류해.
-- hospital : 병원 위치·주소·운영시간·휴진일·전화·수의사(의료진) 소개·병원 특징 등 '병원 정보' 질문
-- symptom  : 반려동물 증상·상태 호소(예: 토해요, 다리를 절어요, 발작했어요, 기침, 발작, 피부, 기타)
-- booking  : 예약하고 싶다는 의사(예: 예약하기, 예약할게요, 건강검진)
-- care     : 반려동물 일반질문(예: 비타민 먹여도 돼?, 사료 추천, 괜찮아요)
-- followup : 예약 후 경과 보고(증상이 어떻게 바뀌었는지)
-- other    : 위와 무관(잡담, 일반지식 등)
+# 후보 에이전트 설명 — 라우터 LLM이 담당을 고를 때 본다. (REGISTRY description 과 동기화)
+_AGENT_DESC = {
+    "reception": "병원 정보(위치·운영시간·전화·수의사 소개)와 일반 안내. 진단·처방은 수의사께 넘긴다.",
+    "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
+    "followup_filter": "예약 후 경과(증상이 어떻게 바뀌었는지) 보고를 받아 기록한다.",
+    "redirect": "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단.",
+}
 
-JSON으로만: {"label": "symptom"}"""
+# 시스템이 직접 제공한 pill — LLM 없이 결정론 처리 (버튼 클릭은 판단이 아니다).
+_RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
 
-# LLM 실패 시 쓰는 아주 단순한 키워드 백업
+# LLM 실패 시 폴백용 키워드 — 후보 집합 안에서만 매핑.
 _SYMPTOM_KW = ("토", "설사", "아파", "아프", "발작", "경련", "기침", "피", "출혈",
                "절뚝", "절어", "다리", "숨", "호흡", "열", "기력", "안 먹", "구토", "쓰러")
 _HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전화", "휴진", "몇 시", "몇시",
                 "의사", "선생님", "수의사", "원장", "소개", "특징")
-_BOOKING_KW = ("예약",)
-
-# 시스템이 직접 제공한 pill 텍스트 — LLM 분류 없이 결정론적으로 처리
-_RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
 
 
-def _heuristic(text: str) -> str:
-    t = text or ""
-    if any(k in t for k in _BOOKING_KW):
-        return "booking"
-    if any(k in t for k in _SYMPTOM_KW):
-        return "symptom"
-    if any(k in t for k in _HOSPITAL_KW):
-        return "hospital"
-    return "care"
+def _candidates(ctx: SessionContext) -> list[str]:
+    """현재 phase에서 담당 가능한 에이전트 후보(하드 제약 반영)."""
+    if ctx.phase == Phase.BOOKED:
+        return ["reception", "followup_filter", "redirect"]   # triage 불가(재문진 안 함)
+    if ctx.phase == Phase.CLOSED:
+        return ["reception", "redirect"]
+    return ["reception", "triage", "redirect"]                # 예약 전: followup 불가
 
 
 def _recent_convo(ctx: SessionContext, n: int = 5) -> str:
@@ -49,75 +48,76 @@ def _recent_convo(ctx: SessionContext, n: int = 5) -> str:
     return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in msgs)
 
 
-async def _classify(text: str, ctx: SessionContext | None = None) -> str:
-    """발화 분류 — '맨몸 발화'가 아니라 '최근 대화 맥락'까지 보고 라벨을 고른다.
-    문진 중엔 직전 질문의 답·증상·잡담을 hospital로 오인하지 않게 강하게 편향시킨다."""
-    flow_hint = ""
-    if ctx is not None and ctx.active_flow == Flow.TRIAGING:
-        flow_hint = ("\n[지금 상황] 보호자는 '증상 문진' 중이다. 직전 봇 질문에 대한 답이거나 "
-                     "증상·걱정·되묻기·잡담이면 'symptom'으로 본다. "
-                     "'hospital'은 보호자가 분명히 병원 운영시간·위치·전화·휴진 같은 '병원 정보'로 "
-                     "화제를 바꿀 때만 골라라(증상 얘기 중 병원을 스쳐 언급한 정도면 symptom).")
-    convo = _recent_convo(ctx) if ctx is not None else ""
-    prompt = (f"{_CLASSIFY_PROMPT}{flow_hint}\n\n"
-              f"[최근 대화]\n{convo}\n[분류할 발화] {text}")
+def _fallback(ctx: SessionContext, candidates: list[str]) -> str:
+    """LLM 실패 시: 키워드로 후보 안에서만 고른다(결정론 백업)."""
+    t = ctx.user_message or ""
+    if any(k in t for k in _SYMPTOM_KW):
+        if "triage" in candidates:
+            return "triage"
+        if "followup_filter" in candidates:
+            return "followup_filter"
+    if any(k in t for k in _HOSPITAL_KW):
+        return "reception"
+    return "reception"
+
+
+async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
+    """후보 에이전트 설명을 주고, 이번 발화의 담당을 LLM이 직접 고르게 한다."""
+    desc = "\n".join(f"- {n}: {_AGENT_DESC[n]}" for n in candidates if n in _AGENT_DESC)
+
+    if ctx.phase == Phase.BOOKED:
+        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고는 followup_filter, "
+                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다)")
+    elif ctx.phase == Phase.CLOSED:
+        phase_hint = "지금은 입력 마감 상태야. 병원 안내(reception)만 가능."
+    else:
+        phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
+                      "병원 정보·일반 안내는 reception.")
+        if ctx.emrid is not None:
+            phase_hint += " 문진은 이미 완료됨(재문진하지 말 것)."
+
+    if ctx.active_flow == Flow.TRIAGING:
+        phase_hint += (" 지금 증상 문진이 진행 중이야 — 직전 봇 질문의 답·증상·되묻기·잡담이면 "
+                       "triage로 이어가고, 분명히 병원 정보로 화제를 바꿀 때만 reception.")
+
+    prompt = (
+        "동물병원 챗봇의 라우터야. 아래 보호자 발화를 '누가' 처리해야 할지 후보 중 하나의 이름만 골라.\n"
+        f"{phase_hint}\n\n[후보 에이전트]\n{desc}\n\n"
+        f"[최근 대화]\n{_recent_convo(ctx)}\n[이번 발화] {ctx.user_message}\n\n"
+        'JSON으로만: {"agent": "후보 이름 중 하나"}'
+    )
     try:
         out = await call_llm_json(prompt)
-        label = (out.get("label") or "").strip().lower()
-        if label in {"hospital", "symptom", "booking", "care", "followup", "other"}:
-            return label
+        pick = (out.get("agent") or "").strip()
+        if pick in candidates:
+            return pick
+        logger.warning("[router] LLM이 후보 밖 선택(%r), 폴백", pick)
     except Exception as e:
-        logger.warning("[router] LLM 분류 실패, 휴리스틱 사용: %s", e)
-    return _heuristic(text)
+        logger.warning("[router] LLM 담당 선택 실패, 폴백: %s", e)
+    return _fallback(ctx, candidates)
 
 
 async def route(ctx: SessionContext) -> str:
     """반환: 처리 노드 이름 {reception|triage|schedule|followup_filter|redirect}."""
-    # 0) 시스템 pill 텍스트 — 결정론적으로 처리 (LLM 호출 없음)
+    # 0) 시스템 pill 텍스트 — 결정론 (버튼 클릭은 판단 아님)
     if ctx.user_message in _RECEPTION_PILLS:
         return "reception"
 
-    # 1) 예약확인(예/아니오) 대기 = 짧은 결정 게이트라 결정론적으로 triage가 받는다.
-    #    (여기서 LLM 라우팅을 돌리면 "예"가 엉뚱하게 분류될 수 있어 의도적으로 고정)
+    # 1) 예약확인(예/아니오) 대기 = 짧은 결정 게이트 → 결정론적으로 triage가 받는다.
     if ctx.active_flow == Flow.AWAITING_BOOKING_CONFIRM:
         return "triage"
 
-    # 2) LLM 분류(맥락 인식) — 사진/영상 첨부는 '증상 신호'로 간주.
-    label = "symptom" if ctx.attachments else await _classify(ctx.user_message, ctx)
+    # 2) 슬롯 고르는 중 = 예약 플로우 잠금 → 결정론적으로 schedule.
+    if ctx.active_flow == Flow.SCHEDULING:
+        return "schedule"
 
-    # 2.5) 동적 라우팅(문진 중) — 매 턴 LLM이 화제를 보고 에이전트를 고른다.
-    #   기본은 triage가 이어받되(증상답·되묻기·잡담·종료는 triage가 내부에서 응대),
-    #   '명확한 병원 정보'로 화제를 바꾸면 그 턴만 응대로 우회 → 응대는 active_flow를 안 건드리므로
-    #   다음 증상 발화에서 문진이 자동 복귀(turn_count·수집정보 그대로 보존).
-    if ctx.active_flow == Flow.TRIAGING:
-        return "reception" if label == "hospital" else "triage"
-
-    # 3) phase별 매핑
-    if ctx.phase == Phase.BOOKED:
-        if label == "hospital":
-            return "reception"
-        if label in ("symptom", "followup", "booking"):
-            return "followup_filter"   # 예약 후 = 경과로 수집
-        if label == "care":
-            return "reception"
-        return "redirect"
-
-    if ctx.phase == Phase.CLOSED:
-        return "reception" if label == "hospital" else "redirect"
-
-    # PRE_BOOKING
-    if ctx.active_flow == Flow.SCHEDULING and label in ("booking", "symptom"):
-        return "schedule"            # 문진 끝나고 시간 고르는 중
-    # 문진 완료(emrid 발급) 후: 같은 세션에선 재문진하지 않는다(응급도→예약 한 플로우).
-    #  - 'booking'(다시 예약) → triage가 재문진 없이 예약 재개(저장된 기록으로)
-    #  - 'symptom'(증상 재발화) → 새 문진 안 하고 가볍게 응대
-    if ctx.emrid is not None:
-        if label == "booking":
+    # 3) 첨부(사진/영상)는 증상/경과 신호 — phase에 따라 담당 고정.
+    if ctx.attachments:
+        if ctx.phase == Phase.BOOKED:
+            return "followup_filter"
+        if ctx.phase == Phase.PRE_BOOKING:
             return "triage"
-        if label == "symptom":
-            return "reception"
-    if label in ("symptom", "booking"):
-        return "triage"              # 증상·예약 → 문진부터 (예약은 문진 경유)
-    if label in ("hospital", "care"):
-        return "reception"           # care는 응대의 가드레일이 처리
-    return "redirect"                # other
+        return "reception"
+
+    # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
+    return await _llm_pick(ctx, _candidates(ctx))

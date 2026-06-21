@@ -52,6 +52,7 @@ services:
       REFRESH_TOKEN_EXPIRE_DAYS: 14
       DEBUG: false
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
+      MEDIPAW_MCP_URL: http://medipaw-mcp:8765/mcp
     ports:
       - "8000:8000"
     volumes:
@@ -70,6 +71,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # ── medipaw-mcp (병원 안내 MCP 서버) ─────────────────────────────
+  # 응대(reception)가 tool-calling으로 호출하는 read-only 조회 도구를 Streamable HTTP로 노출.
+  # backend 와 같은 이미지를 쓰되 서버만 다르게 기동. (fail-open이라 backend는 이 서비스에 의존 안 함)
+  medipaw-mcp:
+    build:
+      context: ../..
+      dockerfile: ai/docker/Dockerfile.backend
+    command: >
+      bash -c "python /app/ai/orchestrator/mcp/server.py"
+    env_file:
+      - ../../backend/.env
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
+      MCP_PORT: 8765
+    ports:
+      - "8765:8765"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - medipaw_net
 
   # ── DB 마이그레이션 ──────────────────────────────────────────────
   # 매 `up` 마다 alembic upgrade head 실행(멱등) → 새 마이그레이션이 항상 반영됨.
