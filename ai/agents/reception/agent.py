@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, select
 
 from ai.llm import call_llm_json
-from ai.orchestrator.contracts import AgentResult, SessionContext
+from ai.orchestrator.contracts import AgentResult, Flow, SessionContext
 
 from .prompts import build_reception_prompt
 
@@ -183,6 +183,14 @@ class ReceptionAgent:
         ]
         history_block = "\n[이전 대화]\n" + "\n".join(history_lines) + "\n" if history_lines else ""
         streak_hint = f"\n[현재 안내 횟수: {streak}회 — 이미 안내한 적 있음]" if streak >= 2 else ""
+
+        # 문진 중 잠깐 들른 '병원 정보 우회'면 → 답한 뒤 자연스럽게 증상 문진으로 돌아오도록 마무리.
+        if ctx.active_flow == Flow.TRIAGING:
+            streak_hint += (
+                f"\n[중요] 보호자는 원래 '{pet_name} 증상 문진' 중이고 잠깐 병원 정보를 물은 거야. "
+                f"병원 정보를 친절히 답한 뒤, 마지막은 '다른 것도 도와드릴까요?' 대신 증상 이야기로 "
+                f"자연스럽게 돌아오도록 권해(예: '그럼 {pet_name} 증상 더 들려주실래요?')."
+            )
 
         prompt = build_reception_prompt(facts, pet_name, history_block, streak_hint, ctx.user_message)
 
