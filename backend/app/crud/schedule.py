@@ -484,18 +484,18 @@ async def get_available_slots(
 # 응급도 3버킷 → 탐색 시작 오프셋(영업일). 급할수록 이른 날부터 스캔하여
 # 응급 환자에게 가장 빠른 시간을 우선 추천한다. 일반은 뒤로 미뤄 이른 슬롯을 비워둠
 #   응급(RED, num1)        → 오늘부터
-#   준응급(num2~3)         → +1 영업일부터
-#   일반(num4~5)           → +2 영업일부터
+#   준응급(ORANGE, num2)   → +1 영업일부터
+#   일반(YELLOW·GREEN, num3~) → +2 영업일부터
 _URGENCY_START_OFFSET_DAYS = {"emergency": 0, "semi": 1, "normal": 2}
 
 
 def _urgency_bucket(urgency_level_num: int) -> str:
-    """urgency_level_num(1~5) → 3버킷. (표시 라벨 3버킷과 동일 기준)"""
+    """urgency_level_num → 3버킷. RED(1)=응급 / ORANGE(2)=준응급 / YELLOW(3)·GREEN(4)=일반. (표시 라벨과 동일)"""
     if urgency_level_num <= 1:
         return "emergency"   # 응급
-    if urgency_level_num <= 3:
-        return "semi"        # 준응급
-    return "normal"          # 일반
+    if urgency_level_num == 2:
+        return "semi"        # 준응급(ORANGE)
+    return "normal"          # 일반(YELLOW·GREEN)
 
 
 async def find_earliest_slots(
@@ -543,13 +543,32 @@ async def find_earliest_slots(
 
 # ── 응급도 기반 슬롯 추천 (3모드, 결정론) ─────────────────────────────────────
 # triage 응급도로 추천 분배를 정한다. LLM 없이 vet_scheduleDB 운영시간만으로 계산.
-#   응급(RED) → 가장 빠른 운영일 2개 + 다음 운영일 1개
-#   그 외     → 운영일 3일에 1개씩(오늘·내일·모레), 휴진/마감이면 다음 운영일로 밀기.
+# find_earliest_slots._urgency_bucket과 동일한 3버킷 기준으로 통일.
+#   응급(RED, num1)        → 가장 빠른 운영일 2개 + 다음 운영일 1개
+#   준응급(ORANGE, num2)   → 가장 빠른 운영일 1개 + 다음 운영일 2개
+#   일반(YELLOW·GREEN)     → 운영일 3일에 1개씩(오늘·내일·모레), 휴진/마감이면 다음 운영일로 밀기.
+
+# 버킷별 운영일 quota (fill-forward)
+_BUCKET_DAY_QUOTAS = {
+    "emergency": [2, 1],
+    "semi": [1, 2],
+    "normal": [1, 1, 1],
+}
+
+
 def _recommend_bucket(urgency) -> str:
-    """triage urgency(라벨 'RED'/'ORANGE'.. 또는 숫자 1~5) → 'emergency' | 'standard'."""
+    """triage urgency(라벨 'RED'/'ORANGE'/'YELLOW'/'GREEN' 또는 숫자 1~5) → 3버킷.
+
+    find_earliest_slots._urgency_bucket과 동일 기준: RED(1)=emergency / ORANGE(2)=semi / 그외=normal.
+    """
     if isinstance(urgency, (int, float)):
-        return "emergency" if int(urgency) <= 1 else "standard"
-    return "emergency" if str(urgency).strip().upper() == "RED" else "standard"
+        return _urgency_bucket(int(urgency))
+    label = str(urgency).strip().upper()
+    if label == "RED":
+        return "emergency"
+    if label == "ORANGE":
+        return "semi"
+    return "normal"
 
 
 # AvailableSlot → 응답용 dict
@@ -563,6 +582,22 @@ def _slot_to_dict(d, slot: "AvailableSlot") -> dict:
     }
 
 
+# 슬롯 목록에서 count개를, 의사가 골고루 섞이도록 고른다 (recommended 모드 분산용).
+# used: 누적 선택 횟수(의사별). 호출 간 공유하면 날짜를 넘나들며 한 의사 쏠림을 막는다.
+# slots는 (start_time, doctorid) 오름차순 전제 → 같은 사용횟수면 가장 이른 슬롯이 잡힌다.
+def _pick_diverse(slots: list, count: int, used: dict[int, int]) -> list:
+    chosen: list = []
+    pool = list(slots)
+    while len(chosen) < count and pool:
+        min_used = min(used.get(s.doctorid, 0) for s in pool)
+        i = next(idx for idx, s in enumerate(pool) if used.get(s.doctorid, 0) == min_used)
+        s = pool.pop(i)
+        used[s.doctorid] = used.get(s.doctorid, 0) + 1
+        chosen.append(s)
+    chosen.sort(key=lambda s: (s.start_time, s.doctorid))  # 표시용 시간순 복원
+    return chosen
+
+
 # 운영일마다 정해진 개수(quota)씩 가장 빠른 슬롯 수집 (휴진은 건너뜀 = fill-forward)
 async def _collect_by_day_quota(
     db: AsyncSession,
@@ -571,13 +606,16 @@ async def _collect_by_day_quota(
     hospitalid: int | None,
     doctorid: int | None,
     max_scan_days: int = 21,
+    diversify: bool = False,
 ) -> list[dict]:
     """day_quotas=[2,1] → '첫 운영일 2개, 다음 운영일 1개'.
 
     휴진/마감으로 빈 날은 quota를 소비하지 않고 다음 운영일로 넘어간다(fill-forward).
+    diversify=True면 한 의사 쏠림을 줄여 여러 의사를 골고루 추천한다(병원 전체 조회 시).
     """
     today = datetime.now(KST).date()
     collected: list[dict] = []
+    used: dict[int, int] = {}  # 의사별 누적 선택 횟수 (날짜 넘나들며 공유)
     quota_idx = 0
     for day_index in range(max_scan_days):
         if quota_idx >= len(day_quotas):
@@ -586,7 +624,9 @@ async def _collect_by_day_quota(
         slots, _ = await get_available_slots(db, d.isoformat(), duration_min, doctorid, hospitalid)
         if not slots:
             continue  # 휴진/마감 → 다음 운영일
-        for s in slots[: day_quotas[quota_idx]]:
+        q = day_quotas[quota_idx]
+        picked = _pick_diverse(slots, q, used) if diversify else slots[:q]
+        for s in picked:
             collected.append(_slot_to_dict(d, s))
         quota_idx += 1
     return collected
@@ -606,10 +646,15 @@ async def recommend_slots(
     반환: {bucket, recommended[], earliest[], by_doctor{docid: {doctor_name, slots[]}}}
     """
     bucket = _recommend_bucket(urgency)
-    rec_quota = [2, 1] if bucket == "emergency" else [1, 1, 1]  # 응급=오늘2+내일1 / 그외=오늘1·내일1·모레1
+    # 응급=오늘2+내일1 / 준응급=오늘1+내일2 / 일반=오늘1·내일1·모레1
+    rec_quota = _BUCKET_DAY_QUOTAS.get(bucket, _BUCKET_DAY_QUOTAS["normal"])
 
-    recommended = await _collect_by_day_quota(db, rec_quota, duration_min, hospitalid, doctorid)
-    earliest = await _collect_by_day_quota(db, [3], duration_min, hospitalid, doctorid)  # 가장 빠른 운영일 앞 3개
+    # 추천시간: 의사 골고루(diversify). 특정 원장 지정(doctorid) 시엔 의사 1명뿐이라 분산 무의미.
+    recommended = await _collect_by_day_quota(
+        db, rec_quota, duration_min, hospitalid, doctorid, diversify=True
+    )
+    # 가장 가까운 시간: 의사 무관 '순수 가장 이른' 순서 유지(분산 안 함)
+    earliest = await _collect_by_day_quota(db, [3], duration_min, hospitalid, doctorid)
 
     by_doctor: dict[int, dict] = {}
     # 수의사별: 병원 전체 조회일 때만 원장 각각에 추천 분배 적용

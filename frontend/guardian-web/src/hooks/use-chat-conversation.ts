@@ -65,7 +65,7 @@ export interface ChatMessage {
   i18nVars?: Record<string, string | number>;
   pipelineKey?: "checking-slots" | "slots-result" | "slot-error" | "booking-status" | "followup-restore";
   /** 응답 대기 중 진행 단계 — 빈 말풍선 로딩 문구 분기용. */
-  statusPhase?: "image_analysis" | "generating";
+  statusPhase?: "image_analysis" | "generating" | "searching";
 }
 
 interface UseChatConversationParams {
@@ -82,6 +82,8 @@ interface UseChatConversationParams {
     emrid?: number,
     scheduleTaskId?: string,
   ) => void;
+  /** 문진 완료 시 생성된 대화 요약 제목 — 채팅 목록 제목 실시간 갱신용. */
+  onTitleUpdate?: (sessionId: number, title: string) => void;
 }
 
 export const useChatConversation = ({
@@ -92,6 +94,7 @@ export const useChatConversation = ({
   setErrorMessage,
   getErrorMessage,
   onTriageComplete,
+  onTitleUpdate,
 }: UseChatConversationParams) => {
   const { t, lang } = useTranslation();
   const [session, setSession] = useState<ChatSessionResult | null>(null);
@@ -159,6 +162,13 @@ export const useChatConversation = ({
             : message,
         ),
       );
+      return;
+    }
+
+    if (event.type === "chat_title") {
+      if (session && onTitleUpdate && event.title) {
+        onTitleUpdate(session.session_id, event.title);
+      }
       return;
     }
 

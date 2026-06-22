@@ -20,7 +20,7 @@ import {
   formatSelectedDate,
 } from "../../utils/dashboardUtils";
 import { getHolidayName } from "../../utils/reservationUtils";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 interface DashboardPageProps {
   session: AuthSession;

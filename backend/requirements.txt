@@ -45,4 +45,7 @@ python-dotenv==1.0.1
 httpx==0.28.1
 
 # MCP — 수의 RAG read-only MCP 서버(backend/scripts/mcp_rag_server.py, 개발/탐색용)
+#       + medipaw-mcp 병원안내 서버(ai/orchestrator/mcp/server.py, 응대 tool-calling용)
 mcp==1.27.2
+# MCP 도구를 LangChain 툴로 로드 — 응대(reception)가 tool-calling으로 호출.
+langchain-mcp-adapters==0.1.9

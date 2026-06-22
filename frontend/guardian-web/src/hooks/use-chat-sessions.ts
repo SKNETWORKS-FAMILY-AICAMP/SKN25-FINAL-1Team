@@ -275,6 +275,17 @@ export const useChatSessions = ({
     });
   }, [liveSessionRef]);
 
+  // 열려 있는 세션만 닫고 상담 목록은 그대로 둔다(모바일 드릴다운에서
+  // 채팅 → 목록 뒤로가기). 펫 변경과 달리 히스토리를 다시 불러오지 않는다.
+  const closeActiveSession = () => {
+    discardEmptyLiveSession();
+    setSelectedHistoryId(null);
+    setSession(null);
+    setIsLoadingHistoryMessages(false);
+    resetConversationState();
+    setErrorMessage("");
+  };
+
   const resetSessionStateForPetChange = () => {
     discardEmptyLiveSession();
     setSelectedHistoryId(null);
@@ -460,6 +471,15 @@ export const useChatSessions = ({
     );
   };
 
+  // 문진 완료 시 생성된 요약 제목으로 목록 제목 실시간 갱신
+  const updateChatHistoryTitle = (sessionId: number, title: string) => {
+    setChatHistories((currentHistories) =>
+      currentHistories.map((history) =>
+        history.session_id === sessionId ? { ...history, title } : history,
+      ),
+    );
+  };
+
   return {
     chatHistories,
     selectedHistoryId,
@@ -472,11 +492,13 @@ export const useChatSessions = ({
     isLoadingMoreHistories,
     loadMoreChatHistories,
     resetSessionStateForPetChange,
+    closeActiveSession,
     handleCreateSession,
     handleSelectHistory,
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    updateChatHistoryTitle,
     discardEmptyLiveSession,
   };
 };

@@ -40,10 +40,40 @@ def _agent_node(agent):
     return _node
 
 
+_DEFLECT = "저는 반려동물 건강·예약을 도와드려요. 증상이나 예약을 말씀해 주세요."
+
+# 문진 흐름 밖(응대 직후·콜드 스타트 등)에서 들어온 '회상/메타 질문'을 history로 답해준다.
+# 모든 대화는 저장되므로, 어디서 물어도 "방금 뭐라 했지"에 일관되게 답하게 하는 게 목적.
+_RECALL_PROMPT = """너는 동물병원 상담 도우미야. 보호자의 '이번 발화'가 '우리가 나눈 대화에 대한
+회상/메타 질문'(예: "방금 뭐라 했어", "내가 뭐라고 말했지", "여태 무슨 얘기 했더라")인지 판단해.
+
+[지금까지 대화]
+{convo}
+
+[이번 발화] {msg}
+
+- 회상/메타 질문이면: [지금까지 대화]를 근거로 보호자가 한 말을 사실대로 짧게 짚어준다(지어내기 금지). is_recall=true.
+- 아니면(무관한 잡담·일반지식 등): is_recall=false (reply는 비워도 됨).
+
+JSON으로만: {{"is_recall": true, "reply": "회상 답변(회상일 때만)"}}"""
+
+
 async def _redirect_node(state: OrchState) -> dict:
-    return {"result": AgentResult(
-        reply="저는 반려동물 건강·예약을 도와드려요. 증상이나 예약을 말씀해 주세요."
-    )}
+    from ai.llm import call_llm_json
+    ctx = state["ctx"]
+    # 현재 발화(마지막 항목)는 빼고 '이전까지'의 대화만 근거로 준다.
+    hist = list(ctx.history or [])
+    if hist and hist[-1].get("role") == "user" and hist[-1].get("content") == ctx.user_message:
+        hist = hist[:-1]
+    convo = "\n".join(f"{m.get('role')}: {m.get('content')}" for m in hist if m.get("content"))
+    if convo:
+        try:
+            out = await call_llm_json(_RECALL_PROMPT.format(convo=convo, msg=ctx.user_message))
+            if out.get("is_recall") and (out.get("reply") or "").strip():
+                return {"result": AgentResult(reply=out["reply"].strip())}
+        except Exception as e:
+            logger.warning("[orch] redirect 회상 처리 실패: %s", e)
+    return {"result": AgentResult(reply=_DEFLECT)}
 
 
 def _pick(state: OrchState) -> str:

@@ -3,7 +3,7 @@ import type { DrugSearchResult } from "../api/prescriptionApi";
 import { fetchEmrReport, generateAutoPrescription } from "../api/emrApi";
 import { FORM_OPTIONS, DOSAGE_OPTIONS, FREQUENCY_OPTIONS, DURATION_OPTIONS } from "../components/emr/EditorPanels";
 import type { Prescription } from "../types/emr";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 let prescriptionClientIdSeq = 0;
 

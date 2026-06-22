@@ -77,12 +77,18 @@ const LocalizedDateInput = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const displayValue = value ? formatDatePreview(value, lang) : label;
 
+  // 데스크톱에서 투명 input을 클릭하면 달력을 바로 띄운다. 모바일은 투명 input을
+  // 직접 탭하면 OS 네이티브 날짜 휠이 열리므로, showPicker가 실패해도 무시한다.
   const openPicker = () => {
     if (disabled) return;
     const input = inputRef.current;
     if (!input) return;
     if (typeof input.showPicker === "function") {
-      input.showPicker();
+      try {
+        input.showPicker();
+      } catch {
+        input.focus();
+      }
     } else {
       input.focus();
     }
@@ -90,15 +96,12 @@ const LocalizedDateInput = ({
 
   return (
     <div className="relative mt-2">
-      <button
-        type="button"
-        onClick={openPicker}
-        disabled={disabled}
+      {/* 보이는 부분(스타일). 실제 입력/탭은 위에 겹친 투명 input이 직접 받는다. */}
+      <div
+        aria-hidden="true"
         className={[
-          "flex h-12 w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-left text-sm font-semibold outline-none transition-all duration-300",
-          disabled
-            ? "cursor-not-allowed bg-slate-100 text-slate-400"
-            : "text-[#1F2937] hover:border-[#6B7280]/30 focus:border-[#2F6F67] focus:bg-white focus:ring-4 focus:ring-[#2F6F67]/10",
+          "flex h-12 w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-left text-sm font-semibold transition-all duration-300",
+          disabled ? "bg-slate-100 text-slate-400" : "text-[#1F2937]",
         ].join(" ")}
       >
         <span className={value ? "text-slate-900" : "text-slate-400"}>
@@ -110,7 +113,9 @@ const LocalizedDateInput = ({
             <path d="M8 2v4M16 2v4M3 10h18" />
           </svg>
         </span>
-      </button>
+      </div>
+      {/* 투명 네이티브 date 입력을 박스 위에 겹쳐, 모바일에서 탭하면 OS 날짜
+          선택기가 바로 열리도록 한다(showPicker 미지원/iOS에서도 안정적). */}
       <input
         ref={inputRef}
         id={id}
@@ -119,8 +124,10 @@ const LocalizedDateInput = ({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="pointer-events-none absolute inset-0 h-11 w-full opacity-0"
-        tabIndex={-1}
+        onClick={openPicker}
+        className={`absolute inset-0 h-full w-full opacity-0 ${
+          disabled ? "pointer-events-none cursor-not-allowed" : "cursor-pointer"
+        }`}
       />
     </div>
   );

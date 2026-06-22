@@ -40,11 +40,12 @@ def _triage_key(triage, triage_result) -> str:
     """챗봇 문진 결과가 있으면 그 응급도를 우선 사용한다."""
     # VTL 4단계(urgency_level_num) → 화면 표시 3버킷
     def _bucket(n) -> str:
+        # RED(num1)=응급 / ORANGE(num2)=준응급 / YELLOW(num3)·GREEN(num4)=일반
         if n == 1:
             return "emergency"      # 응급
-        if n in (2, 3):
-            return "semiEmergency"  # 준응급
-        return "normal"             # 일반
+        if n == 2:
+            return "semiEmergency"  # 준응급(ORANGE)
+        return "normal"             # 일반(YELLOW·GREEN)
 
     if triage_result:
         return _bucket(triage_result.urgency_level_num)

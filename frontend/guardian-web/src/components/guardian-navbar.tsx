@@ -50,7 +50,7 @@ interface GuardianNavbarProps {
 }
 
 const GuardianNavbar = ({
-  contentClassName = "max-w-[1200px] px-6",
+  contentClassName = "max-w-[1200px] px-4 sm:px-6",
 }: GuardianNavbarProps) => {
   const navigate = useNavigate();
   const { t, lang, setLang } = useTranslation();
@@ -117,8 +117,12 @@ const GuardianNavbar = ({
           {/* 햄버거 버튼 — lg 미만에서만 표시 */}
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 lg:hidden"
+            onClick={() => {
+              setIsMobileMenuOpen((v) => !v);
+              setIsLangMenuOpen(false);
+              setIsAccountMenuOpen(false);
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 lg:hidden"
             aria-label={isMobileMenuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
           >
             {isMobileMenuOpen ? <XIcon /> : <MenuIcon />}
@@ -128,8 +132,12 @@ const GuardianNavbar = ({
           <div ref={langMenuRef} className="relative">
             <button
               type="button"
-              onClick={() => setIsLangMenuOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-50 hover:text-blue-600"
+              onClick={() => {
+                setIsLangMenuOpen((v) => !v);
+                setIsAccountMenuOpen(false);
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-50 hover:text-blue-600"
               aria-label={t("nav.language")}
               aria-haspopup="true"
               aria-expanded={isLangMenuOpen}
@@ -137,7 +145,7 @@ const GuardianNavbar = ({
               <GlobeIcon />
             </button>
             {isLangMenuOpen && (
-              <div className="absolute right-0 mt-2 w-36 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5">
+              <div className="absolute left-1/2 mt-2 w-32 -translate-x-1/2 rounded-2xl border border-slate-100 bg-white p-1.5 text-[13px] font-semibold shadow-lg shadow-slate-900/5">
                 {LANGUAGES.map((option) => (
                   <button
                     key={option.code}
@@ -147,7 +155,7 @@ const GuardianNavbar = ({
                       setIsLangMenuOpen(false);
                     }}
                     className={[
-                      "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition",
+                      "flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-left transition",
                       lang === option.code
                         ? "bg-blue-50 text-blue-600"
                         : "text-slate-700 hover:bg-blue-50 hover:text-blue-600",
@@ -165,7 +173,11 @@ const GuardianNavbar = ({
           <div ref={accountMenuRef} className="relative">
             <button
               type="button"
-              onClick={() => setIsAccountMenuOpen((v) => !v)}
+              onClick={() => {
+                setIsAccountMenuOpen((v) => !v);
+                setIsLangMenuOpen(false);
+                setIsMobileMenuOpen(false);
+              }}
               className="flex items-center gap-1.5 rounded-full px-2 py-1 transition hover:bg-slate-50"
             >
               <span className="max-w-28 truncate text-sm font-bold text-slate-600">
@@ -177,18 +189,18 @@ const GuardianNavbar = ({
               </span>
             </button>
             {isAccountMenuOpen && (
-              <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold shadow-lg shadow-slate-900/5">
+              <div className="absolute right-0 mt-2 w-32 rounded-2xl border border-slate-100 bg-white p-1.5 text-[13px] font-semibold shadow-lg shadow-slate-900/5">
                 <Link
                   to="/mypage"
                   onClick={() => setIsAccountMenuOpen(false)}
-                  className="block rounded-xl px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                  className="block rounded-xl px-3 py-1.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
                 >
                   {t("nav.accountManage")}
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                  className="block w-full rounded-xl px-3 py-1.5 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-600"
                 >
                   {t("nav.logout")}
                 </button>
@@ -198,9 +210,9 @@ const GuardianNavbar = ({
         </div>
       </div>
 
-      {/* 모바일 메뉴 — 햄버거 클릭 시 아래로 펼쳐짐 */}
+      {/* 모바일 메뉴 — 햄버거 클릭 시 아래로 펼쳐짐(가로 배치, 좁으면 줄바꿈) */}
       {isMobileMenuOpen && (
-        <nav className="border-t border-slate-100 bg-white lg:hidden">
+        <nav className="flex flex-nowrap items-center justify-center gap-1 border-t border-slate-100 bg-white px-2 py-2.5 lg:hidden">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -208,10 +220,10 @@ const GuardianNavbar = ({
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
                 [
-                  "block border-l-2 px-6 py-3 text-sm font-bold transition",
+                  "whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-bold transition",
                   isActive
-                    ? "border-blue-600 bg-blue-50 text-blue-600"
-                    : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-blue-600",
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600",
                 ].join(" ")
               }
             >

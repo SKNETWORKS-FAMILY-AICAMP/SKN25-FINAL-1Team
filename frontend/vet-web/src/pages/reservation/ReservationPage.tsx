@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 import axios from "axios";
 import { AuthSession } from "../../api/authApi";
 import {

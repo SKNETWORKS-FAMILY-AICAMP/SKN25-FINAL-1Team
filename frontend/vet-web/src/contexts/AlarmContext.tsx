@@ -2,7 +2,7 @@ import axios from "axios";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { AlarmItem, fetchAlarmList, markAllAlarmsRead } from "../api/alarmApi";
 import { AuthSession } from "../api/authApi";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 // 알림 폴링 주기. 실패가 이어지면 BASE → MAX 로 점진 백오프했다가 성공 시 BASE 복귀.
 const POLL_INTERVAL_MS = 30_000;

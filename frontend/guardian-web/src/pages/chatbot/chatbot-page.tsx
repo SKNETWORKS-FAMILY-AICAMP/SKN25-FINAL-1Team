@@ -111,6 +111,18 @@ const MessageCircleIcon = () => (
   </svg>
 );
 
+const ChevronLeftIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" aria-hidden="true">
+    <path
+      d="M15 18l-6-6 6-6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const TrashIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
     <path
@@ -223,6 +235,7 @@ const ChatbotPage = () => {
     getErrorMessage,
     onTriageComplete: (sessionId, keywords, collectedInfo, emrid, scheduleTaskId) =>
       onTriageCompleteRef.current?.(sessionId, keywords, collectedInfo, emrid, scheduleTaskId),
+    onTitleUpdate: (sessionId, title) => updateChatHistoryTitle(sessionId, title),
   });
 
   const pipeline = useAgentPipeline({
@@ -248,11 +261,13 @@ const ChatbotPage = () => {
     isLoadingMoreHistories,
     loadMoreChatHistories,
     resetSessionStateForPetChange,
+    closeActiveSession,
     handleCreateSession,
     handleSelectHistory,
     handleDeleteHistory,
     refreshChatHistories,
     updateChatHistoryKeywords,
+    updateChatHistoryTitle,
     discardEmptyLiveSession,
   } = useChatSessions({
     selectedPet,
@@ -388,9 +403,11 @@ const ChatbotPage = () => {
 
   const todayChatTitle = useMemo(() => formatDateToYyyyMmDd(new Date()), []);
 
-  // 상담 제목 = 저장된 keywords 그대로 표시 (완료 시점 언어로 박제됨 → 재번역하지 않음)
+  // 상담 제목 = 완료 시 생성된 요약 title 우선, 없으면 기존 keywords 표시(하위호환).
   const getHistoryTitle = useCallback(
     (history: ChatSessionHistory) => {
+      const title = history.title?.trim();
+      if (title) return title;
       const keywords = history.keywords
         .map((keyword) => keyword.trim())
         .filter((keyword) => keyword && keyword.length <= 24)
@@ -446,6 +463,35 @@ const ChatbotPage = () => {
     resetSessionStateForPetChange();
     // 펫 선택 상태를 저장 → 새로고침 시 이 펫이 복원된다(세션은 아직 없음).
     writeActiveChatSession(petId, null);
+  };
+
+  // 모바일 드릴다운 — 한 번에 한 패널만 보여준다.
+  // 채팅 활성(세션/히스토리/생성·로드중) → "chat", 펫 선택됨 → "sessions", 그 외 → "pets".
+  // lg(데스크톱) 이상에서는 무시되고 3단 그리드가 모두 표시된다.
+  const hasActiveChat =
+    Boolean(session) ||
+    selectedHistoryId !== null ||
+    creatingPetId !== null ||
+    isLoadingHistoryMessages;
+  const mobilePane: "pets" | "sessions" | "chat" = hasActiveChat
+    ? "chat"
+    : selectedPetId !== null
+      ? "sessions"
+      : "pets";
+
+  // 채팅 → 목록: 열린 세션만 닫고 펫/히스토리 목록은 유지.
+  const handleBackToSessions = () => {
+    closeActiveSession();
+    if (selectedPetId !== null) {
+      writeActiveChatSession(selectedPetId, null);
+    }
+  };
+
+  // 목록 → 펫 선택: 펫 선택을 해제한다.
+  const handleBackToPets = () => {
+    closeActiveSession();
+    setSelectedPetId(null);
+    clearActiveChatSession();
   };
 
   // 통합 메시지 전송 핸들러 — phase에 따라 분기
@@ -518,8 +564,8 @@ const ChatbotPage = () => {
   const stableDeleteHistory = useStableCallback(handleDeleteHistory);
 
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-col px-6 pt-10 pb-6 lg:h-[calc(100vh-4rem)] lg:min-h-0">
-        <div className="mb-6 shrink-0 flex items-end justify-between">
+    <main className="mx-auto flex h-[calc(100dvh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-4 pt-6 pb-6 sm:px-6 sm:pt-10">
+        <div className="mb-4 shrink-0 flex items-end justify-between sm:mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               {t("chatbot.title")}
@@ -529,7 +575,7 @@ const ChatbotPage = () => {
             </p>
           </div>
         </div>
-        <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:min-h-0 lg:flex-1">
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
 
           {errorMessage ? (
             <div className="border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-600 sm:px-7">
@@ -537,33 +583,63 @@ const ChatbotPage = () => {
             </div>
           ) : null}
 
-          <div className="grid lg:min-h-0 lg:flex-1 lg:grid-cols-[200px_200px_1fr]">
-            <PetSelector
-              pets={pets}
-              selectedPetId={selectedPetId}
-              isLoadingPets={isLoadingPets}
-              onSelectPet={stableSelectPet}
-              getProfileImage={getProfileImage}
-            />
+          <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[200px_200px_1fr]">
+            {/* 패널 1 — 반려동물 (모바일: pets 단계에서만) */}
+            <div
+              className={`${mobilePane === "pets" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:min-h-0 lg:flex-none`}
+            >
+              <PetSelector
+                pets={pets}
+                selectedPetId={selectedPetId}
+                isLoadingPets={isLoadingPets}
+                onSelectPet={stableSelectPet}
+                getProfileImage={getProfileImage}
+              />
+            </div>
 
-            <ChatSessionList
-              selectedPet={selectedPet}
-              selectedPetId={selectedPetId}
-              isLoadingPets={isLoadingPets}
-              chatHistories={chatHistories}
-              selectedHistoryId={selectedHistoryId}
-              isLoadingHistories={isLoadingHistories}
-              hasMoreHistories={hasMoreHistories}
-              isLoadingMoreHistories={isLoadingMoreHistories}
-              onLoadMoreHistories={loadMoreChatHistories}
-              creatingPetId={creatingPetId}
-              onCreateSession={stableCreateSession}
-              onSelectHistory={stableSelectHistory}
-              onDeleteHistory={stableDeleteHistory}
-              getHistoryTitle={getHistoryTitle}
-            />
+            {/* 패널 2 — 상담 기록 (모바일: sessions 단계에서만, 뒤로가기 포함) */}
+            <div
+              className={`${mobilePane === "sessions" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:min-h-0 lg:flex-none`}
+            >
+              <button
+                type="button"
+                onClick={handleBackToPets}
+                className="flex h-12 shrink-0 items-center gap-1 border-b border-slate-100 px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              >
+                <ChevronLeftIcon />
+                <span className="truncate">{selectedPet?.petname ?? t("chatbot.pets")}</span>
+              </button>
+              <ChatSessionList
+                selectedPet={selectedPet}
+                selectedPetId={selectedPetId}
+                isLoadingPets={isLoadingPets}
+                chatHistories={chatHistories}
+                selectedHistoryId={selectedHistoryId}
+                isLoadingHistories={isLoadingHistories}
+                hasMoreHistories={hasMoreHistories}
+                isLoadingMoreHistories={isLoadingMoreHistories}
+                onLoadMoreHistories={loadMoreChatHistories}
+                creatingPetId={creatingPetId}
+                onCreateSession={stableCreateSession}
+                onSelectHistory={stableSelectHistory}
+                onDeleteHistory={stableDeleteHistory}
+                getHistoryTitle={getHistoryTitle}
+              />
+            </div>
 
-            <section className="relative flex min-h-[480px] flex-col overflow-hidden bg-white lg:min-h-0">
+            {/* 패널 3 — 채팅 (모바일: chat 단계에서만, 뒤로가기 포함) */}
+            <div
+              className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:min-h-0 lg:flex-none`}
+            >
+              <button
+                type="button"
+                onClick={handleBackToSessions}
+                className="flex h-12 shrink-0 items-center gap-1 border-b border-slate-100 px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              >
+                <ChevronLeftIcon />
+                <span className="truncate">{t("chatbot.history")}</span>
+              </button>
+            <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
               {session ? (
                 <>
                   <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 px-5 sm:px-7">
@@ -742,6 +818,7 @@ const ChatbotPage = () => {
                 </>
               )}
             </section>
+            </div>
           </div>
         </section>
       </main>

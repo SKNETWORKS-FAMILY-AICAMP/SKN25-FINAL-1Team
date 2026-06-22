@@ -53,6 +53,21 @@ const helperClassName = (hasError?: boolean) =>
     hasError ? "text-red-500" : "text-slate-500",
   ].join(" ");
 
+// 전화번호 입력 시 하이픈(-)을 자동으로 넣는다. 비밀번호 찾기 화면과 동일한 규칙.
+const formatPhoneNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.length < 4) {
+    return digits;
+  }
+
+  if (digits.length < 8) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+};
+
 const getApiFieldError = (message: string): SignupFieldErrors | null => {
   const lowerMessage = message.toLowerCase();
 
@@ -105,9 +120,13 @@ const SignupPage = () => {
   const handleChange =
     (field: keyof SignupFormState) =>
     (event: ChangeEvent<HTMLInputElement>) => {
+      const value =
+        field === "phone"
+          ? formatPhoneNumber(event.target.value)
+          : event.target.value;
       setForm((current) => ({
         ...current,
-        [field]: event.target.value,
+        [field]: value,
       }));
       setFieldErrors((current) => {
         const nextErrors = { ...current };

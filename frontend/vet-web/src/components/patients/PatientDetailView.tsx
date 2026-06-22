@@ -9,7 +9,7 @@ import type {
 } from "../../types/patient";
 import { editableSpeciesOptions, speciesOptions } from "../../utils/patientUtils";
 import { EmptyState } from "../common/EmptyState";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 interface PatientDetailViewProps {
   accessToken: string;
