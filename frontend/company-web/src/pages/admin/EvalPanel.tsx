@@ -21,6 +21,13 @@ interface MissedSample {
   message: string;
   category: string;
 }
+interface LowConfidenceCase {
+  message: string;
+  confidence: number;
+  predicted: boolean;
+  expected: boolean;
+  correct: boolean;
+}
 interface AgentMetrics {
   keyword_recall?: number | null;
   keyword_precision?: number | null;
@@ -30,6 +37,8 @@ interface AgentMetrics {
   total_cases?: number;
   category_stats?: Record<string, CategoryStat>;
   missed_samples?: MissedSample[];
+  avg_confidence?: number | null;
+  low_confidence_cases?: LowConfidenceCase[];
   [key: string]: unknown;
 }
 interface AgentEvalResult {
@@ -60,6 +69,12 @@ interface ValidationChecks {
   schedule?: ModuleResult;
   chart?: ModuleResult;
 }
+interface ConversationStatus {
+  item: string;
+  status: CheckStatus;
+  detail: string;
+  scores?: Record<string, number>;
+}
 interface ValidationRow {
   emrid: number;
   createdAt: string | null;
@@ -67,6 +82,7 @@ interface ValidationRow {
   completeness: number | null;
   checks: ValidationChecks | AgentCheck[];
   summary: string;
+  conversation_status?: ConversationStatus | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -205,6 +221,52 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
         </div>
       )}
 
+      {/* LLM 판단 확신도 */}
+      {m.avg_confidence != null && (
+        <div className="mt-10 border-t border-slate-100 pt-6">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">LLM 판단 확신도</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-xs text-slate-400">평균 confidence</p>
+              <p className={`mt-1 text-2xl font-black ${m.avg_confidence < 0.7 ? "text-amber-600" : "text-slate-800"}`}>
+                {Math.round(m.avg_confidence * 100)}%
+              </p>
+            </div>
+            {m.low_confidence_cases && m.low_confidence_cases.length > 0 && (
+              <div>
+                <p className="text-xs text-slate-400">저신뢰 케이스 <span className="text-slate-300">(&lt; 70%)</span></p>
+                <p className="mt-1 text-2xl font-black text-amber-600">{m.low_confidence_cases.length}건</p>
+              </div>
+            )}
+          </div>
+
+          {m.low_confidence_cases && m.low_confidence_cases.length > 0 && (
+            <table className="mt-4 w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400">
+                  <th className="pb-2 text-left font-medium">메시지</th>
+                  <th className="pb-2 text-center font-medium">확신도</th>
+                  <th className="pb-2 text-center font-medium">정답</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(m.low_confidence_cases as LowConfidenceCase[]).map((c, i) => (
+                  <tr key={i} className="border-b border-slate-50">
+                    <td className="py-2 text-slate-600 max-w-xs truncate">{c.message}</td>
+                    <td className="py-2 text-center font-bold text-amber-600">{Math.round(c.confidence * 100)}%</td>
+                    <td className="py-2 text-center">
+                      {c.correct
+                        ? <span className="font-bold text-slate-800">O</span>
+                        : <span className="font-bold text-amber-600">X</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {/* 카테고리별 Keyword recall */}
       {m.category_stats && Object.keys(m.category_stats).length > 0 && (
         <div className="mt-10 border-t border-slate-100 pt-6">
@@ -242,10 +304,140 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
   );
 }
 
+// ── triage 전용 리포트 ────────────────────────────────────────
+interface TriageMetrics {
+  urgency_accuracy?: number | null;
+  urgency_cases?: number;
+  urgency_errors?: { name: string; expected: string; got: string }[];
+  red_flag_recall?: string;
+  slot_f1?: number | null;
+  slot_precision?: number | null;
+  slot_recall?: number | null;
+  hallucination_count?: number;
+  summary_score?: number | null;
+  llm_errors?: number;
+  total_cases?: number;
+}
+
+function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
+  const m = result.metrics as TriageMetrics;
+  const urgAcc = m.urgency_accuracy;
+  const rfRaw  = m.red_flag_recall ?? "N/A";
+  let rfOk = rfRaw === "N/A";
+  if (!rfOk) {
+    const [tp, total] = rfRaw.split("/").map(Number);
+    rfOk = tp === total;
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+      <ReportHeader result={result} />
+
+      {/* 응급도 + Red flag */}
+      <div className="mt-10">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">결정론 체크 (엔진)</p>
+        <div className="flex gap-12">
+          <div>
+            <p className="text-xs text-slate-400">응급도 정확도</p>
+            <p className={`mt-1 text-3xl font-black ${urgAcc != null && urgAcc < 0.95 ? "text-amber-600" : "text-slate-800"}`}>
+              {urgAcc != null ? `${Math.round(urgAcc * 100)}%` : "—"}
+            </p>
+            {m.urgency_cases != null && (
+              <p className="mt-0.5 text-xs text-slate-400">{m.urgency_cases}개 케이스 · 기준 95%</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Red flag 감지율</p>
+            <p className={`mt-1 text-3xl font-black ${!rfOk && rfRaw !== "N/A" ? "text-amber-600" : "text-slate-800"}`}>
+              {rfRaw}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">100% 필수</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 응급도 오분류 */}
+      {m.urgency_errors && m.urgency_errors.length > 0 && (
+        <div className="mt-6 border-t border-slate-100 pt-4">
+          <p className="mb-3 text-xs font-semibold text-slate-400">응급도 오분류</p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400">
+                <th className="pb-2 text-left font-medium">케이스</th>
+                <th className="pb-2 text-center font-medium">예상</th>
+                <th className="pb-2 text-center font-medium">결과</th>
+              </tr>
+            </thead>
+            <tbody>
+              {m.urgency_errors.map((e, i) => (
+                <tr key={i} className="border-b border-slate-50">
+                  <td className="py-2 text-slate-600 max-w-xs truncate">{e.name}</td>
+                  <td className="py-2 text-center font-bold text-slate-700">{e.expected}</td>
+                  <td className="py-2 text-center font-bold text-amber-600">{e.got}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* LLM 체크 */}
+      <div className="mt-10 border-t border-slate-100 pt-6">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">LLM 체크</p>
+        <div className="flex gap-12">
+          <div>
+            <p className="text-xs text-slate-400">슬롯 추출 F1</p>
+            <p className={`mt-1 text-3xl font-black ${m.slot_f1 != null && m.slot_f1 < 0.8 ? "text-amber-600" : "text-slate-800"}`}>
+              {m.slot_f1 != null ? m.slot_f1.toFixed(2) : "—"}
+            </p>
+            {m.slot_precision != null && m.slot_recall != null && (
+              <p className="mt-0.5 text-xs text-slate-400">P={m.slot_precision.toFixed(2)} R={m.slot_recall.toFixed(2)} · 기준 0.80</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">환각 의심</p>
+            <p className={`mt-1 text-3xl font-black ${(m.hallucination_count ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>
+              {m.hallucination_count ?? "—"}건
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">예상 외 변수 추출</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">요약 완전성</p>
+            <p className={`mt-1 text-3xl font-black ${m.summary_score != null && m.summary_score < 0.8 ? "text-amber-600" : "text-slate-800"}`}>
+              {m.summary_score != null ? `${Math.round(m.summary_score * 100)}%` : "—"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">키워드 포함율 · 기준 80%</p>
+          </div>
+        </div>
+        {m.llm_errors != null && m.llm_errors > 0 && (
+          <p className="mt-3 text-xs text-amber-500">LLM 오류 {m.llm_errors}건</p>
+        )}
+      </div>
+
+      {/* 체크 목록 */}
+      <div className="mt-10 border-t border-slate-100 pt-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">체크 목록</p>
+        <div className="space-y-3">
+          {result.checks.map((c, i) => (
+            <div key={c.item}>
+              <div className="text-xs text-slate-500">[{i + 1}] {c.item}</div>
+              <div className="mt-0.5 pl-4 text-xs">결과: <StatusText status={c.status} /></div>
+              <div className="mt-0.5 pl-4 text-xs text-slate-400">{c.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 벤치마크 리포트 (범용) ────────────────────────────────────
 function BenchmarkReport({ result }: { result: AgentEvalResult }) {
   if (result.agent === "followup_filter") {
     return <FollowupBenchmarkReport result={result} />;
+  }
+  if (result.agent === "triage") {
+    return <TriageBenchmarkReport result={result} />;
   }
 
   const m = result.metrics;
@@ -279,6 +471,8 @@ function BenchmarkReport({ result }: { result: AgentEvalResult }) {
 }
 
 // ── 운영 모니터링 테이블 ─────────────────────────────────────
+const PAGE_SIZE = 20;
+
 function MonitoringTable({
   logs,
   loading,
@@ -288,15 +482,21 @@ function MonitoringTable({
   loading: boolean;
   onRefresh: () => void;
 }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(logs.length / PAGE_SIZE);
+  const pageLogs = logs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
       <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
         <span className="font-sans text-base font-bold text-slate-800">
           실시간 운영 로그
-          <span className="ml-2 text-sm font-normal text-slate-400">(최근 10건)</span>
+          <span className="ml-2 text-sm font-normal text-slate-400">
+            ({logs.length}건 / 최대 200건)
+          </span>
         </span>
         <button
-          onClick={onRefresh}
+          onClick={() => { setPage(0); onRefresh(); }}
           disabled={loading}
           className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-40"
         >
@@ -310,48 +510,73 @@ function MonitoringTable({
           아직 로그가 없습니다. 채팅으로 경과 메시지를 보내면 기록됩니다.
         </p>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-lg border border-slate-100">
-          <table className="w-full text-xs">
-            <thead className="border-b border-slate-100 bg-slate-50 text-slate-400">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">EMR</th>
-                <th className="px-3 py-2 text-left font-medium">시간</th>
-                <th className="px-3 py-2 text-left font-medium">메시지</th>
-                <th className="px-3 py-2 text-left font-medium">카테고리</th>
-                <th className="px-3 py-2 text-left font-medium">심각도</th>
-                <th className="px-3 py-2 text-left font-medium">저장</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {logs.map((log, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-3 py-2 font-mono font-bold text-slate-700">
-                    {log.emrid != null ? `#${log.emrid}` : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-400 whitespace-nowrap">
-                    {log.ts?.slice(11, 16) ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">
-                    {log.message ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-500">{log.category ?? "—"}</td>
-                  <td className="px-3 py-2">
-                    <span className={log.severity === "urgent_possible" ? "text-amber-600 font-bold" : "text-slate-500"}>
-                      {log.severity ?? "—"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {log.is_saved ? (
-                      <span className="font-bold text-slate-700">Y</span>
-                    ) : (
-                      <span className="text-slate-300">N</span>
-                    )}
-                  </td>
+        <>
+          <div className="mt-5 overflow-hidden rounded-lg border border-slate-100">
+            <table className="w-full text-xs">
+              <thead className="border-b border-slate-100 bg-slate-50 text-slate-400">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">EMR</th>
+                  <th className="px-3 py-2 text-left font-medium">시간</th>
+                  <th className="px-3 py-2 text-left font-medium">메시지</th>
+                  <th className="px-3 py-2 text-left font-medium">카테고리</th>
+                  <th className="px-3 py-2 text-left font-medium">심각도</th>
+                  <th className="px-3 py-2 text-left font-medium">저장</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pageLogs.map((log, i) => (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 font-mono font-bold text-slate-700">
+                      {log.emrid != null ? `#${log.emrid}` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-400 whitespace-nowrap">
+                      {log.ts?.slice(11, 16) ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">
+                      {log.message ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-500">{log.category ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <span className={log.severity === "urgent_possible" ? "text-amber-600 font-bold" : "text-slate-500"}>
+                        {log.severity ?? "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {log.is_saved ? (
+                        <span className="font-bold text-slate-700">Y</span>
+                      ) : (
+                        <span className="text-slate-300">N</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+              <span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, logs.length)} / {logs.length}건</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="rounded border border-slate-200 px-2 py-1 hover:bg-slate-50 disabled:opacity-30"
+                >
+                  이전
+                </button>
+                <span className="px-2 py-1 font-semibold text-slate-600">{page + 1} / {totalPages}</span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page === totalPages - 1}
+                  className="rounded border border-slate-200 px-2 py-1 hover:bg-slate-50 disabled:opacity-30"
+                >
+                  다음
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -374,6 +599,12 @@ function AgentBenchmarkTab({
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<MonitoringLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+
+  // 탭 전환 시(endpoint 변경) 이전 탭의 결과/에러 초기화
+  useEffect(() => {
+    setResult(null);
+    setError(null);
+  }, [endpoint]);
 
   useEffect(() => {
     if (logsEndpoint) fetchLogs();
@@ -454,6 +685,178 @@ function AgentBenchmarkTab({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── 전체 에이전트 벤치마크 섹션 ──────────────────────────────
+interface FullReportModule {
+  agent: string;
+  overall: CheckStatus;
+  checks: AgentCheck[];
+  metrics: AgentMetrics;
+}
+interface FullReport {
+  agent: "full_report";
+  overall_verdict: "PASS" | "PARTIAL_FAIL" | "CRITICAL_FAIL";
+  modules: {
+    triage?: FullReportModule;
+    mcp_health?: FullReportModule;
+    orchestrator?: FullReportModule;
+    reception?: FullReportModule;
+    followup?: FullReportModule;
+  };
+  critical_reasons: string[];
+}
+
+const MODULE_LABEL: Record<string, string> = {
+  triage:       "Triage",
+  mcp_health:   "MCP",
+  orchestrator: "라우터",
+  reception:    "Reception",
+  followup:     "경과 필터",
+};
+
+function moduleKeyMetric(key: string, mod: FullReportModule): string {
+  // AgentMetrics 인덱스 시그니처가 unknown이라 모두 as로 강제 캐스팅
+  const m = mod.metrics as Record<string, unknown>;
+  if (key === "triage") {
+    const urg = m["urgency_accuracy"] != null ? `응급도 ${pct(m["urgency_accuracy"] as number)}` : null;
+    const rf  = m["red_flag_recall"]  != null ? `Red flag ${m["red_flag_recall"]}` : null;
+    return [urg, rf].filter(Boolean).join(" · ") || "—";
+  }
+  if (key === "orchestrator") {
+    const acc  = m["routing_accuracy"] != null ? `라우팅 ${pct(m["routing_accuracy"] as number)}` : null;
+    const leak = m["triage_leak_count"] != null ? `유출 ${m["triage_leak_count"]}건` : null;
+    return [acc, leak].filter(Boolean).join(" · ") || "—";
+  }
+  if (key === "mcp_health") {
+    const cnt = m["tool_count"]      != null ? `도구 ${m["tool_count"]}개` : null;
+    const ms  = m["avg_latency_ms"]  != null ? `${m["avg_latency_ms"]}ms` : null;
+    return [cnt, ms].filter(Boolean).join(" · ") || "—";
+  }
+  if (key === "reception") {
+    return m["tool_accuracy"] != null ? `도구 선택 ${pct(m["tool_accuracy"] as number)}` : "—";
+  }
+  if (key === "followup") {
+    const kw  = m["keyword_recall"] != null ? `KW ${pct(m["keyword_recall"] as number)}` : null;
+    const llm = m["llm_recall"]     != null ? `LLM ${pct(m["llm_recall"] as number)}` : null;
+    const urg = m["urgent_recall"]  != null ? `악화 ${m["urgent_recall"]}` : null;
+    return [kw, llm, urg].filter(Boolean).join(" · ") || "—";
+  }
+  return "—";
+}
+
+function AgentFullReportSection() {
+  const [report, setReport] = useState<FullReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
+  async function runAll() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/admin/eval/full-report`, {
+        method: "POST",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      setReport(await res.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "오류");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const verdictColor = !report ? "" :
+    report.overall_verdict === "CRITICAL_FAIL" ? "text-red-600" :
+    report.overall_verdict === "PARTIAL_FAIL"  ? "text-amber-600" :
+    "text-slate-800";
+
+  return (
+    <div className="space-y-4 border-t border-slate-200 pt-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-700">에이전트 성능 벤치마크</p>
+          <p className="text-xs text-slate-400">Triage · 경과필터 · 라우터 · Reception · MCP 일괄 평가</p>
+        </div>
+        <button
+          onClick={runAll}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {loading ? "평가 중..." : "전체 에이전트 평가 실행"}
+        </button>
+      </div>
+
+      {error && <p className="text-xs text-red-400">오류: {error}</p>}
+
+      {report && (
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+          {/* 판정 헤더 */}
+          <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3">
+            <span className="text-xs font-semibold text-slate-400">종합 판정</span>
+            <span className={`text-base font-black ${verdictColor}`}>{report.overall_verdict}</span>
+            {report.critical_reasons.length > 0 && (
+              <span className="text-xs text-red-500">{report.critical_reasons.join(" / ")}</span>
+            )}
+          </div>
+
+          {/* 모듈별 요약 테이블 */}
+          <table className="w-full text-xs">
+            <thead className="border-b border-slate-100 bg-slate-50 text-slate-400">
+              <tr>
+                <th className="px-5 py-2 text-left font-medium">에이전트</th>
+                <th className="px-5 py-2 text-center font-medium w-20">결과</th>
+                <th className="px-5 py-2 text-left font-medium">주요 지표</th>
+                <th className="px-5 py-2 text-center font-medium w-16">상세</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {Object.entries(report.modules).map(([key, mod]) => (
+                <tr key={key} className="hover:bg-slate-50">
+                  <td className="px-5 py-3 font-semibold text-slate-700">{MODULE_LABEL[key] ?? key}</td>
+                  <td className="px-5 py-3 text-center">
+                    <StatusText status={mod.overall} />
+                  </td>
+                  <td className="px-5 py-3 text-slate-500">{moduleKeyMetric(key, mod)}</td>
+                  <td className="px-5 py-3 text-center">
+                    <button
+                      onClick={() => setExpandedKey(expandedKey === key ? null : key)}
+                      className="text-slate-400 underline hover:text-slate-600"
+                    >
+                      {expandedKey === key ? "닫기" : "보기"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* 상세 체크 (토글) */}
+          {expandedKey && report.modules[expandedKey as keyof typeof report.modules] && (
+            <div className="border-t border-slate-100 bg-slate-50 px-5 py-4 space-y-2">
+              <p className="text-xs font-semibold text-slate-500">{MODULE_LABEL[expandedKey] ?? expandedKey} 체크 상세</p>
+              {(report.modules[expandedKey as keyof typeof report.modules]!.checks).map((c, i) => (
+                <div key={i} className="text-xs">
+                  <span className="text-slate-400">[{i+1}] {c.item}</span>
+                  {" "}<StatusText status={c.status} />
+                  <span className="ml-2 text-slate-400">{c.detail}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!report && !loading && (
+        <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center">
+          <p className="text-xs text-slate-400">버튼을 눌러 모든 에이전트를 한 번에 평가하세요.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -584,6 +987,7 @@ function OverallTab() {
                 <th className="px-4 py-3 text-left">Triage</th>
                 <th className="px-4 py-3 text-left">Schedule</th>
                 <th className="px-4 py-3 text-left">Chart</th>
+                <th className="px-4 py-3 text-left">대화</th>
                 <th className="px-4 py-3 text-left">시간</th>
                 <th className="px-4 py-3 text-left">요약</th>
               </tr>
@@ -596,11 +1000,13 @@ function OverallTab() {
                 const trgStatus = checksDict.triage?.status ?? null;
                 const schStatus = checksDict.schedule?.status ?? null;
                 const chtStatus = checksDict.chart?.status ?? null;
+                const convStatus = row.conversation_status?.status ?? null;
+                const convTitle = row.conversation_status?.detail ?? "";
                 return (
                   <tr key={row.emrid} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono font-bold text-slate-700">#{row.emrid}</td>
                     <td className="px-4 py-3">
-                      <StatusText status={row.overall as CheckStatus} />
+                      <StatusText status={row.overall} />
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {trgStatus ? <StatusText status={trgStatus} /> : "—"}
@@ -610,6 +1016,9 @@ function OverallTab() {
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {chtStatus ? <StatusText status={chtStatus} /> : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500" title={convTitle}>
+                      {convStatus ? <StatusText status={convStatus} /> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">{fmtTime(row.createdAt)}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{row.summary}</td>
@@ -621,17 +1030,7 @@ function OverallTab() {
         </div>
       )}
 
-      {/* 준비 중 카드 */}
-      <div className="grid grid-cols-2 gap-4 pt-2">
-        <ComingSoon
-          label="오케스트레이터 라우팅 평가"
-          desc="MCP 구현 후 활성화"
-        />
-        <ComingSoon
-          label="MCP 안정성"
-          desc="MCP 구현 후 활성화"
-        />
-      </div>
+      <AgentFullReportSection />
     </div>
   );
 }
@@ -654,11 +1053,11 @@ const AGENT_CONFIG: Record<Exclude<TabId, "overall">, {
   logsEndpoint?: string | null;
   desc: string;
 }> = {
-  triage:    { label: "Triage",    endpoint: null,                   desc: "슬롯 추출 F1 · 응급도 정확도 · red flag 감지율. 테스트셋 준비 후 활성화." },
-  schedule:  { label: "Schedule",  endpoint: null,                   desc: "예약 타이밍 · 근무시간 · 빈슬롯 검증. MCP 구현 후 활성화." },
-  chart:     { label: "Chart",     endpoint: null,                   desc: "차트 완전성 · 임상 품질 평가. judge.py 통합 후 활성화." },
-  reception: { label: "Reception", endpoint: null,                   desc: "병원 안내 정확도 · 핸드오프 정확도. 테스트셋 준비 후 활성화." },
-  followup:  { label: "경과 필터", endpoint: "/admin/eval/followup", logsEndpoint: "/admin/eval/followup/logs", desc: "경과 필터 에이전트 분류 성능 측정. 테스트 케이스 80개 기준." },
+  triage:    { label: "Triage",    endpoint: "/admin/eval/triage",    desc: "응급도 정확도 · Red flag 감지율 (결정론) + 슬롯 추출 F1 · 환각 · 요약 완전성 (LLM). 15개 케이스 기준." },
+  schedule:  { label: "Schedule",  endpoint: null,                    desc: "예약 타이밍 · 근무시간 · 빈슬롯 검증. 테스트셋 준비 후 활성화." },
+  chart:     { label: "Chart",     endpoint: null,                    desc: "차트 완전성 · 임상 품질 평가. judge.py 통합 후 활성화." },
+  reception: { label: "Reception", endpoint: "/admin/eval/reception", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 4케이스). MCP 서버 가동 필요." },
+  followup:  { label: "경과 필터", endpoint: "/admin/eval/followup",  logsEndpoint: "/admin/eval/followup/logs", desc: "경과 필터 에이전트 분류 성능 측정. 테스트 케이스 100개 기준." },
 };
 
 // ── Main ──────────────────────────────────────────────────────
@@ -700,10 +1099,10 @@ export default function EvalPanel() {
         <OverallTab />
       ) : (
         <AgentBenchmarkTab
-          label={AGENT_CONFIG[activeTab].label}
-          endpoint={AGENT_CONFIG[activeTab].endpoint}
-          logsEndpoint={AGENT_CONFIG[activeTab].logsEndpoint}
-          description={AGENT_CONFIG[activeTab].desc}
+          label={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].label}
+          endpoint={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].endpoint}
+          logsEndpoint={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].logsEndpoint}
+          description={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].desc}
         />
       )}
     </div>

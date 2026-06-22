@@ -1,0 +1,167 @@
+[
+  {
+    "name": "발작 중 (RED — NEUROLOGIC)",
+    "messages": [
+      {"role": "user", "content": "강아지가 지금 발작을 해요 멈추질 않아요 몸을 떨면서 경련하고 있어요"}
+    ],
+    "pet_info": {"name": "뽀삐", "species": "강아지", "breed": "말티즈", "age": 3},
+    "expected_extracted": {"NEUROLOGIC": {"seizure_status": "active"}},
+    "expected_urgency": "RED",
+    "expected_red_flag": true,
+    "expected_summary_keywords": ["발작", "경련"]
+  },
+  {
+    "name": "심한 호흡곤란 (RED — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "고양이가 입 벌리고 숨을 쉬어요 너무 힘들어 보이고 가슴이 막 들썩거려요 숨이 너무 차 보여요"}
+    ],
+    "pet_info": {"name": "나비", "species": "고양이", "breed": "코리안숏헤어", "age": 2},
+    "expected_extracted": {"RESPIRATORY": {"breathing_severity": "severe"}},
+    "expected_urgency": "RED",
+    "expected_red_flag": true,
+    "expected_summary_keywords": ["호흡", "숨"]
+  },
+  {
+    "name": "의식불명 (RED — NEUROLOGIC)",
+    "messages": [
+      {"role": "user", "content": "강아지가 쓰러졌어요 이름 불러도 반응이 없어요 눈은 떠 있는데 멍하니 있고 깨우질 못하겠어요"}
+    ],
+    "pet_info": {"name": "초코", "species": "강아지", "breed": "푸들", "age": 5},
+    "expected_extracted": {"NEUROLOGIC": {"consciousness": "unresponsive"}},
+    "expected_urgency": "RED",
+    "expected_red_flag": true,
+    "expected_summary_keywords": ["의식", "반응"]
+  },
+  {
+    "name": "요도폐색 (RED — UROGENITAL)",
+    "messages": [
+      {"role": "user", "content": "고양이가 화장실을 계속 들락날락 하는데 소변을 전혀 못 싸요 몇 시간 동안 화장실 들어가도 아무것도 안 나와요"}
+    ],
+    "pet_info": {"name": "루루", "species": "고양이", "breed": "페르시안", "age": 4},
+    "expected_extracted": {"UROGENITAL": {"urination": "obstruction"}},
+    "expected_urgency": "RED",
+    "expected_red_flag": true,
+    "expected_summary_keywords": ["소변", "배뇨"]
+  },
+  {
+    "name": "자일리톨 섭취 (RED — TOXIN)",
+    "messages": [
+      {"role": "user", "content": "강아지가 자일리톨 들어간 껌을 먹었어요 방금 발견했는데 두 개 정도 먹은 것 같아요"}
+    ],
+    "pet_info": {"name": "해피", "species": "강아지", "breed": "골든리트리버", "age": 2},
+    "expected_extracted": {"TOXIN": {"substance": "xylitol"}},
+    "expected_urgency": "RED",
+    "expected_red_flag": true,
+    "expected_summary_keywords": ["자일리톨", "껌"]
+  },
+  {
+    "name": "중등도 호흡곤란 (ORANGE — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 숨이 좀 차 보여요 운동하지도 않았는데 숨을 빠르게 쉬고 힘들어 보이는 것 같아요"}
+    ],
+    "pet_info": {"name": "바둑이", "species": "강아지", "breed": "진돗개", "age": 6},
+    "expected_extracted": {"RESPIRATORY": {"breathing_severity": "moderate"}},
+    "expected_urgency": "ORANGE",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["호흡"]
+  },
+  {
+    "name": "기도 협착음 (ORANGE — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 숨 쉴 때 끽끽 이상한 소리가 나요 목에서 그렁그렁 소리가 들려요"}
+    ],
+    "pet_info": {"name": "콩이", "species": "강아지", "breed": "불독", "age": 4},
+    "expected_extracted": {"RESPIRATORY": {"stridor": "yes"}},
+    "expected_urgency": "ORANGE",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["소리"]
+  },
+  {
+    "name": "혈성 비루 (ORANGE — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지 코에서 피가 나와요 아까부터 계속 피가 흐르고 있어요"}
+    ],
+    "pet_info": {"name": "쿠키", "species": "강아지", "breed": "시바이누", "age": 3},
+    "expected_extracted": {"RESPIRATORY": {"nasal_discharge": "bloody"}},
+    "expected_urgency": "ORANGE",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["코", "피"]
+  },
+  {
+    "name": "경도 호흡곤란 (YELLOW — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 산책 후에 좀 더 숨이 차 보여요 조금 헉헉대는 것 같은데 심하진 않아요"}
+    ],
+    "pet_info": {"name": "몽이", "species": "강아지", "breed": "포메라니안", "age": 2},
+    "expected_extracted": {"RESPIRATORY": {"breathing_severity": "mild"}},
+    "expected_urgency": "YELLOW",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["호흡", "숨"]
+  },
+  {
+    "name": "잦은 기침 (YELLOW — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 기침을 자주 해요 어제부터 계속 켁켁대고 있어요 밥은 잘 먹는데 기침이 많이 나요"}
+    ],
+    "pet_info": {"name": "별이", "species": "강아지", "breed": "치와와", "age": 5},
+    "expected_extracted": {"RESPIRATORY": {"cough": "frequent"}},
+    "expected_urgency": "YELLOW",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["기침"]
+  },
+  {
+    "name": "안정 시 빈호흡 (YELLOW — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 그냥 누워 있는데도 숨이 많이 빠르게 쉬어요 세어보니까 분당 50번 가까이 되는 것 같아요"}
+    ],
+    "pet_info": {"name": "두부", "species": "강아지", "breed": "웰시코기", "age": 7},
+    "expected_extracted": {"RESPIRATORY": {"breathing_rate": "fast"}},
+    "expected_urgency": "YELLOW",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["호흡", "빠른"]
+  },
+  {
+    "name": "거위소리 기침 (YELLOW — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 거위 우는 것처럼 컹컹 기침을 해요 목에 뭔가 걸린 것처럼 특이한 소리예요"}
+    ],
+    "pet_info": {"name": "땅콩", "species": "강아지", "breed": "요크셔테리어", "age": 4},
+    "expected_extracted": {"RESPIRATORY": {"cough": "honking"}},
+    "expected_urgency": "YELLOW",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["기침", "소리"]
+  },
+  {
+    "name": "가끔 기침 (GREEN — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 가끔 기침을 해요 하루에 한두 번 정도요 다른 건 다 괜찮아 보여요"}
+    ],
+    "pet_info": {"name": "솜이", "species": "강아지", "breed": "비숑프리제", "age": 3},
+    "expected_extracted": {"RESPIRATORY": {"cough": "occasional"}},
+    "expected_urgency": "GREEN",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["기침"]
+  },
+  {
+    "name": "재채기 (GREEN — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지가 아침에 재채기를 몇 번 했어요 콧물은 맑은 편이에요 밥도 잘 먹어요"}
+    ],
+    "pet_info": {"name": "토리", "species": "강아지", "breed": "슈나우저", "age": 2},
+    "expected_extracted": {"RESPIRATORY": {"sneezing": "yes"}},
+    "expected_urgency": "GREEN",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["재채기"]
+  },
+  {
+    "name": "맑은 콧물 (GREEN — RESPIRATORY)",
+    "messages": [
+      {"role": "user", "content": "강아지 코에서 맑은 콧물이 조금 나와요 기침이나 다른 증상은 없고 활동도 정상이에요"}
+    ],
+    "pet_info": {"name": "밀크", "species": "강아지", "breed": "사모예드", "age": 1},
+    "expected_extracted": {"RESPIRATORY": {"nasal_discharge": "clear"}},
+    "expected_urgency": "GREEN",
+    "expected_red_flag": false,
+    "expected_summary_keywords": ["콧물"]
+  }
+]

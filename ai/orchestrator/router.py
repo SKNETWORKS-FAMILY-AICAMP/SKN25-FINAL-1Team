@@ -119,5 +119,12 @@ async def route(ctx: SessionContext) -> str:
             return "triage"
         return "reception"
 
-    # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
+    # 4) 예약 후(BOOKED) 발화는 followup_filter가 통합 처리.
+    #    - 실제 경과 → DB 저장 + 모니터링 로그 Y
+    #    - 무관 발화(잡담·병원정보 등) → 모니터링 로그 N (is_saved=false)
+    #    followup_filter 내부에서 분류 후 HOSPITAL_INFO면 reception handoff 처리.
+    if ctx.phase == Phase.BOOKED:
+        return "followup_filter"
+
+    # 5) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
     return await _llm_pick(ctx, _candidates(ctx))

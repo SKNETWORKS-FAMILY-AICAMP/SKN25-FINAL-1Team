@@ -269,6 +269,7 @@ async def validation_results(
             "completeness": float(v.completeness_score) if v.completeness_score is not None else None,
             "checks": v.checks or [],
             "summary": v.summary,
+            "conversation_status": (v.score_breakdown or {}).get("conversation"),
         }
         for v in rows.scalars().all()
     ]
@@ -306,4 +307,34 @@ async def eval_followup(current_admin=Depends(get_current_admin)):
 @router.get("/eval/followup/logs")
 async def followup_logs(current_admin=Depends(get_current_admin)):
     from ai.monitoring import recent_logs
-    return {"code": 200, "result": recent_logs("followup_filter")}
+    return {"code": 200, "result": recent_logs("followup_filter", limit=200)}
+
+
+@router.post("/eval/triage")
+async def eval_triage(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_triage_eval
+    return await run_triage_eval()
+
+
+@router.post("/eval/mcp")
+async def eval_mcp(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_mcp_health_check
+    return await run_mcp_health_check()
+
+
+@router.post("/eval/orchestrator")
+async def eval_orchestrator(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_orchestrator_eval
+    return await run_orchestrator_eval(db)
+
+
+@router.post("/eval/reception")
+async def eval_reception(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_reception_eval
+    return await run_reception_eval(db)
+
+
+@router.post("/eval/full-report")
+async def eval_full_report(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_full_agent_report
+    return await run_full_agent_report(db)

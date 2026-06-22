@@ -44,6 +44,7 @@ class FollowupClassification(BaseModel):
 
     summary_delta: DB(ai_summary)용 — 짧고 구조적인 의료 메모.
     assistant_reply: 보호자가 실제로 읽는 자연스러운 답변.
+    confidence: 분류 확신도 0.0~1.0 (평가·모니터링용).
     """
     is_followup: bool = False
     category: Category = Category.OTHER
@@ -51,6 +52,16 @@ class FollowupClassification(BaseModel):
     summary_delta: str = ""
     assistant_reply: str = ""
     reason: str = ""
+    confidence: float = 0.5
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _coerce_confidence(cls, v):
+        try:
+            f = float(v)
+            return max(0.0, min(1.0, f))
+        except (TypeError, ValueError):
+            return 0.5
 
     @field_validator("category", mode="before")
     @classmethod
