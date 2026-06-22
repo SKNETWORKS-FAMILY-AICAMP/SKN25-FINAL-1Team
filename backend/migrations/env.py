@@ -59,17 +59,16 @@ from app.models.vet_schedule import HospitalWeeklySchedule, HospitalClosedDate, 
 from app.models.emr import EMR                          # noqa: F401
 from app.models.report import Report                    # noqa: F401
 from app.models.triage_result import TriageResult       # noqa: F401
-from app.models.photo_analysis import PhotoAnalysis     # noqa: F401
 from app.models.validation_result import ValidationResult  # noqa: F401
 from app.models.followup import Followup                # noqa: F401
 from app.models.hospital import Hospital                # noqa: F401
-from app.models.agent_pipeline_result import AgentPipelineResult  # noqa: F401
 from app.models.triage_rag_document import TriageRagDocument  # noqa: F401
 from app.models.hospital_profile import HospitalProfile  # noqa: F401
 from app.models.doctor_profile import DoctorProfile  # noqa: F401
 from app.models.clinic_signup_request import ClinicSignupRequest  # noqa: F401
 from app.models.admin_user import AdminUser  # noqa: F401
 from app.models.guardian_hospital import GuardianHospital  # noqa: F401
+from app.models.contact_inquiry import ContactInquiry  # noqa: F401
 
 config = context.config
 

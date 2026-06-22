@@ -7,7 +7,7 @@ import { useHospitalStore } from "../../stores/hospital-store";
 import ActionButton from "../common/action-button";
 import { useCheckupReservation } from "../../hooks/use-checkup-reservation";
 import { useTranslation } from "../../i18n/language-context";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 interface CheckupReservationModalProps {
   pet: Pet;

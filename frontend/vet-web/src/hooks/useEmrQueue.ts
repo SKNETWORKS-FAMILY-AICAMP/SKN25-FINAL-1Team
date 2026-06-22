@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchEmrQueue, fetchHospitalDoctors } from "../api/emrApi";
 import type { DoctorInfo } from "../api/emrApi";
 import type { QueuePatient, QueueTab } from "../types/emr";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 const DATE_MS = 24 * 60 * 60 * 1000;
 

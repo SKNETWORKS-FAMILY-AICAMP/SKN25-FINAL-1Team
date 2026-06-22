@@ -5,7 +5,7 @@ import { useEscapeToClose } from "../../hooks/useEscapeToClose";
 import { useAuthStore } from "../../stores/auth-store";
 import type { AuthState } from "../../stores/auth-store";
 import type { PetInfo } from "../../types/emr";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 const GENDER_OPTIONS = [
   { label: "수컷", value: "male" },

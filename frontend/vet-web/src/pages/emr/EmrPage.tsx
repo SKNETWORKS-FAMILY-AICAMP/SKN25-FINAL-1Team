@@ -27,7 +27,7 @@ import { QueuePanel } from "../../components/emr/QueuePanel";
 import { useEmrData } from "../../hooks/useEmrData";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
 import { buildPrescriptionDocument } from "./prescriptionDocumentBuilder";
-import { logger } from "../../utils/logger";
+import { logger } from "@shared/utils/logger";
 
 interface EmrPageProps {
   session: AuthSession;

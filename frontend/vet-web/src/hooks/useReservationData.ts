@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { logger } from "../utils/logger";
+import { logger } from "@shared/utils/logger";
 import {
   fetchDoctorPatientDetail,
   fetchDoctorPatientList,

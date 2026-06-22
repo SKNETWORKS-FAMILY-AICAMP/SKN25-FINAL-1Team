@@ -38,6 +38,10 @@ frontend/**/node_modules/
 frontend/**/dist/
 frontend/**/.env
 *.tsbuildinfo
+# vet-web 의 tsconfig.node 가 composite emit 라 vite.config 를 .js/.d.ts 로 재생성한다.
+# 소스는 vite.config.ts 이며 빌드(tsc -b) 때 자동 생성되므로 산출물은 커밋하지 않는다.
+frontend/vet-web/vite.config.js
+frontend/vet-web/vite.config.d.ts
 
 # Python virtual env
 venv/
