@@ -32,7 +32,7 @@ from .prompts import (
 
 logger = logging.getLogger(__name__)
 
-# 종료 정책 — urgency_tier(LLM 임상 판단)로 문진 길이 제어. (키워드 하드코딩 아님)
+# 종료 정책 — urgency_tier(LLM 임상 판단)로 문진 길이 제어
 #  critical: 생명위협 → 최대 2턴 / high: 빨리 봐야 → 최대 3턴 / normal: 최대 5턴(충분하면 조기).
 CRITICAL_MAX_TURNS = 2
 HIGH_MAX_TURNS = 3
@@ -239,7 +239,7 @@ class TriageAgent:
             # 5) 질문 콜 (트리 비노출, 따뜻하게)
             try:
                 q = await call_llm_json(
-                    build_question_prompt(pet_name, history, ctx.user_message, section),
+                    build_question_prompt(pet_name, history, ctx.user_message, section, extracted),
                     temperature=0.75,   # 표현 다양성 ↑ (똑같은 인사 반복 완화)
                 )
             except Exception:
