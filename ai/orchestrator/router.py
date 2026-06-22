@@ -69,7 +69,9 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
 
     if ctx.phase == Phase.BOOKED:
         phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고는 followup_filter, "
-                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다)")
+                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다) "
+                      "이미 예약이 확정된 상태라 '바로 예약'·새 예약·예약 변경 요청은 followup_filter가 아니라 "
+                      "reception이 받아서 안내한다.")
     elif ctx.phase == Phase.CLOSED:
         phase_hint = "지금은 입력 마감 상태야. 병원 안내(reception)만 가능."
     else:
