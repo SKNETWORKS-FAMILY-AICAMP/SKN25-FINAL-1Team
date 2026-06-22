@@ -12,7 +12,7 @@ import logging
 
 from ai.llm import call_llm_json
 
-from .contracts import Flow, Phase, SessionContext
+from .contracts import INITIAL_TRIAGE_PILL, Flow, Phase, SessionContext
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,14 @@ logger = logging.getLogger(__name__)
 _AGENT_DESC = {
     "reception": "병원 정보(위치·운영시간·전화·수의사 소개)와 일반 안내. 진단·처방은 수의사께 넘긴다.",
     "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
-    "followup_filter": "예약 후 경과(증상이 어떻게 바뀌었는지) 보고를 받아 기록한다.",
+    "followup_filter": "예약 후 경과(증상 변화) 보고를 받아 기록하고, 예약 시간 변경·재예약(더 빠른 시간) 요청도 받는다.",
     "redirect": "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단.",
 }
 
 # 시스템이 직접 제공한 pill — LLM 없이 결정론 처리 (버튼 클릭은 판단이 아니다).
 _RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
+# 초기 진입 pill — '증상 말하고 예약' → 무조건 문진으로 (예약 글자에 휘둘려 reception으로 새지 않게).
+_TRIAGE_PILLS = {INITIAL_TRIAGE_PILL}
 
 # LLM 실패 시 폴백용 키워드 — 후보 집합 안에서만 매핑.
 _SYMPTOM_KW = ("토", "설사", "아파", "아프", "발작", "경련", "기침", "피", "출혈",
@@ -66,13 +68,17 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
     desc = "\n".join(f"- {n}: {_AGENT_DESC[n]}" for n in candidates if n in _AGENT_DESC)
 
     if ctx.phase == Phase.BOOKED:
-        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고는 followup_filter, "
+        # 예약 후엔: 증상 경과 + '예약 시간 변경·재예약(더 빠른 시간)'은 followup_filter가 받아
+        # 챗 안에서 바로 재예약 흐름을 띄운다(홈 화면으로 떠넘기지 않음). 병원 정보는 reception.
+        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고와 '예약 시간 변경·재예약'은 followup_filter, "
                       "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다)")
     elif ctx.phase == Phase.CLOSED:
         phase_hint = "지금은 입력 마감 상태야. 병원 안내(reception)만 가능."
     else:
         phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
-                      "병원 정보·일반 안내는 reception.")
+                      "병원 정보·일반 안내는 reception. "
+                      "예약은 문진을 거쳐야 가능하므로, 증상 설명 없이 '바로 예약'만 원하는 발화도 "
+                      "reception이 아니라 triage가 받아서 안내한다.")
         if ctx.emrid is not None:
             phase_hint += " 문진은 이미 완료됨(재문진하지 말 것)."
 
@@ -102,6 +108,8 @@ async def route(ctx: SessionContext) -> str:
     # 0) 시스템 pill 텍스트 — 결정론 (버튼 클릭은 판단 아님)
     if ctx.user_message in _RECEPTION_PILLS:
         return "reception"
+    if ctx.user_message in _TRIAGE_PILLS:
+        return "triage"
 
     # 1) 예약확인(예/아니오) 대기 = 짧은 결정 게이트 → 결정론적으로 triage가 받는다.
     if ctx.active_flow == Flow.AWAITING_BOOKING_CONFIRM:

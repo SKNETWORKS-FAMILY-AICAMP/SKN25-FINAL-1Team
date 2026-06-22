@@ -23,6 +23,8 @@ from app.crud.chat import add_message
 from app.services.orchestrator_service import process_turn
 from app.services.translation import translate_batch
 
+from ai.orchestrator.contracts import INITIAL_TRIAGE_PILL
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ INITIAL_MESSAGE = (
 )
 
 INITIAL_PILLS = [
-    "증상을 말하고 예약할래요",
+    INITIAL_TRIAGE_PILL,
     "궁금한 게 있어요",
 ]
 

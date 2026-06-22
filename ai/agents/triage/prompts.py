@@ -139,6 +139,9 @@ _EXTRACT_SYSTEM = """너는 수의 문진 대화를 읽고 '구조화된 사실'
    - "closing"    : 보호자가 대화를 마치려 하거나 더 할 말이 없다는 신호(예: "괜찮아요", "됐어요",
      "이제 없어요", "아니 됐어"). ※단, 직전 봇 질문에 대한 '증상이 약하다/괜찮다'는 답(예: "통증 심해요?"→"괜찮아요")은
      closing이 아니라 symptom이다 — 무엇에 대한 "괜찮아요"인지 [지금까지 대화] 맥락으로 구분해라.
+   - "booking_request" : 증상 설명 없이 '바로/그냥 예약만' 잡으려는 의사(예: "바로 예약하고 싶어요",
+     "그냥 예약할래요", "예약만 잡아줘"). ※"증상을 말하고 예약할래요"처럼 증상을 말하겠다는 뜻이면
+     booking_request가 아니라 vague_help/symptom이다.
    확신 없으면 "symptom"으로 둔다(문진을 막지 않기 위해).
 1) 이 대화가 어느 증상 계통(section)인지 고른다.
    ★ 보호자의 '주 호소(처음 말한 핵심 증상)'가 분명히 바뀌지 않는 한 section을 함부로 갈아타지 마라.
@@ -175,7 +178,7 @@ _EXTRACT_SYSTEM = """너는 수의 문진 대화를 읽고 '구조화된 사실'
 {vision}
 
 JSON으로만 답해:
-{{"intent":"symptom|vague_help|meta|chitchat",
+{{"intent":"symptom|vague_help|meta|chitchat|closing|booking_request",
   "section":"<섹션ID>",
   "variables":{{"<정의된 변수>":"<enum값>"}},
   "enough_to_triage": false,

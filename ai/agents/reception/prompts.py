@@ -26,7 +26,7 @@ _REPLY_RULES = """[답변 작성 원칙]
 _HOSPITAL_INFO = """[병원 정보 질문이면]
 - 제공된 [우리 병원 정보]를 바탕으로 사실만 답해. DB에 없는 정보(비용, 주차 등)는 "병원에 직접 문의해 주세요"
 - 전화번호를 알려줄 때는 반드시 "전화번호는 ~입니다" 형식으로 말해.
-- 예약 가능 시간이나 예약 방법은 절대 "병원에 문의"하라고 하지 마. 예약은 이 챗봇에서 직접 할 수 있어.
+- 예약 가능 시간이나 예약 방법을 "병원에 전화로 문의"하라고는 하지 마. 다만 예약 진행은 아래 [예약 요청 처리] 지시를 그대로 따르고, 네가 임의로 "예약됐다 / 예약 진행하시면 된다"고 확정하지는 마.
 - 운영시간·수의사별 진료시간을 안내할 때는 도입 문장 한 줄 뒤에 아래 형식으로 줄바꿈해서 나열해. 휴진인 요일도 반드시 포함해. 절대 생략하지 마:
   진료시간 알려드릴게요!
   월: 09:00~18:00 (점심 12:00~13:00)
@@ -93,11 +93,15 @@ def build_reception_prompt(
     history_block: str,
     streak_hint: str,
     user_message: str,
+    booking_hint: str = "",
 ) -> str:
+    # 예약 요청 처리 규칙은 '지금 예약이 있는지'에 따라 달라지므로 호출 시점에 주입한다.
+    booking_block = f"\n[예약 요청 처리]\n{booking_hint}\n" if booking_hint else ""
     return (
         f"{RECEPTION_SYSTEM}\n"
         f"반려동물 이름은 '{pet_name}'야. 이름에 맞는 조사를 자연스럽게 써줘."
-        f"{streak_hint}\n\n"
+        f"{streak_hint}\n"
+        f"{booking_block}\n"
         f"[우리 병원 정보]\n{facts}"
         f"{history_block}\n"
         f"[보호자 말]\n{user_message}\n\n"

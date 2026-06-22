@@ -52,6 +52,8 @@ class FollowupClassification(BaseModel):
     summary_delta: str = ""
     assistant_reply: str = ""
     reason: str = ""
+    # 보호자가 '예약 시간 변경/재예약'을 원하면 true (증상 경과와 별개 — 예약 흐름으로 넘긴다).
+    wants_rebooking: bool = False
     confidence: float = 0.5
 
     @field_validator("confidence", mode="before")
@@ -150,18 +152,16 @@ def parse_classification(raw: dict | None, message: str) -> FollowupClassificati
 # --- 보호자 응답 안전 보정 ------------------------------------------------
 
 # urgent_possible인데 LLM이 안내를 빠뜨렸을 때 코드가 덧붙이는 짧은 안전 문구.
+# ※ 전화 응대가 없으므로 '연락'이 아니라, 진료를 앞당기는 '더 빠른 예약'을 제안한다.
 URGENT_SAFETY_NOTE = (
-    "호흡곤란, 의식저하, 반복 구토, 피 섞인 설사·구토처럼 상태가 심해지면 "
-    "병원에 바로 연락해 주세요."
+    "상태가 더 나빠질 수 있어 걱정돼요. 지금 예약보다 더 빠른 시간으로 진료를 앞당겨 보는 건 어떨까요?"
 )
 
 
 def _has_emergency_guidance(text: str) -> bool:
-    """답변에 이미 '병원에 연락' 류의 안전 안내가 들어있는지 대략 판단."""
+    """답변에 이미 '빠른 예약/진료 앞당김' 류의 안내가 들어있는지 대략 판단."""
     t = text or ""
-    if "병원" not in t:
-        return False
-    return any(k in t for k in ("연락", "전화", "내원", "방문", "바로", "응급"))
+    return any(k in t for k in ("앞당", "더 빠른", "빠른 시간", "빠른 예약", "예약을 다시", "내원"))
 
 
 def ensure_safe_reply(cls: "FollowupClassification", fallback: str) -> str:

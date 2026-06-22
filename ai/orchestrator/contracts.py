@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol
 
+# 채팅 시작 시 노출되는 '문진 시작' 진입 pill — chat.py/router/triage가 공유하는 단일 출처.
+INITIAL_TRIAGE_PILL = "증상을 말하고 예약할래요"
+
 
 class Phase(str, Enum):
     """대화 국면 — 후보 에이전트를 결정한다."""
