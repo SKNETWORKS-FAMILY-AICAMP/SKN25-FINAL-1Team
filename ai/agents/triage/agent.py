@@ -18,7 +18,7 @@ import logging
 import re
 
 from ai.llm import call_llm_json
-from ai.orchestrator.contracts import AgentResult, Flow, SessionContext
+from ai.orchestrator.contracts import INITIAL_TRIAGE_PILL, AgentResult, Flow, SessionContext
 
 from . import engine, vision
 from .prompts import (
@@ -41,6 +41,12 @@ NORMAL_MAX_TURNS = 5
 
 _YES_KW = ("예", "네", "넹", "응", "어", "그래", "좋아", "해줘", "부탁", "ㅇㅇ", "할게", "진행", "당연")
 _NO_KW = ("아니", "아뇨", "싫", "안 할", "안할", "나중", "괜찮", "ㄴㄴ", "노")
+
+# 문진 전 '바로 예약' 차단 안내 — 증상 먼저 / 그래도 바로 예약은 홈 탭으로.
+_BOOKING_BLOCKED_REPLY = (
+    "{pet}가 어디가 불편한지 먼저 알려주시면 제가 살펴보고 예약까지 도와드릴게요. 🐾\n\n"
+    "증상 없이 바로 예약만 원하시면 홈 화면의 '예약하기'를 이용해 주세요."
+)
 
 
 def _history_before_current(ctx: SessionContext) -> list[dict]:
@@ -123,6 +129,14 @@ class TriageAgent:
         pet_name = (ctx.pet_info or {}).get("name") or "아이"
         history = _history_before_current(ctx)
 
+        # 0) 초기 진입 pill 클릭 → 추출/판정 없이 바로 증상부터 묻는다(첫 턴·첨부 없을 때).
+        if ctx.user_message == INITIAL_TRIAGE_PILL and turn_count == 0 and not ctx.attachments:
+            return AgentResult(
+                reply=f"네! {pet_name}가 어디가 어떻게 불편한지 편하게 말씀해 주세요. "
+                      "살펴보고 예약까지 도와드릴게요. 🐾",
+                state_patch={"triage_state": state, "active_flow": "triaging"},
+            )
+
         # 1) 이미지/영상 분석(있으면) — VLM 먼저 판단 → 피부/안구면 CNN 보조 → RAG에 투입
         vis = None
         if ctx.attachments:
@@ -166,6 +180,13 @@ class TriageAgent:
             intent = "symptom"
         if intent == "vague_help" and turn_count > 0:
             intent = "chitchat"   # 막연한 도움요청은 '진입 시점'에만 의미 — 진행 중엔 잡담으로
+        # 증상 없이 '바로 예약'만 원하는 경우 → 예약은 문진 후에. 증상 먼저 / 그래도 바로면 홈 탭 안내.
+        #   (문진 흐름은 유지 — 이어서 증상을 말하면 그대로 문진 진행. 턴카운트·추출은 건드리지 않음.)
+        if intent == "booking_request" and ctx.emrid is None:
+            return AgentResult(
+                reply=_BOOKING_BLOCKED_REPLY.format(pet=pet_name),
+                state_patch={"triage_state": state, "active_flow": "triaging"},
+            )
         if intent == "closing":
             # '괜찮아요/됐어요' 등 마무리 신호 → 응대처럼 깔끔히 종료(다시 캐묻지 않음).
             return AgentResult(

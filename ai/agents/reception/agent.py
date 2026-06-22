@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, select
 
 from ai.llm import call_llm_json
-from ai.orchestrator.contracts import AgentResult, Flow, SessionContext
+from ai.orchestrator.contracts import AgentResult, Flow, Phase, SessionContext
 
 from .prompts import build_reception_prompt
 
@@ -196,7 +196,21 @@ class ReceptionAgent:
                 f"자연스럽게 돌아오도록 권해(예: '그럼 {pet_name} 증상 더 들려주실래요?')."
             )
 
-        prompt = build_reception_prompt(facts, pet_name, history_block, streak_hint, ctx.user_message)
+        # '이미 예약이 있는지'는 의견이 아니라 사실 → phase로 결정(BOOKED/CLOSED = 확정 예약 존재).
+        # 그 사실만 프롬프트에 넣고, '예약하려는 말인지/어떻게 안내할지'는 위 LLM 호출이 알아서 한다.
+        if ctx.phase in (Phase.BOOKED, Phase.CLOSED):
+            booking_hint = (
+                "이 보호자는 이미 예약이 확정되어 있어. 새 예약이나 '바로 예약'을 원하더라도 예약을 진행/확정한다고 "
+                "하지 말고, '이미 예약이 잡혀 있고, 예약 변경이나 추가 예약은 홈 화면의 예약하기에서 하실 수 있다'고 안내해."
+            )
+        else:
+            booking_hint = (
+                "너는 예약을 직접 확정해 줄 수 없어. 보호자가 예약을 원하면, 먼저 증상을 들어야 예약을 도와드릴 수 있으니 "
+                "증상을 말씀해 달라고 안내하고, 증상 없이 바로 예약만 원하면 홈 화면의 예약하기를 이용하시라고 안내해."
+            )
+
+        prompt = build_reception_prompt(facts, pet_name, history_block, streak_hint,
+                                        ctx.user_message, booking_hint)
 
         try:
             out = await call_llm_json(prompt)
