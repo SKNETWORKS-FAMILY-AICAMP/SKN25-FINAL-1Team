@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 _AGENT_DESC = {
     "reception": "병원 정보(위치·운영시간·전화·수의사 소개)와 일반 안내. 진단·처방은 수의사께 넘긴다.",
     "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
-    "followup_filter": "예약 후 경과(증상이 어떻게 바뀌었는지) 보고를 받아 기록한다.",
+    "followup_filter": "예약 후 경과(증상 변화) 보고를 받아 기록하고, 예약 시간 변경·재예약(더 빠른 시간) 요청도 받는다.",
     "redirect": "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단.",
 }
 
@@ -68,10 +68,10 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
     desc = "\n".join(f"- {n}: {_AGENT_DESC[n]}" for n in candidates if n in _AGENT_DESC)
 
     if ctx.phase == Phase.BOOKED:
-        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고는 followup_filter, "
-                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다) "
-                      "이미 예약이 확정된 상태라 '바로 예약'·새 예약·예약 변경 요청은 followup_filter가 아니라 "
-                      "reception이 받아서 안내한다.")
+        # 예약 후엔: 증상 경과 + '예약 시간 변경·재예약(더 빠른 시간)'은 followup_filter가 받아
+        # 챗 안에서 바로 재예약 흐름을 띄운다(홈 화면으로 떠넘기지 않음). 병원 정보는 reception.
+        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고와 '예약 시간 변경·재예약'은 followup_filter, "
+                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다)")
     elif ctx.phase == Phase.CLOSED:
         phase_hint = "지금은 입력 마감 상태야. 병원 안내(reception)만 가능."
     else:
