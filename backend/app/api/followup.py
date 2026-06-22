@@ -112,6 +112,8 @@ async def create_followup(
 
     agent_result = await run_turn(ctx)
     saved = any(ev.get("type") == "followup_saved" for ev in (agent_result.events or []))
+    # 재예약(예약 변경/앞당김) 요청 신호 — 프론트가 슬롯 선택 흐름을 다시 띄우는 데 사용.
+    rebook = any(ev.get("type") == "rebook_request" for ev in (agent_result.events or []))
 
     # 실제로 경과가 저장됐을 때만 수의사에게 알림(잡담/병원질문 등은 저장 안 됨).
     if saved and schedule:
@@ -151,8 +153,13 @@ async def create_followup(
         "result": {
             "reply": agent_result.reply,
             "saved": saved,
-            # 경과로 저장되지 않은 입력(잡담/병원 질문 등) — 프론트 안내용.
-            "offtopic": not saved,
+            # 경과로 저장되지 않은 입력(잡담/병원 질문 등) — 프론트 안내용. (재예약은 offtopic 아님)
+            "offtopic": not saved and not rebook,
+            # 재예약 요청이면 프론트가 슬롯 선택을 다시 띄운다.
+            "rebook": rebook,
+            "emrid": request.emrid,
+            # urgent 경과의 '더 빠른 시간 찾기'처럼 후속 행동 pill.
+            "quick_replies": agent_result.quick_replies or [],
         },
     }
 

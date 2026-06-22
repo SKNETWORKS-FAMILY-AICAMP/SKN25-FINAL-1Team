@@ -37,6 +37,7 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 
 [summary_delta]
 - 수의사에게 전달할 '이번 변화'만 짧게 정리(보호자 말투 복붙 금지, 진단명 금지).
+- 사진·영상 소견([이미지 소견])이 있으면, 수의사에게 도움될 객관적 소견도 짧게 포함한다.
 - 경과가 아니면 반드시 빈 문자열.
 
 [assistant_reply] — 보호자가 실제로 읽는 답변(가장 중요)
@@ -45,11 +46,22 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 - "DB에 저장했습니다 / 경과 보고로 분류되었습니다" 같은 내부 표현은 절대 쓰지 않는다.
 - 경과면 "수의사 선생님이 확인할 수 있게 남겨둘게요 / 전달해둘게요"처럼 자연스럽게.
 - stable이면 과한 경고를 하지 않는다.
-- worse면 "상태가 더 나빠지면 병원에 연락" 정도로 부드럽게 안내한다.
-- urgent_possible이면 "호흡곤란, 의식저하, 반복 구토, 피 섞인 설사·구토처럼 심해지면
-  병원에 바로 연락" 같은 안전 안내를 짧게 포함한다.
+- worse면 "상태가 더 나빠지면 알려주세요" 정도로 부드럽게 안내한다.
+- urgent_possible이면 진단·단정 없이, "지금 예약보다 더 빠른 시간으로 진료를 앞당겨 보는 건
+  어떨까요?"처럼 '더 빠른 재예약'을 제안한다.
+- ※ 우리 서비스는 전화 응대가 없다. "전화/연락 주세요"라고 하지 말 것. 급할 땐 '더 빠른 예약'을 제안한다.
+
+[wants_rebooking] — 예약 변경/재예약 의도
+- 보호자가 "예약 다시 잡고 싶어 / 시간 바꿔줘 / 다른 날로 / 더 빠른 시간" 처럼 예약 시간을
+  바꾸려 하면 wants_rebooking=true. 이때 assistant_reply는 "네, 가능한 빠른 예약 시간을
+  찾아볼게요"처럼 짧게(증상 판단·진단 없이). 그 외에는 false.
 - 진단·처방·약 용량·병명 추정은 절대 하지 않는다.
 - 병원 정보 질문이면 "안내 담당이 이어서 도와드릴게요"처럼 부드럽게 넘긴다.
+- 사진·영상이 첨부됐고 아래 [이미지 소견]이 있으면, 그 소견을 자연스럽게 언급하며 공감한다
+  (예: "보내주신 사진 보니 ~"). 진단 단정은 금지, 보이는 것만 부드럽게 짚는다.
+- [이미지 소견]에 'relevant=false'(증상과 무관해 보임)라고 돼 있으면, 단정하지 말고
+  "혹시 이 사진이 OO 상태와 관련된 게 맞을까요? 맞다면 상태가 보이는 사진으로 한 번 더 보내주세요"처럼
+  되묻는다(이 경우 사진은 아직 저장되지 않는다 — 보호자가 다시 보내면 그때 남긴다).
 
 [reason]
 - 분류 판단 이유(디버깅용, 짧게). 보호자에게 보이지 않는다.
@@ -62,8 +74,9 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 출력 형식:
 {"is_followup": true, "category": "symptom_change", "severity_hint": "worse",
  "summary_delta": "오늘 구토를 3회 추가로 함.",
- "assistant_reply": "구토가 더 있었다면 많이 걱정되셨겠어요. 말씀해주신 내용은 수의사 선생님이 확인할 수 있게 남겨둘게요. 반복해서 토하거나 기운이 더 떨어지면 병원에 바로 연락해 주세요.",
- "reason": "예약 후 증상 변화 보고."}
+ "assistant_reply": "구토가 더 있었다면 많이 걱정되셨겠어요. 말씀해주신 내용은 수의사 선생님이 확인할 수 있게 남겨둘게요. 더 잦아지면 진료를 앞당기는 것도 도와드릴게요.",
+ "reason": "예약 후 증상 변화 보고.",
+ "wants_rebooking": false}
 """
 
 
@@ -74,6 +87,14 @@ def _format_history(history: list[dict] | None, n: int = 6) -> str:
     return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in recent)
 
 
+def _format_vision(vision_findings: str | None, vision_relevant) -> str:
+    """첨부 이미지/영상의 VLM 소견을 프롬프트 블록으로. 없으면 '(없음)'."""
+    if not vision_findings and vision_relevant is None:
+        return "(없음)"
+    rel = "" if vision_relevant is None else f"relevant={'true' if vision_relevant else 'false'} / "
+    return f"{rel}{vision_findings or '소견 없음'}"
+
+
 def build_classification_prompt(
     *,
     pet_info: dict | None,
@@ -81,6 +102,8 @@ def build_classification_prompt(
     history: list[dict] | None,
     user_message: str,
     attachment_count: int = 0,
+    vision_findings: str | None = None,
+    vision_relevant: bool | None = None,
 ) -> str:
     """분류용 최종 프롬프트 조립."""
     return (
@@ -89,7 +112,8 @@ def build_classification_prompt(
         f"[이전 누적 경과 메모]\n{(followup_summary or '아직 없음')}\n\n"
         f"[최근 대화]\n{_format_history(history)}\n\n"
         f"[이번 보호자 메시지]\n{user_message}\n"
-        f"[첨부 개수] {attachment_count}\n\n"
+        f"[첨부 개수] {attachment_count}\n"
+        f"[이미지 소견]\n{_format_vision(vision_findings, vision_relevant)}\n\n"
         "위 메시지를 위 규칙대로 분류해 JSON 하나만 출력해."
     )
 
@@ -107,3 +131,11 @@ REPLY_IRRELEVANT = (
 REPLY_SAVED = "말씀해주신 변화는 수의사 선생님이 확인할 수 있게 남겨둘게요."
 # 사진·영상이 첨부돼서 (글이 경과로 안 잡혀도) 저장하는 경우의 응답.
 REPLY_SAVED_MEDIA = "사진·영상 잘 받았어요. 수의사 선생님이 확인할 수 있게 함께 남겨둘게요."
+# 사진이 증상과 무관해 보여(잘못 보낸 듯) 저장하지 않고 한 번 더 확인하는 응답.
+REPLY_CONFIRM_PHOTO = (
+    "보내주신 사진이 아이 상태와 관련된 게 맞을까요? "
+    "혹시 다른 사진을 보내려던 거면, 상태가 보이는 사진으로 한 번 더 보내주세요."
+)
+# 재예약(예약 시간 변경/앞당김) — pill 텍스트(결정론 트리거) + 응답.
+REBOOK_PILL = "더 빠른 시간 찾기"
+REPLY_REBOOK = "네, 가능한 빠른 예약 시간을 찾아볼게요. 잠시만 기다려 주세요!"
