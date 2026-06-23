@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from enum import Enum
+import re
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -27,6 +28,18 @@ class SeverityHint(str, Enum):
     STABLE = "stable"            # 호전·유지·가벼운 변화
     WORSE = "worse"              # 악화 가능성
     URGENT_POSSIBLE = "urgent_possible"  # 즉시 병원 연락 안내 가능성
+
+
+class ReplyKind(str, Enum):
+    """이번 답변의 '목적' — 매 답변이 정확히 하나만 갖는다(직전과 다른 목적을 권장)."""
+    REFLECT_ASK = "reflect_ask"              # 변화 반영 + 필요한 정보 1개 질문
+    STABLE_NEXT = "stable_next"              # 호전/안정 확인 + 다음 관찰 포인트 1개
+    URGENT_REBOOK = "urgent_rebook"          # urgent일 때만 — 더 빠른 예약 안내
+    GENERAL_DISCHARGE = "general_discharge"  # 일반 질문 — 퇴원안내 우선 + 현재 상태 1개 질문
+    CARE_ADVICE = "care_advice"              # 관리방법 질문 — 무리 말 것 + 확인 포인트 + 진료 시 전달
+    EMPATHY = "empathy"                      # 감정 표현 — 공감 먼저, 단정 없이 안심
+    REASSURE_CLOSE = "reassure_close"        # 여러 정상 확인됨 — 체크리스트 멈추고 안심하며 마무리
+    OTHER = "other"
 
 
 # 경과(수의사 전달 대상)로 보는 카테고리
@@ -51,9 +64,25 @@ class FollowupClassification(BaseModel):
     severity_hint: SeverityHint = SeverityHint.STABLE
     summary_delta: str = ""
     assistant_reply: str = ""
+    # 이번 답변의 목적(직전과 다르게) + 이번에 물은 항목(같은 대화 재질문 회피용).
+    reply_kind: ReplyKind = ReplyKind.OTHER
+    asked_fields: list[str] = Field(default_factory=list)
     reason: str = ""
     # 보호자가 '예약 시간 변경/재예약'을 원하면 true (증상 경과와 별개 — 예약 흐름으로 넘긴다).
     wants_rebooking: bool = False
+    # 보호자가 '내 예약이 언제인지(예약 시각)'를 물으면 true → 실제 confirmed_time을 안내.
+    asks_appointment_time: bool = False
+    # 보호자가 '예약 취소'를 원하면 true → 프론트에서 확인 후 예약 취소.
+    wants_cancel: bool = False
+    # 보호자가 '새로(추가로) 예약을 잡고 싶다'(기존 예약 변경이 아니라 신규)면 true →
+    # 챗에서 '바로 예약 / 문진 작성 후 예약' 선택지를 띄운다. (변경=wants_rebooking과 구분)
+    wants_new_booking: bool = False
+    # 보호자가 '내 예약 내역/기록을 보여달라'고 하면 true → 현재 예약 목록 카드 + 예약내역 탭 안내.
+    asks_schedule_list: bool = False
+    # 보호자가 '내원 전 준비사항을 다시 알려달라'고 하면 true → 저장된 준비사항을 다시 보여준다.
+    asks_prep_instructions: bool = False
+    # 보호자가 '이번 예약 담당 수의사가 누구인지' 물으면 true → scheduleDB.doctorid로 실제 이름 안내.
+    asks_vet_info: bool = False
     confidence: float = 0.5
 
     @field_validator("confidence", mode="before")
@@ -80,6 +109,27 @@ class FollowupClassification(BaseModel):
             return SeverityHint(v)
         except (ValueError, KeyError):
             return SeverityHint.STABLE
+
+    @field_validator("reply_kind", mode="before")
+    @classmethod
+    def _coerce_reply_kind(cls, v):
+        try:
+            return ReplyKind(v)
+        except (ValueError, KeyError):
+            return ReplyKind.OTHER
+
+    @field_validator("asked_fields", mode="before")
+    @classmethod
+    def _coerce_asked_fields(cls, v):
+        if not isinstance(v, list):
+            return []
+        # 짧은 키워드 문자열만, 공백 제거 + 빈값/중복 제거(최대 6개).
+        out: list[str] = []
+        for x in v:
+            s = str(x).strip()
+            if s and s not in out:
+                out.append(s)
+        return out[:6]
 
     @field_validator("summary_delta", "assistant_reply", "reason", mode="before")
     @classmethod
@@ -138,7 +188,7 @@ def keyword_fallback(message: str) -> FollowupClassification:
             is_followup=False,
             category=Category.HOSPITAL_INFO,
             severity_hint=SeverityHint.STABLE,
-            assistant_reply="병원 정보 확인이 필요한 질문이네요. 안내 담당이 이어서 도와드릴 수 있게 넘길게요.",
+            assistant_reply="병원 정보는 바로 확인해 알려드릴게요.",
             reason="fallback: 병원 정보 키워드 감지",
         )
 
@@ -149,7 +199,7 @@ def keyword_fallback(message: str) -> FollowupClassification:
             category=Category.SYMPTOM_CHANGE,
             severity_hint=SeverityHint.URGENT_POSSIBLE if urgent else SeverityHint.WORSE,
             summary_delta=text.strip()[:100],
-            assistant_reply="말씀해주신 변화가 걱정되셨겠어요. 수의사 선생님이 확인할 수 있게 남겨둘게요.",
+            assistant_reply="말씀해주신 변화가 걱정되셨겠어요. 상태가 더 달라지면 바로 알려주세요.",
             reason="fallback: 증상 키워드 감지(보수적으로 저장)",
         )
 
@@ -157,7 +207,7 @@ def keyword_fallback(message: str) -> FollowupClassification:
         is_followup=False,
         category=Category.IRRELEVANT,
         severity_hint=SeverityHint.STABLE,
-        assistant_reply="예약 전후로 아이 상태가 달라지면 언제든 알려주세요. 진료 때 참고될 수 있게 정리해둘게요.",
+        assistant_reply="예약 전후로 아이 상태가 달라지면 언제든 알려주세요.",
         reason="fallback: 경과/병원 키워드 없음 → 저장 안 함",
     )
 
@@ -197,6 +247,75 @@ def ensure_safe_reply(cls: "FollowupClassification", fallback: str) -> str:
     if cls.severity_hint == SeverityHint.URGENT_POSSIBLE and not _has_emergency_guidance(reply):
         reply = f"{reply} {URGENT_SAFETY_NOTE}".strip()
     return reply
+
+
+# --- 저장 안내 반복 제거 ---------------------------------------------------
+
+_SAVE_NOTICE_PATTERNS = (
+    r"기록\s*해\s*둘게요",
+    r"기록\s*해\s*두겠습니다",
+    r"남겨\s*둘게요",
+    r"남겨\s*두겠습니다",
+    r"정리\s*해\s*둘게요",
+    r"정리\s*해\s*두겠습니다",
+    r"수의사\s*선생님이\s*확인할\s*수\s*있게",
+    r"수의사(?:\s*선생님)?(?:에게|께)?\s*전달",
+    r"진료\s*메모에\s*반영",
+    r"확인할\s*수\s*있도록\s*전달",
+    r"전달(?:될|해\s*둘|해\s*두|하겠)",
+)
+_SAVE_NOTICE_RE = re.compile("|".join(f"(?:{p})" for p in _SAVE_NOTICE_PATTERNS))
+_SENTENCE_RE = re.compile(r"[^.!?。！？\n]+(?:[.!?。！？]+|$)")
+_TOO_SHORT_EMPATHY_RE = re.compile(
+    r"^(?:많이\s*)?(?:걱정|놀라|불안|속상|답답)(?:되셨겠어요|하셨겠어요|스러우셨겠어요)[.!?。！？]?$"
+)
+_BROKEN_END_RE = re.compile(r"(?:수\s*있게|있도록|에게|께|에|을|를|은|는|이|가|도|만|로|으로|와|과|고|며|지만)$")
+_SAVE_NOTICE_QUESTION_RE = re.compile(
+    r"(기록|저장|전달|메모|남(?:아|나요|겨)|수의사|선생님|보여\s*주|볼\s*수|확인).*(\?|나요|될까요|되나요|하나요|해요|죠|지요)"
+)
+
+
+def allows_save_notice_question(user_message: str) -> bool:
+    """보호자가 기록/전달 여부를 직접 물은 경우만 저장 안내를 허용한다."""
+    text = re.sub(r"\s+", " ", user_message or "").strip()
+    if not text:
+        return False
+    return bool(_SAVE_NOTICE_QUESTION_RE.search(text))
+
+
+def strip_save_notice(reply: str, *, allow_save_notice: bool = False) -> str:
+    """저장/전달 완료를 알리는 문장만 제거한다.
+
+    보호자가 기록 여부를 직접 물은 경우에는 답변 목적 자체가 저장 안내일 수 있어 그대로 둔다.
+    """
+    text = re.sub(r"\s+", " ", reply or "").strip()
+    if allow_save_notice or not text:
+        return text
+
+    sentences = [m.group(0).strip() for m in _SENTENCE_RE.finditer(text)]
+    if not sentences:
+        return "" if _SAVE_NOTICE_RE.search(text) else text
+
+    kept = [s for s in sentences if not _SAVE_NOTICE_RE.search(s)]
+    return " ".join(kept).strip()
+
+
+def needs_saved_reply_fallback(reply: str, user_message: str = "") -> bool:
+    """저장 안내 제거 뒤 보호자에게 보일 답변으로 부족하면 fallback으로 교체한다."""
+    text = re.sub(r"\s+", " ", reply or "").strip()
+    if not text:
+        return True
+    if len(text) < 8:
+        return True
+    if _TOO_SHORT_EMPATHY_RE.fullmatch(text):
+        return True
+    if _BROKEN_END_RE.search(text):
+        return True
+    # 저장 문장 제거 뒤 남은 말이 사용자 발화와 무관한 접속/확인 토막이면 교체한다.
+    weak_fragments = {"네", "알겠어요", "확인했어요", "좋아요", "그렇군요", "말씀해주셔서 고마워요"}
+    if text.rstrip(".!?。！？") in weak_fragments:
+        return True
+    return False
 
 
 # --- 누적 경과 메모 머지 --------------------------------------------------

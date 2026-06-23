@@ -44,6 +44,15 @@ NORMAL_MAX_TURNS = 5
 _YES_KW = ("예", "네", "넹", "응", "어", "그래", "좋아", "해줘", "부탁", "ㅇㅇ", "할게", "진행", "당연")
 _NO_KW = ("아니", "아뇨", "싫", "안 할", "안할", "나중", "괜찮", "ㄴㄴ", "노")
 
+
+def _pet_call(name: str | None) -> str:
+    """반려동물 호칭 — 받침 있는 이름엔 친근형 '이'를 붙인다(군밤 → 군밤이가, 뽀미 → 뽀미가)."""
+    n = (name or "아이").strip()
+    ch = n[-1:]
+    if "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28:
+        return n + "이"
+    return n
+
 # 문진 전 '바로 예약' 차단 안내 — 증상 먼저 / 그래도 바로 예약은 홈 탭으로.
 _BOOKING_BLOCKED_REPLY = (
     "{pet}가 어디가 불편한지 먼저 알려주시면 제가 살펴보고 예약까지 도와드릴게요. 🐾\n\n"
@@ -129,7 +138,7 @@ class TriageAgent:
         extracted = dict(state.get("extracted") or {})
         turn_count = int(state.get("turn_count", 0))
         prev_section = state.get("section")
-        pet_name = (ctx.pet_info or {}).get("name") or "아이"
+        pet_name = _pet_call((ctx.pet_info or {}).get("name"))
         history = _history_before_current(ctx)
 
         # 0) 초기 진입 pill 클릭 → 추출/판정 없이 바로 증상부터 묻는다(첫 턴·첨부 없을 때).
@@ -292,10 +301,13 @@ class TriageAgent:
                 from app.crud.chat import create_triage_guardian, update_session_emrid
                 from app.crud.triage import build_triage_result
 
-                if emrid is None:
+                # new_booking(예약 후 챗에서 새로 예약하기)면 기존 emrid가 있어도 새 emrid를 발급해
+                # 세션을 새 예약으로 옮긴다(force) — 기존 예약은 별도 emrid로 그대로 남는다.
+                if emrid is None or ctx.new_booking:
                     guardian = await create_triage_guardian(ctx.db, ctx.petid)
                     emrid = guardian.emrid
-                    await update_session_emrid(ctx.db, ctx.session, emrid)
+                    await update_session_emrid(ctx.db, ctx.session, emrid, force=ctx.new_booking)
+                    ctx.emrid = emrid
                 info = {
                     "urgency_level": urgency,
                     "urgency_level_num": engine.urgency_num(urgency),
@@ -348,6 +360,8 @@ class TriageAgent:
             state_patch={
                 "triage_state": {"last_complete": complete_payload},
                 "active_flow": "awaiting_booking_confirm",
+                # 새 emrid를 발급했으니 new_booking 오버라이드는 해제(이후 phase는 새 예약 기준).
+                "new_booking": False,
             },
             events=events,
         )

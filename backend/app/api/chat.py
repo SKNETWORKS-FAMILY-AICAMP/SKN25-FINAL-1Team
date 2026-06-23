@@ -24,6 +24,11 @@ from app.services.orchestrator_service import process_turn
 from app.services.translation import translate_batch
 
 from ai.orchestrator.contracts import INITIAL_TRIAGE_PILL
+from app.utils.followup_policy import (
+    FOLLOWUP_LIMIT_NOTICE,
+    FOLLOWUP_LIMIT_NOTICE_TYPE,
+    is_followup_limited,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -40,6 +45,69 @@ INITIAL_PILLS = [
     INITIAL_TRIAGE_PILL,
     "궁금한 게 있어요",
 ]
+
+
+async def _ensure_followup_limit_notice(db: AsyncSession, session, schedule) -> bool:
+    """10분 제한 상태 진입 공지를 예약별 1회만 채팅 메시지에 남긴다."""
+    def _flag(field: str) -> None:
+        try:
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(session, field)
+        except Exception:
+            return
+
+    if not schedule or not getattr(schedule, "scheduleid", None):
+        return False
+    marker = f"{schedule.scheduleid}"
+    orch = dict(session.orch_state or {})
+    notice_ids = {str(x) for x in (orch.get("followup_limit_notice_scheduleids") or [])}
+    legacy_marker = orch.get("followup_limit_notice_scheduleid")
+    if legacy_marker:
+        notice_ids.add(str(legacy_marker))
+    if marker in notice_ids:
+        return False
+
+    messages = list(session.messages or [])
+    for msg in messages:
+        meta = (msg or {}).get("meta") if isinstance(msg, dict) else None
+        if isinstance(meta, dict) and meta.get("type") == FOLLOWUP_LIMIT_NOTICE_TYPE and str(meta.get("scheduleid")) == marker:
+            notice_ids.add(marker)
+            orch["followup_limit_notice_scheduleid"] = marker
+            orch["followup_limit_notice_scheduleids"] = sorted(notice_ids)
+            session.orch_state = orch
+            _flag("orch_state")
+            db.add(session)
+            await db.commit()
+            return False
+
+    messages.append({
+        "role": "assistant",
+        "content": FOLLOWUP_LIMIT_NOTICE,
+        "image_url": None,
+        "meta": {"type": FOLLOWUP_LIMIT_NOTICE_TYPE, "scheduleid": schedule.scheduleid},
+    })
+    notice_ids.add(marker)
+    orch["followup_limit_notice_scheduleid"] = marker
+    orch["followup_limit_notice_scheduleids"] = sorted(notice_ids)
+    session.messages = messages
+    session.orch_state = orch
+    _flag("messages")
+    _flag("orch_state")
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return True
+
+
+async def _current_schedule_for_session(db: AsyncSession, session):
+    if session.emrid is None:
+        return None
+    return (await db.execute(
+        select(Schedule).where(
+            Schedule.emrid == session.emrid,
+            Schedule.deleted_at.is_(None),
+        )
+    )).scalars().first()
 
 
 # 챗봇 세션 시작
@@ -234,9 +302,9 @@ async def get_chat_sessions(
     has_more = len(sessions) > limit
     sessions = sessions[:limit]
 
-    # 경과보고(followup)가 '활성'인 세션 표시용 — 예약(확정)이 있고 진료 시작 1시간 전까지인 emrid.
+    # 경과보고(followup)가 '활성'인 세션 표시용 — 예약(확정)이 있고 마감 전인 emrid.
     # need_followup 게이팅 폐기 → 상세의 can_followup과 동일하게 예약 기준만 본다.
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone
     emrids = [s.emrid for s in sessions if s.emrid is not None]
     followup_active_emrids: set[int] = set()
     if emrids:
@@ -248,14 +316,8 @@ async def get_chat_sessions(
                 Schedule.confirmed_time.isnot(None),
             )
         )
-        now = datetime.now(timezone.utc)
         for sched in sched_rows.scalars().all():
-            confirmed = sched.confirmed_time
-            if confirmed.tzinfo is None:
-                confirmed = confirmed.replace(tzinfo=timezone.utc)
-            # 진료 시작 1시간 전까지만 활성.
-            if now <= confirmed - timedelta(hours=1):
-                followup_active_emrids.add(sched.emrid)
+            followup_active_emrids.add(sched.emrid)
 
     return {
         "code": 200,
@@ -289,27 +351,23 @@ async def get_chat_session_detail(
     can_followup = False
     booking_complete = False
     followup_closed = False
+    followup_limited = False
     emrid = session.emrid
     if emrid is not None:
-        from datetime import datetime, timezone, timedelta
-        schedule_row = await db.execute(
-            select(Schedule).where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
-        )
-        schedule = schedule_row.scalar_one_or_none()
-        # follow-up은 진료 시작 1시간 전에 마감 → 그 전까지만 '열림'.
-        followup_open_time = True
+        from datetime import datetime, timezone
+        schedule = await _current_schedule_for_session(db, session)
         if schedule and schedule.confirmed_time:
             confirmed = schedule.confirmed_time
             if confirmed.tzinfo is None:
                 confirmed = confirmed.replace(tzinfo=timezone.utc)
-            followup_open_time = datetime.now(timezone.utc) <= confirmed - timedelta(hours=1)
-        # need_followup 게이팅 폐기 — 예약(확정)만 있으면 경과보고 가능(라이브=재진입 일관).
-        can_followup = bool(schedule and schedule.confirmed_time and schedule.status != "COMPLETED" and followup_open_time)
+            followup_limited = is_followup_limited(confirmed, now=datetime.now(timezone.utc))
+            if followup_limited and schedule.status != "CANCELLED":
+                await _ensure_followup_limit_notice(db, session, schedule)
+        # need_followup 게이팅 폐기 — 예약(확정)만 있으면 제한 상태에서도 채팅 가능.
+        can_followup = bool(schedule and schedule.confirmed_time and schedule.status != "COMPLETED" and schedule.status != "CANCELLED")
         # 예약 확정 = 취소되지 않은 schedule에 확정 시각이 존재.
         booking_complete = bool(schedule and schedule.confirmed_time and schedule.status != "CANCELLED")
-        # 경과보고 마감 = 예약은 있으나 진료 시작 시간이 지났거나 완료된 상태.
-        #  → 재진입 시 입력창 대신 '마감' 안내를 띄우기 위한 신호.
-        followup_closed = bool(schedule and schedule.confirmed_time and not can_followup)
+        followup_closed = False
 
     messages = session.messages or []
 
@@ -338,9 +396,42 @@ async def get_chat_session_detail(
             "resumable_schedule": resumable_schedule,
             "resume_quick_replies": resume_quick_replies,
             "can_followup": can_followup,
+            "followup_limited": followup_limited,
             "followup_closed": followup_closed,
             "booking_complete": booking_complete,
             "created_at": str(session.created_at),
+        },
+    }
+
+
+@router.post("/sessions/{session_id}/followup-limit-notice")
+async def ensure_followup_limit_notice(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """진료 10분 전 사전 공지를 서버 기록에 예약별 1회만 남긴다."""
+    session = await get_chat_session(db, session_id, current_user.userid)
+    if not session:
+        raise HTTPException(status_code=404, detail="상담 기록을 찾을 수 없습니다.")
+
+    from datetime import datetime, timezone
+
+    schedule = await _current_schedule_for_session(db, session)
+    limited = False
+    if schedule and schedule.confirmed_time and schedule.status != "CANCELLED":
+        limited = is_followup_limited(schedule.confirmed_time, now=datetime.now(timezone.utc))
+
+    inserted = False
+    if limited:
+        inserted = await _ensure_followup_limit_notice(db, session, schedule)
+
+    return {
+        "code": 200,
+        "result": {
+            "inserted": inserted,
+            "limited": limited,
+            "message": FOLLOWUP_LIMIT_NOTICE if limited else None,
         },
     }
 

@@ -33,8 +33,10 @@ _VLM_PROMPT = """이 반려동물 미디어(사진 또는 영상 프레임 여�
    (구토물·배설물·분비물은 "general")
 3) findings: 보이는 객관적 소견 1~2문장(병명 단정 금지. 부위·색·붓기·분비물·상처·자세,
    구토물/배설물이면 색·점도·이물질·혈흔 유무 등). 영상이면 프레임들을 종합.
+4) species: 사진 속 동물 종류 — "dog" | "cat" | "rabbit" | "other" | "unknown".
+   (동물이 안 보이거나 확실치 않으면 "unknown". 배설물·분비물만 찍혀 종을 알 수 없어도 "unknown".)
 
-JSON: {"relevant": true, "region": "skin", "findings": "..."}"""
+JSON: {"relevant": true, "region": "skin", "findings": "...", "species": "dog"}"""
 
 
 def _is_video(url: str) -> bool:
@@ -158,10 +160,11 @@ async def analyze(attachments: list[str], text: str) -> dict | None:
     relevant = bool(v.get("relevant"))
     findings = (v.get("findings") or "").strip()
     region = (v.get("region") or "").strip().lower()
+    species = (v.get("species") or "").strip().lower()   # 사진 속 동물 종(등록 펫과 대조용)
 
-    # 3) 무관 이미지 → 버림(안내용 플래그만)
+    # 3) 무관 이미지 → 버림(안내용 플래그만). species는 '잘못 보낸 사진' 판정에 쓰이므로 함께 전달.
     if not relevant:
-        return {"relevant": False, "note": "", "rag_text": "", "suspected": [],
+        return {"relevant": False, "note": "", "rag_text": "", "suspected": [], "species": species,
                 "evidence": {"relevant": False, "media": media, "vlm_description": findings}}
 
     # 4) VLM 라우팅으로 CNN 보조 (피부/안구만)
@@ -184,5 +187,5 @@ async def analyze(attachments: list[str], text: str) -> dict | None:
 
     evidence = {"relevant": True, "media": media, "region": region,
                 "cnn": cnn, "vlm_description": findings}
-    return {"relevant": True, "note": " | ".join(note_parts),
+    return {"relevant": True, "note": " | ".join(note_parts), "species": species,
             "evidence": evidence, "rag_text": rag_text, "suspected": suspected}

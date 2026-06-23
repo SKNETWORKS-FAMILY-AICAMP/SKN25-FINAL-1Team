@@ -20,11 +20,17 @@ from app.models.guardian import Guardian
 from app.models.triage_result import TriageResult
 from app.models.schedule import Schedule
 from app.crud.alarm import create_alarm
+from app.utils.followup_policy import BOOKING_CHANGE_LIMITED_REPLY, ensure_utc, is_followup_limited
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 KST = timezone(timedelta(hours=9))
+
+
+def _raise_if_booking_change_limited(schedule: Schedule) -> None:
+    if schedule.confirmed_time and is_followup_limited(schedule.confirmed_time, now=datetime.now(timezone.utc)):
+        raise HTTPException(status_code=400, detail=BOOKING_CHANGE_LIMITED_REPLY)
 
 
 async def _verify_emrid_owner(db: AsyncSession, emrid: int, current_user_id: int) -> None:
@@ -305,7 +311,9 @@ async def delete_schedule(
     if schedule.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="이미 취소된 예약입니다.")
 
-    if schedule.confirmed_time.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    _raise_if_booking_change_limited(schedule)
+
+    if ensure_utc(schedule.confirmed_time) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="이미 지난 예약은 취소할 수 없습니다.")
 
     await cancel_schedule(db, schedule)
@@ -330,7 +338,9 @@ async def update_schedule(
     if schedule.status in ["COMPLETED", "CANCELLED"]:
         raise HTTPException(status_code=400, detail="변경할 수 없는 예약입니다.")
 
-    if schedule.confirmed_time.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    _raise_if_booking_change_limited(schedule)
+
+    if ensure_utc(schedule.confirmed_time) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="이미 지난 예약은 변경할 수 없습니다.")
 
     result = await update_schedule_time(db, schedule, request.confirmed_time, schedule.duration_min)

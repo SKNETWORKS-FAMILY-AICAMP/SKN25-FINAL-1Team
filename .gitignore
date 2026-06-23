@@ -69,4 +69,8 @@ backend/data/triage/*.gz
 
 # Evaluation/Validation 개발 전용 파일 — 로컬 전용, 커밋 금지
 ai/agents/test_data/
+# 평가 실행 산출물(리포트/결과) — 생성물이라 추적 안 함. 데이터셋(*_dataset.json, PetEVAL.json)은 유지.
+backend/data/validation/*_report.html
+backend/data/validation/*_report.json
+backend/data/validation/*_result.json
 

@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { isAxiosError } from "axios";
-import { useNavigationType, useSearchParams } from "react-router-dom";
+import { useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import {
   deleteChatSessionKeepalive,
   resumeSchedule,
@@ -48,7 +48,7 @@ const SYMPTOM_PILLS = [
 // SLOT_RECOMMENDING        → pipeline.phase === "slot-selection"
 // BOOKING_CONFIRMED        → pipeline.phase === "confirmed"
 // FOLLOWUP_ACTIVE          → pipeline.phase === "followup"
-// FOLLOWUP_CLOSED          → pipeline.phase === "followup-closed" (진료 시작 시간 경과)
+// FOLLOWUP_CLOSED          → legacy 제한 안내. 채팅 입력은 닫지 않는다.
 type ChatPhase =
   | "IDLE"
   | "SYMPTOM_COLLECTING"
@@ -151,6 +151,7 @@ const useStableCallback = <Args extends unknown[], Return>(
 
 const ChatbotPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams] = useSearchParams();
   const selectedPetIdFromQuery = Number(searchParams.get("petId"));
@@ -188,6 +189,9 @@ const ChatbotPage = () => {
   const handleSelectHospital = (id: number) => {
     setSelectedHospitalId(id);
     setCurrentHospital(id);
+    // 예약(슬롯) 단계에서 병원을 바꾸면 → 그 병원 기준으로 슬롯을 다시 추천한다.
+    // (슬롯 단계가 아니면 reselectHospital이 내부에서 무시함)
+    void pipeline.reselectHospital(id);
   };
   // 보호자가 한마디도 안 한 빈 세션 추적 — 이탈 시 삭제(req1).
   const liveSessionRef = useRef<LiveSessionInfo | null>(null);
@@ -243,6 +247,7 @@ const ChatbotPage = () => {
     setQuickReplies,
     setIsStreaming,
     hospitalId: selectedHospitalId,
+    sessionId: session?.session_id ?? null,
   });
 
   const selectedPet = useMemo(
@@ -525,7 +530,18 @@ const ChatbotPage = () => {
       return;
     }
 
-    if (pipeline.phase === "followup") {
+    if (pipeline.phase === "followup" || pipeline.phase === "followup-closed") {
+      // followup_filter가 띄운 '동작' pill — 백엔드 전송 없이 프론트에서 해당 화면으로 이동.
+      //  · 새 예약하기/바로 예약하기 → 홈의 '예약하기'(검진예약 모달) 자동 오픈
+      //  · 예약 내역 탭에서 보기 → 예약 내역 페이지
+      if (trimmed === "새 예약하기" || trimmed === "바로 예약하기") {
+        navigate(selectedPetId ? `/home?reserve=${selectedPetId}` : "/home");
+        return;
+      }
+      if (trimmed === "예약 내역 탭에서 보기") {
+        navigate("/reservations");
+        return;
+      }
       // 경과 모니터링 메시지 — 첨부 이미지가 있으면 함께 전송하고 대화에도 노출한다.
       const att = pendingAttachment;
       const images = att?.cloudfrontUrl ? [att.cloudfrontUrl] : [];
@@ -545,7 +561,7 @@ const ChatbotPage = () => {
       return;
     }
 
-    if (pipeline.phase === "confirmed") return; // 상담 완료 — 입력 차단
+    if (pipeline.phase === "confirmed") return; // 예약 없는 완료 상태 — 입력 차단
 
     // 일반 트리아지 채팅
     await handleSendMessage(trimmed);
@@ -695,10 +711,6 @@ const ChatbotPage = () => {
                     <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
                       {t("chatbot.bookingComplete")}
                     </div>
-                  ) : chatPhase === "FOLLOWUP_CLOSED" ? (
-                    <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
-                      {t("chatbot.followupClosed")}
-                    </div>
                   ) : chatPhase === "SLOT_RECOMMENDING" ? (
                     <div className="border-t border-slate-100 px-4 py-3 text-center">
                       <span className="text-xs font-semibold text-slate-400">
@@ -748,14 +760,41 @@ const ChatbotPage = () => {
                   ) : (
                     <ChatMessageList
                       messages={messages}
-                      quickReplies={EMPTY_QUICK_REPLIES}
+                      // 재진입한 followup 세션에서도 pill(의도 선택·재예약·슬롯)을 띄우고 클릭되게 한다.
+                      quickReplies={
+                        pipeline.phase === "followup" || pipeline.phase === "slot-selection" || pipeline.phase === "followup-closed"
+                          ? quickReplies
+                          : EMPTY_QUICK_REPLIES
+                      }
                       isStreaming={isStreaming}
-                      onSendMessage={noop}
-                      onOpenDatePicker={noop}
+                      onSendMessage={
+                        pipeline.phase === "followup" || pipeline.phase === "slot-selection" || pipeline.phase === "followup-closed"
+                          ? stableSendCombined
+                          : noop
+                      }
+                      onOpenDatePicker={
+                        pipeline.phase === "followup" || pipeline.phase === "slot-selection"
+                          ? stableOpenDatePicker
+                          : noop
+                      }
                     />
                   )}
 
-                  {pipeline.phase === "followup" && (
+                  {/* 재예약(재진입) 시 직접 날짜 선택 피커 — 라이브 흐름과 동일 */}
+                  {pipeline.showDatePicker && (
+                    <div className="absolute bottom-16 right-4 z-10">
+                      <ChatDatePicker
+                        durationMin={pipeline.getScheduleDurationMin()}
+                        hospitalId={selectedHospitalId}
+                        onSelectSlot={(date, time, doctorid, label) => {
+                          void pipeline.handleManualSlotSelect(date, time, doctorid, label);
+                        }}
+                        onCancel={() => pipeline.setShowDatePicker(false)}
+                      />
+                    </div>
+                  )}
+
+                  {(pipeline.phase === "followup" || pipeline.phase === "followup-closed") && (
                     <ChatInputBox
                       fileInputRef={fileInputRef}
                       pendingAttachment={pendingAttachment}
@@ -765,12 +804,6 @@ const ChatbotPage = () => {
                       onSelectAttachment={handleSelectAttachment}
                       onSubmitMessage={stableSendCombined}
                     />
-                  )}
-
-                  {pipeline.phase === "followup-closed" && (
-                    <div className="border-t border-slate-100 px-5 py-4 text-center text-sm font-semibold text-slate-400">
-                      {t("chatbot.followupClosed")}
-                    </div>
                   )}
 
                   {pipeline.phase === "confirmed" && (
