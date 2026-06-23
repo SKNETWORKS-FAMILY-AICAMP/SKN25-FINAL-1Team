@@ -624,6 +624,36 @@ async def validate_chart(
 
 # ── 결과 조립 ───────────────────────────────────────────────────
 
+def _calc_completeness(triage_v: dict) -> float | None:
+    """triage 체크 4개를 가중 평균해 문진 완전성 점수(0~10) 산출.
+
+    완료 신호(40%) — urgency/chief_complaint/symptom_summary 필드 완전성
+    컨텍스트 연속성(30%) — 추출 슬롯이 보호자 발화에 근거하는지
+    응급도 정합성(15%) — 보호자 발화 vs urgency_level_num
+    응급도 판단(15%) — chief_complaint vs urgency_level_num 내부 일관성
+    PASS=1.0, WARN=0.5, SKIPPED=제외
+    """
+    _WEIGHTS = {
+        "완료 신호": 0.40,
+        "컨텍스트 연속성": 0.30,
+        "응급도 정합성": 0.15,
+        "응급도 판단": 0.15,
+    }
+    _STATUS_SCORE = {"PASS": 1.0, "WARN": 0.5}
+
+    total_w = weighted = 0.0
+    for c in triage_v.get("checks", []):
+        w = _WEIGHTS.get(c.get("item", ""))
+        s = _STATUS_SCORE.get(c.get("status", ""))
+        if w and s is not None:
+            total_w += w
+            weighted += w * s
+
+    if total_w == 0:
+        return None
+    return round((weighted / total_w) * 10, 1)
+
+
 def _build_result(
     triage_v: dict,
     schedule_v: dict,
@@ -638,6 +668,8 @@ def _build_result(
         for c in module.get("checks", [])
     ]
     overall = "ATTENTION" if "WARN" in all_statuses else "OK"
+
+    completeness_score = _calc_completeness(triage_v)
 
     consistency_score = None
     for c in chart_v.get("checks", []):
@@ -662,6 +694,7 @@ def _build_result(
     return {
         "overall": overall,
         "checks": checks,
+        "completeness_score": completeness_score,
         "consistency_score": consistency_score,
         "summary": summary,
         "conversation_status": conversation_v,
@@ -686,7 +719,7 @@ async def _save_result(
     if row:
         row.overall = result["overall"]
         row.checks = result["checks"]
-        row.completeness_score = None
+        row.completeness_score = result.get("completeness_score")
         row.consistency_score = result["consistency_score"]
         row.summary = result["summary"]
         row.score_breakdown = score_breakdown
