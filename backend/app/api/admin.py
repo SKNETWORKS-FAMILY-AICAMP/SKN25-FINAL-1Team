@@ -269,6 +269,7 @@ async def validation_results(
             "completeness": float(v.completeness_score) if v.completeness_score is not None else None,
             "checks": v.checks or [],
             "summary": v.summary,
+            "conversation_status": (v.score_breakdown or {}).get("conversation"),
         }
         for v in rows.scalars().all()
     ]
@@ -285,6 +286,30 @@ async def run_validation_endpoint(
     from ai.agents.evaluation import run_case_evaluation
     result = await run_case_evaluation(schedule_id, db)
     return {"code": 200, "result": result}
+
+
+@router.post("/validation/run-recent")
+async def run_recent_validations(
+    limit: int = Query(default=10, le=50, description="재검증할 최근 케이스 수"),
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    """최근 N개 ValidationResult의 scheduleid를 꺼내 case_eval 재실행."""
+    from ai.agents.evaluation import run_case_evaluation
+
+    q = select(ValidationResult).order_by(ValidationResult.created_at.desc()).limit(limit)
+    rows = await db.execute(q)
+    schedule_ids = [v.scheduleid for v in rows.scalars().all() if v.scheduleid is not None]
+
+    results = []
+    for sid in schedule_ids:
+        try:
+            r = await run_case_evaluation(sid, db)
+            results.append({"scheduleid": sid, "overall": r.get("overall", "?")})
+        except Exception as exc:
+            results.append({"scheduleid": sid, "error": str(exc)})
+
+    return {"code": 200, "result": {"count": len(results), "details": results}}
 
 
 # ── 모니터링: Judge (메모리 링버퍼 — DB 불필요) ──
@@ -306,4 +331,46 @@ async def eval_followup(current_admin=Depends(get_current_admin)):
 @router.get("/eval/followup/logs")
 async def followup_logs(current_admin=Depends(get_current_admin)):
     from ai.monitoring import recent_logs
-    return {"code": 200, "result": recent_logs("followup_filter")}
+    return {"code": 200, "result": recent_logs("followup_filter", limit=200)}
+
+
+@router.post("/eval/triage")
+async def eval_triage(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_triage_eval
+    return await run_triage_eval()
+
+
+@router.post("/eval/mcp")
+async def eval_mcp(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_mcp_health_check
+    return await run_mcp_health_check()
+
+
+@router.post("/eval/orchestrator")
+async def eval_orchestrator(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_orchestrator_eval
+    return await run_orchestrator_eval(db)
+
+
+@router.post("/eval/reception")
+async def eval_reception(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_reception_eval
+    return await run_reception_eval(db)
+
+
+@router.post("/eval/full-report")
+async def eval_full_report(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_full_agent_report
+    return await run_full_agent_report(db)
+
+
+@router.post("/eval/schedule")
+async def eval_schedule(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_schedule_eval
+    return await run_schedule_eval()
+
+
+@router.post("/eval/chart")
+async def eval_chart(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_chart_eval
+    return await run_chart_eval()

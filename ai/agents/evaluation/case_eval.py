@@ -1,22 +1,15 @@
-"""Evaluation Agent — AI 산출물 사후 검증 (triage → schedule → chart).
+"""케이스 단위 평가 — scheduleid 하나로 DB를 직접 조회해 triage/schedule/chart 검증.
 
-scheduleid 하나로 DB를 직접 조회해 3개 모듈을 독립적으로 검증한다.
   Check 1 (Triage):   1A 응급도정합성 · 1B 응급도판단
-                      1C 컨텍스트연속성(MCP후) · 1D 완료신호(MCP후)
-                      1E 대화품질(LLM, judge.py 통합 예정)
-  Check 2 (Schedule): 2A 예약타이밍 · 2B 근무시간 · 2C 빈슬롯 · 2D 핸드오프수신(MCP후)
-  Check 3 (Chart):    구조체크 1~4단계(rule) → 임상품질 5단계(LLM, 추후)
-
-Part B (에이전트 성능 평가) — MCP 구현 후 이 파일 하단에 추가:
-  run_orchestrator_eval, run_reception_eval, run_triage_agent_eval,
-  run_followup_filter_eval, run_mcp_health_check, run_e2e_scenarios,
-  run_full_agent_report
+                      1C 컨텍스트연속성 · 1D 완료신호 · 1E 대화품질(LLM)
+  Check 2 (Schedule): 2A 예약타이밍 · 2B 근무시간 · 2C 빈슬롯 · 2D 핸드오프수신
+  Check 3 (Chart):    구조체크 1~4단계(rule) → 임상품질 5단계(LLM)
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, time, timedelta
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +26,7 @@ from app.models.vet_schedule import HospitalWeeklySchedule, VetWeeklySchedule
 from app.crud.schedule import has_time_overlap
 from app.utils.timezone import KST, to_kst
 
-logger = logging.getLogger("ai.agents.evaluation")
+logger = logging.getLogger("ai.agents.evaluation.case_eval")
 
 
 # ── 상수 ────────────────────────────────────────────────────────
@@ -142,14 +135,8 @@ def validate_triage(
     checks = [
         _check_1a(triage, chat_history),
         _check_1b(triage),
-        # TODO(1C): MCP 구현 후 활성화
-        # messages에 agent_type 태그가 추가되면 세션 분기 감지 가능
-        # _check_1c(chat_history) 로 교체
-        {"item": "컨텍스트 연속성", "status": "SKIPPED", "detail": "agent_type 태그 없음 (MCP 미구현)"},
-        # TODO(1D): MCP 구현 후 활성화
-        # 오케스트레이터로 보낸 핸드오프 신호 로그가 있어야 검증 가능
-        # _check_1d(handoff_log) 로 교체
-        {"item": "완료 신호", "status": "SKIPPED", "detail": "핸드오프 신호 로그 없음 (MCP 미구현)"},
+        _check_1c(triage, chat_history),
+        _check_1d(triage),
     ]
     return {"status": _module_status(checks), "checks": checks}
 
@@ -222,21 +209,120 @@ def _check_1b(triage: TriageResult) -> dict:
     }
 
 
-# TODO(1E): 대화 품질 평가 — judge.py 통합
-# 구현 시 아래 함수를 작성하고 validate_triage에서 호출할 것
-#
-# async def _check_1e(triage, chat_history, db) -> dict:
-#     """1E: 문진 대화 품질 LLM 평가 (구 judge.py 통합).
-#
-#     - triage 에이전트와 다른 모델/provider 사용 (self-enhancement 편향 회피)
-#     - chat_history.messages에서 agent_type="triage" 구간만 추출 (MCP 후)
-#       MCP 전에는 전체 messages 사용
-#     - turn_count는 코드로 직접 계산 (LLM 비의존)
-#     - 4개 지표: completeness, question_efficiency, response_consistency, structuring_quality
-#     - 모두 7.0 이상 → PASS, 하나라도 미만 → WARN
-#     - overall(ATTENTION/OK) 집계에서 제외 — conversation_status 필드로만 노출
-#     """
-#     pass
+def _check_1c(triage: TriageResult, chat_history: ChatHistory | None) -> dict:
+    """1C: 추출 슬롯이 보호자 발화에 근거하는지 확인 (symptom_keywords 기반)."""
+    if chat_history is None:
+        return {"item": "컨텍스트 연속성", "status": "SKIPPED", "detail": "chat_history 없음"}
+
+    messages = chat_history.messages or []
+    user_text = " ".join(
+        m.get("content", "")
+        for m in messages
+        if isinstance(m, dict) and m.get("role") == "user"
+    )
+    if not user_text:
+        return {"item": "컨텍스트 연속성", "status": "SKIPPED", "detail": "보호자 발화 없음"}
+
+    keywords = triage.symptom_keywords or []
+    if not keywords:
+        return {"item": "컨텍스트 연속성", "status": "PASS", "detail": "증상 키워드 없음 — 연속성 N/A"}
+
+    user_nospace = user_text.replace(" ", "")
+    hit = sum(1 for kw in keywords if kw in user_text or kw.replace(" ", "") in user_nospace)
+    ratio = hit / len(keywords)
+
+    # 0.3 기준: symptom_keywords는 의학 용어("식욕부진")이고 보호자 발화는 구어("밥을 안 먹어요")라
+    # string-match 자체가 낮게 나오는 구조. 1/3 이상만 확인되면 연속성 인정.
+    if ratio >= 0.3:
+        return {
+            "item": "컨텍스트 연속성",
+            "status": "PASS",
+            "detail": f"증상 키워드 {hit}/{len(keywords)}개 보호자 발화에서 확인됨",
+        }
+    return {
+        "item": "컨텍스트 연속성",
+        "status": "WARN",
+        "detail": f"증상 키워드 {hit}/{len(keywords)}개만 발화 확인 — 추출 근거 불충분",
+    }
+
+
+def _check_1d(triage: TriageResult) -> dict:
+    """1D: 문진 완료 신호 확인 (DB 필드 완전성으로 추론)."""
+    missing = []
+    if not triage.urgency_level:
+        missing.append("urgency_level")
+    if not triage.chief_complaint:
+        missing.append("chief_complaint")
+    if not triage.symptom_summary:
+        missing.append("symptom_summary")
+
+    if missing:
+        return {
+            "item": "완료 신호",
+            "status": "WARN",
+            "detail": f"미설정 필드: {', '.join(missing)} — 문진 완료 불확실",
+        }
+    return {
+        "item": "완료 신호",
+        "status": "PASS",
+        "detail": (
+            f"urgency={triage.urgency_level}({triage.urgency_level_num}) · "
+            f"chief_complaint={triage.chief_complaint[:30]!r}"
+        ),
+    }
+
+
+async def _check_1e(triage: TriageResult, chat_history: ChatHistory | None) -> dict:
+    """1E: 문진 대화 품질 LLM 평가 — overall 집계 제외, conversation_status로만 노출."""
+    from ai.llm import call_llm_json
+
+    if not chat_history or not (chat_history.messages or []):
+        return {"item": "대화 품질", "status": "SKIPPED", "detail": "대화 기록 없음"}
+
+    messages = chat_history.messages or []
+    recent = messages[-20:]
+    convo = "\n".join(
+        f"{m.get('role', '?')}: {(m.get('content') or '')[:200]}"
+        for m in recent
+        if isinstance(m, dict)
+    )
+
+    triage_info = f"응급도={triage.urgency_level}({triage.urgency_level_num})"
+    if triage.chief_complaint:
+        triage_info += f", 주증상={triage.chief_complaint}"
+
+    prompt = (
+        "너는 동물병원 AI 문진 품질 평가자야. 아래 문진 대화를 보고 4가지 항목을 0~10점으로 평가해.\n\n"
+        f"[최종 문진 결과] {triage_info}\n\n"
+        f"[문진 대화]\n{convo}\n\n"
+        "[평가 항목]\n"
+        "1. completeness(완전성): 증상·발병시기·심각도를 충분히 파악했는가?\n"
+        "2. question_efficiency(질문 효율): 중복 없이 핵심만 물었는가?\n"
+        "3. response_consistency(응답 일관성): 봇 응답이 앞 대화와 일관되는가?\n"
+        "4. structuring_quality(구조화 품질): 증상을 체계적으로 정리했는가?\n\n"
+        "모두 7.0 이상 → PASS 기준.\n"
+        'JSON만 출력: {"completeness": 8, "question_efficiency": 7, "response_consistency": 9, "structuring_quality": 8, "comment": "한 줄 요약"}'
+    )
+
+    try:
+        out = await call_llm_json(prompt)
+        keys = ("completeness", "question_efficiency", "response_consistency", "structuring_quality")
+        scores = {k: float(out.get(k, 0)) for k in keys}
+        comment = out.get("comment", "")
+        avg = sum(scores.values()) / len(scores)
+        low = [k for k, v in scores.items() if v < 7.0]
+
+        # 집계 제외 항목이므로 WARN 대신 INFO 사용 — UI에서 중립 색상으로 표시 가능
+        status = "INFO" if low else "PASS"
+        detail = (
+            f"평균 {avg:.1f}/10 · 아쉬운 항목: {', '.join(low)} | {comment}"
+            if low
+            else f"평균 {avg:.1f}/10 | {comment}"
+        )
+        return {"item": "대화 품질", "status": status, "detail": detail, "scores": scores}
+    except Exception as exc:
+        logger.warning("[Evaluation] 1E LLM 실패: %s", exc)
+        return {"item": "대화 품질", "status": "SKIPPED", "detail": f"LLM 평가 실패: {exc}"}
 
 
 # ── Check 2 — Schedule ──────────────────────────────────────────
@@ -257,10 +343,7 @@ async def validate_schedule(
         checks.append(await _check_2b(schedule, doctor, db))
         checks.append(await _check_2c(schedule, db))
 
-    # TODO(2D): MCP 구현 후 활성화
-    # 문진 완료 신호 수신 기록 + emrid 일치 + Schedule 에이전트 실행 기록 확인
-    # _check_2d(handoff_log, schedule) 로 교체
-    checks.append({"item": "핸드오프 수신", "status": "SKIPPED", "detail": "MCP 미구현"})
+    checks.append(_check_2d(schedule, triage))
 
     return {"status": _module_status(checks), "checks": checks}
 
@@ -428,13 +511,86 @@ async def _check_2c(schedule: Schedule, db: AsyncSession) -> dict:
     return {"item": "빈 슬롯", "status": "PASS", "detail": "충돌 없음"}
 
 
+def _check_2d(schedule: Schedule, triage: TriageResult | None) -> dict:
+    """2D: 문진→예약 핸드오프 수신 확인 (DB emrid 일치로 추론)."""
+    if triage is None:
+        return {"item": "핸드오프 수신", "status": "SKIPPED", "detail": "triage 없음 — 수신 여부 불명"}
+
+    if schedule.emrid != triage.emrid:
+        return {
+            "item": "핸드오프 수신",
+            "status": "WARN",
+            "detail": (
+                f"schedule.emrid({schedule.emrid}) ≠ triage.emrid({triage.emrid}) "
+                "— 환자 불일치 의심"
+            ),
+        }
+    return {
+        "item": "핸드오프 수신",
+        "status": "PASS",
+        "detail": f"emrid={schedule.emrid} 일치 — triage→schedule 연결 정상 (추론)",
+    }
+
+
 # ── Check 3 — Chart ─────────────────────────────────────────────
+
+async def _check_chart_quality(
+    triage: TriageResult | None,
+    draft: dict,
+    intake: dict,
+) -> dict:
+    """5단계: LLM으로 차트 임상 품질 평가 — triage 결과와 일관성 체크."""
+    from ai.llm import call_llm_json
+
+    soap = draft.get("soap") or {}
+    differential = draft.get("differential_diagnosis") or []
+
+    chart_snippet = {
+        "intake_summary": intake,
+        "soap_S": soap.get("S", ""),
+        "soap_A": soap.get("A", ""),
+        "differential_diagnosis": differential[:5],
+    }
+    triage_context = (
+        {
+            "urgency_level": triage.urgency_level,
+            "urgency_level_num": triage.urgency_level_num,
+            "chief_complaint": triage.chief_complaint or "",
+        }
+        if triage
+        else {}
+    )
+
+    prompt = (
+        "너는 동물병원 AI 차트 검토자야. AI가 생성한 차트 초안의 임상 품질을 평가한다.\n\n"
+        f"[트리아지 결과]\n{json.dumps(triage_context, ensure_ascii=False)}\n\n"
+        f"[AI 차트 초안]\n{json.dumps(chart_snippet, ensure_ascii=False)}\n\n"
+        "[평가 기준]\n"
+        "1. SOAP A(Assessment)가 트리아지 응급도와 크게 모순되지 않는가?\n"
+        "2. 주요 증상이 차트에 반영되어 있는가?\n"
+        "3. 감별 진단이 증상에 근거가 있는가?(지어낸 병명·무관한 진단 없는가?)\n"
+        "4. 임상적으로 명백히 잘못된 내용이 없는가?\n\n"
+        "판정 기준: 위 4가지 중 2개 이상 문제가 있을 때만 WARN. 1개 정도 아쉬운 점은 PASS로 처리.\n"
+        'JSON만 출력: {"result": "PASS" 또는 "WARN", "detail": "판단 이유 한 문장"}'
+    )
+
+    for attempt in range(2):
+        try:
+            out = await call_llm_json(prompt)
+            result = (out.get("result") or "").upper()
+            detail = out.get("detail") or ""
+            if result in ("PASS", "WARN"):
+                return {"item": "임상 품질", "status": result, "detail": detail}
+        except Exception as exc:
+            logger.warning("[Evaluation] Chart LLM 품질 평가 시도 %d 실패: %s", attempt + 1, exc)
+
+    return {"item": "임상 품질", "status": "SKIPPED", "detail": "LLM 평가 실패"}
+
 
 async def validate_chart(
     triage: TriageResult | None,
     report: Report | None,
 ) -> dict:
-    # 1단계: report 없음
     if report is None:
         return {
             "status": "SKIPPED",
@@ -443,14 +599,12 @@ async def validate_chart(
 
     draft = report.ai_draft_json
 
-    # 2단계: ai_draft_json 형식 오류
     if not isinstance(draft, dict):
         return {
             "status": "WARN",
             "checks": [{"item": "정합성", "status": "WARN", "detail": "ai_draft_json이 dict 아님"}],
         }
 
-    # 3단계: intake_summary 없음
     intake = draft.get("intake_summary")
     if not isinstance(intake, dict):
         return {
@@ -458,33 +612,56 @@ async def validate_chart(
             "checks": [{"item": "정합성", "status": "WARN", "detail": "intake_summary 없음 (차트 구조 이상)"}],
         }
 
-    # 4단계: key_symptoms 비어있음
     if not (intake.get("key_symptoms") or []):
         return {
             "status": "WARN",
             "checks": [{"item": "정합성", "status": "WARN", "detail": "key_symptoms 비어있음 (증상 미기록)"}],
         }
 
-    # TODO(Chart 5단계): LLM 임상 품질 평가 — Sonnet 사용
-    # triage 결과와 ai_draft_json의 일관성을 LLM으로 평가
-    # 전달 필드: intake_summary, soap.S, soap.A, differential_diagnosis
-    # 제외 필드: thinking, soap.O, soap.P, recommended_tests, missing_info, vet_questions, cautions
-    # tool_use로 JSON 강제: {"result": "PASS"|"WARN", "detail": "..."}
-    # 1회 재시도 정책 (4xx 제외, 5xx/타임아웃만 재시도)
-    check = {"item": "정합성", "status": "SKIPPED", "detail": "LLM 임상 품질 평가 미구현 (추후 추가)"}
-    return {"status": "SKIPPED", "checks": [check]}
+    quality_check = await _check_chart_quality(triage, draft, intake)
+    return {"status": _module_status([quality_check]), "checks": [quality_check]}
 
 
 # ── 결과 조립 ───────────────────────────────────────────────────
+
+def _calc_completeness(triage_v: dict) -> float | None:
+    """triage 체크 4개를 가중 평균해 문진 완전성 점수(0~10) 산출.
+
+    완료 신호(40%) — urgency/chief_complaint/symptom_summary 필드 완전성
+    컨텍스트 연속성(30%) — 추출 슬롯이 보호자 발화에 근거하는지
+    응급도 정합성(15%) — 보호자 발화 vs urgency_level_num
+    응급도 판단(15%) — chief_complaint vs urgency_level_num 내부 일관성
+    PASS=1.0, WARN=0.5, SKIPPED=제외
+    """
+    _WEIGHTS = {
+        "완료 신호": 0.40,
+        "컨텍스트 연속성": 0.30,
+        "응급도 정합성": 0.15,
+        "응급도 판단": 0.15,
+    }
+    _STATUS_SCORE = {"PASS": 1.0, "WARN": 0.5}
+
+    total_w = weighted = 0.0
+    for c in triage_v.get("checks", []):
+        w = _WEIGHTS.get(c.get("item", ""))
+        s = _STATUS_SCORE.get(c.get("status", ""))
+        if w and s is not None:
+            total_w += w
+            weighted += w * s
+
+    if total_w == 0:
+        return None
+    return round((weighted / total_w) * 10, 1)
+
 
 def _build_result(
     triage_v: dict,
     schedule_v: dict,
     chart_v: dict,
+    conversation_v: dict | None = None,
 ) -> dict:
     checks = {"triage": triage_v, "schedule": schedule_v, "chart": chart_v}
 
-    # overall은 triage/schedule/chart만 집계 — conversation(1E)은 제외
     all_statuses = [
         c["status"]
         for module in checks.values()
@@ -492,9 +669,11 @@ def _build_result(
     ]
     overall = "ATTENTION" if "WARN" in all_statuses else "OK"
 
+    completeness_score = _calc_completeness(triage_v)
+
     consistency_score = None
     for c in chart_v.get("checks", []):
-        if c.get("item") == "정합성":
+        if c.get("item") in ("정합성", "임상 품질"):
             if c["status"] == "PASS":
                 consistency_score = 10.0
             elif c["status"] == "WARN":
@@ -515,8 +694,10 @@ def _build_result(
     return {
         "overall": overall,
         "checks": checks,
+        "completeness_score": completeness_score,
         "consistency_score": consistency_score,
         "summary": summary,
+        "conversation_status": conversation_v,
     }
 
 
@@ -533,12 +714,15 @@ async def _save_result(
     )
     row = existing.scalar_one_or_none()
 
+    score_breakdown = {"conversation": result.get("conversation_status")} if result.get("conversation_status") else None
+
     if row:
         row.overall = result["overall"]
         row.checks = result["checks"]
-        row.completeness_score = None  # 완전성 체크 제거 — 항상 None
+        row.completeness_score = result.get("completeness_score")
         row.consistency_score = result["consistency_score"]
         row.summary = result["summary"]
+        row.score_breakdown = score_breakdown
     else:
         db.add(ValidationResult(
             emrid=emrid,
@@ -548,13 +732,14 @@ async def _save_result(
             completeness_score=None,
             consistency_score=result["consistency_score"],
             summary=result["summary"],
+            score_breakdown=score_breakdown,
         ))
 
     await db.commit()
     logger.info("[Evaluation] 저장 scheduleid=%s overall=%s", scheduleid, result["overall"])
 
 
-# ── Part A 진입점 ────────────────────────────────────────────────
+# ── 진입점 ────────────────────────────────────────────────────────
 
 async def run_case_evaluation(scheduleid: int, db: AsyncSession) -> dict:
     """케이스 평가 진입점. scheduleid 하나로 triage/schedule/chart 검증."""
@@ -598,255 +783,14 @@ async def run_case_evaluation(scheduleid: int, db: AsyncSession) -> dict:
             "checks": [{"item": "모듈 오류", "status": "ERROR", "detail": str(exc)}],
         }
 
-    result = _build_result(triage_v, schedule_v, chart_v)
+    try:
+        conversation_v = await _check_1e(triage, chat_history)
+    except Exception as exc:
+        logger.warning("[Evaluation] 1E 오류 scheduleid=%s: %s", scheduleid, exc)
+        conversation_v = {"item": "대화 품질", "status": "SKIPPED", "detail": str(exc)}
+
+    result = _build_result(triage_v, schedule_v, chart_v, conversation_v)
     await _save_result(scheduleid, emrid, result, db)
 
     logger.info("[Evaluation] 완료 scheduleid=%s overall=%s", scheduleid, result["overall"])
     return {"agent": "evaluation", "scheduleid": scheduleid, **result}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ── Part B — 에이전트 성능 평가 ─────────────────────────────────
-
-# TODO(Part B - MCP 후): run_orchestrator_eval, run_reception_eval,
-# run_triage_agent_eval, run_mcp_health_check, run_e2e_scenarios
-
-# ── 경과 필터 테스트셋 — ai/agents/eval_cases/followup_eval_cases.json 에서 로드 ──
-# 형식: {"message": str, "expected_is_followup": bool,
-#         "expected_severity": "stable|worse|urgent_possible", "expected_category": str}
-def _load_followup_cases() -> list[dict]:
-    import json
-    candidates = [
-        Path(__file__).resolve().parent / "eval_cases" / "followup_eval_cases.json",
-        Path("ai/agents/eval_cases/followup_eval_cases.json"),
-    ]
-    for p in candidates:
-        if p.exists():
-            return json.loads(p.read_text(encoding="utf-8"))
-    return []
-
-
-async def run_followup_filter_eval(
-    test_cases: list[dict] | None = None,
-) -> dict:
-    """경과 필터 AI 평가.
-
-    Check 1: keyword_fallback 분류 Recall/Precision (빠름, 비용 없음)
-    Check 2: urgent_possible 감지율 100% (안전 필수)
-    Check 3: classify_followup LLM 실호출 정확도 (API 비용 발생)
-
-    test_cases 미전달 시 ai/agents/eval_cases/followup_eval_cases.json 로드.
-    """
-    from ai.agents.followup_filter.schema import SeverityHint, keyword_fallback
-
-    cases = test_cases or _load_followup_cases()
-    if not cases:
-        return {"agent": "followup_filter", "status": "SKIPPED", "detail": "테스트 케이스 없음"}
-
-    checks = []
-
-    # ── 1. 분류 Recall / Precision ─────────────────────────────
-    tp = fp = fn = 0
-    for case in cases:
-        expected = case.get("expected_is_followup", False)
-        predicted = keyword_fallback(case["message"]).is_followup
-        if expected and predicted:
-            tp += 1
-        elif not expected and predicted:
-            fp += 1
-        elif expected and not predicted:
-            fn += 1
-
-    recall = tp / (tp + fn) if (tp + fn) > 0 else None
-    precision = tp / (tp + fp) if (tp + fp) > 0 else None
-
-    if recall is None:
-        checks.append({"item": "분류 Recall/Precision", "status": "SKIPPED", "detail": "경과 케이스 없음"})
-    elif recall >= 0.9 and (precision is None or precision >= 0.8):
-        checks.append({
-            "item": "분류 Recall/Precision", "status": "PASS",
-            "detail": f"Recall {recall:.0%} / Precision {precision:.0%}",
-        })
-    else:
-        checks.append({
-            "item": "분류 Recall/Precision", "status": "WARN",
-            "detail": f"Recall {recall:.0%} (기준 90%) / Precision {precision:.0%} (기준 80%)",
-        })
-
-    # ── 2. 악화 신호(urgent_possible) 감지 — 100% 필수 ────────
-    urgent_cases = [c for c in cases if c.get("expected_severity") == "urgent_possible"]
-    urgent_detected = sum(
-        1 for c in urgent_cases
-        if keyword_fallback(c["message"]).severity_hint == SeverityHint.URGENT_POSSIBLE
-    )
-    if not urgent_cases:
-        checks.append({"item": "악화 신호 감지", "status": "SKIPPED", "detail": "urgent 케이스 없음"})
-    elif urgent_detected == len(urgent_cases):
-        checks.append({
-            "item": "악화 신호 감지", "status": "PASS",
-            "detail": f"{urgent_detected}/{len(urgent_cases)} 감지",
-        })
-    else:
-        checks.append({
-            "item": "악화 신호 감지", "status": "WARN",
-            "detail": f"{urgent_detected}/{len(urgent_cases)} 감지 (100% 필수)",
-        })
-
-    # ── 3. LLM 분류 정확도 (classify_followup 병렬 실호출) ──────────
-    llm_tp = llm_fp = llm_fn = llm_errors = 0
-    try:
-        import asyncio
-        from ai.agents.followup_filter.agent import classify_followup
-        from ai.orchestrator.contracts import Phase, SessionContext
-
-        async def _run_one(case: dict):
-            ctx = SessionContext(
-                session_id=0, userid=0, petid=0,
-                pet_info={"name": "평가용"},
-                hospitalid=0, emrid=None, scheduleid=None,
-                user_message=case["message"], attachments=[],
-                phase=Phase.BOOKED, db=None,
-            )
-            return await classify_followup(ctx, case["message"])
-
-        results = await asyncio.gather(
-            *[_run_one(c) for c in cases], return_exceptions=True
-        )
-
-        for case, res in zip(cases, results):
-            if isinstance(res, Exception):
-                llm_errors += 1
-                continue
-            expected = case.get("expected_is_followup", False)
-            predicted = res.is_followup
-            if expected and predicted:
-                llm_tp += 1
-            elif not expected and predicted:
-                llm_fp += 1
-            elif expected and not predicted:
-                llm_fn += 1
-
-        llm_recall = llm_tp / (llm_tp + llm_fn) if (llm_tp + llm_fn) > 0 else None
-        llm_precision = llm_tp / (llm_tp + llm_fp) if (llm_tp + llm_fp) > 0 else None
-
-        if llm_errors == len(cases):
-            checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "모든 케이스 LLM 호출 실패"})
-        elif llm_recall is None:
-            checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "경과 케이스 없음"})
-        elif llm_recall >= 0.9 and (llm_precision is None or llm_precision >= 0.8):
-            checks.append({
-                "item": "LLM 분류 정확도", "status": "PASS",
-                "detail": f"Recall {llm_recall:.0%} / Precision {llm_precision:.0%} (LLM 실호출, 오류 {llm_errors}건)",
-            })
-        else:
-            checks.append({
-                "item": "LLM 분류 정확도", "status": "WARN",
-                "detail": f"Recall {llm_recall:.0%} (기준 90%) / Precision {llm_precision:.0%} (기준 80%), 오류 {llm_errors}건",
-            })
-    except ImportError:
-        llm_recall = llm_precision = None
-        checks.append({"item": "LLM 분류 정확도", "status": "SKIPPED", "detail": "classify_followup import 실패"})
-
-    statuses = {c["status"] for c in checks}
-    overall = "WARN" if "WARN" in statuses else ("SKIPPED" if statuses <= {"SKIPPED"} else "PASS")
-
-    return {
-        "agent": "followup_filter",
-        "overall": overall,
-        "checks": checks,
-        "metrics": {
-            "keyword_recall": round(recall, 3) if recall is not None else None,
-            "keyword_precision": round(precision, 3) if precision is not None else None,
-            "llm_recall": round(llm_recall, 3) if llm_recall is not None else None,
-            "llm_precision": round(llm_precision, 3) if llm_precision is not None else None,
-            "urgent_recall": f"{urgent_detected}/{len(urgent_cases)}" if urgent_cases else "N/A",
-            "total_cases": len(cases),
-        },
-    }
-
-#
-# async def run_orchestrator_eval(db) -> dict:
-#     """오케스트레이터 라우팅 평가. MCP 구현 후 활성화.
-#     - 쓰는 것: tests/router_eval.jsonl (메시지 → 예상 에이전트 정답 레이블)
-#     - 확인하는 것:
-#       · 라우팅 정확도 90% 이상 (triage/reception/followup_filter 올바르게 고르는지)
-#       · 문진 중 유출 0건 (active_flow=triaging 중 triage/reception 외로 라우팅 안 하는지)
-#       · sticky 규칙 (짧은 답변 → 문진 유지, 이탈 안 하는지)
-#     """
-#     pass
-#
-# async def run_reception_eval(db) -> dict:
-#     """응대 AI 평가. MCP 구현 후 활성화.
-#     - 쓰는 것: MCP 도구 호출 로그 (get_hospital_info / get_operating_hours / get_available_slots)
-#     - 확인하는 것:
-#       · 병원 정보·운영시간·예약 슬롯 질문에 맞는 MCP 도구를 골랐는지 (정확도 100%)
-#       · 가드레일 3요소 포함 여부 (일반론 + 수의사 권고 + 예약 유도)
-#       · 무관한 질문(날씨, 요리 등) 차단 100%
-#     """
-#     pass
-#
-# async def run_triage_agent_eval(db) -> dict:
-#     """문진 AI 평가.
-#
-#     [사전 준비 필요]
-#     1. tests/triage_eval.jsonl — 대화+정답 라벨 테스트셋 (팀 직접 제작)
-#        형식: {"messages":[...], "expected_variables":{"SKIN":{"itching_severity":"moderate"}},
-#               "expected_urgency":"GREEN", "expected_red_flag":false}
-#     2. engine.py 수정 (triage 담당자):
-#        · vet_triage_v3.json 경로로 업데이트
-#        · red_flag_list() public 함수 추가
-#
-#     [쓰는 DB 컬럼 — 새 스키마 기준]
-#       · extracted_variables  {섹션:{변수:값}}  슬롯 추출 F1 측정
-#       · matched_discriminators [{section,label,urgency}]  응급도 점수표 정확도 측정
-#       · red_flags  [label]  RED flag 감지 측정
-#       · vision_evidence  {vlm_description, body_part, cnn_results}  이미지 분석 평가
-#
-#     [확인하는 것]
-#       · 슬롯 추출 F1 90% 이상 (expected_variables vs extracted_variables)
-#       · hallucination 0건 (대화에 없는 값이 extracted_variables에 들어갔는지)
-#       · 응급도 점수표 정확도 95% 이상 (expected_urgency vs urgency_level)
-#       · RED flag 즉시 감지 100% (expected_red_flag=true 케이스 전수)
-#     """
-#     pass
-#
-# async def run_mcp_health_check(db) -> dict:
-#     """MCP 서버 연결 상태 평가. MCP 구현 후 활성화.
-#     - 쓰는 것: MCP 서버 엔드포인트
-#     - 확인하는 것:
-#       · 연결 + list_tools + call_tool 왕복 성공 100%
-#       · 도구별 성공률 99% 이상
-#       · p95 응답 시간 2000ms 이내
-#       · Fallback 동작 (서버 다운 시 안내 메시지 나오는지)
-#     """
-#     pass
-#
-# async def run_e2e_scenarios(db) -> dict:
-#     """전체 흐름 시나리오 평가. MCP 구현 후 활성화.
-#     - 쓰는 것: 시나리오 스크립트 (메시지 시퀀스 + 단계별 기대 결과)
-#     - 확인하는 것:
-#       · S1 정상 예약 흐름: 문진→예약→차트→평가 각 단계 결과물 DB 저장 확인
-#       · S2 문진 중 끼어들기: 슬롯 보존 + 문진 복귀 (이탈 없이 돌아오는지)
-#       · S6 예약 후 경과: 경과 vs 잡담 분류 + 악화 감지 시 내원 권유 포함 여부
-#     """
-#     pass
-#
-# async def run_full_agent_report(db) -> dict:
-#     """전체 에이전트 성능 통합 리포트.
-#     - overall_verdict: PASS / PARTIAL_FAIL / CRITICAL_FAIL
-#     - CRITICAL_FAIL 조건: RED flag recall < 100% 또는 triage_leak > 0
-#     - 저장: agent_eval_resultDB (validation_resultDB와 다른 테이블)
-#     """
-#     pass

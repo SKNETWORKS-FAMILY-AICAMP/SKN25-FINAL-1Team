@@ -128,4 +128,21 @@ async def route(ctx: SessionContext) -> str:
         return "reception"
 
     # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
-    return await _llm_pick(ctx, _candidates(ctx))
+    picked = await _llm_pick(ctx, _candidates(ctx))
+
+    # BOOKED 상태에서 followup_filter가 아닌 에이전트로 가면 "저장 안 됨(N)" 로그 기록
+    # emrid가 없으면 eval 테스트 컨텍스트이므로 로그 생략
+    if ctx.phase == Phase.BOOKED and picked != "followup_filter" and ctx.emrid is not None:
+        from ai.monitoring import push_log
+        _CATEGORY_MAP = {"reception": "병원안내", "redirect": "무관발화"}
+        push_log("followup_filter", {
+            "emrid": ctx.emrid,
+            "scheduleid": ctx.scheduleid,
+            "message": (ctx.user_message or "")[:80],
+            "category": _CATEGORY_MAP.get(picked, picked),
+            "severity": "none",
+            "is_saved": False,
+            "has_media": bool(ctx.attachments),
+        })
+
+    return picked

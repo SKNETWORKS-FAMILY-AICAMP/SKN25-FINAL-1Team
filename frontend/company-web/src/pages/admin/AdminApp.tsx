@@ -22,7 +22,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 function AdminShell({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-800">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-4">
+      <aside className="sticky top-0 h-screen flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-4">
         <div className="flex items-center gap-2 px-2 py-2">
           <img src={medipawSymbol} alt="MediPaw" className="h-8 w-auto" />
           <span className="text-sm font-black text-slate-700">운영팀</span>

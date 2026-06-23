@@ -205,9 +205,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 _allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 # CORSMiddleware를 먼저 add_middleware (나중에 래핑되므로 안쪽에 위치)
+# allow_origin_regex로 로컬 개발 포트 전체 허용 (Vite가 5173~517x 랜덤 포트 사용)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"],

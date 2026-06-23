@@ -66,6 +66,11 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 [reason]
 - 분류 판단 이유(디버깅용, 짧게). 보호자에게 보이지 않는다.
 
+[confidence]
+- 0.0~1.0 사이 실수. 이 분류가 얼마나 확실한지.
+- 명확한 구토·발작 → 0.95 이상. 애매한 발화("좀 이상한 것 같아요") → 0.5~0.7.
+- 0.5 미만은 쓰지 않는다.
+
 [출력 규칙]
 - JSON 객체 하나만 출력한다.
 - Markdown 코드블록(```)을 쓰지 않는다.
@@ -76,7 +81,7 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
  "summary_delta": "오늘 구토를 3회 추가로 함.",
  "assistant_reply": "구토가 더 있었다면 많이 걱정되셨겠어요. 말씀해주신 내용은 수의사 선생님이 확인할 수 있게 남겨둘게요. 더 잦아지면 진료를 앞당기는 것도 도와드릴게요.",
  "reason": "예약 후 증상 변화 보고.",
- "wants_rebooking": false}
+ "wants_rebooking": false, "confidence": 0.95}
 """
 
 
@@ -126,7 +131,7 @@ REPLY_PET_GENERAL = (
     "예약 전후로 상태 변화가 있으면 알려주세요."
 )
 REPLY_IRRELEVANT = (
-    "예약 전 상태 변화가 있으면 편하게 알려주세요. 수의사 선생님께 전달해둘게요."
+    "저는 반려동물 건강·경과 관련 대화를 도와드려요. 상태 변화가 있으면 편하게 알려주세요."
 )
 REPLY_SAVED = "말씀해주신 변화는 수의사 선생님이 확인할 수 있게 남겨둘게요."
 # 사진·영상이 첨부돼서 (글이 경과로 안 잡혀도) 저장하는 경우의 응답.

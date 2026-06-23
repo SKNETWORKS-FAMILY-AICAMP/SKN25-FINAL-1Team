@@ -14,7 +14,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-_MAX = 10  # 에이전트당 최대 보관 건수 (데모용)
+_MAX = 200  # 에이전트당 최대 보관 건수
 
 # 에이전트명 → deque
 _BUFFERS: dict[str, deque[dict[str, Any]]] = {}

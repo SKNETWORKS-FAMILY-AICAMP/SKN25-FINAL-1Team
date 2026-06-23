@@ -168,6 +168,7 @@ class FollowupFilterAgent:
 
         # 공통 모니터링 로그
         push_log("followup_filter", {
+            "emrid": ctx.emrid,
             "scheduleid": ctx.scheduleid,
             "message": user_message[:80],
             "category": cls.category.value,
