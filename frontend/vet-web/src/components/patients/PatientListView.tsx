@@ -31,7 +31,7 @@ export function PatientListView({
   onOpenDetail,
 }: PatientListViewProps) {
   return (
-    <div className="flex min-w-0 flex-col">
+    <div data-tour="vet-patients" className="flex min-w-0 flex-col">
       <div className="mb-6 flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold text-slate-900">환자 관리</h1>

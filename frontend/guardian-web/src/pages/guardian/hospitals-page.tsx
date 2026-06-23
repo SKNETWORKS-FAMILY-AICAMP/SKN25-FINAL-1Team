@@ -213,7 +213,7 @@ const HospitalDetail = ({ hospital }: { hospital: Hospital }) => {
   return (
     <div className="space-y-6">
       {/* 병원 소개 — 배너 오른쪽 블러 스머지 */}
-      <SectionCard padding="none" className="overflow-hidden">
+      <SectionCard data-tour="guardian-hospitals" padding="none" className="overflow-hidden">
         <div className="relative">
           {/* 오른쪽 배너 이미지 — 블러 마스크 스머지 */}
           {hasBanner ? (
@@ -389,7 +389,7 @@ const HospitalsPage = () => {
         </div>
       ) : myHospitals.length === 0 ? (
         // 등록된 병원이 없는 보호자 — 병원 등록 유도
-        <div className="flex flex-1 min-h-[480px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+        <div data-tour="guardian-hospitals" className="flex flex-1 min-h-[480px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
           <h2 className="text-xl font-bold text-slate-800">
             {t("hospitalsPage.emptyTitle")}
           </h2>
@@ -400,7 +400,7 @@ const HospitalsPage = () => {
       ) : hospital ? (
         <HospitalDetail hospital={hospital} />
       ) : (
-        <div className="flex flex-1 min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+        <div data-tour="guardian-hospitals" className="flex flex-1 min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
           <p className="text-sm font-semibold text-slate-500">
             {t("hospitalsPage.noHospitals")}
           </p>

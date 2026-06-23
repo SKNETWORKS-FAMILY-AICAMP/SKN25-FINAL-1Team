@@ -176,7 +176,7 @@ export default function HospitalManagePage({ session, onLogout, onNavigate }: Pr
 
   return (
     <AppLayout session={session} activeMenu="hospital-manage" onLogout={onLogout} onNavigate={onNavigate}>
-      <div className="mb-5 flex items-center justify-between">
+      <div data-tour="vet-hospital" className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">병원 관리</h1>
           <p className="mt-0.5 text-sm font-bold text-slate-500">
@@ -1225,4 +1225,3 @@ function DoctorTagInput({ value, onChange }: { value: string[]; onChange: (arr: 
     </div>
   );
 }
-

@@ -10,6 +10,7 @@ import {
 import ActionButton from "../../components/common/action-button";
 import PageHeader from "../../components/common/page-header";
 import SectionCard from "../../components/common/section-card";
+import { startGuardianProductTour } from "../../components/product-tour";
 import MyHospitalsSection from "../../components/guardian/my-hospitals-section";
 import GuardianLayout from "../../layouts/guardian-layout";
 import { useAuthStore } from "../../stores/auth-store";
@@ -309,12 +310,21 @@ const MypagePage = () => {
         title={t("mypage.title")}
         description={t("mypage.description")}
         rightAction={
-          <Link
-            to="/mypage/password"
-            className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
-          >
-            {t("mypage.changePassword")}
-          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={startGuardianProductTour}
+              className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
+            >
+              튜토리얼 다시보기
+            </button>
+            <Link
+              to="/mypage/password"
+              className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
+            >
+              {t("mypage.changePassword")}
+            </Link>
+          </div>
         }
       />
 
@@ -343,7 +353,7 @@ const MypagePage = () => {
             </ActionButton>
           </section>
         ) : profile ? (
-          <SectionCard>
+          <SectionCard className="scroll-mt-24" data-tour="guardian-mypage">
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-950">

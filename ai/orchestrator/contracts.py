@@ -12,6 +12,17 @@ from typing import Any, Protocol
 # 채팅 시작 시 노출되는 '문진 시작' 진입 pill — chat.py/router/triage가 공유하는 단일 출처.
 INITIAL_TRIAGE_PILL = "증상을 말하고 예약할래요"
 
+# 문진 시작 직후 보호자가 증상 범주를 빠르게 고를 수 있게 노출하는 기본 pill.
+INITIAL_SYMPTOM_PILLS = [
+    "구토",
+    "설사",
+    "피부",
+    "기침",
+    "식욕저하",
+    "눈물",
+    "절뚝거림",
+]
+
 
 class Phase(str, Enum):
     """대화 국면 — 후보 에이전트를 결정한다."""
