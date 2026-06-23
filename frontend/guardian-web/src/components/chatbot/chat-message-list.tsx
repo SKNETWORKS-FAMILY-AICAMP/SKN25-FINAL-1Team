@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState } from "react";
 
 import type { ChatCard, ChatMessage, SlotOption } from "../../hooks/use-chat-conversation";
 import { useTranslation } from "../../i18n/language-context";
-import { useDynamicTranslation } from "../../i18n/use-dynamic-translation";
+import { useDynamicTranslation, type TranslationStatus } from "../../i18n/use-dynamic-translation";
 import {
   formatChatDateTimeFull,
   formatChatDuration,
@@ -286,26 +286,29 @@ const ConfirmationCard = ({
 const InstructionsCard = ({
   card,
   t,
-  translate,
+  translateWithStatus,
 }: {
   card: Extract<ChatCard, { kind: "instructions" }>;
   t: (key: string) => string;
-  translate: (text: string) => string;
+  translateWithStatus: (text: string) => TranslationStatus;
 }) => (
   <div className="w-full rounded-3xl rounded-bl-lg border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
     <p className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
       <span>📋</span> {t("chatbot.instructionsTitle")}
     </p>
     <ul className="mt-2.5 space-y-1.5">
-      {card.items.map((item, idx) => (
-        <li
-          key={idx}
-          className="flex gap-2 text-sm font-semibold leading-6 text-slate-600"
-        >
-          <span className="text-blue-500">•</span>
-          <span>{translate(item)}</span>
-        </li>
-      ))}
+      {card.items.map((item, idx) => {
+        const { text, pending } = translateWithStatus(item);
+        return (
+          <li
+            key={idx}
+            className="flex gap-2 text-sm font-semibold leading-6 text-slate-600"
+          >
+            <span className="text-blue-500">•</span>
+            <span>{pending ? <TranslatingDots /> : text}</span>
+          </li>
+        );
+      })}
     </ul>
   </div>
 );
@@ -370,7 +373,7 @@ const ChatMessageList = ({
   onOpenDatePicker,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
-  const { translate, translateWithStatus, ensureTranslated, lang } =
+  const { translateWithStatus, ensureTranslated, lang } =
     useDynamicTranslation();
   // 스크롤 컨테이너(overflow-y-auto). main이 고정 높이(100dvh-4rem)라 모바일에서도
   // 창이 아니라 이 내부 div가 스크롤 주체다(측정으로 확인). 그래서 scrollIntoView로
@@ -416,6 +419,8 @@ const ChatMessageList = ({
     const texts: Array<string | null | undefined> = [];
     for (const message of messages) {
       if (message.i18nKey) continue;
+      // 사용자가 직접 입력한 메시지는 원문 그대로 표시 — 번역 대상에서 제외.
+      if (message.role === "user") continue;
       // 이미 현재 언어로 받은 본문은 번역 불필요.
       if (message.contentLang === lang) continue;
       const source = message.sourceContent ?? message.content;
@@ -450,7 +455,7 @@ const ChatMessageList = ({
                 <ConfirmationCard card={message.card} t={t} lang={lang} />
               )}
               {message.card.kind === "instructions" && (
-                <InstructionsCard card={message.card} t={t} translate={translate} />
+                <InstructionsCard card={message.card} t={t} translateWithStatus={translateWithStatus} />
               )}
               {message.card.kind === "schedules" && (
                 <SchedulesCard card={message.card} t={t} onSendMessage={onSendMessage} />
@@ -480,11 +485,14 @@ const ChatMessageList = ({
                 return `💬 ${t("chatbot.writingResponse")}`;
               }
 
+              // 사용자 메시지는 입력 원문 그대로 노출 — 다국어 모드에서도 번역하지 않음.
+              if (message.role === "user") return message.content;
               // 백엔드가 이미 현재 언어로 보내준 본문은 그대로 노출(플래시 없음).
               if (message.contentLang === lang) return message.content;
               const source = message.sourceContent ?? message.content;
               const { text, pending } = translateWithStatus(source);
-              return pending ? <TranslatingDots /> : text;
+              if (pending) return `💬 ${t("chatbot.writingResponse")}`;
+              return text;
             })()}
             {message.attachmentUrl ? (
               isVideoAttachment(message.attachmentType, message.attachmentUrl) ? (
@@ -510,21 +518,25 @@ const ChatMessageList = ({
           </div>
         );
       })}
-      {quickReplies.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {quickReplies.map((reply) => (
-            <button
-              key={reply}
-              type="button"
-              onClick={() => onSendMessage(reply)}
-              disabled={isStreaming}
-              className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
-            >
-              {translate(reply)}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {quickReplies.length > 0 && (() => {
+        const translated = quickReplies.map((r) => translateWithStatus(r));
+        if (translated.some((r) => r.pending)) return null;
+        return (
+          <div className="flex flex-wrap gap-2">
+            {quickReplies.map((reply, i) => (
+              <button
+                key={reply}
+                type="button"
+                onClick={() => onSendMessage(reply)}
+                disabled={isStreaming}
+                className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
+              >
+                {translated[i].text}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
       <div ref={endRef} />
     </div>
   );
