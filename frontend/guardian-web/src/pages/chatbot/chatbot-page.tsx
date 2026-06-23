@@ -565,7 +565,15 @@ const ChatbotPage = () => {
     // 첨부가 없는 일반 메시지도 텍스트가 있어야 전송.
     if (!trimmed || isStreaming || isUploadingAttachment) return;
 
+    // 예약 확정 후엔 phase가 followup으로 넘어가지만, 이전 추천 슬롯 카드의 '선택' 칩은 화면에 남아 클릭된다.
+    // 슬롯 라벨("6월 24일 13:00")은 followup 메시지로 보낼 값이 아니므로, slot-selection이 아닐 때의
+    // 슬롯 라벨 클릭은 followup 분기로 새어 메시지가 전송되기 전에 입구에서 무시한다.
+    if (pipeline.phase !== "slot-selection" && pipeline.isSlotLabel(trimmed)) return;
+
     if (pipeline.phase === "slot-selection") {
+      // 이미 예약을 확정했거나 확정 진행 중인데 옛 슬롯 버튼을 다시 누른 경우 —
+      // 메시지 말풍선도 띄우지 않고 무시(답장 없는 빈 메시지 방지).
+      if (pipeline.isSlotLabel(trimmed) && pipeline.isBookingLocked()) return;
       // 슬롯 버튼 클릭 또는 텍스트 입력
       setMessages((prev) => [
         ...prev,
