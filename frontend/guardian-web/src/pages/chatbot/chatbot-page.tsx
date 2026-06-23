@@ -43,6 +43,11 @@ const SYMPTOM_PILLS = [
   "절뚝거림",
 ] as const;
 
+const INITIAL_TITLE_EXCLUDED_PILLS = new Set([
+  "증상을 말하고 예약할래요",
+  "궁금한 게 있어요",
+]);
+
 // chatPhase: UI 레이어에서 사용하는 상태 머신
 // IDLE / SYMPTOM_COLLECTING → pipeline.phase === "chatting"
 // TRIAGE_RUNNING           → pipeline.phase === "scheduling"
@@ -98,6 +103,52 @@ const formatDateToYyyyMmDd = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+};
+
+const buildTemporaryHistoryTitle = (content: string) => {
+  const normalized = content.replace(/\s+/g, " ").trim();
+  const includesAny = (keywords: string[]) =>
+    keywords.some((keyword) => normalized.includes(keyword));
+  const matchesAny = (patterns: RegExp[]) =>
+    patterns.some((pattern) => pattern.test(normalized));
+
+  const symptomTitles = [
+    { title: "구토/설사 상담", keywords: ["구토", "토해", "토하", "토", "설사", "묽은 변"] },
+    { title: "기침/호흡 상담", keywords: ["기침", "숨", "호흡", "재채기", "콧물"] },
+    { title: "피부/가려움 상담", keywords: ["피부", "가려", "긁", "발진", "털", "탈모"] },
+    { title: "눈/귀 증상 상담", keywords: ["눈", "눈물", "귀", "귀지", "충혈"] },
+    { title: "보행/통증 상담", keywords: ["절뚝", "다리", "못 걸", "통증", "아파"] },
+    {
+      title: "식욕 변화 상담",
+      keywords: ["식욕", "밥", "사료", "간식", "입맛", "안 먹", "못 먹", "덜 먹", "많이 먹", "배고", "허기", "기운", "무기력"],
+    },
+  ];
+  const matchedSymptom = symptomTitles.find(({ keywords }) => includesAny(keywords));
+  if (matchedSymptom) return matchedSymptom.title;
+
+  const asksHospital = includesAny(["병원", "주소", "위치", "전화", "번호", "운영", "시간", "휴진", "수의사", "원장"]);
+  if (asksHospital) {
+    const parts: string[] = [];
+    if (includesAny(["주소", "위치", "어디", "찾아", "오시는", "길"])) parts.push("주소");
+    if (includesAny(["전화", "번호", "연락", "문의"])) parts.push("전화");
+    if (includesAny(["운영", "시간", "몇 시", "몇시", "휴진", "점심", "오늘"])) parts.push("운영시간");
+    if (includesAny(["수의사", "원장", "선생님", "의사", "담당"])) parts.push("수의사");
+    if (parts.length > 0) return `병원 ${parts.slice(0, 2).join("/")} 문의`;
+    return "병원 정보 문의";
+  }
+
+  if (includesAny(["예약", "일정", "진료 가능", "가능한 시간"])) return "예약 문의";
+  if (includesAny(["검진", "예방접종", "접종"])) return "검진/접종 문의";
+  if (
+    includesAny(["애가", "아이가", "강아지", "고양이", "냥이", "댕댕이", "반려동물", "우리 애"]) ||
+    matchesAny([/아파(?:요|해)?/, /이상해(?:요)?/, /불편해(?:요)?/, /힘들어해(?:요)?/])
+  ) {
+    return "증상 상담";
+  }
+
+  const maxLength = 18;
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
 };
 
 const MessageCircleIcon = () => (
@@ -508,7 +559,7 @@ const ChatbotPage = () => {
   };
 
   // 통합 메시지 전송 핸들러 — phase에 따라 분기
-  const handleSendCombined = async (content: string) => {
+  const handleSendCombined = async (content: string, displayContent?: string) => {
     const trimmed = content.trim();
     // 첨부가 있으면 설명 텍스트 필수(영상 컷 단위라 맥락 보강 → off-topic 오인 방지).
     // 첨부가 없는 일반 메시지도 텍스트가 있어야 전송.
@@ -518,7 +569,12 @@ const ChatbotPage = () => {
       // 슬롯 버튼 클릭 또는 텍스트 입력
       setMessages((prev) => [
         ...prev,
-        { id: Date.now(), role: "user" as const, content: trimmed },
+        {
+          id: Date.now(),
+          role: "user" as const,
+          content: trimmed,
+          displayContent: displayContent?.trim() || undefined,
+        },
       ]);
       setQuickReplies([]);
       if (pipeline.isSlotLabel(trimmed) && selectedPet) {
@@ -559,6 +615,7 @@ const ChatbotPage = () => {
           id: Date.now(),
           role: "user" as const,
           content: trimmed,
+          displayContent: displayContent?.trim() || undefined,
           attachmentUrl: att?.cloudfrontUrl,
           attachmentType: att?.contentType,
         },
@@ -572,13 +629,21 @@ const ChatbotPage = () => {
     if (pipeline.phase === "confirmed") return; // 예약 없는 완료 상태 — 입력 차단
 
     // 일반 트리아지 채팅
-    await handleSendMessage(trimmed);
+    if (
+      session &&
+      !selectedHistory?.title?.trim() &&
+      !INITIAL_TITLE_EXCLUDED_PILLS.has(trimmed) &&
+      !messages.some((message) => message.role === "user")
+    ) {
+      updateChatHistoryTitle(session.session_id, buildTemporaryHistoryTitle(trimmed));
+    }
+    await handleSendMessage(trimmed, displayContent);
   };
 
   // 메모된 자식들에 넘길 안정 콜백 — latest-ref로 identity를 고정해 React.memo 유지.
   const stableSelectPet = useStableCallback(handleSelectPet);
-  const stableSendCombined = useStableCallback((content: string) => {
-    void handleSendCombined(content);
+  const stableSendCombined = useStableCallback((content: string, displayContent?: string) => {
+    void handleSendCombined(content, displayContent);
   });
   const stableOpenDatePicker = useStableCallback(() => {
     pipeline.setShowDatePicker(true);

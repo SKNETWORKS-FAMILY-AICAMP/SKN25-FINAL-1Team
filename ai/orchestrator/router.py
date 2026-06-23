@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # 후보 에이전트 설명 — 라우터 LLM이 담당을 고를 때 본다. (REGISTRY description 과 동기화)
 _AGENT_DESC = {
-    "reception": "병원 정보(위치·운영시간·전화·수의사 소개)와 일반 안내. 진단·처방은 수의사께 넘긴다.",
+    "reception": "병원 정보(위치·운영시간·전화·수의사 소개), 예약 전 일반 안내, 비타민·영양제·사료·간식 같은 일반 케어 질문. 진단·처방은 수의사께 넘긴다.",
     "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
     "followup_filter": "예약 후 아이 상태에 대한 모든 대화·질문(증상 변화·사진·되묻기 포함)을 받고, "
                        "예약 시간 변경·재예약, '내 예약 시각이 언제인지' 확인도 처리한다.",
@@ -37,6 +37,8 @@ _SYMPTOM_KW = ("토", "설사", "아파", "아프", "발작", "경련", "기침"
                "절뚝", "절어", "다리", "숨", "호흡", "열", "기력", "안 먹", "구토", "쓰러")
 _HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전화", "휴진", "몇 시", "몇시",
                 "의사", "선생님", "수의사", "원장", "소개", "특징")
+_CARE_KW = ("비타민", "영양제", "보충제", "사료", "간식", "추천", "먹여도", "급여",
+            "케어", "관리", "목욕", "양치", "빗질", "미용", "산책")
 _AFFIRMATIVE_KW = ("확인", "응", "네", "그래", "보여", "해줘", "해 줘", "좋아")
 
 
@@ -67,6 +69,8 @@ def _fallback(ctx: SessionContext, candidates: list[str]) -> str:
             return "followup_filter"
     if any(k in t for k in _HOSPITAL_KW):
         return "reception"
+    if any(k in t for k in _CARE_KW):
+        return "reception"
     if "followup_filter" in candidates:
         return "followup_filter"
     return "reception"
@@ -87,7 +91,7 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
         phase_hint = "지금은 과거 예약 상태야. 채팅은 닫지 않고 병원 안내(reception)를 중심으로 응답한다."
     else:
         phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
-                      "병원 정보·일반 안내는 reception. "
+                      "병원 정보·비타민·영양제·사료·간식 추천 같은 일반 케어 질문은 reception. "
                       "예약은 문진을 거쳐야 가능하므로, 증상 설명 없이 '바로 예약'만 원하는 발화도 "
                       "reception이 아니라 triage가 받아서 안내한다.")
         if ctx.emrid is not None:
@@ -142,6 +146,9 @@ async def route(ctx: SessionContext) -> str:
             return "followup_filter"
         if ctx.phase == Phase.PRE_BOOKING:
             return "triage"
+        return "reception"
+
+    if ctx.phase == Phase.PRE_BOOKING and any(k in (ctx.user_message or "") for k in _CARE_KW):
         return "reception"
 
     if ctx.phase == Phase.BOOKED:

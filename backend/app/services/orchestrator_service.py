@@ -74,6 +74,12 @@ async def process_turn(db, session_id: int, userid: int, request):
             })
         elif ev.get("type") == "chat_title":
             # 채팅 목록 제목 실시간 갱신용
-            payload["title"] = ev.get("title")
+            title = (ev.get("title") or "").strip()
+            if title:
+                payload["title"] = title
+                if not (session.title or "").strip():
+                    session.title = title
+                    db.add(session)
+                    await db.commit()
 
     yield {"type": "result", "result": payload}

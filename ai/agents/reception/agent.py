@@ -34,6 +34,10 @@ _SCHEDULE_KW = ("시간", "운영", "휴진", "점심", "몇 시", "몇시", "�
 _PROFILE_KW  = ("소개", "특징", "어떤", "어떻게", "설명", "정보")
 _PHONE_KW    = ("전화", "번호", "연락", "문의")
 _ADDRESS_KW  = ("주소", "위치", "어디", "찾아", "오시는", "길")
+_CARE_KW = (
+    "비타민", "영양제", "보충제", "사료", "간식", "추천", "먹여도", "먹여도 돼",
+    "급여", "케어", "관리", "목욕", "양치", "빗질", "미용", "산책",
+)
 
 
 def _prev_was_vet_intro(history: list) -> bool:
@@ -43,6 +47,32 @@ def _prev_was_vet_intro(history: list) -> bool:
             content = m.get("content", "")
             return any(k in content for k in ("수의사", "선생님이 계세요", "전문으로"))
     return False
+
+
+def _reception_title(question: str) -> str | None:
+    """응대 에이전트가 처리한 첫 문의를 상담 목록용 큰 분류로 바꾼다."""
+    q = (question or "").strip()
+    if not q or q in {"궁금한 게 있어요", "네, 있어요", "아니요, 괜찮아요"}:
+        return None
+
+    if any(k in q for k in _CARE_KW):
+        return "일반 케어 문의"
+    if any(k in q for k in _ADDRESS_KW + _PHONE_KW):
+        parts: list[str] = []
+        if any(k in q for k in _ADDRESS_KW):
+            parts.append("위치")
+        if any(k in q for k in _PHONE_KW):
+            parts.append("전화")
+        return f"병원 {'/'.join(parts[:2])} 문의" if parts else "병원 정보 문의"
+    if any(k in q for k in _SCHEDULE_KW):
+        return "병원 운영시간 문의"
+    if any(k in q for k in _DOCTOR_KW):
+        return "수의사 소개 문의"
+    if "예약" in q:
+        return "예약 문의"
+    if any(k in q for k in _PROFILE_KW):
+        return "병원 정보 문의"
+    return "상담 문의"
 
 
 async def _hospital_facts(db, hospitalid: int | None, question: str,
@@ -235,6 +265,11 @@ class ReceptionAgent:
             reply=reply,
             quick_replies=quick_replies,
             state_patch={"reception_streak": streak},
+            events=[
+                {"type": "chat_title", "session_id": ctx.session_id, "title": title}
+                for title in [_reception_title(ctx.user_message)]
+                if title
+            ],
         )
 
     # 병원 정보 수집: MCP 도구(LLM tool-calling) 우선, 실패/미가동 시 키워드 DB 조회 폴백.

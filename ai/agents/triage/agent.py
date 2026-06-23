@@ -78,7 +78,11 @@ def _push_status(ctx: SessionContext, phase: str) -> None:
 
 def _format_confirm_reply(text: str) -> str:
     """완료 안내 멘트 가독성 — '예약을 도와드릴까요?'를 항상 빈 줄 뒤로 보낸다(LLM이 안 나눠도)."""
-    t = (text or "").strip()
+    t = re.sub(
+        r"원하시면\s*(?:\n+\s*)+(예약을 도와드릴까요\??)",
+        r"원하시면 \1",
+        (text or "").strip(),
+    )
     idx = t.rfind("예약을 도와드릴까요")
     if idx > 0:
         return f"{t[:idx].rstrip()}\n\n{t[idx:]}"
@@ -293,12 +297,18 @@ class TriageAgent:
         vtl_basis = engine.build_vtl_basis(
             matched, urgency, evidence=vision_note, reason=out.get("summary") or "",
         )
+        symptom_keywords = [kw for kw in (out.get("keywords") or []) if kw]
         title = (out.get("title") or "").strip()[:60]  # 채팅 목록 요약 제목
+        final_title = title or ", ".join(symptom_keywords[:3])
 
         emrid = ctx.emrid
         if ctx.db is not None and ctx.session is not None:
             try:
-                from app.crud.chat import create_triage_guardian, update_session_emrid
+                from app.crud.chat import (
+                    create_triage_guardian,
+                    update_session_complete,
+                    update_session_emrid,
+                )
                 from app.crud.triage import build_triage_result
 
                 # new_booking(예약 후 챗에서 새로 예약하기)면 기존 emrid가 있어도 새 emrid를 발급해
@@ -314,7 +324,7 @@ class TriageAgent:
                     "vtl_basis": vtl_basis,
                     "red_flags": engine.red_flag_labels(matched),
                     "chief_complaint": out.get("chief_complaint"),
-                    "symptom_keywords": out.get("keywords") or [],
+                    "symptom_keywords": symptom_keywords,
                     "suspected_diseases": suspected,
                     "symptom_summary": out.get("summary") or "",
                     "symptom_onset": out.get("onset"),
@@ -324,13 +334,14 @@ class TriageAgent:
                     "vision_evidence": vision_evidence,
                     "rag_context": rag_context,
                 }
-                # 대화 요약 제목 저장 + 문진 완료 표시(재진입 시 슬롯 재개 조건 resumable_schedule용)
-                if title:
-                    ctx.session.title = title
-                ctx.session.is_complete = True
-                ctx.db.add(ctx.session)
                 ctx.db.add(build_triage_result(emrid, info))
-                await ctx.db.commit()
+                # 대화 요약 제목/키워드 저장 + 문진 완료 표시(재진입 시 슬롯 재개 조건 resumable_schedule용)
+                await update_session_complete(
+                    ctx.db,
+                    ctx.session,
+                    info["symptom_keywords"],
+                    title=final_title,
+                )
             except Exception as e:
                 logger.warning("[triage] triage_result 적재 실패: %s", e)
                 try:
@@ -346,14 +357,14 @@ class TriageAgent:
                 "urgency": urgency,
                 "chief_complaints": [out.get("chief_complaint")] if out.get("chief_complaint") else [],
                 "suspected_conditions": suspected,
-                "symptom_keywords": out.get("keywords") or [],
+                "symptom_keywords": symptom_keywords,
                 "triage_summary": out.get("summary"),
             },
         }
         # 제목은 지금(완료 시점) 바로 푸시 → 채팅 목록 제목 실시간 갱신
         events = []
-        if title:
-            events.append({"type": "chat_title", "session_id": ctx.session_id, "title": title})
+        if final_title:
+            events.append({"type": "chat_title", "session_id": ctx.session_id, "title": final_title})
         return AgentResult(
             reply=reply,
             quick_replies=["예", "아니오"],
