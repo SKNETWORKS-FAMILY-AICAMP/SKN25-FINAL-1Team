@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { AuthSession } from "../api/authApi";
+import ProductTour from "../components/ProductTour";
 import { AppMenuId } from "../layouts/AppLayout";
 import AccountInquiryPage from "../pages/auth/AccountInquiryPage";
 import FindPasswordPage from "../pages/auth/FindPasswordPage";
@@ -198,6 +199,7 @@ function VetRoutes() {
         element={<Navigate to={session ? "/home" : "/login"} replace />}
       />
     </Routes>
+    {session && !session.user.isFirstLogin ? <ProductTour /> : null}
     </Suspense>
   );
 }

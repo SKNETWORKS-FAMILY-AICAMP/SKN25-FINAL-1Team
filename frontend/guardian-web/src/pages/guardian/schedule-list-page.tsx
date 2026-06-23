@@ -201,7 +201,7 @@ const ScheduleListPage = () => {
         description={t("schedule.description")}
       />
 
-      <section className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-4 pb-6 shadow-sm sm:px-8 sm:pb-8">
+      <section data-tour="guardian-reservations" className="w-full min-h-[480px] rounded-2xl border border-slate-100 bg-white px-4 pb-6 shadow-sm sm:px-8 sm:pb-8">
         <ScheduleTabs
           selectedFilter={selectedFilter}
           onSelectFilter={handleSelectFilter}

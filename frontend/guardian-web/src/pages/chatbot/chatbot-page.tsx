@@ -653,7 +653,7 @@ const ChatbotPage = () => {
   const stableDeleteHistory = useStableCallback(handleDeleteHistory);
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-4 pt-6 pb-6 sm:px-6 sm:pt-10">
+    <main data-tour="guardian-chatbot" className="mx-auto flex h-[calc(100dvh-4rem)] min-h-0 w-full max-w-[1200px] flex-col px-4 pt-6 pb-6 sm:px-6 sm:pt-10">
         <div className="mb-4 shrink-0 flex items-end justify-between sm:mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">

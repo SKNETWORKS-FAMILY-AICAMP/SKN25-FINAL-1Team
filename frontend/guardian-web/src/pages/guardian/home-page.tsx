@@ -4,6 +4,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { getPets, type Pet } from "../../api/pets-api";
 import PageHeader from "../../components/common/page-header";
+import { startGuardianProductTour } from "../../components/product-tour";
 import CheckupReservationModal from "../../components/schedule/checkup-reservation-modal";
 import GuardianLayout from "../../layouts/guardian-layout";
 import { useTranslation } from "../../i18n/language-context";
@@ -234,15 +235,24 @@ const HomePage = () => {
             title={t("home.title")}
             description={t("home.description")}
             rightAction={
-              <Link
-                to={petRegisterPath}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                {t("home.registerLong")}
-              </Link>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={startGuardianProductTour}
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  튜토리얼
+                </button>
+                <Link
+                  to={petRegisterPath}
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  {t("home.registerLong")}
+                </Link>
+              </div>
             }
           />
-          <div className="flex flex-1 w-full min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+          <div data-tour="guardian-home" className="flex flex-1 w-full min-h-[480px] items-center justify-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
             <div className="text-center">
               <PetIllustration alt={t("home.registerAlt")} />
               <h2 className="mt-8 text-2xl font-bold text-slate-800">
@@ -260,16 +270,25 @@ const HomePage = () => {
             title={t("home.title")}
             description={t("home.description")}
             rightAction={
-              <Link
-                to={petRegisterPath}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                {t("home.registerShort")}
-              </Link>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={startGuardianProductTour}
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  튜토리얼
+                </button>
+                <Link
+                  to={petRegisterPath}
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  {t("home.registerShort")}
+                </Link>
+              </div>
             }
           />
 
-          <div className="flex-1 min-h-[480px] rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+          <div data-tour="guardian-home" className="flex-1 min-h-[480px] rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
             <div className="mb-3 text-sm font-bold text-slate-500">
               {t("home.registeredCount", { count: pets.length })}
             </div>

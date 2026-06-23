@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 type SectionCardPadding = "default" | "none";
 
-interface SectionCardProps {
+interface SectionCardProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
   className?: string;
   padding?: SectionCardPadding;
@@ -17,9 +17,11 @@ const SectionCard = ({
   children,
   className = "",
   padding = "default",
+  ...sectionProps
 }: SectionCardProps) => {
   return (
     <section
+      {...sectionProps}
       className={[
         "w-full rounded-2xl border border-slate-100 bg-white shadow-sm",
         paddingClassName[padding],
