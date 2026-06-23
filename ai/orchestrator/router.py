@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 
+from langfuse import observe
+
 from ai.llm import call_llm_json
 
 from .contracts import INITIAL_TRIAGE_PILL, Flow, Phase, SessionContext
@@ -103,6 +105,7 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
     return _fallback(ctx, candidates)
 
 
+@observe(name="router")
 async def route(ctx: SessionContext) -> str:
     """반환: 처리 노드 이름 {reception|triage|schedule|followup_filter|redirect}."""
     # 0) 시스템 pill 텍스트 — 결정론 (버튼 클릭은 판단 아님)

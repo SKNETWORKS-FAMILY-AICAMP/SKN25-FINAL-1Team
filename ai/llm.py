@@ -1,6 +1,7 @@
 import json
 import os
 
+import langfuse.openai  # OpenAI 클라이언트 자동 패치 — 토큰/latency 추적
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
