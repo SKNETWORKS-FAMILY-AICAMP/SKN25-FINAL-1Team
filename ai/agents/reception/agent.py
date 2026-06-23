@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+from langfuse import observe
+
 import logging
 import random
 from datetime import date, datetime, timedelta
@@ -175,9 +177,10 @@ class ReceptionAgent:
     name = "reception"
     description = "병원 정보 안내 담당. 진단·처방 같은 진료 얘기는 '수의사께'로 넘긴다."
 
+    @observe(name="reception")
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
         # 병원 정보 수집 — MCP 도구를 LLM이 골라 호출(우선), 실패 시 키워드 DB 조회로 폴백.
-        facts = await self._collect_facts(ctx)
+        facts = await self.collect_facts(ctx)
         pet_name = ctx.pet_info.get("name") or "아이"
         streak = (ctx.reception_streak or 0) + 1
 
@@ -235,7 +238,7 @@ class ReceptionAgent:
         )
 
     # 병원 정보 수집: MCP 도구(LLM tool-calling) 우선, 실패/미가동 시 키워드 DB 조회 폴백.
-    async def _collect_facts(self, ctx: SessionContext) -> str:
+    async def collect_facts(self, ctx: SessionContext) -> str:
         try:
             from ai.orchestrator.mcp.client import get_mcp_tools
             tools = await get_mcp_tools()

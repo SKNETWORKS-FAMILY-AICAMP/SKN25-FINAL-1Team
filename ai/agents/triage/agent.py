@@ -14,6 +14,8 @@
 """
 from __future__ import annotations
 
+from langfuse import observe
+
 import logging
 import re
 
@@ -121,6 +123,7 @@ class TriageAgent:
     name = "triage"
     description = "증상 문진 + 응급도 판정. 질문은 LLM이 자연스럽게(트리 비노출), 판정은 디스크리미네이터로 결정론."
 
+    @observe(name="triage")
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
         # 모드 분기
         if ctx.active_flow == Flow.AWAITING_BOOKING_CONFIRM:

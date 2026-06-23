@@ -496,6 +496,19 @@ async def _run_chart_pipeline(emrid: int, scheduleid: int) -> None:
             async with AsyncSessionLocal() as db:
                 await save_chart_report(db, emrid, scheduleid, chart_result)
         logger.info(f"[PostBooking] chart 완료 emrid={emrid}")
+
+        # 케이스 검증 자동 실행 — chart 저장 직후라 triage·schedule·chart 3개 체크 모두 유효
+        try:
+            from app.db.session import AsyncSessionLocal
+            from ai.agents.evaluation import run_case_evaluation
+            async with AsyncSessionLocal() as eval_db:
+                eval_result = await run_case_evaluation(scheduleid, eval_db)
+            logger.info(
+                f"[PostBooking] case eval 완료 scheduleid={scheduleid} overall={eval_result.get('overall')}"
+            )
+        except Exception as exc:
+            logger.warning(f"[PostBooking] case eval 실패 scheduleid={scheduleid}: {exc}")
+
     except Exception as exc:
         logger.error(f"[PostBooking] chart 파이프라인 실패 emrid={emrid}: {exc}", exc_info=True)
 

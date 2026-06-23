@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 
+from langfuse import observe
+
 from ai.llm import call_llm_json
 from ai.monitoring import push_log
 from ai.orchestrator.contracts import AgentResult, Intent, SessionContext
@@ -479,6 +481,7 @@ class FollowupFilterAgent:
     name = "followup_filter"
     description = "예약 후 경과 보고를 걸러서, 진짜 경과면 followupDB에 저장하고 잡담이면 넘긴다."
 
+    @observe(name="followup_filter")
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
         user_message = (args or {}).get("user_message") or ctx.user_message or ""
         has_media = bool(ctx.attachments)
@@ -809,6 +812,7 @@ class FollowupFilterAgent:
 
         # 공통 모니터링 로그
         push_log("followup_filter", {
+            "emrid": ctx.emrid,
             "scheduleid": ctx.scheduleid,
             "message": user_message[:80],
             "category": cls.category.value,

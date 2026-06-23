@@ -85,5 +85,26 @@
   {"message": "영어로 번역해줘", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "irrelevant"},
   {"message": "고마워요", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "irrelevant"},
   {"message": "날씨가 너무 더워요", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "irrelevant"},
-  {"message": "배달 음식 뭐 먹을까요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "irrelevant"}
+  {"message": "배달 음식 뭐 먹을까요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "irrelevant"},
+
+  {"message": "오늘 좀 이상한 것 같았어요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "어제보다 좀 나아진 것 같아요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "별로 달라진 건 없는 것 같아요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "아직도 그렇게 해요", "expected_is_followup": true, "expected_severity": "worse", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "좋아지고 있는 건 맞죠?", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "오늘 조금 나아진 것 같기도 한데 아닌 것 같기도 해요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "수술 후에 이렇게 되는 게 정상인가요?", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "오늘 병원 가야 할까요?", "expected_is_followup": true, "expected_severity": "worse", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "털이 좀 많이 빠지는 것 같아요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "전보다 좀 덜 핥는 것 같아요", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "pain_behavior", "ambiguous": true},
+  {"message": "밥을 평소보다 조금 덜 먹었는데 괜찮겠죠?", "expected_is_followup": true, "expected_severity": "stable", "expected_category": "appetite_energy", "ambiguous": true},
+  {"message": "강아지가 기운이 없는데 자는 건지 아픈 건지 모르겠어요", "expected_is_followup": true, "expected_severity": "worse", "expected_category": "appetite_energy", "ambiguous": true},
+  {"message": "몇 달째 이러는데 언제 나아요?", "expected_is_followup": true, "expected_severity": "worse", "expected_category": "symptom_change", "ambiguous": true},
+  {"message": "약은 언제까지 먹여야 해요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "hospital_info", "ambiguous": true},
+  {"message": "집에서 어떻게 돌봐야 해요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "pet_general", "ambiguous": true},
+  {"message": "산책하면 안 되나요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "pet_general", "ambiguous": true},
+  {"message": "그냥 물어보는 건데 이런 증상은 위험한가요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "pet_general", "ambiguous": true},
+  {"message": "처방받은 음식은 꼭 먹여야 해요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "pet_general", "ambiguous": true},
+  {"message": "얼마나 더 아플 것 같아요?", "expected_is_followup": false, "expected_severity": "stable", "expected_category": "pet_general", "ambiguous": true},
+  {"message": "이게 부작용인가요?", "expected_is_followup": true, "expected_severity": "worse", "expected_category": "medication_response", "ambiguous": true}
 ]

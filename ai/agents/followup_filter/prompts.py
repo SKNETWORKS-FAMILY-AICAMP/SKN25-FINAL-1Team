@@ -202,6 +202,11 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 [reason]
 - 분류 판단 이유(디버깅용, 짧게). 보호자에게 보이지 않는다.
 
+[confidence]
+- 0.0~1.0 사이 실수. 이 분류가 얼마나 확실한지.
+- 명확한 구토·발작 → 0.95 이상. 애매한 발화("좀 이상한 것 같아요") → 0.5~0.7.
+- 0.5 미만은 쓰지 않는다.
+
 [출력 규칙]
 - JSON 객체 하나만 출력한다.
 - Markdown 코드블록(```)을 쓰지 않는다.
@@ -213,7 +218,7 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
  "assistant_reply": "오늘 구토가 세 번 더 있었군요. 혈변이 보이는지도 함께 살펴봐 주세요.",
  "reply_kind": "reflect_ask", "asked_fields": ["혈변"],
  "reason": "예약 후 증상 변화 보고.",
- "wants_rebooking": false}
+ "wants_rebooking": false, "confidence": 0.95}
 """
 
 

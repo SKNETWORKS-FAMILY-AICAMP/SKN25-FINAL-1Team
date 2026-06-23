@@ -1,6 +1,8 @@
 import json
 import logging
 
+from langfuse import observe
+
 from ai.llm import call_llm_json
 
 from ai.agents.chart.prompts import CHART_PROMPT
@@ -54,6 +56,7 @@ class ChartAgent:
     """수의사용 SOAP 차트 초안 생성 에이전트 (LLM, env 모델)."""
 
     # 차트 작성
+    @observe(name="chart")
     async def generate(
         self,
         pet: dict,

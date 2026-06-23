@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 
+from langfuse import observe
+
 from ai.llm import call_llm_json
 
 from .contracts import INITIAL_TRIAGE_PILL, Flow, Phase, SessionContext
@@ -112,6 +114,7 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
     return _fallback(ctx, candidates)
 
 
+@observe(name="router")
 async def route(ctx: SessionContext) -> str:
     """반환: 처리 노드 이름 {reception|triage|schedule|followup_filter|redirect}."""
     # 0) 시스템 pill 텍스트 — 결정론 (버튼 클릭은 판단 아님)
@@ -147,4 +150,21 @@ async def route(ctx: SessionContext) -> str:
             return "followup_filter"
 
     # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
-    return await _llm_pick(ctx, _candidates(ctx))
+    picked = await _llm_pick(ctx, _candidates(ctx))
+
+    # BOOKED 상태에서 followup_filter가 아닌 에이전트로 가면 "저장 안 됨(N)" 로그 기록
+    # emrid가 없으면 eval 테스트 컨텍스트이므로 로그 생략
+    if ctx.phase == Phase.BOOKED and picked != "followup_filter" and ctx.emrid is not None:
+        from ai.monitoring import push_log
+        _CATEGORY_MAP = {"reception": "병원안내", "redirect": "무관발화"}
+        push_log("followup_filter", {
+            "emrid": ctx.emrid,
+            "scheduleid": ctx.scheduleid,
+            "message": (ctx.user_message or "")[:80],
+            "category": _CATEGORY_MAP.get(picked, picked),
+            "severity": "none",
+            "is_saved": False,
+            "has_media": bool(ctx.attachments),
+        })
+
+    return picked

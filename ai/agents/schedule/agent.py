@@ -1,6 +1,8 @@
 import json
 import logging
 
+from langfuse import observe
+
 from ai.llm import call_llm_structured
 
 from ai.agents.schedule.prompts import DURATION_PROMPT, CARE_TIPS_PROMPT
@@ -40,6 +42,7 @@ _FALLBACK_BASE = {"RED": 50, "ORANGE": 40, "YELLOW": 30, "GREEN": 30}
 class ScheduleAgent:
 
     # 진료 예상 소요시간 산정 (LLM)
+    @observe(name="schedule")
     async def estimate_duration(self, pet: dict, triage: dict) -> dict:
         is_initial = bool(triage.get("is_initial_visit", True))
 
