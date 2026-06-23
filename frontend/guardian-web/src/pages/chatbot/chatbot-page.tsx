@@ -31,6 +31,7 @@ import {
 } from "../../hooks/use-chat-sessions";
 import { useChatUpload } from "../../hooks/use-chat-upload";
 import { useTranslation } from "../../i18n/language-context";
+import { useDynamicTranslation } from "../../i18n/use-dynamic-translation";
 
 const SYMPTOM_PILLS = [
   "구토",
@@ -151,6 +152,7 @@ const useStableCallback = <Args extends unknown[], Return>(
 
 const ChatbotPage = () => {
   const { t } = useTranslation();
+  const { translate, ensureTranslated } = useDynamicTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams] = useSearchParams();
@@ -408,18 +410,24 @@ const ChatbotPage = () => {
 
   const todayChatTitle = useMemo(() => formatDateToYyyyMmDd(new Date()), []);
 
-  // 상담 제목 = 완료 시 생성된 요약 title 우선, 없으면 기존 keywords 표시(하위호환).
+  // 채팅 제목 번역: chatHistories에 title이 생기거나 언어가 바뀔 때 일괄 번역 큐에 등록.
+  useEffect(() => {
+    const titles = chatHistories.flatMap((h) => (h.title?.trim() ? [h.title.trim()] : []));
+    if (titles.length > 0) ensureTranslated(titles);
+  }, [chatHistories, ensureTranslated]);
+
+  // 상담 제목 = 완료 시 생성된 요약 title 우선(번역 적용), 없으면 기존 keywords 표시(하위호환).
   const getHistoryTitle = useCallback(
     (history: ChatSessionHistory) => {
       const title = history.title?.trim();
-      if (title) return title;
+      if (title) return translate(title) || title;
       const keywords = history.keywords
         .map((keyword) => keyword.trim())
         .filter((keyword) => keyword && keyword.length <= 24)
         .slice(0, 3);
       return keywords.length > 0 ? keywords.join(", ") : t("chatbot.historyDefaultTitle");
     },
-    [t],
+    [t, translate],
   );
 
   useEffect(() => {

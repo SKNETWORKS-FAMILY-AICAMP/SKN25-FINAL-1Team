@@ -17,6 +17,10 @@ const pendingKeys = new Set<string>();
 const hasHangul = (text: string): boolean =>
   /[ᄀ-ᇿ㄰-㆏가-힣]/.test(text);
 
+// 번역 API가 브랜드명을 잘못 음역하는 경우를 교정한다.
+const fixBrandNames = (text: string): string =>
+  text.replace(/Medipo/g, "Medipaw").replace(/medipo/g, "medipaw");
+
 /**
  * 백엔드가 내려준 (원문→번역) 매핑으로 캐시를 미리 채운다.
  * 추천(pill)·스트리밍 답변을 추가 API 호출 없이 즉시 표시하기 위함.
@@ -28,7 +32,7 @@ export const primeTranslationCache = (
   if (lang === "ko") return;
   const cache = (translationCache[lang] ??= {});
   for (const [source, translated] of Object.entries(entries)) {
-    if (source && translated) cache[source] = translated;
+    if (source && translated) cache[source] = fixBrandNames(translated);
   }
 };
 
@@ -97,7 +101,7 @@ export const useDynamicTranslation = () => {
         .then((translations) => {
           const cache = (translationCache[targetLang] ??= {});
           missing.forEach((text, index) => {
-            cache[text] = translations[index] ?? text;
+            cache[text] = fixBrandNames(translations[index] ?? text);
           });
           forceRender((value) => value + 1);
         })
