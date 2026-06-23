@@ -1,0 +1,149 @@
+[
+  {
+    "name": "구토·식욕저하 (소화기)",
+    "pet": {"name": "두부", "species": "강아지", "breed": "포메라니안", "age": 4, "weight_kg": 3.1},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["구토", "식욕저하"],
+      "symptom_onset": "2일 전",
+      "suspected_diseases": ["위장염", "이물섭취"],
+      "red_flags": [],
+      "symptom_summary": "2일 전부터 구토 3회, 식욕 저하, 기운 없음"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 어제부터 구토를 3번 했어요"},
+      {"role": "assistant", "content": "구토가 몇 번이나 있었나요?"},
+      {"role": "user",  "content": "3번이요, 밥도 잘 안 먹어요"},
+      {"role": "assistant", "content": "혈변이나 혈뇨는 없었나요?"},
+      {"role": "user",  "content": "없어요, 그냥 밥 안 먹고 기운이 없어요"}
+    ],
+    "expected_keywords": ["구토", "식욕", "기운"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "다리 절음 (정형외과)",
+    "pet": {"name": "초코", "species": "강아지", "breed": "닥스훈트", "age": 6, "weight_kg": 8.5},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["파행", "다리절음"],
+      "symptom_onset": "3일 전",
+      "suspected_diseases": ["추간판탈출증", "관절염"],
+      "red_flags": [],
+      "symptom_summary": "3일 전부터 뒷다리를 절며 계단 오르기 힘들어함"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 갑자기 뒷다리를 절기 시작했어요"},
+      {"role": "assistant", "content": "언제부터 절기 시작했나요?"},
+      {"role": "user",  "content": "3일 전부터요, 계단도 못 올라가요"},
+      {"role": "assistant", "content": "통증 반응이 있나요? 만지면 아파하나요?"},
+      {"role": "user",  "content": "네, 등 부분을 만지면 많이 아파해요"}
+    ],
+    "expected_keywords": ["파행", "다리", "통증"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "피부 가려움 (피부과)",
+    "pet": {"name": "솜이", "species": "강아지", "breed": "비숑프리제", "age": 2, "weight_kg": 4.0},
+    "triage": {
+      "urgency_level": "GREEN",
+      "symptom_keywords": ["가려움", "긁음"],
+      "symptom_onset": "1주일 전",
+      "suspected_diseases": ["알레르기성 피부염", "아토피"],
+      "red_flags": [],
+      "symptom_summary": "1주일 전부터 귀·배 부위 반복 긁음, 피부 발적 있음"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 계속 긁어요"},
+      {"role": "assistant", "content": "어느 부위를 주로 긁나요?"},
+      {"role": "user",  "content": "귀랑 배 쪽을 많이 긁어요"},
+      {"role": "assistant", "content": "발진이나 피부 변화가 보이나요?"},
+      {"role": "user",  "content": "귀 안쪽이 좀 빨개진 것 같아요"}
+    ],
+    "expected_keywords": ["가려움", "긁", "귀"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "심장 질환 (심장내과)",
+    "pet": {"name": "맥스", "species": "강아지", "breed": "카발리에킹찰스스패니얼", "age": 9, "weight_kg": 7.2},
+    "triage": {
+      "urgency_level": "ORANGE",
+      "symptom_keywords": ["기침", "호흡곤란", "운동불내성"],
+      "symptom_onset": "3주 전",
+      "suspected_diseases": ["승모판막질환", "울혈성심부전"],
+      "red_flags": [],
+      "symptom_summary": "3주 전부터 야간 기침, 운동 후 호흡 곤란, 활동량 저하"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 밤에 기침을 많이 해요"},
+      {"role": "assistant", "content": "언제부터 기침이 시작됐나요?"},
+      {"role": "user",  "content": "3주 전부터요, 산책하면 금방 지쳐요"},
+      {"role": "assistant", "content": "호흡 시 이상한 소리가 나나요?"},
+      {"role": "user",  "content": "네, 가끔 거친 소리가 나요"}
+    ],
+    "expected_keywords": ["기침", "호흡", "운동"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "발작 (신경과)",
+    "pet": {"name": "별이", "species": "강아지", "breed": "비글", "age": 4, "weight_kg": 9.8},
+    "triage": {
+      "urgency_level": "RED",
+      "symptom_keywords": ["발작", "경련", "의식저하"],
+      "symptom_onset": "오늘",
+      "suspected_diseases": ["간질", "뇌염"],
+      "red_flags": ["반복 발작"],
+      "symptom_summary": "오늘 처음으로 발작 2회, 회복 후 혼미 상태"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 갑자기 발작을 했어요"},
+      {"role": "assistant", "content": "발작이 몇 분간 지속됐나요?"},
+      {"role": "user",  "content": "2분 정도요, 2번 있었어요"},
+      {"role": "assistant", "content": "지금 의식은 있나요?"},
+      {"role": "user",  "content": "눈은 뜨는데 멍하게 있어요"}
+    ],
+    "expected_keywords": ["발작", "경련", "의식"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "안구 충혈 (안과)",
+    "pet": {"name": "루나", "species": "고양이", "breed": "스코티시폴드", "age": 5, "weight_kg": 4.8},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["눈 충혈", "눈물", "눈 비빔"],
+      "symptom_onset": "5일 전",
+      "suspected_diseases": ["결막염", "각막궤양"],
+      "red_flags": [],
+      "symptom_summary": "5일 전부터 한쪽 눈 충혈 및 눈물, 눈 비비는 행동"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이 눈이 빨개요"},
+      {"role": "assistant", "content": "언제부터 충혈이 시작됐나요?"},
+      {"role": "user",  "content": "5일 전부터요, 눈물도 많이 나요"},
+      {"role": "assistant", "content": "눈을 자주 비비나요?"},
+      {"role": "user",  "content": "네, 계속 앞발로 눈을 비벼요"}
+    ],
+    "expected_keywords": ["충혈", "눈물", "눈"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "예방접종 (건강검진)",
+    "pet": {"name": "해피", "species": "강아지", "breed": "말티즈", "age": 1, "weight_kg": 2.8},
+    "triage": {
+      "urgency_level": "GREEN",
+      "symptom_keywords": [],
+      "symptom_onset": null,
+      "suspected_diseases": [],
+      "red_flags": [],
+      "symptom_summary": "생후 12개월 예방접종 및 건강검진, 특이 증상 없음"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "예방접종 맞으러 왔어요"},
+      {"role": "assistant", "content": "현재 특별한 증상이 있나요?"},
+      {"role": "user",  "content": "아니요, 잘 먹고 잘 놀아요"},
+      {"role": "assistant", "content": "마지막 접종은 언제였나요?"},
+      {"role": "user",  "content": "3개월 전에 맞았어요"}
+    ],
+    "expected_keywords": ["예방접종", "건강"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  }
+]

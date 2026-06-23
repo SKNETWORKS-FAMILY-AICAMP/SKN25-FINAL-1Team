@@ -1,0 +1,106 @@
+[
+  {
+    "name": "RED — 발작 (초진)",
+    "pet": {"name": "뽀삐", "species": "강아지", "breed": "말티즈", "age": 3, "weight_kg": 3.2},
+    "triage": {
+      "urgency": "RED",
+      "chief_complaint": "발작·경련",
+      "suspected_diseases": ["간질", "저혈당"],
+      "triage_summary": "강아지가 반복 발작 중이며 멈추지 않음",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 45,
+    "expected_duration_max": 60
+  },
+  {
+    "name": "RED — 복합 외상 (재진)",
+    "pet": {"name": "두부", "species": "강아지", "breed": "골든리트리버", "age": 5, "weight_kg": 28},
+    "triage": {
+      "urgency": "RED",
+      "chief_complaint": "복합 외상·출혈",
+      "suspected_diseases": ["외상", "골절"],
+      "triage_summary": "교통사고 후 출혈 및 다리 골절 의심, 이전 내원 이력 있음",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 45,
+    "expected_duration_max": 60
+  },
+  {
+    "name": "ORANGE — 중등도 호흡곤란 (초진)",
+    "pet": {"name": "나비", "species": "고양이", "breed": "코리안숏헤어", "age": 5, "weight_kg": 4.1},
+    "triage": {
+      "urgency": "ORANGE",
+      "chief_complaint": "호흡곤란 중등도",
+      "suspected_diseases": ["기관지염", "흉막삼출"],
+      "triage_summary": "안정 시 빈호흡, 노력성 호흡",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 35,
+    "expected_duration_max": 55
+  },
+  {
+    "name": "ORANGE — 위확장 의심 (초진)",
+    "pet": {"name": "맥스", "species": "강아지", "breed": "래브라도 리트리버", "age": 4, "weight_kg": 33},
+    "triage": {
+      "urgency": "ORANGE",
+      "chief_complaint": "복부 팽창·구토",
+      "suspected_diseases": ["위확장염전", "장폐색"],
+      "triage_summary": "식사 후 갑작스러운 복부 팽창, 구토 반복, 안절부절 못함",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 40,
+    "expected_duration_max": 60
+  },
+  {
+    "name": "YELLOW — 잦은 기침 (재진)",
+    "pet": {"name": "콩이", "species": "강아지", "breed": "비숑프리제", "age": 2, "weight_kg": 4.8},
+    "triage": {
+      "urgency": "YELLOW",
+      "chief_complaint": "잦은 기침",
+      "suspected_diseases": ["켄넬코프"],
+      "triage_summary": "어제부터 반복 기침, 식욕 정상",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 20,
+    "expected_duration_max": 40
+  },
+  {
+    "name": "YELLOW — 피부 알레르기 (초진)",
+    "pet": {"name": "루나", "species": "고양이", "breed": "페르시안", "age": 3, "weight_kg": 4.2},
+    "triage": {
+      "urgency": "YELLOW",
+      "chief_complaint": "피부 가려움·발적",
+      "suspected_diseases": ["알레르기성 피부염", "아토피"],
+      "triage_summary": "1주일 전부터 반복 긁음, 귀·배 발적 및 피부 변화",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 20,
+    "expected_duration_max": 35
+  },
+  {
+    "name": "GREEN — 정기 건강검진 (재진)",
+    "pet": {"name": "해피", "species": "강아지", "breed": "골든리트리버", "age": 3, "weight_kg": 27},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "정기 검진",
+      "suspected_diseases": [],
+      "triage_summary": "특이 증상 없음, 연간 건강검진",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 15,
+    "expected_duration_max": 30
+  },
+  {
+    "name": "GREEN — 연간 예방접종 (재진)",
+    "pet": {"name": "초코", "species": "강아지", "breed": "포메라니안", "age": 2, "weight_kg": 3.5},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "연간 예방접종",
+      "suspected_diseases": [],
+      "triage_summary": "특이 증상 없음, 연간 정기 예방접종 방문",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 10,
+    "expected_duration_max": 20
+  }
+]

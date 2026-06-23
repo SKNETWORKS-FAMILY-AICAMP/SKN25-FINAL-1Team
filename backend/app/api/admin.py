@@ -338,3 +338,15 @@ async def eval_reception(db: AsyncSession = Depends(get_db), current_admin=Depen
 async def eval_full_report(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
     from ai.agents.evaluation import run_full_agent_report
     return await run_full_agent_report(db)
+
+
+@router.post("/eval/schedule")
+async def eval_schedule(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_schedule_eval
+    return await run_schedule_eval()
+
+
+@router.post("/eval/chart")
+async def eval_chart(current_admin=Depends(get_current_admin)):
+    from ai.agents.evaluation import run_chart_eval
+    return await run_chart_eval()

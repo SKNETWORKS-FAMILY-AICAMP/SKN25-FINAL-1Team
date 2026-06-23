@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FlaskConical, Loader2, RefreshCw, Construction } from "lucide-react";
 import { getAdminToken } from "../../onboarding/api";
 
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API = (import.meta.env.VITE_API_BASE_URL as string) || "/api";
 
 // ── Types ─────────────────────────────────────────────────────
 type CheckStatus = "PASS" | "WARN" | "SKIPPED";
@@ -588,23 +588,20 @@ function AgentBenchmarkTab({
   endpoint,
   description,
   logsEndpoint,
+  cachedResult,
+  onRunFull,
+  fullLoading,
 }: {
   label: string;
   endpoint: string | null;
   description: string;
   logsEndpoint?: string | null;
+  cachedResult?: AgentEvalResult | null;
+  onRunFull: () => void;
+  fullLoading: boolean;
 }) {
-  const [result, setResult] = useState<AgentEvalResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<MonitoringLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-
-  // 탭 전환 시(endpoint 변경) 이전 탭의 결과/에러 초기화
-  useEffect(() => {
-    setResult(null);
-    setError(null);
-  }, [endpoint]);
 
   useEffect(() => {
     if (logsEndpoint) fetchLogs();
@@ -622,25 +619,6 @@ function AgentBenchmarkTab({
     }
   }
 
-  async function runEval() {
-    if (!endpoint) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}${endpoint}`, {
-        method: "POST",
-        headers: authHeader(),
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const data = await res.json();
-      setResult({ ...data, ran_at: new Date().toLocaleString("ko-KR") });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "오류");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="space-y-8">
       {/* ── 운영 모니터링 (logsEndpoint 있을 때만) ── */}
@@ -654,35 +632,30 @@ function AgentBenchmarkTab({
 
         {!endpoint ? (
           <ComingSoon label={`${label} 벤치마크`} desc={description} />
-        ) : (
+        ) : fullLoading ? (
+          <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center">
+            <Loader2 className="mx-auto mb-3 h-7 w-7 animate-spin text-slate-300" />
+            <p className="text-sm text-slate-400">전체 에이전트 평가 중...</p>
+            <p className="mt-1 text-xs text-slate-300">약 2~3분 소요</p>
+          </div>
+        ) : cachedResult ? (
           <>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-400">{description}</p>
-              <button
-                onClick={runEval}
-                disabled={loading}
-                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                {loading ? "평가 중..." : "평가 실행"}
-              </button>
-            </div>
-
-            {error && <p className="text-xs text-red-400">오류: {error}</p>}
-
-            {!result && !loading && (
-              <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center">
-                <FlaskConical className="mx-auto mb-2 h-8 w-8 text-slate-200" />
-                <p className="text-sm text-slate-400">평가 실행 버튼을 눌러 시작하세요.</p>
-              </div>
-            )}
-
-            {result && <BenchmarkReport result={result} />}
+            <p className="text-sm text-slate-400">{description}</p>
+            <BenchmarkReport result={cachedResult} />
           </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center">
+            <FlaskConical className="mx-auto mb-3 h-8 w-8 text-slate-200" />
+            <p className="mb-4 text-sm text-slate-400">아직 평가 결과가 없습니다</p>
+            <button
+              onClick={onRunFull}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              전체 에이전트 평가 실행
+            </button>
+            <p className="mt-3 text-xs text-slate-300">완료되면 이 탭에 결과가 자동 표시됩니다</p>
+          </div>
         )}
       </div>
     </div>
@@ -705,6 +678,8 @@ interface FullReport {
     orchestrator?: FullReportModule;
     reception?: FullReportModule;
     followup?: FullReportModule;
+    schedule?: FullReportModule;
+    chart?: FullReportModule;
   };
   critical_reasons: string[];
 }
@@ -715,6 +690,8 @@ const MODULE_LABEL: Record<string, string> = {
   orchestrator: "라우터",
   reception:    "Reception",
   followup:     "경과 필터",
+  schedule:     "Schedule",
+  chart:        "Chart",
 };
 
 function moduleKeyMetric(key: string, mod: FullReportModule): string {
@@ -744,31 +721,29 @@ function moduleKeyMetric(key: string, mod: FullReportModule): string {
     const urg = m["urgent_recall"]  != null ? `악화 ${m["urgent_recall"]}` : null;
     return [kw, llm, urg].filter(Boolean).join(" · ") || "—";
   }
+  if (key === "schedule") {
+    const total = m["total_cases"] != null ? `${m["total_cases"]}케이스` : null;
+    return total ?? "—";
+  }
+  if (key === "chart") {
+    const total = m["total_cases"] != null ? `${m["total_cases"]}케이스` : null;
+    return total ?? "—";
+  }
   return "—";
 }
 
-function AgentFullReportSection() {
-  const [report, setReport] = useState<FullReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function AgentFullReportSection({
+  report,
+  loading,
+  error,
+  onRunAll,
+}: {
+  report: FullReport | null;
+  loading: boolean;
+  error: string | null;
+  onRunAll: () => void;
+}) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-
-  async function runAll() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/admin/eval/full-report`, {
-        method: "POST",
-        headers: authHeader(),
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      setReport(await res.json());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "오류");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const verdictColor = !report ? "" :
     report.overall_verdict === "CRITICAL_FAIL" ? "text-red-600" :
@@ -783,7 +758,7 @@ function AgentFullReportSection() {
           <p className="text-xs text-slate-400">Triage · 경과필터 · 라우터 · Reception · MCP 일괄 평가</p>
         </div>
         <button
-          onClick={runAll}
+          onClick={onRunAll}
           disabled={loading}
           className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
         >
@@ -862,7 +837,17 @@ function AgentFullReportSection() {
 }
 
 // ── 전체 성능 탭 ──────────────────────────────────────────────
-function OverallTab() {
+function OverallTab({
+  fullReport,
+  fullLoading,
+  fullError,
+  onRunFull,
+}: {
+  fullReport: FullReport | null;
+  fullLoading: boolean;
+  fullError: string | null;
+  onRunFull: () => void;
+}) {
   const [rows, setRows] = useState<ValidationRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
@@ -1030,7 +1015,7 @@ function OverallTab() {
         </div>
       )}
 
-      <AgentFullReportSection />
+      <AgentFullReportSection report={fullReport} loading={fullLoading} error={fullError} onRunAll={onRunFull} />
     </div>
   );
 }
@@ -1054,15 +1039,40 @@ const AGENT_CONFIG: Record<Exclude<TabId, "overall">, {
   desc: string;
 }> = {
   triage:    { label: "Triage",    endpoint: "/admin/eval/triage",    desc: "응급도 정확도 · Red flag 감지율 (결정론) + 슬롯 추출 F1 · 환각 · 요약 완전성 (LLM). 15개 케이스 기준." },
-  schedule:  { label: "Schedule",  endpoint: null,                    desc: "예약 타이밍 · 근무시간 · 빈슬롯 검증. 테스트셋 준비 후 활성화." },
-  chart:     { label: "Chart",     endpoint: null,                    desc: "차트 완전성 · 임상 품질 평가. judge.py 통합 후 활성화." },
-  reception: { label: "Reception", endpoint: "/admin/eval/reception", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 4케이스). MCP 서버 가동 필요." },
+  schedule:  { label: "Schedule",  endpoint: "/admin/eval/schedule",  desc: "소요시간 범위 · 응급도 순서 · 형식 유효성 (4케이스 기준)." },
+  chart:     { label: "Chart",     endpoint: "/admin/eval/chart",     desc: "SOAP 구조 완전성 · 키워드 포함율 · 단정 표현 없음 (3케이스 기준)." },
+  reception: { label: "Reception", endpoint: "/admin/eval/reception", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 10케이스). MCP 서버 가동 필요." },
   followup:  { label: "경과 필터", endpoint: "/admin/eval/followup",  logsEndpoint: "/admin/eval/followup/logs", desc: "경과 필터 에이전트 분류 성능 측정. 테스트 케이스 100개 기준." },
 };
 
 // ── Main ──────────────────────────────────────────────────────
 export default function EvalPanel() {
   const [activeTab, setActiveTab] = useState<TabId>("overall");
+  const [fullReport, setFullReport] = useState<FullReport | null>(null);
+  const [fullLoading, setFullLoading] = useState(false);
+  const [fullError, setFullError] = useState<string | null>(null);
+
+  async function runFullEval() {
+    setFullLoading(true);
+    setFullError(null);
+    try {
+      const res = await fetch(`${API}/admin/eval/full-report`, {
+        method: "POST",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      setFullReport(await res.json());
+    } catch (e) {
+      setFullError(e instanceof Error ? e.message : "오류");
+    } finally {
+      setFullLoading(false);
+    }
+  }
+
+  const cachedAgentResult =
+    activeTab !== "overall"
+      ? fullReport?.modules[activeTab as keyof FullReport["modules"]] ?? null
+      : null;
 
   return (
     <div className="mx-auto max-w-5xl p-8">
@@ -1096,13 +1106,21 @@ export default function EvalPanel() {
 
       {/* 콘텐츠 */}
       {activeTab === "overall" ? (
-        <OverallTab />
+        <OverallTab
+          fullReport={fullReport}
+          fullLoading={fullLoading}
+          fullError={fullError}
+          onRunFull={runFullEval}
+        />
       ) : (
         <AgentBenchmarkTab
           label={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].label}
           endpoint={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].endpoint}
           logsEndpoint={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].logsEndpoint}
           description={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].desc}
+          cachedResult={cachedAgentResult}
+          onRunFull={runFullEval}
+          fullLoading={fullLoading}
         />
       )}
     </div>
