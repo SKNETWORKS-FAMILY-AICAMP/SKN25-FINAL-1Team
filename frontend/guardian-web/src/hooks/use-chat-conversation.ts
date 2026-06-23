@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -65,6 +67,8 @@ export interface ChatMessage {
   id: number;
   role: "user" | "assistant";
   content: string;
+  /** Pill 번역본처럼 UI에 표시할 별도 텍스트. 있으면 content 대신 버블에 노출. */
+  displayContent?: string;
   attachmentUrl?: string;
   attachmentType?: string;
   card?: ChatCard;
@@ -113,8 +117,18 @@ export const useChatConversation = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const activeSessionIdRef = useRef<number | null>(null);
+  const activeRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    activeSessionIdRef.current = session?.session_id ?? null;
+  }, [session?.session_id]);
+
+  const isCurrentStream = (sessionId: number, requestId: number) =>
+    activeSessionIdRef.current === sessionId && activeRequestIdRef.current === requestId;
 
   const resetConversationState = () => {
+    activeRequestIdRef.current += 1;
     setSession(null);
     setMessages([]);
     setQuickReplies([]);
@@ -125,7 +139,11 @@ export const useChatConversation = ({
   const applyStreamEvent = (
     event: ChatStreamEvent,
     assistantMessageId: number,
+    requestSessionId: number,
+    requestId: number,
   ) => {
+    if (!isCurrentStream(requestSessionId, requestId)) return;
+
     if (event.type === "message") {
       setMessages((currentMessages) =>
         currentMessages.map((message) =>
@@ -178,17 +196,17 @@ export const useChatConversation = ({
     }
 
     if (event.type === "chat_title") {
-      if (session && onTitleUpdate && event.title) {
-        onTitleUpdate(session.session_id, event.title);
+      if (onTitleUpdate && event.title) {
+        onTitleUpdate(requestSessionId, event.title);
       }
       return;
     }
 
     if (event.type === "triage_complete") {
       const keywords = event.data?.symptom_keywords ?? [];
-      if (session && onTriageComplete) {
+      if (onTriageComplete) {
         onTriageComplete(
-          session.session_id,
+          requestSessionId,
           keywords,
           event.data,
           event.emrid,
@@ -209,7 +227,7 @@ export const useChatConversation = ({
     }
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, displayContent?: string) => {
     const trimmedContent = content.trim();
     if (
       !session ||
@@ -223,6 +241,9 @@ export const useChatConversation = ({
     const userMessageId = Date.now();
     const assistantMessageId = userMessageId + 1;
     const attachmentToSend = pendingAttachment;
+    const requestSessionId = session.session_id;
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
 
     setMessages((currentMessages) => [
       ...currentMessages,
@@ -230,6 +251,7 @@ export const useChatConversation = ({
         id: userMessageId,
         role: "user",
         content: trimmedContent || t("chatbot.attachmentSent"),
+        displayContent: displayContent?.trim() || undefined,
         attachmentUrl: attachmentToSend?.previewUrl,
         attachmentType: attachmentToSend?.contentType,
       },
@@ -247,21 +269,23 @@ export const useChatConversation = ({
     let caughtError = false;
     try {
       await sendChatMessage(
-        session.session_id,
+        requestSessionId,
         {
           content: trimmedContent,
           image_url: attachmentToSend?.cloudfrontUrl,
           lang,
         },
-        (event) => applyStreamEvent(event, assistantMessageId),
+        (event) => applyStreamEvent(event, assistantMessageId, requestSessionId, requestId),
       );
     } catch (error) {
+      if (!isCurrentStream(requestSessionId, requestId)) return;
       caughtError = true;
       setErrorMessage(getErrorMessage(error, t("chatbot.sendFailed")));
       setMessages((currentMessages) =>
         currentMessages.filter((message) => message.id !== assistantMessageId),
       );
     } finally {
+      if (!isCurrentStream(requestSessionId, requestId)) return;
       if (!caughtError) {
         // 서버가 "done" 없이 연결을 닫거나 timeout 발생 시 빈 말풍선 대신 안내 메시지 표시
         setMessages((currentMessages) =>

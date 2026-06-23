@@ -17,7 +17,7 @@ interface ChatMessageListProps {
   messages: ChatMessage[];
   quickReplies: string[];
   isStreaming: boolean;
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, displayContent?: string) => void;
   onOpenDatePicker: () => void;
 }
 
@@ -485,8 +485,8 @@ const ChatMessageList = ({
                 return `💬 ${t("chatbot.writingResponse")}`;
               }
 
-              // 사용자 메시지는 입력 원문 그대로 노출 — 다국어 모드에서도 번역하지 않음.
-              if (message.role === "user") return message.content;
+              // 사용자 메시지: pill 번역본이 있으면 그걸 표시, 없으면 직접 입력 원문.
+              if (message.role === "user") return message.displayContent ?? message.content;
               // 백엔드가 이미 현재 언어로 보내준 본문은 그대로 노출(플래시 없음).
               if (message.contentLang === lang) return message.content;
               const source = message.sourceContent ?? message.content;
@@ -527,7 +527,7 @@ const ChatMessageList = ({
               <button
                 key={reply}
                 type="button"
-                onClick={() => onSendMessage(reply)}
+                onClick={() => onSendMessage(reply, translated[i].text)}
                 disabled={isStreaming}
                 className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-extrabold text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
               >

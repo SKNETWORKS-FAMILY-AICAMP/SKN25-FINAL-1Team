@@ -79,9 +79,17 @@ async def add_message(
     await db.refresh(session)
     return session
 
-# 세션 키워드/완료 업데이트
-async def update_session_complete(db: AsyncSession, session: ChatHistory, keywords: list):
-    session.keywords = keywords
+# 세션 키워드/완료/제목 업데이트
+async def update_session_complete(
+    db: AsyncSession,
+    session: ChatHistory,
+    keywords: list,
+    title: str | None = None,
+):
+    clean_keywords = [str(keyword).strip() for keyword in (keywords or []) if str(keyword).strip()]
+    fallback_title = ", ".join(clean_keywords[:3])
+    session.keywords = clean_keywords
+    session.title = (title or "").strip() or fallback_title or session.title
     session.is_complete = True
     flag_modified(session, "keywords")
     db.add(session)
