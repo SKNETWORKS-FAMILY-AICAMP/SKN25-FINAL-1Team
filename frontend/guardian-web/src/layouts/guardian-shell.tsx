@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import GuardianNavbar from "../components/guardian-navbar";
+import ProductTour from "../components/product-tour";
 
 /**
  * 보호자 화면 공유 셸.
@@ -13,6 +14,7 @@ const GuardianShell = () => {
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-950">
       <GuardianNavbar />
       <Outlet />
+      <ProductTour />
     </div>
   );
 };

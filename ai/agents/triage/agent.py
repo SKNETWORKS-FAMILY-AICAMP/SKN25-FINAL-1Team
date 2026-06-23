@@ -20,7 +20,13 @@ import logging
 import re
 
 from ai.llm import call_llm_json
-from ai.orchestrator.contracts import INITIAL_TRIAGE_PILL, AgentResult, Flow, SessionContext
+from ai.orchestrator.contracts import (
+    INITIAL_SYMPTOM_PILLS,
+    INITIAL_TRIAGE_PILL,
+    AgentResult,
+    Flow,
+    SessionContext,
+)
 
 from . import engine, vision
 from .prompts import (
@@ -150,6 +156,7 @@ class TriageAgent:
             return AgentResult(
                 reply=f"네! {pet_name}가 어디가 어떻게 불편한지 편하게 말씀해 주세요. "
                       "살펴보고 예약까지 도와드릴게요. 🐾",
+                quick_replies=INITIAL_SYMPTOM_PILLS,
                 state_patch={"triage_state": state, "active_flow": "triaging"},
             )
 

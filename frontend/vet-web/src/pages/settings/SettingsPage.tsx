@@ -3,6 +3,7 @@ import { LockKeyhole } from "lucide-react";
 import type { AuthSession } from "../../api/authApi";
 import AppLayout, { AppMenuId } from "../../layouts/AppLayout";
 import { PasswordChangeModal } from "../../components/settings/PasswordChangeModal";
+import { startVetProductTour } from "../../components/ProductTour";
 
 interface SettingsPageProps {
   session: AuthSession;
@@ -24,14 +25,23 @@ export default function SettingsPage({ session, onLogout, onNavigate }: Settings
       )}
 
       <div className="flex flex-col h-full">
-        <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-slate-900">설정</h1>
-          <p className="mt-1 text-sm font-bold text-slate-500">
-            계정 보안을 관리합니다.
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold text-slate-900">설정</h1>
+            <p className="mt-1 text-sm font-bold text-slate-500">
+              계정 보안을 관리합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={startVetProductTour}
+            className="h-9 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+          >
+            튜토리얼 다시보기
+          </button>
         </div>
 
-        <div className="space-y-4 max-w-2xl">
+        <div data-tour="vet-settings" className="space-y-4 max-w-2xl">
           <SettingSection title="계정 및 보안" description="계정 정보 및 보안을 관리합니다.">
             <SettingRow
               icon={<LockKeyhole className="h-5 w-5 text-blue-600" strokeWidth={2.2} />}

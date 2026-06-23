@@ -7,11 +7,11 @@ import { LANGUAGES } from "../i18n/translations";
 import medipawSymbol from "../../../shared/assets/logo/medipaw-symbol.png";
 
 const navItems = [
-  { labelKey: "nav.home", to: "/home" },
-  { labelKey: "nav.hospitals", to: "/hospitals" },
-  { labelKey: "nav.chatbot", to: "/chatbot" },
-  { labelKey: "nav.reservations", to: "/reservations" },
-  { labelKey: "nav.mypage", to: "/mypage" },
+  { labelKey: "nav.home", to: "/home", tourId: "guardian-nav-home" },
+  { labelKey: "nav.hospitals", to: "/hospitals", tourId: "guardian-nav-hospitals" },
+  { labelKey: "nav.chatbot", to: "/chatbot", tourId: "guardian-nav-chatbot" },
+  { labelKey: "nav.reservations", to: "/reservations", tourId: "guardian-nav-reservations" },
+  { labelKey: "nav.mypage", to: "/mypage", tourId: "guardian-nav-mypage" },
 ];
 
 const ChevronDownIcon = () => (
@@ -99,6 +99,7 @@ const GuardianNavbar = ({
             <NavLink
               key={item.to}
               to={item.to}
+              data-tour={item.tourId}
               className={({ isActive }) =>
                 [
                   "flex h-full items-center border-b-2 px-1 text-sm font-bold transition",
@@ -217,6 +218,7 @@ const GuardianNavbar = ({
             <NavLink
               key={item.to}
               to={item.to}
+              data-tour={item.tourId}
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
                 [

@@ -120,10 +120,12 @@ export default function DashboardPage({
               )}
             </p>
           </div>
-          <DashboardSummaryCards summaries={summaryCards} className="pt-1" />
+          <div data-tour="vet-dashboard-summary">
+            <DashboardSummaryCards summaries={summaryCards} className="pt-1" />
+          </div>
 
         </div>
-        <div className="min-w-0 flex-1">
+        <div data-tour="vet-dashboard-schedule" className="min-w-0 flex-1">
           <DashboardSchedulePanel
             schedules={scheduleItems}
             isLoading={isLoading}

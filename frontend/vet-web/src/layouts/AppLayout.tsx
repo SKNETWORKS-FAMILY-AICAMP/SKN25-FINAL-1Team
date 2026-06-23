@@ -296,6 +296,7 @@ export default function AppLayout({
               <NavLink
                 key={id}
                 to={menuPathMap[id]}
+                data-tour={`vet-nav-${id}`}
                 className={({ isActive }) =>
                   [
                     "flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-extrabold transition",
