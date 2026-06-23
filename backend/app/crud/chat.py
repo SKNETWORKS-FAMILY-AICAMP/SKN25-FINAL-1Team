@@ -162,8 +162,12 @@ async def update_guardian_category(
 
 
 # ChatHistory.emrid 설정 (NULL → emrid, 기존 값 있으면 스킵)
-async def update_session_emrid(db: AsyncSession, session: ChatHistory, emrid: int) -> ChatHistory:
-    if session.emrid is not None:
+async def update_session_emrid(
+    db: AsyncSession, session: ChatHistory, emrid: int, force: bool = False
+) -> ChatHistory:
+    # 기본은 1회만 발급(이미 emrid가 있으면 유지). force=True(예약 후 챗에서 새로 예약하기)면
+    # 새 emrid로 덮어써 세션을 새 예약으로 옮긴다.
+    if session.emrid is not None and not force:
         return session
     session.emrid = emrid
     db.add(session)

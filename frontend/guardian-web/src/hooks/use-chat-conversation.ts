@@ -47,7 +47,19 @@ export type ChatCard =
       durationText?: string; // legacy fallback: "1시간 30분"
       hospitalName?: string;
     }
-  | { kind: "instructions"; items: string[] };
+  | { kind: "instructions"; items: string[] }
+  // 예약 내역 보기 — 다가오는 확정 예약 요약 카드(+ 예약내역 탭 이동 pill).
+  | {
+      kind: "schedules";
+      items: {
+        schedule_id: number;
+        when?: string | null;
+        petName?: string | null;
+        doctorName?: string | null;
+        hospitalName?: string | null;
+        status?: string | null;
+      }[];
+    };
 
 export interface ChatMessage {
   id: number;
@@ -63,7 +75,7 @@ export interface ChatMessage {
   /** 생성 시점 문자열 대신 렌더 시점 언어로 다시 표시할 로컬 UI 문구 키. */
   i18nKey?: string;
   i18nVars?: Record<string, string | number>;
-  pipelineKey?: "checking-slots" | "slots-result" | "slot-error" | "booking-status" | "followup-restore";
+  pipelineKey?: "checking-slots" | "slots-result" | "slot-error" | "booking-status" | "followup-restore" | "followup-loading";
   /** 응답 대기 중 진행 단계 — 빈 말풍선 로딩 문구 분기용. */
   statusPhase?: "image_analysis" | "generating" | "searching";
 }

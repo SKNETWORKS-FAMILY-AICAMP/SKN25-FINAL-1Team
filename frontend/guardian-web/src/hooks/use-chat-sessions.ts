@@ -88,7 +88,7 @@ interface UseChatSessionsParams {
   getErrorMessage: (error: unknown, fallbackMessage: string) => string;
   getProfileImage: (pet: Pet) => string;
   onFollowupRestore?: (emrid: number) => void;
-  /** 경과보고 마감(진료 시작 시간 경과) 세션 — 마감 안내 표시. */
+  /** legacy: 채팅은 닫지 않고 제한 안내만 표시. */
   onFollowupClosed?: (emrid: number) => void;
   /** 일반(followup 미활성) 예약 완료 세션 — '상담 완료' 안내 표시. */
   onBookingComplete?: (emrid: number) => void;
@@ -404,10 +404,10 @@ export const useChatSessions = ({
         // 팔로우업 활성(진료 시간 전) → 경과 입력 활성화.
         onFollowupRestore?.(detail.emrid);
       } else if (detail.followup_closed && detail.emrid) {
-        // 팔로우업 마감(진료 시작 시간 경과) → 입력창 대신 마감 안내.
+        // legacy 제한 안내. 현재 정책에서는 can_followup이 true라 채팅 입력은 유지된다.
         onFollowupClosed?.(detail.emrid);
       } else if (detail.booking_complete && detail.emrid) {
-        // 일반 예약 완료(followup 미활성) → 입력창 대신 상담 완료 안내.
+        // 일반 예약 완료(followup 미활성) → 상담 완료 안내.
         onBookingComplete?.(detail.emrid);
       }
     } catch (error) {

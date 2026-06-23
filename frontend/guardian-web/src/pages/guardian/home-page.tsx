@@ -113,7 +113,7 @@ const HomePage = () => {
       .filter(Boolean)
       .join(" · ");
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const previewMode = import.meta.env.DEV ? searchParams.get("preview") : null;
   const isEmptyPreview = previewMode === "empty";
   const isPetsPreview = previewMode === "pets";
@@ -189,6 +189,20 @@ const HomePage = () => {
       isMounted = false;
     };
   }, [isEmptyPreview, isPetsPreview, refreshRequestedAt]);
+
+  // 챗봇의 '바로 예약하기'에서 넘어온 경우(?reserve=<petId>) → 해당 반려동물 예약 모달 자동 오픈.
+  useEffect(() => {
+    const reserveId = Number(searchParams.get("reserve"));
+    if (!reserveId || pets.length === 0) return;
+    const pet = pets.find((p) => p.pet_id === reserveId);
+    if (pet) setReservationPet(pet);
+    // 쿼리 제거(뒤로가기/새로고침 시 재오픈 방지).
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("reserve");
+      return next;
+    }, { replace: true });
+  }, [pets, searchParams, setSearchParams]);
 
   return (
     <GuardianLayout>

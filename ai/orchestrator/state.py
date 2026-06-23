@@ -3,7 +3,7 @@ AGENT_SPECS '공통 동작 규칙 A/B'.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.models.guardian_hospital import GuardianHospital
 from app.models.pet import Pet
 from app.models.schedule import Schedule
+from app.utils.followup_policy import is_followup_limited
 
 from .contracts import Flow, Phase, SessionContext
 
@@ -35,8 +36,18 @@ async def _compute_phase(db, session) -> Phase:
     confirmed = sched.confirmed_time
     if confirmed.tzinfo is None:
         confirmed = confirmed.replace(tzinfo=timezone.utc)
-    # 진료 1시간 전에 경과 마감 → chat.py/followup.py(can_followup)와 동일 기준
-    return Phase.BOOKED if datetime.now(timezone.utc) <= confirmed - timedelta(hours=1) else Phase.CLOSED
+    return Phase.BOOKED
+
+
+async def _current_schedule(db, emrid: int | None):
+    if emrid is None:
+        return None
+    return (await db.execute(
+        select(Schedule).where(
+            Schedule.emrid == emrid,
+            Schedule.deleted_at.is_(None),
+        )
+    )).scalars().first()
 
 
 async def _pet_info(db, petid: int) -> dict:
@@ -65,6 +76,19 @@ async def build_context(db, session, user_message: str,
     """DB → SessionContext. session = 이미 로드된 chat_historyDB row."""
     orch = session.orch_state or {}
     phase = await _compute_phase(db, session)
+    sched = await _current_schedule(db, session.emrid)
+    followup_limited = False
+    if sched and sched.confirmed_time and sched.status != "CANCELLED":
+        confirmed = sched.confirmed_time
+        if confirmed.tzinfo is None:
+            confirmed = confirmed.replace(tzinfo=timezone.utc)
+        followup_limited = is_followup_limited(confirmed, now=datetime.now(timezone.utc))
+
+    # 예약 후(BOOKED) 챗에서 '문진 작성 후 새로 예약하기'를 고른 세션 — 같은 세션에서 새 문진을
+    # 돌릴 수 있게 phase를 PRE_BOOKING으로 강등한다(문진 완료 시 triage가 새 emrid 발급 + 플래그 해제).
+    new_booking = bool(orch.get("new_booking"))
+    if new_booking and phase == Phase.BOOKED:
+        phase = Phase.PRE_BOOKING
 
     active_flow = orch.get("active_flow") or "idle"
     if phase in (Phase.BOOKED, Phase.CLOSED):
@@ -86,6 +110,12 @@ async def build_context(db, session, user_message: str,
         reception_streak=int(orch.get("reception_streak", 0) or 0),
         triage_state=orch.get("triage_state") or {},
         followup_summary=orch.get("followup_summary") or "",
+        last_followup_reply_kind=orch.get("last_followup_reply_kind") or "",
+        asked_followup_fields=orch.get("asked_followup_fields") or [],
+        pending_confirmation_action=orch.get("pending_confirmation_action") or "",
+        last_media_summary=orch.get("last_media_summary") or "",
+        followup_limited=followup_limited,
+        new_booking=new_booking,
         db=db,
         session=session,
     )
@@ -101,11 +131,23 @@ def apply_patch(ctx: SessionContext, patch: dict) -> None:
 async def save_state(db, ctx: SessionContext) -> None:
     """ctx 상태를 chat_historyDB.orch_state(JSON)에 저장. (phase는 매번 계산하므로 저장 안 함)"""
     session = ctx.session
+    existing = dict(session.orch_state or {})
+    preserved = {
+        k: v
+        for k, v in existing.items()
+        if k.startswith("followup_limit_notice_")
+    }
     session.orch_state = {
+        **preserved,
         "active_flow": _enum_value(ctx.active_flow),
         "reception_streak": ctx.reception_streak,
         "triage_state": ctx.triage_state,
         "followup_summary": ctx.followup_summary,
+        "last_followup_reply_kind": ctx.last_followup_reply_kind,
+        "asked_followup_fields": ctx.asked_followup_fields,
+        "pending_confirmation_action": ctx.pending_confirmation_action,
+        "last_media_summary": ctx.last_media_summary,
+        "new_booking": bool(ctx.new_booking),
     }
     flag_modified(session, "orch_state")
     db.add(session)

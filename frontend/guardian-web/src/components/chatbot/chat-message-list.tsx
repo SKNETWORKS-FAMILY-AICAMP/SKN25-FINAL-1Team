@@ -310,6 +310,45 @@ const InstructionsCard = ({
   </div>
 );
 
+/** 예약 내역 보기 카드 — 다가오는 확정 예약 요약 + 예약내역 탭 이동 버튼 */
+const SchedulesCard = ({
+  card,
+  t,
+  onSendMessage,
+}: {
+  card: Extract<ChatCard, { kind: "schedules" }>;
+  t: (key: string) => string;
+  onSendMessage: (content: string) => void;
+}) => (
+  <div className="w-full rounded-3xl rounded-bl-lg border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
+    <p className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+      <span>📅</span> {t("chatbot.schedulesTitle")}
+    </p>
+    <ul className="mt-2.5 space-y-2">
+      {card.items.map((item) => (
+        <li
+          key={item.schedule_id}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+        >
+          <p className="font-extrabold text-slate-800">{item.when ?? "-"}</p>
+          <p className="mt-0.5 font-semibold text-slate-500">
+            {[item.petName, item.doctorName, item.hospitalName]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </li>
+      ))}
+    </ul>
+    <button
+      type="button"
+      onClick={() => onSendMessage("예약 내역 탭에서 보기")}
+      className="mt-3 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+    >
+      {t("chatbot.viewSchedulesTab")}
+    </button>
+  </div>
+);
+
 /** 번역 대기 중 표시하는 점 셋 shimmer — 한국어 원문 플래시 대신 노출. */
 const TranslatingDots = () => (
   <span className="inline-flex items-center gap-1 align-middle">
@@ -344,12 +383,14 @@ const ChatMessageList = ({
 
   useEffect(() => {
     const end = endRef.current;
-    if (!end) return;
+    const container = scrollRef.current;
+    if (!end || !container) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         atBottomRef.current = entry.isIntersecting;
       },
-      { rootMargin: "0px 0px 120px 0px" }, // 바닥 120px 여유까지 '하단'으로 간주
+      // ★ root를 스크롤 컨테이너로 지정 — 없으면 뷰포트 기준이라 '하단' 판정이 어긋나 자동스크롤이 안 됨.
+      { root: container, rootMargin: "0px 0px 120px 0px" },
     );
     io.observe(end);
     return () => io.disconnect();
@@ -411,6 +452,9 @@ const ChatMessageList = ({
               {message.card.kind === "instructions" && (
                 <InstructionsCard card={message.card} t={t} translate={translate} />
               )}
+              {message.card.kind === "schedules" && (
+                <SchedulesCard card={message.card} t={t} onSendMessage={onSendMessage} />
+              )}
             </div>
           );
         }
@@ -455,6 +499,11 @@ const ChatMessageList = ({
                   src={message.attachmentUrl}
                   alt={t("chatbot.attachmentImageAlt")}
                   className="mt-3 max-h-56 rounded-2xl object-cover"
+                  // 이미지가 늦게 로드되며 높이가 늘면, 하단에 있던 경우 한 번 더 맨 아래로 보정.
+                  onLoad={() => {
+                    const c = scrollRef.current;
+                    if (c && atBottomRef.current) c.scrollTop = c.scrollHeight;
+                  }}
                 />
               )
             ) : null}

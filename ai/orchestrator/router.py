@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 _AGENT_DESC = {
     "reception": "병원 정보(위치·운영시간·전화·수의사 소개)와 일반 안내. 진단·처방은 수의사께 넘긴다.",
     "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
-    "followup_filter": "예약 후 경과(증상 변화) 보고를 받아 기록하고, 예약 시간 변경·재예약(더 빠른 시간) 요청도 받는다.",
+    "followup_filter": "예약 후 아이 상태에 대한 모든 대화·질문(증상 변화·사진·되묻기 포함)을 받고, "
+                       "예약 시간 변경·재예약, '내 예약 시각이 언제인지' 확인도 처리한다.",
     "redirect": "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단.",
 }
 
@@ -34,12 +35,16 @@ _SYMPTOM_KW = ("토", "설사", "아파", "아프", "발작", "경련", "기침"
                "절뚝", "절어", "다리", "숨", "호흡", "열", "기력", "안 먹", "구토", "쓰러")
 _HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전화", "휴진", "몇 시", "몇시",
                 "의사", "선생님", "수의사", "원장", "소개", "특징")
+_AFFIRMATIVE_KW = ("확인", "응", "네", "그래", "보여", "해줘", "해 줘", "좋아")
 
 
 def _candidates(ctx: SessionContext) -> list[str]:
     """현재 phase에서 담당 가능한 에이전트 후보(하드 제약 반영)."""
     if ctx.phase == Phase.BOOKED:
-        return ["reception", "followup_filter", "redirect"]   # triage 불가(재문진 안 함)
+        # 예약 후 자연스러운 후속 질문(사진 못 찍음·상태 얘기 등)을 redirect로 차단하지 않고
+        # followup_filter가 받아 되묻게 한다. 병원 정보(위치/시간/전화)만 reception.
+        return ["reception", "followup_filter"]   # triage·redirect 불가
+
     if ctx.phase == Phase.CLOSED:
         return ["reception", "redirect"]
     return ["reception", "triage", "redirect"]                # 예약 전: followup 불가
@@ -60,6 +65,8 @@ def _fallback(ctx: SessionContext, candidates: list[str]) -> str:
             return "followup_filter"
     if any(k in t for k in _HOSPITAL_KW):
         return "reception"
+    if "followup_filter" in candidates:
+        return "followup_filter"
     return "reception"
 
 
@@ -68,12 +75,14 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
     desc = "\n".join(f"- {n}: {_AGENT_DESC[n]}" for n in candidates if n in _AGENT_DESC)
 
     if ctx.phase == Phase.BOOKED:
-        # 예약 후엔: 증상 경과 + '예약 시간 변경·재예약(더 빠른 시간)'은 followup_filter가 받아
-        # 챗 안에서 바로 재예약 흐름을 띄운다(홈 화면으로 떠넘기지 않음). 병원 정보는 reception.
-        phase_hint = ("지금은 '예약 후'야. 증상 변화·경과 보고와 '예약 시간 변경·재예약'은 followup_filter, "
-                      "병원 정보·일반 안내는 reception. (증상 문진은 더 안 한다)")
+        # 예약 후엔: 아이 상태 관련 모든 대화·질문 + 예약 변경/재예약 + '내 예약 시각 확인'은
+        # followup_filter가 받아 챗 안에서 처리한다(홈으로 떠넘기지 않음).
+        # reception은 '병원 위치·운영시간·전화·수의사 소개' 같은 순수 병원 정보만.
+        phase_hint = ("지금은 '예약 후'야. 아이 상태 관련 대화·질문, 예약 변경·재예약, "
+                      "'내 예약 시각이 언제인지' 확인은 모두 followup_filter. "
+                      "병원 위치·운영시간·전화 같은 순수 병원 정보만 reception. (증상 문진은 더 안 한다)")
     elif ctx.phase == Phase.CLOSED:
-        phase_hint = "지금은 입력 마감 상태야. 병원 안내(reception)만 가능."
+        phase_hint = "지금은 과거 예약 상태야. 채팅은 닫지 않고 병원 안내(reception)를 중심으로 응답한다."
     else:
         phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
                       "병원 정보·일반 안내는 reception. "
@@ -119,6 +128,11 @@ async def route(ctx: SessionContext) -> str:
     if ctx.active_flow == Flow.SCHEDULING:
         return "schedule"
 
+    if ctx.phase == Phase.BOOKED and ctx.pending_confirmation_action:
+        text = (ctx.user_message or "").strip()
+        if len(text) <= 12 and any(k in text for k in _AFFIRMATIVE_KW):
+            return "followup_filter"
+
     # 3) 첨부(사진/영상)는 증상/경과 신호 — phase에 따라 담당 고정.
     if ctx.attachments:
         if ctx.phase == Phase.BOOKED:
@@ -126,6 +140,11 @@ async def route(ctx: SessionContext) -> str:
         if ctx.phase == Phase.PRE_BOOKING:
             return "triage"
         return "reception"
+
+    if ctx.phase == Phase.BOOKED:
+        text = ctx.user_message or ""
+        if "예약" in text and any(k in text for k in ("병원", "시간", "시각", "몇 시", "몇시", "내역", "목록")):
+            return "followup_filter"
 
     # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
     return await _llm_pick(ctx, _candidates(ctx))

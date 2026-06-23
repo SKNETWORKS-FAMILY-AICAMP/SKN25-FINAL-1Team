@@ -17,7 +17,7 @@ class Phase(str, Enum):
     """대화 국면 — 후보 에이전트를 결정한다."""
     PRE_BOOKING = "PRE_BOOKING"   # 예약 전: 응대 + 문진 + 예약
     BOOKED = "BOOKED"             # 예약 후: 응대 + 경과필터
-    CLOSED = "CLOSED"             # 예약 시각 지남: 입력 마감
+    CLOSED = "CLOSED"             # legacy: 과거 예약. 채팅방은 닫지 않는다.
 
 
 class Flow(str, Enum):
@@ -59,6 +59,16 @@ class SessionContext:
     reception_streak: int = 0             # 응대 연속 횟수(넛지 트리거)
     triage_state: dict = field(default_factory=dict)   # 문진 슬롯/물은질문/횟수
     followup_summary: str = ""            # 누적 경과 메모
+    # followup 답변 다양화(반복 회피)용 가벼운 상태 — 직전 답변 목적 + 같은 대화에서 이미 물은 항목.
+    last_followup_reply_kind: str = ""
+    asked_followup_fields: list[str] = field(default_factory=list)
+    pending_confirmation_action: str = ""
+    # 직전(최근 1개) 사진/영상 분석 소견 요약 — 다음 턴의 '사진 후속' 발화에서 참조한다(원본 미보관).
+    last_media_summary: str = ""
+    followup_limited: bool = False
+    # 예약 후(BOOKED) 챗에서 '문진 작성 후 새로 예약하기'를 고른 경우 — 같은 세션에서 새 문진을
+    # 돌리도록 phase를 PRE_BOOKING으로 강등하고, 문진 완료 시 새 emrid를 발급한다(완료 시 해제).
+    new_booking: bool = False
     # --- 런타임 핸들 (저장 안 함) ---
     db: Any = None
     session: Any = None       # chat_historyDB ORM row (DB 적재용)

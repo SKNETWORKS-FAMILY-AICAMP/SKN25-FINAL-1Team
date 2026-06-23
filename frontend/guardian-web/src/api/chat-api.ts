@@ -53,7 +53,9 @@ export interface ChatSessionDetailResult {
   keywords: string[];
   is_complete: boolean;
   can_followup: boolean;
-  /** followup 대상이었으나 진료 시작 시간이 지나 경과보고가 마감된 상태. */
+  /** 진료 시작 10분 이내라 이번 예약 메모 저장/변경/취소가 제한되는 상태. 채팅은 가능. */
+  followup_limited?: boolean;
+  /** legacy: 채팅은 닫지 않으므로 신규 응답에서는 false. */
   followup_closed?: boolean;
   booking_complete?: boolean;
   /** 문진 미완료 — 라이브 문진으로 이어서 진행 가능. */
@@ -84,6 +86,15 @@ export interface ChatSessionDetailResponse {
 export interface DeleteChatSessionResponse {
   code: number;
   message?: string;
+}
+
+export interface FollowupLimitNoticeResponse {
+  code: number;
+  result?: {
+    inserted: boolean;
+    limited: boolean;
+    message?: string | null;
+  };
 }
 
 export interface SendChatMessagePayload {
@@ -211,6 +222,15 @@ export const deleteChatSession = async (
 ): Promise<DeleteChatSessionResponse> => {
   const response = await apiClient.delete<DeleteChatSessionResponse>(
     `/chat/sessions/${sessionId}`,
+  );
+  return response.data;
+};
+
+export const ensureFollowupLimitNotice = async (
+  sessionId: number,
+): Promise<FollowupLimitNoticeResponse> => {
+  const response = await apiClient.post<FollowupLimitNoticeResponse>(
+    `/chat/sessions/${sessionId}/followup-limit-notice`,
   );
   return response.data;
 };
