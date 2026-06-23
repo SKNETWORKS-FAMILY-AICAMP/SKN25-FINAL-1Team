@@ -288,6 +288,30 @@ async def run_validation_endpoint(
     return {"code": 200, "result": result}
 
 
+@router.post("/validation/run-recent")
+async def run_recent_validations(
+    limit: int = Query(default=10, le=50, description="재검증할 최근 케이스 수"),
+    db: AsyncSession = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    """최근 N개 ValidationResult의 scheduleid를 꺼내 case_eval 재실행."""
+    from ai.agents.evaluation import run_case_evaluation
+
+    q = select(ValidationResult).order_by(ValidationResult.created_at.desc()).limit(limit)
+    rows = await db.execute(q)
+    schedule_ids = [v.scheduleid for v in rows.scalars().all() if v.scheduleid is not None]
+
+    results = []
+    for sid in schedule_ids:
+        try:
+            r = await run_case_evaluation(sid, db)
+            results.append({"scheduleid": sid, "overall": r.get("overall", "?")})
+        except Exception as exc:
+            results.append({"scheduleid": sid, "error": str(exc)})
+
+    return {"code": 200, "result": {"count": len(results), "details": results}}
+
+
 # ── 모니터링: Judge (메모리 링버퍼 — DB 불필요) ──
 @router.get("/judge/results")
 async def judge_results(

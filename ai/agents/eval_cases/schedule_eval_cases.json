@@ -26,6 +26,45 @@
     "expected_duration_max": 60
   },
   {
+    "name": "RED — 요도폐색 고양이 (초진)",
+    "pet": {"name": "루루", "species": "고양이", "breed": "페르시안", "age": 4, "weight_kg": 5.3},
+    "triage": {
+      "urgency": "RED",
+      "chief_complaint": "소변 완전 폐색",
+      "suspected_diseases": ["요도폐색", "방광결석"],
+      "triage_summary": "수 시간 동안 소변을 전혀 못 보고 있으며 복통 및 안절부절 증상",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 45,
+    "expected_duration_max": 70
+  },
+  {
+    "name": "RED — GDV 위염전 대형견 (초진)",
+    "pet": {"name": "맥스", "species": "강아지", "breed": "그레이트데인", "age": 6, "weight_kg": 55},
+    "triage": {
+      "urgency": "RED",
+      "chief_complaint": "급성 복부 팽창·헛구역질",
+      "suspected_diseases": ["위염전", "GDV"],
+      "triage_summary": "식사 후 갑작스러운 복부 팽창, 반복 헛구역질, 기립 불능",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 50,
+    "expected_duration_max": 70
+  },
+  {
+    "name": "RED — 열사병 (초진)",
+    "pet": {"name": "바둑이", "species": "강아지", "breed": "허스키", "age": 3, "weight_kg": 22},
+    "triage": {
+      "urgency": "RED",
+      "chief_complaint": "고체온·호흡 이상",
+      "suspected_diseases": ["열사병", "고체온증"],
+      "triage_summary": "차 안에 방치 후 과도한 헐떡임, 잇몸 충혈, 기립 불능",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 40,
+    "expected_duration_max": 60
+  },
+  {
     "name": "ORANGE — 중등도 호흡곤란 (초진)",
     "pet": {"name": "나비", "species": "고양이", "breed": "코리안숏헤어", "age": 5, "weight_kg": 4.1},
     "triage": {
@@ -52,6 +91,32 @@
     "expected_duration_max": 60
   },
   {
+    "name": "ORANGE — 혈토 (초진)",
+    "pet": {"name": "솜이", "species": "강아지", "breed": "말티즈", "age": 8, "weight_kg": 3.0},
+    "triage": {
+      "urgency": "ORANGE",
+      "chief_complaint": "구토물에 혈액 혼입",
+      "suspected_diseases": ["위장 출혈", "위궤양"],
+      "triage_summary": "아침부터 구토 반복, 마지막 구토물에 선홍색 혈액 확인",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 35,
+    "expected_duration_max": 55
+  },
+  {
+    "name": "ORANGE — 고양이 혈변 (초진)",
+    "pet": {"name": "치즈", "species": "고양이", "breed": "아메리칸숏헤어", "age": 5, "weight_kg": 4.8},
+    "triage": {
+      "urgency": "ORANGE",
+      "chief_complaint": "혈액이 섞인 설사",
+      "suspected_diseases": ["출혈성 위장염", "범백혈구감소증"],
+      "triage_summary": "어제부터 설사 3회, 오늘 변에 선홍색 혈액 혼입 확인",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 35,
+    "expected_duration_max": 50
+  },
+  {
     "name": "YELLOW — 잦은 기침 (재진)",
     "pet": {"name": "콩이", "species": "강아지", "breed": "비숑프리제", "age": 2, "weight_kg": 4.8},
     "triage": {
@@ -65,13 +130,52 @@
     "expected_duration_max": 40
   },
   {
-    "name": "YELLOW — 피부 알레르기 (초진)",
+    "name": "YELLOW — 피부 알레르기 고양이 (초진)",
     "pet": {"name": "루나", "species": "고양이", "breed": "페르시안", "age": 3, "weight_kg": 4.2},
     "triage": {
       "urgency": "YELLOW",
       "chief_complaint": "피부 가려움·발적",
       "suspected_diseases": ["알레르기성 피부염", "아토피"],
       "triage_summary": "1주일 전부터 반복 긁음, 귀·배 발적 및 피부 변화",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 20,
+    "expected_duration_max": 35
+  },
+  {
+    "name": "YELLOW — 혈뇨 고양이 (초진)",
+    "pet": {"name": "순이", "species": "고양이", "breed": "코리안숏헤어", "age": 4, "weight_kg": 4.0},
+    "triage": {
+      "urgency": "YELLOW",
+      "chief_complaint": "혈뇨",
+      "suspected_diseases": ["방광염", "요로결석"],
+      "triage_summary": "오늘 소변에 혈액 혼입 확인, 소변은 배출 가능하나 빈뇨 증상",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 20,
+    "expected_duration_max": 40
+  },
+  {
+    "name": "YELLOW — 경추 디스크 증상 (재진)",
+    "pet": {"name": "호두", "species": "강아지", "breed": "닥스훈트", "age": 6, "weight_kg": 9.0},
+    "triage": {
+      "urgency": "YELLOW",
+      "chief_complaint": "뒷다리 절음·통증",
+      "suspected_diseases": ["추간판탈출증", "척추 협착"],
+      "triage_summary": "3일 전부터 뒷다리 절음 심화, 이전 디스크 진단 이력 있음",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 25,
+    "expected_duration_max": 40
+  },
+  {
+    "name": "YELLOW — 반복 구토 고양이 (초진)",
+    "pet": {"name": "탱이", "species": "고양이", "breed": "아메리칸숏헤어", "age": 7, "weight_kg": 5.5},
+    "triage": {
+      "urgency": "YELLOW",
+      "chief_complaint": "하루 수 차례 구토",
+      "suspected_diseases": ["위장염", "염증성 장질환"],
+      "triage_summary": "하루 4~5회 구토, 식욕 감소, 체중 감소 경향",
       "is_initial_visit": true
     },
     "expected_duration_min": 20,
@@ -102,5 +206,57 @@
     },
     "expected_duration_min": 10,
     "expected_duration_max": 20
+  },
+  {
+    "name": "GREEN — 중성화 수술 전 검진 (초진)",
+    "pet": {"name": "밤이", "species": "강아지", "breed": "포메라니안", "age": 1, "weight_kg": 2.5},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "중성화 수술 전 건강 평가",
+      "suspected_diseases": [],
+      "triage_summary": "생후 12개월, 중성화 수술 전 혈액검사 및 신체 평가",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 15,
+    "expected_duration_max": 25
+  },
+  {
+    "name": "GREEN — 기침 경과 관찰 (재진)",
+    "pet": {"name": "별이", "species": "강아지", "breed": "치와와", "age": 5, "weight_kg": 2.8},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "기침 치료 경과 확인",
+      "suspected_diseases": [],
+      "triage_summary": "지난 주 켄넬코프 치료 시작, 기침 많이 호전되어 경과 관찰 방문",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 10,
+    "expected_duration_max": 20
+  },
+  {
+    "name": "GREEN — 구강 위생 상담 (초진)",
+    "pet": {"name": "호랑이", "species": "강아지", "breed": "요크셔테리어", "age": 7, "weight_kg": 3.1},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "치석·구취 상담",
+      "suspected_diseases": [],
+      "triage_summary": "치석 과도, 입냄새 심화로 치과 스케일링 상담 방문",
+      "is_initial_visit": true
+    },
+    "expected_duration_min": 10,
+    "expected_duration_max": 20
+  },
+  {
+    "name": "GREEN — 고양이 정기 검진 (재진)",
+    "pet": {"name": "나비", "species": "고양이", "breed": "코리안숏헤어", "age": 6, "weight_kg": 4.3},
+    "triage": {
+      "urgency": "GREEN",
+      "chief_complaint": "연간 종합 건강검진",
+      "suspected_diseases": [],
+      "triage_summary": "특이 증상 없음, 연간 종합 혈액검사 및 신체 검진",
+      "is_initial_visit": false
+    },
+    "expected_duration_min": 15,
+    "expected_duration_max": 30
   }
 ]

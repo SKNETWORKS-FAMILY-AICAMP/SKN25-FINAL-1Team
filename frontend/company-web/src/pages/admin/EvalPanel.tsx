@@ -589,7 +589,6 @@ function AgentBenchmarkTab({
   description,
   logsEndpoint,
   cachedResult,
-  onRunFull,
   fullLoading,
 }: {
   label: string;
@@ -597,7 +596,6 @@ function AgentBenchmarkTab({
   description: string;
   logsEndpoint?: string | null;
   cachedResult?: AgentEvalResult | null;
-  onRunFull: () => void;
   fullLoading: boolean;
 }) {
   const [logs, setLogs] = useState<MonitoringLog[]>([]);
@@ -646,15 +644,8 @@ function AgentBenchmarkTab({
         ) : (
           <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center">
             <FlaskConical className="mx-auto mb-3 h-8 w-8 text-slate-200" />
-            <p className="mb-4 text-sm text-slate-400">아직 평가 결과가 없습니다</p>
-            <button
-              onClick={onRunFull}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <RefreshCw className="h-4 w-4" />
-              전체 에이전트 평가 실행
-            </button>
-            <p className="mt-3 text-xs text-slate-300">완료되면 이 탭에 결과가 자동 표시됩니다</p>
+            <p className="text-sm text-slate-400">아직 평가 결과가 없습니다</p>
+            <p className="mt-2 text-xs text-slate-300">전체 성능 탭에서 "전체 에이전트 평가 실행"을 눌러주세요</p>
           </div>
         )}
       </div>
@@ -732,6 +723,21 @@ function moduleKeyMetric(key: string, mod: FullReportModule): string {
   return "—";
 }
 
+// 모듈별 WARN 항목 추출
+function buildWarnSummary(report: FullReport) {
+  const warn: { module: string; items: string[] }[] = [];
+  const pass: string[] = [];
+  for (const [key, mod] of Object.entries(report.modules)) {
+    const warnItems = mod.checks.filter((c) => c.status === "WARN").map((c) => c.item);
+    if (warnItems.length > 0) {
+      warn.push({ module: MODULE_LABEL[key] ?? key, items: warnItems });
+    } else if (mod.overall === "PASS") {
+      pass.push(MODULE_LABEL[key] ?? key);
+    }
+  }
+  return { warn, pass };
+}
+
 function AgentFullReportSection({
   report,
   loading,
@@ -751,7 +757,7 @@ function AgentFullReportSection({
     "text-slate-800";
 
   return (
-    <div className="space-y-4 border-t border-slate-200 pt-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-700">에이전트 성능 벤치마크</p>
@@ -779,6 +785,28 @@ function AgentFullReportSection({
               <span className="text-xs text-red-500">{report.critical_reasons.join(" / ")}</span>
             )}
           </div>
+
+          {/* 지금 문제 요약 */}
+          {(() => {
+            const { warn: warnMods, pass: passMods } = buildWarnSummary(report);
+            if (warnMods.length === 0) return null;
+            return (
+              <div className="border-b border-amber-100 bg-amber-50 px-5 py-4 space-y-1.5">
+                <p className="text-xs font-semibold text-amber-700 mb-2">해결이 필요한 항목</p>
+                {warnMods.map(({ module, items }) => (
+                  <div key={module} className="flex gap-2 text-xs">
+                    <span className="font-semibold text-slate-700 w-20 shrink-0">{module}</span>
+                    <span className="text-slate-500">{items.join(", ")}</span>
+                  </div>
+                ))}
+                {passMods.length > 0 && (
+                  <p className="pt-1 text-xs text-slate-400">
+                    정상 동작 중: {passMods.join(" · ")}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 모듈별 요약 테이블 */}
           <table className="w-full text-xs">
@@ -836,6 +864,60 @@ function AgentFullReportSection({
   );
 }
 
+// ── WARN 패턴 집계 바 ─────────────────────────────────────────
+function WarnPatternBar({ rows }: { rows: ValidationRow[] }) {
+  const counts: Record<string, { warn: number; total: number }> = {};
+
+  for (const row of rows) {
+    const checksDict = (!Array.isArray(row.checks) && row.checks && typeof row.checks === "object")
+      ? (row.checks as ValidationChecks)
+      : {};
+    for (const mod of [checksDict.triage, checksDict.schedule, checksDict.chart]) {
+      if (!mod) continue;
+      for (const check of mod.checks ?? []) {
+        if (check.status === "SKIPPED") continue;
+        if (!counts[check.item]) counts[check.item] = { warn: 0, total: 0 };
+        counts[check.item].total++;
+        if (check.status === "WARN") counts[check.item].warn++;
+      }
+    }
+  }
+
+  const sorted = Object.entries(counts)
+    .filter(([, v]) => v.warn > 0)
+    .sort((a, b) => b[1].warn / b[1].total - a[1].warn / a[1].total);
+
+  if (sorted.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+      <p className="mb-4 text-xs font-semibold text-slate-400">
+        최근 {rows.length}건 WARN 패턴
+      </p>
+      <div className="space-y-3">
+        {sorted.map(([item, { warn, total }]) => {
+          const ratio = warn / total;
+          const isHigh = ratio >= 0.6;
+          return (
+            <div key={item} className="flex items-center gap-3">
+              <span className="w-32 shrink-0 text-xs text-slate-700">{item}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${isHigh ? "bg-amber-400" : "bg-slate-300"}`}
+                  style={{ width: `${ratio * 100}%` }}
+                />
+              </div>
+              <span className="w-24 shrink-0 text-right text-xs text-slate-400">
+                {warn}/{total} ({Math.round(ratio * 100)}%)
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── 전체 성능 탭 ──────────────────────────────────────────────
 function OverallTab({
   fullReport,
@@ -850,8 +932,7 @@ function OverallTab({
 }) {
   const [rows, setRows] = useState<ValidationRow[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [runLoading, setRunLoading] = useState(false);
-  const [scheduleId, setScheduleId] = useState("");
+  const [batchLoading, setBatchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -874,22 +955,20 @@ function OverallTab({
     }
   }
 
-  async function runValidation() {
-    if (!scheduleId) return;
-    setRunLoading(true);
+  async function runRecentValidation() {
+    setBatchLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `${API}/admin/validation/run?schedule_id=${scheduleId}`,
+        `${API}/admin/validation/run-recent?limit=10`,
         { method: "POST", headers: authHeader() }
       );
       if (!res.ok) throw new Error(`${res.status}`);
       await fetchResults();
-      setScheduleId("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류");
     } finally {
-      setRunLoading(false);
+      setBatchLoading(false);
     }
   }
 
@@ -898,8 +977,11 @@ function OverallTab({
 
   return (
     <div className="space-y-6">
+      {/* 전체 에이전트 평가 */}
+      <AgentFullReportSection report={fullReport} loading={fullLoading} error={fullError} onRunAll={onRunFull} />
+
       {/* 요약 수치 */}
-      <div className="flex gap-8 border-b border-slate-200 pb-5 text-sm">
+      <div className="flex gap-8 border-t border-b border-slate-200 py-5 text-sm">
         <div>
           <p className="text-xs text-slate-400">총 검증</p>
           <p className="mt-1 text-2xl font-black text-slate-800">{loading ? "—" : `${total}건`}</p>
@@ -928,22 +1010,18 @@ function OverallTab({
         </div>
       </div>
 
-      {/* 케이스 실행 */}
+      {/* WARN 패턴 집계 */}
+      {rows && rows.length > 0 && <WarnPatternBar rows={rows} />}
+
+      {/* 최근 10건 재검증 */}
       <div className="flex items-center gap-2">
-        <input
-          type="number"
-          placeholder="Schedule ID"
-          value={scheduleId}
-          onChange={(e) => setScheduleId(e.target.value)}
-          className="w-36 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-        />
         <button
-          onClick={runValidation}
-          disabled={runLoading || !scheduleId}
+          onClick={runRecentValidation}
+          disabled={batchLoading}
           className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
         >
-          {runLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          케이스 검증 실행
+          {batchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {batchLoading ? "재검증 중..." : "최근 10건 재검증"}
         </button>
       </div>
 
@@ -1015,7 +1093,6 @@ function OverallTab({
         </div>
       )}
 
-      <AgentFullReportSection report={fullReport} loading={fullLoading} error={fullError} onRunAll={onRunFull} />
     </div>
   );
 }
@@ -1119,7 +1196,6 @@ export default function EvalPanel() {
           logsEndpoint={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].logsEndpoint}
           description={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].desc}
           cachedResult={cachedAgentResult}
-          onRunFull={runFullEval}
           fullLoading={fullLoading}
         />
       )}

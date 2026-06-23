@@ -145,5 +145,263 @@
     ],
     "expected_keywords": ["예방접종", "건강"],
     "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "고양이 반복 구토 (소화기 — 고양이)",
+    "pet": {"name": "치즈", "species": "고양이", "breed": "아메리칸숏헤어", "age": 6, "weight_kg": 4.5},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["구토", "식욕감소", "체중감소"],
+      "symptom_onset": "2주 전",
+      "suspected_diseases": ["염증성 장질환", "위장염", "헤어볼"],
+      "red_flags": [],
+      "symptom_summary": "2주 전부터 매일 1~2회 구토, 체중 0.3kg 감소, 식욕 약간 저하"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이가 매일 구토를 해요"},
+      {"role": "assistant", "content": "하루에 몇 번 정도 토하나요?"},
+      {"role": "user",  "content": "하루에 한두 번씩 2주 됐어요"},
+      {"role": "assistant", "content": "구토물 성상은 어떤가요? 헤어볼인지 음식물인지요"},
+      {"role": "user",  "content": "노란 액체랑 소화 안 된 사료가 섞여 나와요"},
+      {"role": "assistant", "content": "체중 변화나 활동량 변화는 있나요?"},
+      {"role": "user",  "content": "좀 말라 보이고 기운도 전보다 없어요"}
+    ],
+    "expected_keywords": ["구토", "체중", "식욕"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "고양이 호흡곤란 (호흡기 — 고양이)",
+    "pet": {"name": "나비", "species": "고양이", "breed": "코리안숏헤어", "age": 7, "weight_kg": 4.2},
+    "triage": {
+      "urgency_level": "ORANGE",
+      "symptom_keywords": ["호흡곤란", "빈호흡", "복식호흡"],
+      "symptom_onset": "오늘",
+      "suspected_diseases": ["흉막삼출", "천식", "울혈성심부전"],
+      "red_flags": ["복식호흡", "구강 호흡 시도"],
+      "symptom_summary": "오늘 오전부터 복식호흡, 안정 시에도 숨이 가빠 보이며 구강 호흡 시도"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이가 숨을 너무 힘들게 쉬어요"},
+      {"role": "assistant", "content": "숨 쉬는 패턴이 어때 보이나요? 배가 많이 움직이나요?"},
+      {"role": "user",  "content": "배가 엄청 들썩거리고 입도 벌리려고 해요"},
+      {"role": "assistant", "content": "언제부터 이런 증상이 있었나요?"},
+      {"role": "user",  "content": "오늘 아침부터요, 그냥 앉아 있는데도 힘들어 보여요"}
+    ],
+    "expected_keywords": ["호흡", "흉막", "복식호흡"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "교통사고 외상 (외상)",
+    "pet": {"name": "바둑이", "species": "강아지", "breed": "진돗개", "age": 4, "weight_kg": 18},
+    "triage": {
+      "urgency_level": "ORANGE",
+      "symptom_keywords": ["외상", "출혈", "골절의심"],
+      "symptom_onset": "1시간 전",
+      "suspected_diseases": ["골절", "내부 출혈", "타박상"],
+      "red_flags": ["교통사고", "출혈"],
+      "symptom_summary": "1시간 전 교통사고, 오른쪽 다리 골절 의심, 표재성 출혈 있음"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 차에 치였어요 출혈이 있어요"},
+      {"role": "assistant", "content": "의식은 있나요? 반응은 어떤가요?"},
+      {"role": "user",  "content": "의식은 있고 쳐다봐요 다리를 못 움직이는 것 같아요"},
+      {"role": "assistant", "content": "출혈 부위가 어디인가요?"},
+      {"role": "user",  "content": "다리 쪽에 상처가 있고 피가 나요 다리가 이상하게 꺾인 것 같아요"}
+    ],
+    "expected_keywords": ["외상", "골절", "출혈"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "신장 질환 의심 — 다음다뇨 (비뇨기 — 고양이)",
+    "pet": {"name": "뚱이", "species": "고양이", "breed": "페르시안", "age": 10, "weight_kg": 5.1},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["다뇨", "다음", "체중감소"],
+      "symptom_onset": "1개월 전",
+      "suspected_diseases": ["만성신부전", "당뇨", "갑상선기능항진증"],
+      "red_flags": [],
+      "symptom_summary": "1개월 전부터 물 섭취·소변량 증가, 체중 0.5kg 감소"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이가 요즘 물을 엄청 많이 마셔요"},
+      {"role": "assistant", "content": "물을 더 마시기 시작한 게 언제부터인가요?"},
+      {"role": "user",  "content": "한 달 전부터요, 소변도 훨씬 많이 봐요"},
+      {"role": "assistant", "content": "체중 변화나 식욕 변화는 있나요?"},
+      {"role": "user",  "content": "살이 좀 빠진 것 같고 먹는 건 똑같이 먹어요"},
+      {"role": "assistant", "content": "구토나 기력 저하는 어떤가요?"},
+      {"role": "user",  "content": "가끔 토하고 예전보다 덜 활발한 것 같아요"}
+    ],
+    "expected_keywords": ["다뇨", "신장", "혈액검사"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "당뇨 의심 — 다음다뇨 (내분비 — 강아지)",
+    "pet": {"name": "뭉치", "species": "강아지", "breed": "포메라니안", "age": 8, "weight_kg": 3.8},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["다뇨", "다음", "다식", "체중감소"],
+      "symptom_onset": "3주 전",
+      "suspected_diseases": ["당뇨병", "쿠싱증후군"],
+      "red_flags": [],
+      "symptom_summary": "3주 전부터 물·음식 섭취 증가, 소변량 증가, 체중 감소"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 물도 많이 마시고 밥도 더 달라고 하는데 살이 빠져요"},
+      {"role": "assistant", "content": "언제부터 이런 변화가 있었나요?"},
+      {"role": "user",  "content": "3주 됐어요 소변도 더 자주 봐요"},
+      {"role": "assistant", "content": "기력은 어떤가요? 산책할 때 예전처럼 활발한가요?"},
+      {"role": "user",  "content": "산책 가기 싫어하고 금방 지쳐해요"}
+    ],
+    "expected_keywords": ["다뇨", "당뇨", "혈당"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "외이염 (귀 — 강아지)",
+    "pet": {"name": "코코", "species": "강아지", "breed": "코커스패니얼", "age": 4, "weight_kg": 12},
+    "triage": {
+      "urgency_level": "GREEN",
+      "symptom_keywords": ["귀 가려움", "귀 냄새", "귀 분비물"],
+      "symptom_onset": "1주일 전",
+      "suspected_diseases": ["외이염", "귀 진드기"],
+      "red_flags": [],
+      "symptom_summary": "1주일 전부터 귀를 자주 긁고 냄새 남, 갈색 분비물 확인"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 귀를 계속 긁어요"},
+      {"role": "assistant", "content": "귀 안쪽 색깔이나 분비물이 있나요?"},
+      {"role": "user",  "content": "갈색 분비물이 있고 냄새도 나요"},
+      {"role": "assistant", "content": "언제부터 이런 증상이 시작됐나요?"},
+      {"role": "user",  "content": "일주일 됐어요 왼쪽 귀가 특히 심해요"}
+    ],
+    "expected_keywords": ["외이염", "귀", "분비물"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "아나필락시스 의심 (알레르기 반응 — 강아지)",
+    "pet": {"name": "보리", "species": "강아지", "breed": "비글", "age": 3, "weight_kg": 9.5},
+    "triage": {
+      "urgency_level": "ORANGE",
+      "symptom_keywords": ["얼굴 부종", "두드러기", "알레르기"],
+      "symptom_onset": "30분 전",
+      "suspected_diseases": ["아나필락시스", "급성 알레르기 반응"],
+      "red_flags": ["얼굴 부종", "급성 발현"],
+      "symptom_summary": "벌 쏘인 후 30분 내 얼굴 급격히 부어오름, 두드러기 발생"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 벌에 쏘였는데 얼굴이 부어오르고 있어요"},
+      {"role": "assistant", "content": "얼마나 됐나요? 빠르게 부어오르고 있나요?"},
+      {"role": "user",  "content": "30분 됐는데 눈 주변이 많이 부었어요"},
+      {"role": "assistant", "content": "호흡은 어떤가요? 숨쉬기 힘들어 보이나요?"},
+      {"role": "user",  "content": "좀 헐떡이는 것 같아요 온 몸에 두드러기도 나요"}
+    ],
+    "expected_keywords": ["아나필락시스", "알레르기", "부종"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "고양이 요도폐색 (비뇨기 — 고양이)",
+    "pet": {"name": "순이", "species": "고양이", "breed": "코리안숏헤어", "age": 5, "weight_kg": 4.8},
+    "triage": {
+      "urgency_level": "RED",
+      "symptom_keywords": ["배뇨불능", "복통", "안절부절"],
+      "symptom_onset": "6시간 전",
+      "suspected_diseases": ["요도폐색", "방광결석"],
+      "red_flags": ["소변 완전 폐색", "6시간 이상 배뇨 불능"],
+      "symptom_summary": "6시간 이상 소변 못 보며 화장실을 반복 방문, 복통 및 발성"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이가 소변을 아예 못 봐요 몇 시간째요"},
+      {"role": "assistant", "content": "화장실은 들어가나요? 안에서 어떻게 하나요?"},
+      {"role": "user",  "content": "계속 들어가는데 아무것도 안 나와요 낑낑거려요"},
+      {"role": "assistant", "content": "배를 만지면 어떻게 반응하나요?"},
+      {"role": "user",  "content": "배를 만지면 엄청 아파해요 울어요"}
+    ],
+    "expected_keywords": ["요도폐색", "방광", "배뇨"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "구강 질환 — 치주염 (구강 — 강아지)",
+    "pet": {"name": "호랑이", "species": "강아지", "breed": "요크셔테리어", "age": 8, "weight_kg": 3.2},
+    "triage": {
+      "urgency_level": "GREEN",
+      "symptom_keywords": ["구취", "치석", "잇몸 출혈"],
+      "symptom_onset": "수개월 전",
+      "suspected_diseases": ["치주염", "치석 과다", "잇몸 질환"],
+      "red_flags": [],
+      "symptom_summary": "오래전부터 입냄새 심화, 잇몸 빨갛고 치석 과다, 딱딱한 음식 피함"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지 입냄새가 너무 심해요"},
+      {"role": "assistant", "content": "언제부터 입냄새가 심해졌나요?"},
+      {"role": "user",  "content": "한 6개월 됐어요 이빨에 치석도 많아요"},
+      {"role": "assistant", "content": "밥 먹는 데 어려움이 있거나 딱딱한 걸 피하나요?"},
+      {"role": "user",  "content": "딱딱한 사료 먹을 때 씹기 힘들어하는 것 같아요"}
+    ],
+    "expected_keywords": ["치주염", "구취", "치석"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "관절염 — 노령견 (정형외과)",
+    "pet": {"name": "복실이", "species": "강아지", "breed": "골든리트리버", "age": 11, "weight_kg": 29},
+    "triage": {
+      "urgency_level": "YELLOW",
+      "symptom_keywords": ["관절통", "활동저하", "기립 힘듦"],
+      "symptom_onset": "3개월 전",
+      "suspected_diseases": ["퇴행성 관절염", "髋관절 이형성"],
+      "red_flags": [],
+      "symptom_summary": "3개월 전부터 뒷다리 뻣뻣함, 아침 기립 힘들어함, 산책 거부"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "강아지가 아침에 일어날 때 힘들어해요"},
+      {"role": "assistant", "content": "언제부터 기립에 어려움이 생겼나요?"},
+      {"role": "user",  "content": "3달 정도 됐어요 특히 아침이 심해요"},
+      {"role": "assistant", "content": "산책이나 계단은 어떻게 하나요?"},
+      {"role": "user",  "content": "산책 가자 하면 잘 안 나가려 하고 계단도 힘들어해요"},
+      {"role": "assistant", "content": "나이가 있으시니 관절 관련 검사가 필요해 보여요. 다리 특정 부위를 만지면 아파하나요?"},
+      {"role": "user",  "content": "뒷다리 엉덩이 쪽을 만지면 아파해요"}
+    ],
+    "expected_keywords": ["관절염", "관절", "뒷다리"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "결막염 (안과 — 고양이)",
+    "pet": {"name": "하루", "species": "고양이", "breed": "코리안숏헤어", "age": 2, "weight_kg": 3.6},
+    "triage": {
+      "urgency_level": "GREEN",
+      "symptom_keywords": ["결막 충혈", "눈곱", "눈물"],
+      "symptom_onset": "4일 전",
+      "suspected_diseases": ["결막염", "헤르페스 바이러스", "클라미도필라"],
+      "red_flags": [],
+      "symptom_summary": "4일 전부터 양쪽 눈곱 증가, 결막 충혈, 콧물 동반"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "고양이 눈에 눈곱이 많이 끼어요"},
+      {"role": "assistant", "content": "눈곱의 색깔은 어떤가요? 노란색이나 초록색인가요?"},
+      {"role": "user",  "content": "노란 눈곱이요 양쪽 다 꼈어요"},
+      {"role": "assistant", "content": "콧물이나 재채기도 있나요?"},
+      {"role": "user",  "content": "맞아요 콧물도 좀 나요 밥은 잘 먹어요"}
+    ],
+    "expected_keywords": ["결막염", "눈곱", "충혈"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
+  },
+  {
+    "name": "척추 디스크 악화 (신경과)",
+    "pet": {"name": "땅콩이", "species": "강아지", "breed": "닥스훈트", "age": 7, "weight_kg": 10},
+    "triage": {
+      "urgency_level": "ORANGE",
+      "symptom_keywords": ["뒷다리 마비", "배뇨장애", "척추 통증"],
+      "symptom_onset": "오늘",
+      "suspected_diseases": ["추간판탈출증 악화", "척수 압박"],
+      "red_flags": ["뒷다리 마비", "배뇨 불능"],
+      "symptom_summary": "기존 디스크 환자, 오늘 갑자기 뒷다리 마비 진행 및 소변 못 봄"
+    },
+    "chat_history": [
+      {"role": "user",  "content": "디스크 있는 강아지인데 갑자기 뒷다리를 못 쓰게 됐어요"},
+      {"role": "assistant", "content": "언제부터 못 쓰게 됐나요?"},
+      {"role": "user",  "content": "오늘 아침에 일어나 보니까 완전히 못 걷고 있었어요"},
+      {"role": "assistant", "content": "소변이나 대변을 제대로 보나요?"},
+      {"role": "user",  "content": "소변을 못 보는 것 같아요 배에 힘을 주는데 안 나오는 것 같아요"}
+    ],
+    "expected_keywords": ["디스크", "마비", "배뇨"],
+    "forbidden_phrases": ["확정 진단", "진단됩니다", "확실히"]
   }
 ]
