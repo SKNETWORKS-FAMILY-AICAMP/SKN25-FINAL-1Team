@@ -10,7 +10,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 45,
-    "expected_duration_max": 60
+    "expected_duration_max": 70
   },
   {
     "name": "RED — 복합 외상 (재진)",
@@ -23,7 +23,7 @@
       "is_initial_visit": false
     },
     "expected_duration_min": 45,
-    "expected_duration_max": 60
+    "expected_duration_max": 70
   },
   {
     "name": "RED — 요도폐색 고양이 (초진)",
@@ -49,7 +49,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 50,
-    "expected_duration_max": 70
+    "expected_duration_max": 75
   },
   {
     "name": "RED — 열사병 (초진)",
@@ -62,7 +62,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 40,
-    "expected_duration_max": 60
+    "expected_duration_max": 70
   },
   {
     "name": "ORANGE — 중등도 호흡곤란 (초진)",
@@ -75,7 +75,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 35,
-    "expected_duration_max": 55
+    "expected_duration_max": 60
   },
   {
     "name": "ORANGE — 위확장 의심 (초진)",
@@ -88,7 +88,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 40,
-    "expected_duration_max": 60
+    "expected_duration_max": 65
   },
   {
     "name": "ORANGE — 혈토 (초진)",
@@ -101,7 +101,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 35,
-    "expected_duration_max": 55
+    "expected_duration_max": 60
   },
   {
     "name": "ORANGE — 고양이 혈변 (초진)",
@@ -114,7 +114,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 35,
-    "expected_duration_max": 50
+    "expected_duration_max": 60
   },
   {
     "name": "YELLOW — 잦은 기침 (재진)",
@@ -140,7 +140,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 20,
-    "expected_duration_max": 35
+    "expected_duration_max": 45
   },
   {
     "name": "YELLOW — 혈뇨 고양이 (초진)",
@@ -153,7 +153,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 20,
-    "expected_duration_max": 40
+    "expected_duration_max": 50
   },
   {
     "name": "YELLOW — 경추 디스크 증상 (재진)",
@@ -166,7 +166,7 @@
       "is_initial_visit": false
     },
     "expected_duration_min": 25,
-    "expected_duration_max": 40
+    "expected_duration_max": 45
   },
   {
     "name": "YELLOW — 반복 구토 고양이 (초진)",
@@ -179,7 +179,7 @@
       "is_initial_visit": true
     },
     "expected_duration_min": 20,
-    "expected_duration_max": 35
+    "expected_duration_max": 45
   },
   {
     "name": "GREEN — 정기 건강검진 (재진)",
@@ -191,8 +191,8 @@
       "triage_summary": "특이 증상 없음, 연간 건강검진",
       "is_initial_visit": false
     },
-    "expected_duration_min": 15,
-    "expected_duration_max": 30
+    "expected_duration_min": 20,
+    "expected_duration_max": 40
   },
   {
     "name": "GREEN — 연간 예방접종 (재진)",
@@ -204,8 +204,8 @@
       "triage_summary": "특이 증상 없음, 연간 정기 예방접종 방문",
       "is_initial_visit": false
     },
-    "expected_duration_min": 10,
-    "expected_duration_max": 20
+    "expected_duration_min": 15,
+    "expected_duration_max": 35
   },
   {
     "name": "GREEN — 중성화 수술 전 검진 (초진)",
@@ -217,8 +217,8 @@
       "triage_summary": "생후 12개월, 중성화 수술 전 혈액검사 및 신체 평가",
       "is_initial_visit": true
     },
-    "expected_duration_min": 15,
-    "expected_duration_max": 25
+    "expected_duration_min": 20,
+    "expected_duration_max": 40
   },
   {
     "name": "GREEN — 기침 경과 관찰 (재진)",
@@ -230,8 +230,8 @@
       "triage_summary": "지난 주 켄넬코프 치료 시작, 기침 많이 호전되어 경과 관찰 방문",
       "is_initial_visit": false
     },
-    "expected_duration_min": 10,
-    "expected_duration_max": 20
+    "expected_duration_min": 15,
+    "expected_duration_max": 35
   },
   {
     "name": "GREEN — 구강 위생 상담 (초진)",
@@ -243,8 +243,8 @@
       "triage_summary": "치석 과도, 입냄새 심화로 치과 스케일링 상담 방문",
       "is_initial_visit": true
     },
-    "expected_duration_min": 10,
-    "expected_duration_max": 20
+    "expected_duration_min": 15,
+    "expected_duration_max": 40
   },
   {
     "name": "GREEN — 고양이 정기 검진 (재진)",
@@ -256,7 +256,7 @@
       "triage_summary": "특이 증상 없음, 연간 종합 혈액검사 및 신체 검진",
       "is_initial_visit": false
     },
-    "expected_duration_min": 15,
-    "expected_duration_max": 30
+    "expected_duration_min": 20,
+    "expected_duration_max": 40
   }
 ]

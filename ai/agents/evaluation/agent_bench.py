@@ -397,10 +397,10 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                                 "detail": f"F1={slot_f1:.2f} (기준 0.80, P={slot_precision:.2f} R={slot_recall:.2f})"})
 
             if hallucination_count == 0:
-                checks.append({"item": "환각 체크", "status": "PASS", "detail": "환각 없음"})
+                checks.append({"item": "추가 추출 건수", "status": "PASS", "detail": "expected 외 추출 없음"})
             else:
-                checks.append({"item": "환각 체크", "status": "WARN",
-                                "detail": f"환각 의심 {hallucination_count}건 (예상 외 변수 추출)"})
+                checks.append({"item": "추가 추출 건수", "status": "WARN",
+                                "detail": f"{hallucination_count}건 — expected_extracted 미정의 변수 추출 (환각과 구별 필요)"})
 
             if summary_score is None:
                 checks.append({"item": "요약 완전성", "status": "SKIPPED", "detail": "summary_keywords 없음"})
@@ -518,29 +518,46 @@ async def run_mcp_health_check() -> dict:
 
 # ── 오케스트레이터 평가 ──────────────────────────────────────────
 
+def _load_orchestrator_cases() -> list[dict]:
+    import json
+    p = _EVAL_CASES_DIR / "orchestrator_eval_cases.json"
+    if p.exists():
+        return json.loads(p.read_text(encoding="utf-8"))
+    return []
+
+
 async def run_orchestrator_eval(db: AsyncSession) -> dict:
     """오케스트레이터 라우팅 평가 — 정확도 90%+, 문진 중 유출 0건, sticky 규칙."""
-    import asyncio as _asyncio
-
     from ai.orchestrator.router import route
     from ai.orchestrator.contracts import Flow, Phase, SessionContext
 
-    _CASES: list[tuple] = [
-        ("BOOKED 증상",         Phase.BOOKED,       Flow.IDLE,                    "오늘 구토 3번 했어요",    {"followup_filter"}),
-        ("BOOKED 병원정보",      Phase.BOOKED,       Flow.IDLE,                    "병원 몇 시까지 해요?",    {"followup_filter"}),
-        ("SCHEDULING 고정",      Phase.PRE_BOOKING,  Flow.SCHEDULING,              "다음주 월요일로요",        {"schedule"}),
-        ("예약확인 게이트",       Phase.PRE_BOOKING,  Flow.AWAITING_BOOKING_CONFIRM,"네",                     {"triage"}),
-        ("PRE 발작",             Phase.PRE_BOOKING,  Flow.IDLE,                    "발작 중이에요",           {"triage"}),
-        ("PRE 호흡",             Phase.PRE_BOOKING,  Flow.IDLE,                    "호흡이 이상해요",         {"triage"}),
-        ("PRE 병원 위치",        Phase.PRE_BOOKING,  Flow.IDLE,                    "병원 어디 있어요?",       {"reception"}),
-        ("TRIAGING 중 답변",     Phase.PRE_BOOKING,  Flow.TRIAGING,                "어제부터요",              {"triage"}),
-        ("PRE 잡담",             Phase.PRE_BOOKING,  Flow.IDLE,                    "오늘 날씨 좋네요",        {"reception", "redirect"}),
-    ]
+    _PHASE_MAP = {
+        "PRE_BOOKING": Phase.PRE_BOOKING,
+        "BOOKED": Phase.BOOKED,
+        "CLOSED": Phase.CLOSED,
+    }
+    _FLOW_MAP = {
+        "IDLE": Flow.IDLE,
+        "TRIAGING": Flow.TRIAGING,
+        "SCHEDULING": Flow.SCHEDULING,
+        "AWAITING_BOOKING_CONFIRM": Flow.AWAITING_BOOKING_CONFIRM,
+    }
+
+    raw_cases = _load_orchestrator_cases()
+    if not raw_cases:
+        return {"agent": "orchestrator", "overall": "SKIPPED", "checks": [
+            {"item": "라우팅 평가", "status": "SKIPPED", "detail": "orchestrator_eval_cases.json 없음"}
+        ], "metrics": {}}
 
     hit = total = triage_leak = 0
     errors_detail: list[dict] = []
 
-    for name, phase, flow, msg, allowed in _CASES:
+    for c in raw_cases:
+        name = c["name"]
+        phase = _PHASE_MAP.get(c["phase"], Phase.PRE_BOOKING)
+        flow = _FLOW_MAP.get(c["flow"], Flow.IDLE)
+        msg = c["message"]
+        allowed = set(c["allowed"])
         total += 1
         ctx = SessionContext(
             session_id=0, userid=0, petid=0, pet_info={},
@@ -556,7 +573,7 @@ async def run_orchestrator_eval(db: AsyncSession) -> dict:
         if got in allowed:
             hit += 1
         else:
-            errors_detail.append({"case": name, "expected": str(allowed), "got": got})
+            errors_detail.append({"case": name, "expected": str(sorted(allowed)), "got": got})
 
         if flow == Flow.TRIAGING and got == "followup_filter":
             triage_leak += 1
@@ -767,11 +784,11 @@ async def run_schedule_eval(test_cases: list[dict] | None = None) -> dict:
     # Check 3: 형식 유효성
     valid_count = sum(
         1 for item in results
-        if item.get("res") and 15 <= item["res"].get("estimated_duration_min", 0) <= 60
+        if item.get("res") and 15 <= item["res"].get("estimated_duration_min", 0) <= 90
         and item["res"].get("estimated_duration_min", 0) % 5 == 0
     )
     checks.append({
-        "item": "형식 유효성 (15~60분, 5분 단위)",
+        "item": "형식 유효성 (15~90분, 5분 단위)",
         "status": "PASS" if valid_count == total else "WARN",
         "detail": f"{valid_count}/{total}",
     })

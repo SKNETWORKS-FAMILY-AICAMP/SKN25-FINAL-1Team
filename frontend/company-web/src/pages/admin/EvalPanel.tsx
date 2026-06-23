@@ -1116,8 +1116,8 @@ const AGENT_CONFIG: Record<Exclude<TabId, "overall">, {
   desc: string;
 }> = {
   triage:    { label: "Triage",    endpoint: "/admin/eval/triage",    desc: "응급도 정확도 · Red flag 감지율 (결정론) + 슬롯 추출 F1 · 환각 · 요약 완전성 (LLM). 15개 케이스 기준." },
-  schedule:  { label: "Schedule",  endpoint: "/admin/eval/schedule",  desc: "소요시간 범위 · 응급도 순서 · 형식 유효성 (4케이스 기준)." },
-  chart:     { label: "Chart",     endpoint: "/admin/eval/chart",     desc: "SOAP 구조 완전성 · 키워드 포함율 · 단정 표현 없음 (3케이스 기준)." },
+  schedule:  { label: "Schedule",  endpoint: "/admin/eval/schedule",  desc: "소요시간 범위 · 응급도 순서 · 형식 유효성 (20 케이스 기준)." },
+  chart:     { label: "Chart",     endpoint: "/admin/eval/chart",     desc: "SOAP 구조 완전성 · 키워드 포함율 · 단정 표현 없음 (19 케이스 기준)." },
   reception: { label: "Reception", endpoint: "/admin/eval/reception", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 10케이스). MCP 서버 가동 필요." },
   followup:  { label: "경과 필터", endpoint: "/admin/eval/followup",  logsEndpoint: "/admin/eval/followup/logs", desc: "경과 필터 에이전트 분류 성능 측정. 테스트 케이스 100개 기준." },
 };

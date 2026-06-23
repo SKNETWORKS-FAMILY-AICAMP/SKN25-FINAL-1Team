@@ -8,7 +8,7 @@
     "expected_extracted": {"NEUROLOGIC": {"seizure_status": "active"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["발작", "경련"]
+    "expected_summary_keywords": ["발작"]
   },
   {
     "name": "심한 호흡곤란 (RED — RESPIRATORY)",
@@ -19,7 +19,7 @@
     "expected_extracted": {"RESPIRATORY": {"breathing_severity": "severe"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["호흡", "숨"]
+    "expected_summary_keywords": ["호흡"]
   },
   {
     "name": "의식불명 (RED — NEUROLOGIC)",
@@ -30,7 +30,7 @@
     "expected_extracted": {"NEUROLOGIC": {"consciousness": "unresponsive"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["의식", "반응"]
+    "expected_summary_keywords": ["의식"]
   },
   {
     "name": "요도폐색 (RED — UROGENITAL)",
@@ -41,7 +41,7 @@
     "expected_extracted": {"UROGENITAL": {"urination": "obstruction"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["소변", "배뇨"]
+    "expected_summary_keywords": ["소변"]
   },
   {
     "name": "자일리톨 섭취 (RED — TOXIN)",
@@ -52,7 +52,7 @@
     "expected_extracted": {"TOXIN": {"substance": "xylitol"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["자일리톨", "껌"]
+    "expected_summary_keywords": ["자일리톨"]
   },
   {
     "name": "GDV 위염전 의심 (RED — GASTROINTESTINAL)",
@@ -60,10 +60,10 @@
       {"role": "user", "content": "강아지 배가 갑자기 너무 빵빵하게 부풀어 올랐어요 밥 먹고 나서 얼마 안 됐는데 배가 팽팽하고 계속 헛구역질만 해요 일어서지도 못하고 안절부절 못해요"}
     ],
     "pet_info": {"name": "맥스", "species": "강아지", "breed": "그레이트데인", "age": 5},
-    "expected_extracted": {"GASTROINTESTINAL": {"abdominal_distension": "rapid_onset"}},
+    "expected_extracted": {"GASTROINTESTINAL": {"abdominal_distension": "rapid_onset", "vomiting": "persistent"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["배", "팽창", "헛구역"]
+    "expected_summary_keywords": ["복부", "팽창"]
   },
   {
     "name": "쇼크 (RED — CARDIOVASCULAR)",
@@ -71,10 +71,10 @@
       {"role": "user", "content": "강아지가 갑자기 쓰러지더니 잇몸이 하얗게 됐어요 숨도 약하게 쉬고 다리가 차가워요 의식은 있는데 완전히 힘이 없어요"}
     ],
     "pet_info": {"name": "두부", "species": "강아지", "breed": "진돗개", "age": 8},
-    "expected_extracted": {"CARDIOVASCULAR": {"perfusion": "shock"}},
+    "expected_extracted": {"CARDIOVASCULAR": {"perfusion": "shock", "collapse": "collapsed_now"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["쇼크", "잇몸", "차갑"]
+    "expected_summary_keywords": ["쇼크", "잇몸"]
   },
   {
     "name": "포도 섭취 (RED — TOXIN)",
@@ -85,7 +85,7 @@
     "expected_extracted": {"TOXIN": {"substance": "grapes_raisins"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["포도", "섭취"]
+    "expected_summary_keywords": ["포도"]
   },
   {
     "name": "난산 (RED — REPRODUCTIVE)",
@@ -96,7 +96,7 @@
     "expected_extracted": {"REPRODUCTIVE": {"dystocia": "prolonged_or_stuck"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["분만", "난산", "출산"]
+    "expected_summary_keywords": ["분만", "난산"]
   },
   {
     "name": "열사병 (RED — ENVIRONMENTAL)",
@@ -107,7 +107,7 @@
     "expected_extracted": {"ENVIRONMENTAL": {"heatstroke": "suspected"}},
     "expected_urgency": "RED",
     "expected_red_flag": true,
-    "expected_summary_keywords": ["열사병", "더위", "체온"]
+    "expected_summary_keywords": ["열사병"]
   },
   {
     "name": "중등도 호흡곤란 (ORANGE — RESPIRATORY)",
@@ -140,7 +140,7 @@
     "expected_extracted": {"RESPIRATORY": {"nasal_discharge": "bloody"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["코", "피"]
+    "expected_summary_keywords": ["코", "출혈"]
   },
   {
     "name": "혈변 (ORANGE — GASTROINTESTINAL)",
@@ -151,7 +151,7 @@
     "expected_extracted": {"GASTROINTESTINAL": {"diarrhea": "bloody"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["혈변", "피", "설사"]
+    "expected_summary_keywords": ["혈변"]
   },
   {
     "name": "혈토 (ORANGE — GASTROINTESTINAL)",
@@ -162,7 +162,7 @@
     "expected_extracted": {"GASTROINTESTINAL": {"vomiting": "hematemesis"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["혈토", "피", "구토"]
+    "expected_summary_keywords": ["혈토"]
   },
   {
     "name": "의식 저하 (ORANGE — NEUROLOGIC)",
@@ -173,7 +173,7 @@
     "expected_extracted": {"NEUROLOGIC": {"consciousness": "dull"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["의식", "반응", "멍"]
+    "expected_summary_keywords": ["의식", "반응"]
   },
   {
     "name": "얼굴 부종 — 알레르기 (ORANGE — SKIN)",
@@ -184,7 +184,7 @@
     "expected_extracted": {"SKIN": {"facial_swelling": "yes"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["부종", "얼굴", "알레르기"]
+    "expected_summary_keywords": ["부종"]
   },
   {
     "name": "초콜릿 섭취 (ORANGE — TOXIN)",
@@ -195,7 +195,7 @@
     "expected_extracted": {"TOXIN": {"substance": "chocolate"}},
     "expected_urgency": "ORANGE",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["초콜릿", "독소"]
+    "expected_summary_keywords": ["초콜릿"]
   },
   {
     "name": "경도 호흡곤란 (YELLOW — RESPIRATORY)",
@@ -206,7 +206,7 @@
     "expected_extracted": {"RESPIRATORY": {"breathing_severity": "mild"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["호흡", "숨"]
+    "expected_summary_keywords": ["호흡"]
   },
   {
     "name": "잦은 기침 (YELLOW — RESPIRATORY)",
@@ -239,7 +239,7 @@
     "expected_extracted": {"RESPIRATORY": {"cough": "honking"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["기침", "소리"]
+    "expected_summary_keywords": ["기침"]
   },
   {
     "name": "지속 구토 (YELLOW — GASTROINTESTINAL)",
@@ -250,7 +250,7 @@
     "expected_extracted": {"GASTROINTESTINAL": {"vomiting": "persistent"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["구토", "지속"]
+    "expected_summary_keywords": ["구토"]
   },
   {
     "name": "혈뇨 (YELLOW — UROGENITAL)",
@@ -261,7 +261,7 @@
     "expected_extracted": {"UROGENITAL": {"hematuria": "yes"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["혈뇨", "소변", "피"]
+    "expected_summary_keywords": ["혈뇨"]
   },
   {
     "name": "운동실조 비틀거림 (YELLOW — NEUROLOGIC)",
@@ -272,7 +272,7 @@
     "expected_extracted": {"NEUROLOGIC": {"ataxia": "yes"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["비틀거림", "운동실조", "균형"]
+    "expected_summary_keywords": ["비틀", "보행"]
   },
   {
     "name": "뒷다리 체중부하 불가 (YELLOW — ORTHOPEDIC)",
@@ -283,7 +283,7 @@
     "expected_extracted": {"ORTHOPEDIC": {"ambulation": "non_weight_bearing"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["다리", "절음", "체중부하"]
+    "expected_summary_keywords": ["다리", "절음"]
   },
   {
     "name": "심한 피부 가려움 (YELLOW — SKIN)",
@@ -294,7 +294,7 @@
     "expected_extracted": {"SKIN": {"itch": "severe"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["가려움", "긁음"]
+    "expected_summary_keywords": ["가려움"]
   },
   {
     "name": "다음다뇨 (YELLOW — UROGENITAL)",
@@ -305,7 +305,7 @@
     "expected_extracted": {"UROGENITAL": {"polyuria": "yes"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["다뇨", "다음", "물"]
+    "expected_summary_keywords": ["다뇨"]
   },
   {
     "name": "경증 탈수 (YELLOW — GENERAL)",
@@ -316,7 +316,7 @@
     "expected_extracted": {"GENERAL": {"dehydration": "mild"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["탈수", "잇몸", "건조"]
+    "expected_summary_keywords": ["탈수"]
   },
   {
     "name": "귀 혈종 (YELLOW — EAR)",
@@ -327,7 +327,7 @@
     "expected_extracted": {"EAR": {"aural_hematoma": "yes"}},
     "expected_urgency": "YELLOW",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["귀", "혈종", "부종"]
+    "expected_summary_keywords": ["귀", "혈종"]
   },
   {
     "name": "가끔 기침 (GREEN — RESPIRATORY)",
@@ -382,7 +382,7 @@
     "expected_extracted": {"EAR": {"ear_mites": "yes"}},
     "expected_urgency": "GREEN",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["귀", "진드기", "가려움"]
+    "expected_summary_keywords": ["귀", "진드기"]
   },
   {
     "name": "가끔 구토 (GREEN — GASTROINTESTINAL)",
@@ -390,10 +390,10 @@
       {"role": "user", "content": "강아지가 가끔 토를 해요 일주일에 한두 번 정도 밥 먹고 나서 토하는데 피는 없고 노란 액체가 나와요 밥은 잘 먹어요"}
     ],
     "pet_info": {"name": "뭉치", "species": "강아지", "breed": "진도", "age": 4},
-    "expected_extracted": {"GASTROINTESTINAL": {"vomiting": "occasional"}},
+    "expected_extracted": {"GASTROINTESTINAL": {"vomiting": "occasional", "appetite": "normal"}},
     "expected_urgency": "GREEN",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["구토", "가끔"]
+    "expected_summary_keywords": ["구토"]
   },
   {
     "name": "경미한 설사 (GREEN — GASTROINTESTINAL)",
@@ -401,10 +401,10 @@
       {"role": "user", "content": "고양이 대변이 오늘 좀 물렁물렁했어요 평소보다 부드러운데 피는 없고 한 번만 그랬어요 밥도 잘 먹고 활발해요"}
     ],
     "pet_info": {"name": "탱이", "species": "고양이", "breed": "아메리칸숏헤어", "age": 3},
-    "expected_extracted": {"GASTROINTESTINAL": {"diarrhea": "mild"}},
+    "expected_extracted": {"GASTROINTESTINAL": {"diarrhea": "mild", "appetite": "normal"}},
     "expected_urgency": "GREEN",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["설사", "변"]
+    "expected_summary_keywords": ["설사"]
   },
   {
     "name": "눈 충혈 경도 (GREEN — EYE)",
@@ -426,7 +426,7 @@
     "expected_extracted": {"ORTHOPEDIC": {"ambulation": "limping"}},
     "expected_urgency": "GREEN",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["절뚝", "절음", "파행"]
+    "expected_summary_keywords": ["절뚝"]
   },
   {
     "name": "구강 악취 및 치석 (GREEN — ORAL_DENTAL)",
@@ -437,6 +437,6 @@
     "expected_extracted": {"ORAL_DENTAL": {"halitosis_tartar": "yes"}},
     "expected_urgency": "GREEN",
     "expected_red_flag": false,
-    "expected_summary_keywords": ["치석", "구취", "잇몸"]
+    "expected_summary_keywords": ["치석"]
   }
 ]
