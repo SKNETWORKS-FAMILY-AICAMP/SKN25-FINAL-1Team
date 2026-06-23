@@ -64,6 +64,45 @@ def _load_chart_cases() -> list[dict]:
     return []
 
 
+async def _llm_judge_keywords(text: str, keywords: list[str]) -> list[bool]:
+    """하이브리드 게이트: 1차 string match → 실패 시에만 LLM 의미 판단."""
+    if not keywords or not text.strip():
+        return [False] * len(keywords)
+
+    # 1차: string match (공백 제거 포함 — 의학용어 띄어쓰기 변형 대응)
+    text_nospace = text.replace(" ", "")
+    results = [kw in text or kw.replace(" ", "") in text_nospace for kw in keywords]
+
+    # 1차 실패 키워드만 LLM으로 의미 판단 (비용 최소화)
+    failed_idx = [i for i, r in enumerate(results) if not r]
+    if not failed_idx:
+        return results  # 전부 통과 — LLM 호출 없음
+
+    from ai.llm import call_llm_json
+    failed_kws = [keywords[i] for i in failed_idx]
+    kw_lines = "\n".join(f"{i + 1}. {kw}" for i, kw in enumerate(failed_kws))
+    prompt = (
+        "아래 텍스트에서 각 키워드의 의미가 반영되어 있는지 판단하세요.\n"
+        "표현 방식이 달라도 의미가 동일하면 포함으로 봅니다.\n\n"
+        f"[텍스트]\n{text[:2000]}\n\n"
+        f"[키워드 목록]\n{kw_lines}\n\n"
+        "각 키워드에 대해 JSON으로만 답하세요:\n"
+        '{"results": [{"keyword": "키워드명", "included": true}, ...]}'
+    )
+    try:
+        raw = await call_llm_json(prompt)
+        mapping = {
+            r.get("keyword", ""): bool(r.get("included", False))
+            for r in (raw.get("results") or [])
+        }
+        for i, kw in zip(failed_idx, failed_kws):
+            results[i] = mapping.get(kw, False)
+    except Exception:
+        pass  # LLM 실패 시 string match 결과(False) 유지
+
+    return results
+
+
 # ── 경과 필터 평가 ────────────────────────────────────────────────
 
 async def run_followup_filter_eval(
@@ -318,7 +357,8 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
 
     # ── LLM 체크 (3, 4, 8) ───────────────────────────────────
     slot_tp = slot_fp = slot_fn = 0
-    hallucination_count = 0
+    grounded_count = ungrounded_count = 0
+    ungrounded_samples: list[str] = []
     summary_kw_hits = summary_kw_total = 0
     llm_errors = 0
 
@@ -338,6 +378,9 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
         results = await asyncio.gather(
             *[_extract_one(c) for c in cases], return_exceptions=True
         )
+
+        _summary_judge_items: list[tuple[str, list]] = []
+        _grounding_check_items: list[tuple[str, str, str]] = []  # (var, val_str, user_text)
 
         for case, res in zip(cases, results):
             if isinstance(res, Exception) or not isinstance(res, dict):
@@ -362,15 +405,63 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                 if val not in _trivial and expected_flat.get(var) != val:
                     slot_fp += 1
 
+            # 추가 추출 변수에 보호자 발화 근거가 있는지 확인 (1차: string match)
+            msgs = case.get("messages", [])
+            user_text = " ".join(
+                m.get("content", "")
+                for m in msgs
+                if isinstance(m, dict) and m.get("role") == "user"
+            )
+            user_text_nospace = user_text.replace(" ", "")
             for var, val in extracted_vars.items():
-                if val not in _trivial and var not in expected_flat:
-                    hallucination_count += 1
+                val_str = str(val)
+                if val_str not in _trivial and var not in expected_flat:
+                    if val_str in user_text or val_str.replace(" ", "") in user_text_nospace:
+                        grounded_count += 1
+                    else:
+                        # string match 실패 → 2차 LLM 판단 대기열
+                        _grounding_check_items.append((var, val_str, user_text))
 
-            keywords = case.get("expected_summary_keywords", [])
-            summary_kw_total += len(keywords)
-            for kw in keywords:
-                if kw in summary:
-                    summary_kw_hits += 1
+            _summary_judge_items.append((summary, case.get("expected_summary_keywords", [])))
+
+        # 2차: string match 실패한 추가 추출 → LLM으로 var 개념 언급 여부 판단
+        if _grounding_check_items:
+            async def _judge_grounding(var: str, val_str: str, ut: str) -> bool:
+                prompt = (
+                    "동물병원 보호자의 발화를 보고 두 가지를 판단하세요.\n"
+                    "1. 발화에 아래 항목(var)에 관한 내용이 언급됐는가?\n"
+                    "2. 추출된 값(val)이 발화 내용과 타당하게 일치하는가?\n"
+                    "둘 다 만족할 때만 grounded=true로 답하세요.\n\n"
+                    f"[보호자 발화]\n{ut[:1500]}\n\n"
+                    f"[항목(var)] {var}\n"
+                    f"[추출된 값(val)] {val_str}\n\n"
+                    'JSON만 출력: {"grounded": true 또는 false}'
+                )
+                try:
+                    raw = await call_llm_json(prompt)
+                    return bool(raw.get("grounded", False))
+                except Exception:
+                    return False
+
+            _grounding_results = await asyncio.gather(
+                *[_judge_grounding(var, val_str, ut) for var, val_str, ut in _grounding_check_items],
+                return_exceptions=True,
+            )
+            for (var, val_str, _), grounded in zip(_grounding_check_items, _grounding_results):
+                if isinstance(grounded, Exception) or not grounded:
+                    ungrounded_count += 1
+                    if len(ungrounded_samples) < 3:
+                        ungrounded_samples.append(f"{var}: {val_str}")
+                else:
+                    grounded_count += 1
+
+        if _summary_judge_items:
+            _summary_results = await asyncio.gather(
+                *[_llm_judge_keywords(s, kws) for s, kws in _summary_judge_items]
+            )
+            for judgments, (_, kws) in zip(_summary_results, _summary_judge_items):
+                summary_kw_total += len(kws)
+                summary_kw_hits += sum(judgments)
 
         slot_precision = slot_tp / (slot_tp + slot_fp) if (slot_tp + slot_fp) > 0 else None
         slot_recall = slot_tp / (slot_tp + slot_fn) if (slot_tp + slot_fn) > 0 else None
@@ -396,11 +487,24 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                 checks.append({"item": "슬롯 추출 F1", "status": "WARN",
                                 "detail": f"F1={slot_f1:.2f} (기준 0.80, P={slot_precision:.2f} R={slot_recall:.2f})"})
 
-            if hallucination_count == 0:
+            total_extra = grounded_count + ungrounded_count
+            if total_extra == 0:
                 checks.append({"item": "추가 추출 건수", "status": "PASS", "detail": "expected 외 추출 없음"})
+            elif ungrounded_count == 0:
+                checks.append({
+                    "item": "추가 추출 건수",
+                    "status": "PASS",
+                    "detail": f"{grounded_count}건 추가 추출 — 전부 발화 근거 확인됨 (테스트셋 미정의)",
+                })
             else:
-                checks.append({"item": "추가 추출 건수", "status": "WARN",
-                                "detail": f"{hallucination_count}건 — expected_extracted 미정의 변수 추출 (환각과 구별 필요)"})
+                checks.append({
+                    "item": "추가 추출 건수",
+                    "status": "WARN",
+                    "detail": (
+                        f"근거 없는 추출 {ungrounded_count}건 — {'; '.join(ungrounded_samples)}"
+                        + (f" (발화 근거 있음 {grounded_count}건)" if grounded_count > 0 else "")
+                    ),
+                })
 
             if summary_score is None:
                 checks.append({"item": "요약 완전성", "status": "SKIPPED", "detail": "summary_keywords 없음"})
@@ -432,7 +536,8 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
             "slot_f1": round(slot_f1, 3) if slot_f1 is not None else None,
             "slot_precision": round(slot_precision, 3) if slot_precision is not None else None,
             "slot_recall": round(slot_recall, 3) if slot_recall is not None else None,
-            "hallucination_count": hallucination_count,
+            "extra_grounded": grounded_count,
+            "extra_ungrounded": ungrounded_count,
             "summary_score": round(summary_score, 3) if summary_score is not None else None,
             "llm_errors": llm_errors,
             "total_cases": len(cases),
@@ -880,17 +985,38 @@ async def run_chart_eval(test_cases: list[dict] | None = None) -> dict:
 
     total = len(cases)
 
-    # Check 1: SOAP 구조
+    # Check 1: SOAP 섹션별 최소 요건
+    _A_KEYWORDS = ("의심", "가능성", "감별", "추정")
+    _P_KEYWORDS = ("검사", "처치", "재진", "모니터링")
+
     soap_complete = 0
     soap_errors: list[str] = []
     for item in results:
         case, res = item["case"], item.get("res") or {}
         soap = res.get("soap") or {}
-        missing = [k for k in ("S", "O", "A", "P") if not str(soap.get(k, "")).strip()]
-        if not missing:
+
+        section_issues = []
+
+        s_text = str(soap.get("S", "")).strip()
+        if len(s_text) < 30:
+            section_issues.append("S(주증상·경과 미흡)")
+
+        o_text = str(soap.get("O", "")).strip()
+        if "내원" not in o_text:
+            section_issues.append("O(신체검사 항목 미언급)")
+
+        a_text = str(soap.get("A", "")).strip()
+        if not a_text or not any(kw in a_text for kw in _A_KEYWORDS):
+            section_issues.append("A(추정·감별 표현 없음)")
+
+        p_text = str(soap.get("P", "")).strip()
+        if not p_text or not any(kw in p_text for kw in _P_KEYWORDS):
+            section_issues.append("P(다음 단계 계획 없음)")
+
+        if not section_issues:
             soap_complete += 1
         else:
-            soap_errors.append(f"{case['name']}: {missing} 누락")
+            soap_errors.append(f"{case['name']}: {', '.join(section_issues)}")
 
     soap_acc = soap_complete / total if total else 0
     checks.append({
@@ -899,18 +1025,25 @@ async def run_chart_eval(test_cases: list[dict] | None = None) -> dict:
         "detail": f"{soap_complete}/{total}" + (f" — {'; '.join(soap_errors)}" if soap_errors else ""),
     })
 
-    # Check 2: 키워드 포함율
+    # Check 2: 키워드 포함율 (LLM-as-judge)
+    import asyncio as _asyncio
     kw_hits = kw_total = 0
-    for item in results:
+
+    async def _chart_kw_judge(item: dict) -> tuple[int, int]:
         case, res = item["case"], item.get("res") or {}
         keywords = case.get("expected_keywords", [])
+        if not keywords:
+            return 0, 0
         soap_s = str((res.get("soap") or {}).get("S", ""))
         intake = str((res.get("intake_summary") or {}).get("guardian_report", ""))
-        combined = soap_s + " " + intake
-        for kw in keywords:
-            kw_total += 1
-            if kw in combined:
-                kw_hits += 1
+        combined = (soap_s + " " + intake).strip()
+        judgments = await _llm_judge_keywords(combined, keywords)
+        return sum(judgments), len(keywords)
+
+    _kw_pairs = await _asyncio.gather(*[_chart_kw_judge(item) for item in results])
+    for hits, total in _kw_pairs:
+        kw_hits += hits
+        kw_total += total
 
     kw_score = kw_hits / kw_total if kw_total > 0 else None
     if kw_score is None:
