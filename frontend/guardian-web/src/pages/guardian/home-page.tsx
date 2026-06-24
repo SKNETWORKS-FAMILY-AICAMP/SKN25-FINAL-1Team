@@ -279,6 +279,12 @@ const HomePage = () => {
                   튜토리얼
                 </button>
                 <Link
+                  to="/pets/archive"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  {t("petArchive.linkLabel")}
+                </Link>
+                <Link
                   to={petRegisterPath}
                   className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
                 >

@@ -1,5 +1,6 @@
 import json
 import os
+from functools import lru_cache
 
 import langfuse.openai  # OpenAI 클라이언트 자동 패치 — 토큰/latency 추적
 from dotenv import load_dotenv
@@ -24,13 +25,22 @@ def _resolve_model() -> str:
         return "gpt-5.4-mini"
 
 
+@lru_cache(maxsize=16)
+def _build_llm(model: str, temperature: float) -> ChatOpenAI:
+    """(model, temperature)별 ChatOpenAI 1개를 만들어 재사용한다.
+
+    ★ latency: 한 턴에 라우터+에이전트로 LLM을 여러 번 연달아 부르는데, 매번 새 클라이언트를
+    만들면 그때마다 새 TLS 핸드셰이크가 일어난다. 클라이언트를 캐싱하면 내부 httpx 커넥션 풀이
+    keep-alive로 재사용돼 호출당 수백 ms를 아낀다. 클라이언트는 호출 간 상태가 없어 공유 안전.
+    (model이 런타임에 바뀔 일은 없지만, 만약을 위해 model도 캐시 키에 넣는다.)
+    """
+    return ChatOpenAI(model=model, temperature=temperature)
+
+
 def get_llm(
     temperature: float = 0.3,
 ):
-    return ChatOpenAI(
-        model=_resolve_model(),
-        temperature=temperature,
-    )
+    return _build_llm(_resolve_model(), temperature)
 
 
 async def call_llm(

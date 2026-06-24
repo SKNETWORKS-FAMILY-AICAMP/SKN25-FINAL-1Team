@@ -15,17 +15,15 @@ from langfuse import observe
 from ai.llm import call_llm_json
 
 from .contracts import INITIAL_TRIAGE_PILL, TRIAGE_CLOSE_PILL, Flow, Phase, SessionContext
+from .registry import REGISTRY
 
 logger = logging.getLogger(__name__)
 
-# 후보 에이전트 설명 — 라우터 LLM이 담당을 고를 때 본다. (REGISTRY description 과 동기화)
-_AGENT_DESC = {
-    "reception": "병원 정보(위치·운영시간·전화·수의사 소개), 예약 전 일반 안내, 비타민·영양제·사료·간식 같은 일반 케어 질문. 진단·처방은 수의사께 넘긴다.",
-    "triage": "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기.",
-    "followup_filter": "예약 후 아이 상태에 대한 모든 대화·질문(증상 변화·사진·되묻기 포함)을 받고, "
-                       "예약 시간 변경·재예약, '내 예약 시각이 언제인지' 확인도 처리한다.",
-    "redirect": "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단.",
-}
+# 후보 에이전트 설명 — 라우터 LLM이 담당을 고를 때 본다.
+# 단일 출처: 각 에이전트의 .description 을 그대로 읽어 라우터-에이전트 설명 드리프트를 없앤다.
+# redirect 는 REGISTRY에 없는 그래프 전용 노드라 여기서만 설명을 단다.
+_AGENT_DESC = {name: agent.description for name, agent in REGISTRY.items()}
+_AGENT_DESC["redirect"] = "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단."
 
 # 시스템이 직접 제공한 pill — LLM 없이 결정론 처리 (버튼 클릭은 판단이 아니다).
 _RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
@@ -49,8 +47,6 @@ def _candidates(ctx: SessionContext) -> list[str]:
         # followup_filter가 받아 되묻게 한다. 병원 정보(위치/시간/전화)만 reception.
         return ["reception", "followup_filter"]   # triage·redirect 불가
 
-    if ctx.phase == Phase.CLOSED:
-        return ["reception", "redirect"]
     return ["reception", "triage", "redirect"]                # 예약 전: followup 불가
 
 
@@ -87,8 +83,6 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
         phase_hint = ("지금은 '예약 후'야. 아이 상태 관련 대화·질문, 예약 변경·재예약, "
                       "'내 예약 시각이 언제인지' 확인은 모두 followup_filter. "
                       "병원 위치·운영시간·전화 같은 순수 병원 정보만 reception. (증상 문진은 더 안 한다)")
-    elif ctx.phase == Phase.CLOSED:
-        phase_hint = "지금은 과거 예약 상태야. 채팅은 닫지 않고 병원 안내(reception)를 중심으로 응답한다."
     else:
         phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
                       "병원 정보·비타민·영양제·사료·간식 추천 같은 일반 케어 질문은 reception. "
@@ -152,8 +146,9 @@ async def route(ctx: SessionContext) -> str:
             return "triage"
         return "reception"
 
-    if ctx.phase == Phase.PRE_BOOKING and any(k in (ctx.user_message or "") for k in _CARE_KW):
-        return "reception"
+    # (예전엔 PRE_BOOKING + CARE_KW면 무조건 reception으로 단락시켰는데, "산책하면 내려가나요?"처럼
+    #  증상·응급 발화가 케어 단어를 품으면 triage(+안전 선별)를 건너뛰는 오라우팅이 났다. 케어 vs 증상
+    #  판단은 LLM 라우터에 맡긴다 — phase_hint가 이미 '케어 질문은 reception'을 안내한다.)
 
     if ctx.phase == Phase.BOOKED:
         text = ctx.user_message or ""

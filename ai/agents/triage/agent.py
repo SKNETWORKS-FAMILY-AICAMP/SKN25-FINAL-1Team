@@ -14,6 +14,8 @@
 """
 from __future__ import annotations
 
+import asyncio
+
 from langfuse import observe
 
 import logging
@@ -35,6 +37,7 @@ from .prompts import (
     build_extraction_prompt,
     build_question_prompt,
     build_redirect_reply_prompt,
+    build_safety_screen_prompt,
     build_suspected_confirm_message,
     build_suspected_confirm_prompt,
 )
@@ -130,9 +133,23 @@ async def _run_rag(query: str) -> tuple[list, list]:
         return [], []
 
 
+async def _safety_screen(history: list[dict], user_message: str) -> dict:
+    """'지금 바로/빨리 진료가 필요할 수 있는 상황'인지만 보는 작은 분류 콜. fail-open.
+
+    추출 콜과 병렬로 돌려 latency를 늘리지 않는다. urgent면 차분한 안전 한 줄(note)을 같이 받아온다.
+    """
+    try:
+        out = await call_llm_json(build_safety_screen_prompt(history, user_message))
+        return {"urgent": bool(out.get("urgent")), "note": (out.get("note") or "").strip()}
+    except Exception as e:
+        logger.warning("[triage] 안전 선별 콜 실패(폴백): %s", e)
+        return {"urgent": False, "note": ""}
+
+
 class TriageAgent:
     name = "triage"
-    description = "증상 문진 + 응급도 판정. 질문은 LLM이 자연스럽게(트리 비노출), 판정은 디스크리미네이터로 결정론."
+    # 라우터 LLM이 담당 선택 시 읽는 설명(router._AGENT_DESC 단일 출처).
+    description = "반려동물 증상 문진과 응급도 판정. 증상 호소·문진 답변·되묻기."
 
     @observe(name="triage")
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
@@ -194,14 +211,27 @@ class TriageAgent:
                     state_patch={"active_flow": "idle"},
                 )
 
-        # 2) 추출 콜
+        # 2) 추출 콜 + 안전 선별 콜 — 동시에(asyncio) 돌려 latency를 늘리지 않는다.
+        #    안전 선별은 '지금 바로/빨리 진료가 필요할 수 있나'만 보고, 해당되면 첫 응답에 한 줄 덧붙인다.
+        extraction_task = asyncio.create_task(call_llm_json(
+            build_extraction_prompt(history, ctx.user_message, prev_section, extracted, vision_note)
+        ))
+        safety_task = asyncio.create_task(_safety_screen(history, ctx.user_message))
         try:
-            out = await call_llm_json(
-                build_extraction_prompt(history, ctx.user_message, prev_section, extracted, vision_note)
-            )
+            out = await extraction_task
         except Exception as e:
             logger.warning("[triage] 추출 콜 실패: %s", e)
             out = {}
+        safety = await safety_task
+
+        # 안전 안내 한 줄 — urgent로 판단됐고 이번 세션에서 아직 안 띄웠으면 첫 응답 앞에 차분히 덧붙인다.
+        #   문진 흐름·라우팅은 그대로 두고(additive), 위험 자가처치 만류 + 빠른 진료 권유만 보탠다.
+        safety_note = ""
+        if safety.get("urgent") and safety.get("note") and not state.get("safety_noted"):
+            safety_note = safety["note"].strip() + "\n\n"
+            state["safety_noted"] = True
+        # 증상 질문/완료 멘트 앞에 안전 한 줄을 먼저 보이게 image_notice에 합친다(둘 다 첫 응답 prefix).
+        image_notice = safety_note + image_notice
 
         # 1.5) 의도 분기 — '증상 정보가 아닌 발화'(메타·잡담·막연한 도움요청)는
         #      추출/완료판정/턴카운트에 넣지 않고, 그 발화에 응대한 뒤 본론으로 데려온다.
@@ -216,7 +246,7 @@ class TriageAgent:
         #   (문진 흐름은 유지 — 이어서 증상을 말하면 그대로 문진 진행. 턴카운트·추출은 건드리지 않음.)
         if intent == "booking_request" and ctx.emrid is None:
             return AgentResult(
-                reply=_BOOKING_BLOCKED_REPLY.format(pet=pet_name),
+                reply=safety_note + _BOOKING_BLOCKED_REPLY.format(pet=pet_name),
                 state_patch={"triage_state": state, "active_flow": "triaging"},
             )
         if intent == "closing":
@@ -226,7 +256,8 @@ class TriageAgent:
                 state_patch={"triage_state": state, "active_flow": "idle"},
             )
         if intent in ("meta", "chitchat", "vague_help"):
-            return await self._nonsymptom_turn(ctx, intent, history, prev_section, pet_name, state)
+            return await self._nonsymptom_turn(ctx, intent, history, prev_section, pet_name, state,
+                                               safety_note)
 
         section = out.get("section") or prev_section or "GENERAL"
         # LLM이 값에 대괄호/따옴표를 붙이거나("[recent_single]") 없는 변수를 지어내도 엔진 매칭이
@@ -396,7 +427,8 @@ class TriageAgent:
     # ── 비증상 발화(메타·잡담·막연한 도움요청) → 응대 후 본론 복귀 ──────────────
     #    상태(extracted·turn_count·section)는 그대로 둔다 = 노이즈가 종료 보험을 깎지 않음.
     async def _nonsymptom_turn(self, ctx: SessionContext, intent: str, history: list[dict],
-                               prev_section: str | None, pet_name: str, state: dict) -> AgentResult:
+                               prev_section: str | None, pet_name: str, state: dict,
+                               safety_note: str = "") -> AgentResult:
         try:
             r = await call_llm_json(
                 build_redirect_reply_prompt(pet_name, history, ctx.user_message, intent, prev_section),
@@ -414,7 +446,7 @@ class TriageAgent:
         }.get(intent, "")
         # pill은 응대 에이전트처럼 고정 2지선다 — 증상 더 들을지 / 여기서 마칠지.
         return AgentResult(
-            reply=r.get("reply") or fallback,
+            reply=safety_note + (r.get("reply") or fallback),
             quick_replies=["증상 더 말할게요", TRIAGE_CLOSE_PILL],
             state_patch={"triage_state": state, "active_flow": "triaging"},
         )

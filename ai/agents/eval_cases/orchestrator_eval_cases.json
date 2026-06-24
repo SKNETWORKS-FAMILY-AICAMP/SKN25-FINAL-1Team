@@ -159,19 +159,5 @@
     "flow": "TRIAGING",
     "message": "그런데 병원이 어디 있어요?",
     "allowed": ["reception"]
-  },
-  {
-    "name": "CLOSED — 병원 안내 질문",
-    "phase": "CLOSED",
-    "flow": "IDLE",
-    "message": "병원 위치가 어디예요?",
-    "allowed": ["reception"]
-  },
-  {
-    "name": "CLOSED — 잡담",
-    "phase": "CLOSED",
-    "flow": "IDLE",
-    "message": "감사합니다",
-    "allowed": ["reception", "redirect"]
   }
 ]
