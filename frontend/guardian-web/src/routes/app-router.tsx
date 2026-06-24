@@ -11,6 +11,7 @@ import MypagePage from "../pages/guardian/mypage-page";
 import OnboardingPage from "../pages/guardian/onboarding-page";
 import ScheduleListPage from "../pages/guardian/schedule-list-page";
 import PetRegisterPage from "../pages/pets/pet-register-page";
+import PetArchivePage from "../pages/pets/pet-archive-page";
 import GuardianShell from "../layouts/guardian-shell";
 import OnboardingGate from "./onboarding-gate";
 import ProtectedRoute from "./protected-route";
@@ -35,6 +36,7 @@ const AppRouter = () => {
             <Route path="/mypage" element={<MypagePage />} />
             <Route path="/mypage/password" element={<ChangePasswordPage />} />
             <Route path="/pets/register" element={<PetRegisterPage />} />
+            <Route path="/pets/archive" element={<PetArchivePage />} />
             <Route path="/pets/:petId" element={<PetRegisterPage />} />
             </Route>
           </Route>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>채팅 종합 E2E 리포트</title>
+<style>
+ body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;margin:24px;color:#1a1a1a;background:#fafafa}
+ h1{font-size:22px} h2{font-size:17px;margin-top:28px}
+ table{border-collapse:collapse;width:100%;background:#fff;font-size:13px}
+ th,td{border:1px solid #e0e0e0;padding:8px;vertical-align:top;text-align:left}
+ th{background:#f0f3f7;position:sticky;top:0}
+ .ok{color:#fff;background:#137333;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px}
+ .bad{color:#fff;background:#c5221f;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px}
+ .reply{white-space:pre-wrap;max-width:420px;line-height:1.5}
+ .utt{max-width:180px;white-space:pre-wrap}
+ .meta{color:#666;font-size:11px;margin-top:4px}
+ .rbad{background:#fff5f5}
+ .sumtbl{width:auto;min-width:340px}
+ .note{background:#fff8e1;border:1px solid #ffe082;padding:10px 14px;border-radius:6px;font-size:13px;margin:10px 0}
+ .pills{max-width:160px}
+ .pill{display:inline-block;background:#eef3ff;border:1px solid #c5d6ff;color:#1a3a7a;border-radius:12px;padding:2px 9px;margin:2px;font-size:11px;white-space:nowrap}
+</style></head><body>
+<h1>🐾 채팅 종합 E2E 리포트</h1>
+<p class="meta">생성: unix 1782264194 · seed 병원=메디포동물병원, 담당의=김메디 · 실 dev DB + process_turn(SSE 동일 경로)</p>
+<div class="note"><b>핵심 수치</b> — 전체 16/16 통과 ·
+ route accuracy 1.0 · scheduleid fill 1.0 (BOOKED 7/7 실값) ·
+ archived 차단율 1.0 · BOOKED 맥락정확도 1.0 ·
+ followup 저장 True(1건) · 답변품질 3.67/5</div>
+
+<h2>요약 지표</h2>
+<table class="sumtbl"><tr><td>total_checks</td><td><b>16</b></td></tr><tr><td>turn_latency_ms_avg</td><td><b>1814</b></td></tr><tr><td>turn_latency_ms_p50</td><td><b>1804</b></td></tr><tr><td>turn_latency_ms_max</td><td><b>2829</b></td></tr><tr><td>turns_timed</td><td><b>11</b></td></tr><tr><td>total_passed</td><td><b>16</b></td></tr><tr><td>total_failed</td><td><b>0</b></td></tr><tr><td>pass_rate</td><td><b>1.0</b></td></tr><tr><td>route_accuracy</td><td><b>1.0</b></td></tr><tr><td>route_correct</td><td><b>10</b></td></tr><tr><td>route_total</td><td><b>10</b></td></tr><tr><td>reply_quality_score_avg</td><td><b>3.67</b></td></tr><tr><td>event_correctness</td><td><b>1.0</b></td></tr><tr><td>scheduleid_fill_rate</td><td><b>1.0</b></td></tr><tr><td>booked_with_real_scheduleid</td><td><b>7</b></td></tr><tr><td>booked_total</td><td><b>7</b></td></tr><tr><td>archived_pet_block_rate</td><td><b>1.0</b></td></tr><tr><td>booked_context_accuracy</td><td><b>1.0</b></td></tr><tr><td>followup_save_success</td><td><b>True</b></td></tr><tr><td>followup_saved_rows</td><td><b>1</b></td></tr></table>
+
+<h2>시나리오별 상세 (답변 전문)</h2>
+<table>
+ <tr><th>그룹/시나리오</th><th>사용자 입력</th><th>route/agent</th><th>assistant reply (전문)</th><th>pill 키워드</th><th>events</th><th>결과</th></tr>
+ 
+    <tr class="rok">
+      <td>A_진입<br><b>활성펫_채팅시작_가능</b></td>
+      <td class="utt">(활성펫으로 세션 시작)</td>
+      <td><div class="meta">scheduleid: <b></b> · phase: PRE_BOOKING · ⏱ —</div></td>
+      <td class="reply">세션 시작 가능: True</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">활성펫은 archived_at IS NULL 조건 통과</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>A_진입<br><b>보관펫_신규채팅_차단</b></td>
+      <td class="utt">(보관펫으로 세션 시작 시도)</td>
+      <td><div class="meta">scheduleid: <b></b> · phase:  · ⏱ —</div></td>
+      <td class="reply">세션 시작 차단됨: True</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">보관펫은 archived_at IS NULL 조건에서 제외 → 404 차단</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>A_진입<br><b>보관펫_선택목록_제외</b></td>
+      <td class="utt">(채팅 펫 선택 목록 조회)</td>
+      <td><div class="meta">scheduleid: <b></b> · phase:  · ⏱ —</div></td>
+      <td class="reply">보관전 목록 포함=True, 보관후 제외=True</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">활성 목록(get_pets_by_userid)은 archived 제외</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>B_PRE_BOOKING<br><b>증상→triage</b></td>
+      <td class="utt">우리 강아지가 어제부터 토하고 설사를 해요</td>
+      <td>triage (기대: triage)<div class="meta">scheduleid: <b></b> · phase: PRE_BOOKING · ⏱ 2829ms</div></td>
+      <td class="reply">걱정되시겠어요, 뽀미가 어제부터 계속 그런 편인가요, 아니면 한두 번만 그랬나요?</td>
+      <td class="pills"><span class="pill">한두 번만</span><span class="pill">몇 번 반복돼요</span><span class="pill">계속 그래요</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">기대 route=triage, 실제=triage</div><div class="meta">scheduleid_is_null_ok=True</div></td>
+    </tr>
+    <tr class="rok">
+      <td>B_PRE_BOOKING<br><b>병원정보→reception</b></td>
+      <td class="utt">병원 몇 시까지 진료해요? 위치가 어디예요?</td>
+      <td>reception (기대: reception)<div class="meta">scheduleid: <b></b> · phase: PRE_BOOKING · ⏱ 1949ms</div></td>
+      <td class="reply">진료시간 알려드릴게요!
+[/운영시간]
+병원 위치도 안내드릴게요. 메디포동물병원은 서울특별시 강남구 테스트로 42에 있어요.
+더 궁금한 점 있으시면 말씀해 주세요!</td>
+      <td class="pills"><span class="pill">예약하기</span></td>
+      <td class="meta">chat_title</td>
+      <td><span class="ok">PASS</span><div class="meta">기대 route=reception, 실제=reception</div><div class="meta">scheduleid_is_null_ok=True</div></td>
+    </tr>
+    <tr class="rok">
+      <td>B_PRE_BOOKING<br><b>예약의도→문진흐름</b></td>
+      <td class="utt">예약하고 싶어요</td>
+      <td>triage (기대: triage)<div class="meta">scheduleid: <b></b> · phase: PRE_BOOKING · ⏱ 1804ms</div></td>
+      <td class="reply">뽀미가 어디가 불편한지 먼저 알려주시면 제가 살펴보고 예약까지 도와드릴게요. 🐾
+
+증상 없이 바로 예약만 원하시면 홈 화면의 &#x27;예약하기&#x27;를 이용해 주세요.</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=triage, reply 존재 → 문진/안내 흐름 유지</div><div class="meta">scheduleid_is_null_ok=True</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>예약시각_안내</b></td>
+      <td class="utt">내 예약 언제야?</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>97</b> · phase: BOOKED · ⏱ 1629ms</div></td>
+      <td class="reply">예약 시간은 6월 26일 10:22이에요. 변경을 원하시면 말씀해 주세요.<div class='meta'>품질 judge: 4/5 · 예약 시각을 구체적으로 알려줘서 내 예약을 알고 답하는 느낌이 강함. 다만 병원명과 담당의 정보는 언급하지 않아 5점까지는 아님.</div></td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), 예약시각(6월 26일) 포함=True, scheduleid=실값</div><div class="meta">confirmed_time_read=True · hospital_read=False · doctor_read=False · followup_saved_rows=0</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>병원명_안내</b></td>
+      <td class="utt">어느 병원 예약이야?</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>98</b> · phase: BOOKED · ⏱ 1119ms</div></td>
+      <td class="reply">현재 예약된 병원은 메디포동물병원이에요. 주소는 서울특별시 강남구 테스트로 42입니다.<div class='meta'>품질 judge: 4/5 · 병원명이 실제 예약과 일치해 맥락을 어느 정도 알고 답한 것으로 보이지만, 예약 시각과 담당의 정보는 언급하지 않아 완전하진 않음</div></td>
+      <td class="pills"><span class="pill">예약 내역</span><span class="pill">새 예약하기</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), 병원명/주소/전화 포함=True, scheduleid=실값</div><div class="meta">confirmed_time_read=False · hospital_read=True · doctor_read=False · followup_saved_rows=0</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>담당의_안내</b></td>
+      <td class="utt">담당 의사 누구야?</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>99</b> · phase: BOOKED · ⏱ 1874ms</div></td>
+      <td class="reply">이번 예약은 김메디 선생님이 맡아요. 궁금한 점이 있으면 진료 때 함께 여쭤보면 좋아요.<div class='meta'>품질 judge: 5/5 · 담당의 김메디를 정확히 말해 실제 예약 맥락을 알고 답한 것으로 보임</div></td>
+      <td class="pills"><span class="pill">병원 정보</span><span class="pill">예약 내역</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), 담당의 응답 존재=True (이름반영=True), scheduleid=실값</div><div class="meta">confirmed_time_read=False · hospital_read=False · doctor_read=True · followup_saved_rows=0</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>예약변경_흐름</b></td>
+      <td class="utt">예약 시간 바꾸고 싶어요</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>100</b> · phase: BOOKED · ⏱ 957ms</div></td>
+      <td class="reply">현재 예약은 6월 26일 10:23이에요. 네, 가능한 예약 시간을 찾아볼게요.<div class='meta'>품질 judge: 4/5 · 예약 날짜와 시간을 정확히 언급해 맥락을 꽤 알고 답하는 느낌이지만, 병원/담당의까지는 반영하지 않아 5점은 아님</div></td>
+      <td class="pills"><span class="pill">예약 내역</span><span class="pill">병원 정보</span></td>
+      <td class="meta">rebook_request</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), rebook_request=True, 현예약시각 되짚음=True, scheduleid=실값</div><div class="meta">confirmed_time_read=True · hospital_read=False · doctor_read=False · followup_saved_rows=0</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>예약취소_문의</b></td>
+      <td class="utt">예약 취소돼요?</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>101</b> · phase: BOOKED · ⏱ 2118ms</div></td>
+      <td class="reply">현재 예약은 6월 26일 10:23로 잡혀 있어요. 취소 가능 여부나 세부 정책은 병원마다 다를 수 있어요. 앱에서 가능한 범위는 예약 화면에서 확인해 주세요.<div class='meta'>품질 judge: 4/5 · 예약 시각을 구체적으로 언급해 맥락을 알고 답하는 느낌이 강함. 다만 병원명·담당의는 반영하지 않아 5점까지는 아님.</div></td>
+      <td class="pills"><span class="pill">예약 내역</span><span class="pill">병원 정보</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), cancel_request 미발생=True(문의는 실행 금지), scheduleid=실값</div><div class="meta">confirmed_time_read=True · hospital_read=False · doctor_read=False · followup_saved_rows=0</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>경과저장</b></td>
+      <td class="utt">아이 상태가 안 좋아요, 밥도 잘 안 먹어요</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>102</b> · phase: BOOKED · ⏱ 2262ms</div></td>
+      <td class="reply">상태가 안 좋고 밥도 잘 안 먹는군요. 물은 평소처럼 마시는지 함께 봐 주세요.<div class='meta'>품질 judge: 1/5 · 예약 시각·병원·담당의 등 구체 맥락을 전혀 반영하지 않고 일반적인 조언만 함</div></td>
+      <td class="pills"><span class="pill">상태 계속 알려주기</span><span class="pill">예약 변경</span></td>
+      <td class="meta">followup_saved</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter(✓), save이벤트=False, Followup저장=1건, scheduleid=실값</div><div class="meta">confirmed_time_read=False · hospital_read=False · doctor_read=False · followup_saved_rows=1</div></td>
+    </tr>
+    <tr class="rok">
+      <td>C_BOOKED<br><b>사진후속_연속성</b></td>
+      <td class="utt">사진 못 찍었으면 어떡해요?</td>
+      <td>followup_filter (기대: followup_filter)<div class="meta">scheduleid: <b>103</b> · phase: BOOKED · ⏱ 1732ms</div></td>
+      <td class="reply">사진이 없어도 괜찮아요. 보이는 증상이나 상태를 글로 설명해 주세요.</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">route=followup_filter, 사진맥락 후속 응답 존재=True, scheduleid=실값</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>D_상태<br><b>chat_history_저장</b></td>
+      <td class="utt">내 예약 언제였지?</td>
+      <td>followup_filter<div class="meta">scheduleid: <b>104</b> · phase: BOOKED · ⏱ 1683ms</div></td>
+      <td class="reply">messages 0→2 (user+assistant 추가)</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">메시지 2건 증가</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>D_상태<br><b>orch_state_저장로드</b></td>
+      <td class="utt">(orch_state 확인)</td>
+      <td><div class="meta">scheduleid: <b>104</b> · phase: BOOKED · ⏱ —</div></td>
+      <td class="reply">orch_state keys=[&#x27;active_flow&#x27;, &#x27;reception_streak&#x27;, &#x27;triage_state&#x27;, &#x27;followup_summary&#x27;, &#x27;last_followup_reply_kind&#x27;, &#x27;asked_followup_fields&#x27;]</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">orch_state dict 영속</div><div class="meta"></div></td>
+    </tr>
+    <tr class="rok">
+      <td>D_상태<br><b>scheduleid_실값</b></td>
+      <td class="utt">(BOOKED ctx.scheduleid)</td>
+      <td><div class="meta">scheduleid: <b>104</b> · phase: BOOKED · ⏱ —</div></td>
+      <td class="reply">scheduleid=104</td>
+      <td class="pills"><span class='meta'>—</span></td>
+      <td class="meta">—</td>
+      <td><span class="ok">PASS</span><div class="meta">BOOKED 턴에서 ctx.scheduleid가 null이 아닌 실제 schedule id</div><div class="meta"></div></td>
+    </tr>
+</table>
+</body></html>

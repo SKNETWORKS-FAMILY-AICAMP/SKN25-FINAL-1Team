@@ -4,6 +4,7 @@
 DB에는 반환된 cloudfront_url(읽기용 주소)을 저장한다.
 EC2에서는 IAM Role, 로컬에서는 .env의 AWS 키를 boto3가 자동으로 사용한다.
 """
+import re
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import unquote, urlparse
@@ -26,7 +27,9 @@ _s3 = boto3.client(
 
 
 def _create_object_key(file_name: str, prefix: str) -> str:
-    ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else "bin"
+    # 파일명은 키에 그대로 쓰지 않는다(경로 주입·임의 키 방지). uuid + sanitize된 확장자만 사용.
+    raw_ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+    ext = re.sub(r"[^a-z0-9]", "", raw_ext)[:8] or "bin"
     today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
     return f"{prefix}/{today}/{uuid.uuid4().hex}.{ext}"
 

@@ -26,11 +26,13 @@ async def get_current_hospital(
 
         if hospital_id is None or token_type != "hospital":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        # sub 가 숫자가 아니면 ValueError → 401 로 처리(500 누출 방지).
+        hospital_pk = int(hospital_id)
 
-    except JWTError:
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-    hospital = await db.get(Hospital, int(hospital_id))
+    hospital = await db.get(Hospital, hospital_pk)
 
     if hospital is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
@@ -50,12 +52,14 @@ async def get_current_user(
 
         if user_id is None or token_type != "user":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        # sub 가 숫자가 아니면 ValueError → 401 로 처리(500 누출 방지).
+        user_pk = int(user_id)
 
-    except JWTError:
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     result = await db.execute(
-        select(User).where(User.userid == int(user_id))
+        select(User).where(User.userid == user_pk)
     )
     user = result.scalar_one_or_none()
 
@@ -77,11 +81,13 @@ async def get_current_admin(
 
         if admin_id is None or token_type != "admin":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        # sub 가 숫자가 아니면 ValueError → 401 로 처리(500 누출 방지).
+        admin_pk = int(admin_id)
 
-    except JWTError:
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-    admin = await db.get(AdminUser, int(admin_id))
+    admin = await db.get(AdminUser, admin_pk)
 
     if admin is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

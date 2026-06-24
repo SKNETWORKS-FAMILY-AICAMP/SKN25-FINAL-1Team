@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import pawOnlyLogo from "../../../../shared/assets/logo/medipaw-pawonly.png";
 import { uploadChatAttachment } from "../../api/chat-api";
 import {
+  archivePet,
   createPet,
   getPet,
   updatePet,
@@ -73,6 +74,28 @@ const PetRegisterPage = () => {
   const [isLoading, setIsLoading] = useState(Boolean(isDetailMode || isEditMode));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  // '삭제'가 아니라 '보관함으로 이동'(숨김). 기본 목록·채팅·예약에서 제외되고 보관함에서 복원 가능.
+  const handleArchive = async () => {
+    if (!isEditMode || !selectedPetId) {
+      return;
+    }
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(t("petArchive.moveConfirm"))) {
+      return;
+    }
+    try {
+      setIsArchiving(true);
+      setSubmitMessage("");
+      await archivePet(selectedPetId);
+      navigate("/home");
+    } catch {
+      setSubmitMessage(t("petArchive.moveFailed"));
+    } finally {
+      setIsArchiving(false);
+    }
+  };
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSavingDoodle, setIsSavingDoodle] = useState(false);
   // 꾸미기는 항상 "원본(그림 입히기 전) 사진"을 베이스로 편집한다. 저장 시엔
@@ -362,6 +385,16 @@ const PetRegisterPage = () => {
             ) : null}
 
             <footer className="mt-8 md:mt-10 flex justify-end gap-3 px-1 md:px-2">
+              {isEditMode ? (
+                <button
+                  type="button"
+                  onClick={handleArchive}
+                  disabled={isArchiving || isSubmitting}
+                  className="mr-auto h-12 md:h-14 min-w-24 md:min-w-32 rounded-xl bg-white px-6 md:px-8 text-sm md:text-base font-extrabold text-[#B45309] border border-[#FCD34D] transition-all hover:bg-[#FFFBEB] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t("petArchive.moveToArchive")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={closeModal}

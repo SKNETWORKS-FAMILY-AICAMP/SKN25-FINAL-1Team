@@ -49,11 +49,12 @@ async def create_checkup(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # 반려동물 확인
+    # 반려동물 확인 (보호자 화면 — 보관(숨김)된 펫은 예약 불가)
     result = await db.execute(
         select(Pet).where(
             Pet.petid == request.pet_id,
-            Pet.userid == current_user.userid
+            Pet.userid == current_user.userid,
+            Pet.archived_at.is_(None),
         )
     )
     pet = result.scalar_one_or_none()

@@ -64,12 +64,28 @@ REALDB_CASES = [
     ("지금은 어느 병원 예약이야?", "hospital"),
     ("예약한 병원 이름이 뭐야?", "hospital"),
     ("누구 의사지?", "vet"),
-    ("그 의사 친절해?", "vet"),
-    ("예약 시간 바꾸고 싶어요", "rebook"),
+    ("그 의사 친절해?", "vet"),                       # P4-a(라우팅) — 이번 범위 제외, 관찰만
+    ("예약 시간 바꾸고 싶어요", "rebook"),              # P4-b: 현재 예약 되짚기 + rebook_request
     ("더 빠른 시간 없어요?", "rebook"),
-    ("예약 취소돼요?", "cancel_inquiry"),
+    ("예약을 오전으로 옮기고 싶어요", "rebook"),
+    ("예약 취소돼요?", "cancel_inquiry"),              # P4-c: 현재 예약 되짚기 + cancel_request 금지
     ("취소하면 다시 예약할 수 있죠?", "cancel_inquiry"),
+    ("취소 가능해요?", "cancel_inquiry"),
+    ("예약 취소해줘", "cancel_exec"),                  # 실행형 — cancel_request 유지
+    ("이 예약 취소할래", "cancel_exec"),
 ]
+
+
+def _p4_pass(tag: str, events: list, ct_read: bool) -> bool | None:
+    """P4-b/c 결정론 검증. time/hospital/vet/P4-a는 None(이번 수정 대상 아님)."""
+    ev = set(events)
+    if tag == "rebook":          # 현재 예약 시각 포함 + rebook_request 발생
+        return ct_read and ("rebook_request" in ev)
+    if tag == "cancel_inquiry":  # 현재 예약 시각 포함 + cancel_request 절대 금지
+        return ct_read and ("cancel_request" not in ev)
+    if tag == "cancel_exec":     # 실행형은 cancel_request 발생
+        return "cancel_request" in ev
+    return None
 
 # Part B — DB 무관 품질(P4 후보). 최근 증상 맥락을 깔고 관찰.
 P4_CTX = [
@@ -85,15 +101,25 @@ P4_CASES = {
 }
 
 
-# ── 라우팅 가로채기 ──
+# ── 라우팅 + run_turn 결과 가로채기 ──
+# process_turn은 agent의 followup 이벤트(rebook_request/cancel_request)를 프론트 payload로 forward하지
+# 않으므로(triage_complete/chat_title만), run_turn 결과에서 직접 events를 캡처한다.
 _routed = {"agent": None}
+_last = {"events": []}
 _orig_route = graph_mod.route
+_orig_run_turn = graph_mod.run_turn
 
 
 async def _traced_route(ctx):
     agent = await _orig_route(ctx)
     _routed["agent"] = agent
     return agent
+
+
+async def _traced_run_turn(ctx):
+    res = await _orig_run_turn(ctx)
+    _last["events"] = [e.get("type") for e in (res.events or [])]
+    return res
 
 
 async def _make_booked_subject(db, run_id: str, idx: int) -> dict:
@@ -177,21 +203,24 @@ JSON만: {{"memory_score": 1~5, "feels_remembered": "yes|partial|no", "reason": 
 
 async def run_realdb(run_id: str) -> list[dict]:
     graph_mod.route = _traced_route
+    graph_mod.run_turn = _traced_run_turn
     results = []
     try:
         for idx, (utterance, tag) in enumerate(REALDB_CASES):
             async with AsyncSessionLocal() as db:
                 ids = await _make_booked_subject(db, run_id, idx)
                 _routed["agent"] = None
-                events, reply, quick = [], "", []
+                _last["events"] = []
+                reply, quick = "", []
                 req = SimpleNamespace(content=utterance, image_url=None)
+                events = []
                 try:
                     async for ev in process_turn(db, ids["session_id"], ids["userid"], req):
-                        events.append(ev.get("type"))
                         if ev.get("type") == "result":
                             r = ev.get("result") or {}
                             reply = r.get("reply") or ""
                             quick = r.get("quick_replies") or []
+                    events = list(_last["events"])  # agent가 낸 실제 followup 이벤트
                     sess = (await db.execute(
                         select(ChatHistory).where(ChatHistory.id == ids["session_id"]))).scalar_one()
                     pending = (sess.orch_state or {}).get("pending_confirmation_action", "")
@@ -213,19 +242,23 @@ async def run_realdb(run_id: str) -> list[dict]:
                     "memory_score": 0, "feels_remembered": "error", "reason": err or "no reply"}
                 await _cleanup(db, ids)
 
+                ev_clean = [e for e in events if e and e != "result"]
                 rec = {
                     "utterance": utterance, "tag": tag, "routed": _routed["agent"],
-                    "events": [e for e in events if e and e != "result"],
+                    "events": ev_clean,
                     "reply": reply, "quick_replies": quick, "pending": pending,
                     "confirmed_time_read": ct_read, "hospital_name_read": hn_read,
-                    "doctor_name_read": dn_read, **judge, "error": err,
+                    "doctor_name_read": dn_read, "p4_pass": _p4_pass(tag, ev_clean, ct_read),
+                    **judge, "error": err,
                 }
                 results.append(rec)
                 flags = "".join([" T" if ct_read else "", " H" if hn_read else "", " D" if dn_read else ""])
+                p4 = "" if rec["p4_pass"] is None else (" ✓P4" if rec["p4_pass"] else " ✗P4")
                 print(f"  [{tag:>13}] route={rec['routed']} pend={pending or '-'} mem={judge['memory_score']}"
-                      f"{flags} :: {utterance[:22]} → {reply[:48]}", file=sys.stderr)
+                      f"{flags}{p4} :: {utterance[:22]} → {reply[:48]}", file=sys.stderr)
     finally:
         graph_mod.route = _orig_route
+        graph_mod.run_turn = _orig_run_turn
     return results
 
 
@@ -282,10 +315,13 @@ async def main_async(args):
         by_tag.setdefault(r["tag"], []).append(r)
     summary = {}
     for tag, rs in by_tag.items():
+        p4items = [x for x in rs if x.get("p4_pass") is not None]
         summary[tag] = {
             "n": len(rs),
             "avg_memory": round(sum(x["memory_score"] for x in rs) / len(rs), 2),
             "db_read": sum(1 for x in rs if x["confirmed_time_read"] or x["hospital_name_read"] or x["doctor_name_read"]),
+            "p4_pass": sum(1 for x in p4items if x["p4_pass"]),
+            "p4_total": len(p4items),
         }
     p4_clarify = {g: sum(1 for x in rows if x["clarify_leak"]) for g, rows in p4.items()}
     report = {
@@ -297,7 +333,8 @@ async def main_async(args):
     Path(args.out).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print("\n=== 실DB 요약 ===", file=sys.stderr)
     for tag, s in summary.items():
-        print(f"  {tag:>13}: 메모리 {s['avg_memory']}/5 · DB조회 {s['db_read']}/{s['n']}", file=sys.stderr)
+        p4 = f" · P4통과 {s['p4_pass']}/{s['p4_total']}" if s["p4_total"] else ""
+        print(f"  {tag:>13}: 메모리 {s['avg_memory']}/5 · DB조회 {s['db_read']}/{s['n']}{p4}", file=sys.stderr)
     print(f"=== P4 clarify 누수: {p4_clarify} ===", file=sys.stderr)
     print(f"✓ {args.out}", file=sys.stderr)
 

@@ -63,7 +63,9 @@ services:
     command: bash -c "cd /app/backend && alembic upgrade head"
     environment:
       DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
-      SECRET_KEY: ${SECRET_KEY:-change-me}
+      # migrate 는 alembic 만 돌리고 JWT 서명을 하지 않아 SECRET_KEY 값 자체는 안 쓰이지만,
+      # backend 와 같은 .env 를 공유하므로 기준을 통일한다(약한 기본값 'change-me' 제거).
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in ~/medipaw/.env}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}

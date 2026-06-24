@@ -52,3 +52,49 @@ jobs:
       - name: Compile check (syntax)
         # ai/ 도 포함 — Docker 빌드가 파이썬을 실행하지 않아 ai/ 문법오류가 그냥 prod 로 샌다.
         run: python -m compileall -q backend/app ai
+
+  # 마이그레이션 안전성 검사 — 무거운 AI 의존성 없이 alembic 핵심만 가볍게.
+  # ① 멀티 헤드(머지 실수) 차단  ② 빈 DB에 upgrade head 가 깨지지 않는지  ③ 모델↔DB 드리프트(비차단)
+  backend-migrations:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        # 마이그레이션이 vector/btree_gist 확장을 쓰므로 prod 와 동일한 pgvector 이미지를 쓴다.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: medipaw
+          POSTGRES_USER: medipaw
+          POSTGRES_PASSWORD: medipaw_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medipaw"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://medipaw:medipaw_secret@localhost:5432/medipaw
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install alembic deps (no heavy AI libs)
+        # env.py 가 모델을 임포트하므로 pgvector(triage_rag_document) 까지만 추가로 설치.
+        run: pip install alembic SQLAlchemy psycopg2-binary "pydantic>=2" pydantic-settings pgvector
+
+      - name: Single head check (멀티 헤드 = 머지 실수)
+        working-directory: backend
+        run: |
+          alembic heads
+          test "$(alembic heads | grep -c '(head)')" -eq 1
+
+      - name: Upgrade head on fresh DB
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Model↔migration drift (informational, 비차단)
+        working-directory: backend
+        run: alembic check || echo "::warning::alembic check 가 드리프트를 보고함 — 검토 권장(빌드는 통과)"

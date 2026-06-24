@@ -118,7 +118,11 @@ async def start_chat_session(
     current_user=Depends(get_current_user),
 ):
     result = await db.execute(
-        select(Pet).where(Pet.petid == request.pet_id, Pet.userid == current_user.userid)
+        select(Pet).where(
+            Pet.petid == request.pet_id,
+            Pet.userid == current_user.userid,
+            Pet.archived_at.is_(None),
+        )
     )
     pet = result.scalar_one_or_none()
     if not pet:

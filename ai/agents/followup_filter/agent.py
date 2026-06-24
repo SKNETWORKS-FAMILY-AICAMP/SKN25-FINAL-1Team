@@ -148,11 +148,6 @@ def _patch_pending(action: str = "") -> dict:
     return {"pending_confirmation_action": action}
 
 
-def _with_pending(result: AgentResult, action: str = "") -> AgentResult:
-    result.state_patch = {**(result.state_patch or {}), **_patch_pending(action)}
-    return result
-
-
 def _has_request_ending(text: str) -> bool:
     stripped = (text or "").strip().rstrip(".!?。！？")
     return stripped.endswith(_REQUEST_ENDINGS)
@@ -321,6 +316,29 @@ async def appointment_time_reply(ctx: SessionContext) -> str:
     return f"예약 시간은 {when}이에요. 변경을 원하시면 말씀해 주세요."
 
 
+async def _confirmed_time_text(ctx: SessionContext) -> str:
+    """현재 예약 confirmed_time을 'M월 D일 HH:MM'로. 없거나 조회 불가면 ''.
+
+    rebook/cancel 문의에서 '현재 예약'을 한 번 되짚어 맥락 기억을 살리는 데 쓴다(저장·이벤트 없음).
+    """
+    if ctx.db is None or ctx.emrid is None:
+        return ""
+    try:
+        from sqlalchemy import select
+
+        from app.models.schedule import Schedule
+        sched = (await ctx.db.execute(
+            select(Schedule).where(Schedule.emrid == ctx.emrid, Schedule.deleted_at.is_(None))
+        )).scalars().first()
+        if not sched or not sched.confirmed_time:
+            return ""
+        from app.utils.timezone import to_kst
+        k = to_kst(sched.confirmed_time)
+        return f"{k.month}월 {k.day}일 {k.hour:02d}:{k.minute:02d}"
+    except Exception:
+        return ""
+
+
 async def hospital_info_reply(ctx: SessionContext) -> str:
     """예약된 병원 이름을 우선 안내하고, 있으면 주소/전화까지 짧게 붙인다."""
     if ctx.db is None or ctx.hospitalid is None:
@@ -479,7 +497,9 @@ def _quick_replies_for_result(
 
 class FollowupFilterAgent:
     name = "followup_filter"
-    description = "예약 후 경과 보고를 걸러서, 진짜 경과면 followupDB에 저장하고 잡담이면 넘긴다."
+    # 라우터 LLM이 담당 선택 시 읽는 설명(router._AGENT_DESC 단일 출처).
+    description = ("예약 후 아이 상태에 대한 모든 대화·질문(증상 변화·사진·되묻기 포함)을 받고, "
+                   "예약 시간 변경·재예약, '내 예약 시각이 언제인지' 확인도 처리한다.")
 
     @observe(name="followup_filter")
     async def run(self, ctx: SessionContext, args: dict) -> AgentResult:
@@ -532,6 +552,10 @@ class FollowupFilterAgent:
             cls = cls.model_copy(update={"assistant_reply": ""})
         # 사진 후속인데도 '사진이 없다/보내달라'고 하면 무력화 — 직전 소견 기반 fallback이 받게 한다.
         if photo_followup and any(p in (cls.assistant_reply or "") for p in ("사진이 없", "사진을 보내", "사진을 다시")):
+            cls = cls.model_copy(update={"assistant_reply": ""})
+        # P4-d: 감정 단독 발화인데 공감 뒤 '의도 되묻기'로 흐르면 무력화 — clarify 폴백 방지(공감 마무리).
+        if is_emotional and any(p in (cls.assistant_reply or "")
+                                for p in ("알려주시는 걸까요", "예약을 바꾸시려", "무엇을 도와드릴까요", "관리 방법을 묻는")):
             cls = cls.model_copy(update={"assistant_reply": ""})
 
         # 이번 턴에 '관련 있는' 새 사진을 분석했으면, 다음 턴 후속 발화용으로 짧은 소견을 저장한다(원본 미보관).
@@ -619,8 +643,11 @@ class FollowupFilterAgent:
             result = AgentResult(reply=BOOKING_CHANGE_LIMITED_REPLY, quick_replies=_LIMITED_QUICK_REPLIES)
         # 0) 재예약 요청 → 저장하지 않고 예약 흐름 신호(rebook_request)를 프론트로 넘긴다.
         elif wants_rebook:
+            # P4-b: 현재 예약을 한 번 되짚고 변경 흐름으로(이벤트·pill 유지). 시각 없으면 기존 답변.
+            when = await _confirmed_time_text(ctx)
+            prefix = f"현재 예약은 {when}이에요. " if when else ""
             result = AgentResult(
-                reply=ensure_safe_reply(cls, REPLY_REBOOK),
+                reply=prefix + ensure_safe_reply(cls, REPLY_REBOOK),
                 events=[{"type": "rebook_request", "emrid": ctx.emrid}],
             )
         # 0-a) '문진 작성 후 예약하기' → 같은 챗에서 새 문진 시작(백엔드가 new_booking 플래그 ON).
@@ -663,9 +690,17 @@ class FollowupFilterAgent:
                 quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [HOSPITAL_INFO_PILL, SCHEDULE_LIST_PILL],
             )
         # 0-2a) 취소 '문의/가정형'("취소하면 다시 돼요?") → 취소 이벤트 없이 정책/가능여부만 안내.
+        #       P4-c: 현재 예약을 한 번 되짚는다(cancel_request는 절대 발생시키지 않음).
         elif cancel_inquiry:
+            when = await _confirmed_time_text(ctx)
+            if ctx.followup_limited:
+                prefix = f"현재 예약은 {when}이에요. " if when else ""
+                base = BOOKING_CHANGE_LIMITED_REPLY
+            else:
+                prefix = f"현재 예약은 {when}로 잡혀 있어요. " if when else ""
+                base = REPLY_CANCEL_POLICY
             result = AgentResult(
-                reply=(BOOKING_CHANGE_LIMITED_REPLY if ctx.followup_limited else REPLY_CANCEL_POLICY),
+                reply=prefix + base,
                 quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [SCHEDULE_LIST_PILL, HOSPITAL_INFO_PILL],
             )
         # 0-2) 예약 취소 '실행' 요청 → 저장 안 하고 취소 신호(cancel_request)를 프론트로 넘긴다.
@@ -785,24 +820,27 @@ class FollowupFilterAgent:
                 events=events,
             )
 
-        if not result.state_patch.get("pending_confirmation_action"):
-            result.state_patch = {**(result.state_patch or {}), **_patch_pending("")}
+        # 다음 턴에 짧은 긍정("응/보여줘")이 오면 실행할 동작(pending)을 '한 번만' 정한다.
+        # 위 분기에서 쓴 의도 플래그를 그대로 재사용 — 같은 조건을 두 번 판단/덮어쓰지 않는다.
         if ctx.followup_limited and (wants_rebook or wants_cancel):
-            result = _with_pending(result, "")
+            pending_action = ""
         elif wants_new_booking:
-            result = _with_pending(result, "new_booking")
+            pending_action = "new_booking"
         elif asks_schedule_list:
-            result = _with_pending(result, "schedule_list")
+            pending_action = "schedule_list"
         elif asks_prep:
-            result = _with_pending(result, "prep")
+            pending_action = "prep"
         elif asks_time:
-            result = _with_pending(result, "appointment_time")
+            pending_action = "appointment_time"
         elif asks_vet:
-            result = _with_pending(result, "vet_info")
+            pending_action = "vet_info"
         elif wants_rebook:
-            result = _with_pending(result, "rebook")
+            pending_action = "rebook"
         elif result.handoff == Intent.RECEPTION or cls.category == Category.HOSPITAL_INFO:
-            result = _with_pending(result, "hospital_info")
+            pending_action = "hospital_info"
+        else:
+            pending_action = ""
+        result.state_patch = {**(result.state_patch or {}), **_patch_pending(pending_action)}
 
         result.reply = _avoid_consecutive_request_ending(result.reply, ctx.history)
         result.reply = _avoid_observation_overload(result.reply, ctx.history)

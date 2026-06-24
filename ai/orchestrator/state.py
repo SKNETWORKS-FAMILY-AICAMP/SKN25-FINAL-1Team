@@ -91,7 +91,7 @@ async def build_context(db, session, user_message: str,
         phase = Phase.PRE_BOOKING
 
     active_flow = orch.get("active_flow") or "idle"
-    if phase in (Phase.BOOKED, Phase.CLOSED):
+    if phase == Phase.BOOKED:
         active_flow = "idle"
 
     return SessionContext(
@@ -101,7 +101,8 @@ async def build_context(db, session, user_message: str,
         pet_info=await _pet_info(db, session.petid),
         hospitalid=await _primary_hospitalid(db, session.userid),
         emrid=session.emrid,
-        scheduleid=None,
+        # 현재 예약(soft-delete 제외) — 모니터링/이벤트가 'BOOKED일 때 어떤 예약인지'를 알 수 있게 채운다.
+        scheduleid=(sched.scheduleid if sched else None),
         user_message=user_message,
         attachments=attachments or [],
         history=session.messages or [],

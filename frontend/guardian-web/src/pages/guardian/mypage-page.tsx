@@ -319,6 +319,12 @@ const MypagePage = () => {
               튜토리얼 다시보기
             </button>
             <Link
+              to="/pets/archive"
+              className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
+            >
+              {t("petArchive.linkLabel")}
+            </Link>
+            <Link
               to="/mypage/password"
               className="text-sm font-semibold text-slate-400 transition hover:text-blue-600"
             >
