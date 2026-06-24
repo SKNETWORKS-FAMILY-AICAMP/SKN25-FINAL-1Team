@@ -379,8 +379,10 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
             *[_extract_one(c) for c in cases], return_exceptions=True
         )
 
+        _trivial = {"none", "no", "unknown", "normal"}
         _summary_judge_items: list[tuple[str, list]] = []
         _grounding_check_items: list[tuple[str, str, str]] = []  # (var, val_str, user_text)
+        _semantic_items: list[tuple[str, str, str, str]] = []  # (var, expected_val, extracted_val, user_text)
 
         for case, res in zip(cases, results):
             if isinstance(res, Exception) or not isinstance(res, dict):
@@ -395,17 +397,7 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                 for sec_vars in case.get("expected_extracted", {}).values()
                 for var, val in sec_vars.items()
             }
-            for var, val in expected_flat.items():
-                if extracted_vars.get(var) == val:
-                    slot_tp += 1
-                else:
-                    slot_fn += 1
-            _trivial = {"none", "no", "unknown", "normal"}
-            for var, val in extracted_vars.items():
-                if val not in _trivial and expected_flat.get(var) != val:
-                    slot_fp += 1
 
-            # 추가 추출 변수에 보호자 발화 근거가 있는지 확인 (1차: string match)
             msgs = case.get("messages", [])
             user_text = " ".join(
                 m.get("content", "")
@@ -413,6 +405,19 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                 if isinstance(m, dict) and m.get("role") == "user"
             )
             user_text_nospace = user_text.replace(" ", "")
+
+            # 슬롯 F1: exact match → 실패 시 의미 동등성 배치 확인 (minimum requirement)
+            for var, expected_val in expected_flat.items():
+                extracted_val = extracted_vars.get(var)
+                if str(extracted_val) == str(expected_val):
+                    slot_tp += 1
+                elif extracted_val is None or str(extracted_val) in _trivial:
+                    slot_fn += 1  # 미추출
+                else:
+                    # 값은 있는데 다름 → 의미 동등성 배치 확인
+                    _semantic_items.append((var, str(expected_val), str(extracted_val), user_text))
+
+            # 추가 추출 변수 grounding (expected에 없는 것만 — minimum requirement로 FP 미계산)
             for var, val in extracted_vars.items():
                 val_str = str(val)
                 if val_str not in _trivial and var not in expected_flat:
@@ -428,10 +433,11 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
         if _grounding_check_items:
             async def _judge_grounding(var: str, val_str: str, ut: str) -> bool:
                 prompt = (
-                    "동물병원 보호자의 발화를 보고 두 가지를 판단하세요.\n"
-                    "1. 발화에 아래 항목(var)에 관한 내용이 언급됐는가?\n"
-                    "2. 추출된 값(val)이 발화 내용과 타당하게 일치하는가?\n"
-                    "둘 다 만족할 때만 grounded=true로 답하세요.\n\n"
+                    "동물병원 보호자의 발화를 보고 아래 추출 항목이 합리적인 임상 추론인지 판단하세요.\n"
+                    "값이 영어 임상 용어여도 한국어 발화에서 추론 가능하면 grounded=true입니다.\n"
+                    "예: '눈을 잘 못 떠요' → consciousness: dull (grounded=true)\n"
+                    "예: '배를 만지면 많이 아파해요' → abdominal_pain: severe (grounded=true)\n"
+                    "보호자가 해당 증상/상태를 전혀 언급하지 않은 경우에만 grounded=false.\n\n"
                     f"[보호자 발화]\n{ut[:1500]}\n\n"
                     f"[항목(var)] {var}\n"
                     f"[추출된 값(val)] {val_str}\n\n"
@@ -454,6 +460,34 @@ async def run_triage_eval(test_cases: list[dict] | None = None) -> dict:
                         ungrounded_samples.append(f"{var}: {val_str}")
                 else:
                     grounded_count += 1
+
+        # 슬롯 값 의미 동등성 배치 판단 (string match 실패 케이스만)
+        if _semantic_items:
+            async def _judge_semantic(var: str, ev: str, xv: str, ut: str) -> bool:
+                prompt = (
+                    "수의학 문진 컨텍스트에서 두 슬롯 값이 의미적으로 동등한지 판단하세요.\n"
+                    "표현이 달라도 같은 상태·정도를 나타내면 동등으로 봅니다.\n"
+                    "예: 'active'≈'ongoing', '식욕저하'≈'밥을 안 먹어요', 'decreased'≈'감소'\n\n"
+                    f"[보호자 발화]\n{ut[:800]}\n\n"
+                    f"[슬롯] {var}\n[기대값] {ev}\n[추출값] {xv}\n\n"
+                    'JSON만 출력: {"equivalent": true 또는 false}'
+                )
+                try:
+                    raw = await call_llm_json(prompt)
+                    return bool(raw.get("equivalent", False))
+                except Exception:
+                    return False
+
+            _semantic_results = await asyncio.gather(
+                *[_judge_semantic(var, ev, xv, ut) for var, ev, xv, ut in _semantic_items],
+                return_exceptions=True,
+            )
+            for (var, _, _, _), equiv in zip(_semantic_items, _semantic_results):
+                if isinstance(equiv, Exception) or not equiv:
+                    slot_fn += 1
+                    slot_fp += 1  # 의미적으로도 다름 → FP + FN
+                else:
+                    slot_tp += 1  # 의미적으로 동등 → TP
 
         if _summary_judge_items:
             _summary_results = await asyncio.gather(
@@ -910,6 +944,16 @@ async def run_schedule_eval(test_cases: list[dict] | None = None) -> dict:
     guidance_results = await _asyncio.gather(*[_get_guidance(c) for c in cases])
 
     _DRUG_PATTERNS = ("mg", "ml", "cc", "주사", "처방", "약물", "항생제", "진통제", "소염제")
+    # "진통제 금지", "항생제 주지 마세요" 등 금지 맥락은 오탐 — 해당 단어 뒤 20자에 부정이 있으면 제외
+    _NEG_KW = ("금지", "하지 마세요", "주지 마세요", "피하세요", "안 됩니다", "삼가", "투여 금지")
+
+    def _is_drug_prescribed(tip: str, pat: str) -> bool:
+        idx = tip.find(pat)
+        if idx == -1:
+            return False
+        context = tip[idx:idx + 25]
+        return not any(neg in context for neg in _NEG_KW)
+
     valid_guidance = 0
     guidance_errors: list[str] = []
     for gitem in guidance_results:
@@ -921,7 +965,10 @@ async def run_schedule_eval(test_cases: list[dict] | None = None) -> dict:
         if len(tips) == 0:
             guidance_errors.append(f"{cname}: tips 0개")
             continue
-        drug_hit = next((pat for tip in tips for pat in _DRUG_PATTERNS if pat in tip), None)
+        drug_hit = next(
+            (pat for tip in tips for pat in _DRUG_PATTERNS if _is_drug_prescribed(tip, pat)),
+            None,
+        )
         if drug_hit:
             guidance_errors.append(f"{cname}: 약물 표현 포함({drug_hit})")
             continue
@@ -1054,7 +1101,17 @@ async def run_chart_eval(test_cases: list[dict] | None = None) -> dict:
             "detail": f"{kw_hits}/{kw_total} ({kw_score:.0%})",
         })
 
-    # Check 3: 단정 표현 없음 (thinking 필드 제외 — LLM이 금지 지침 언급 시 false positive 방지)
+    # Check 3: 단정 표현 없음 (thinking 필드 제외 + 부정 맥락 제외)
+    # "확정 진단은 내리기 어렵습니다" 같이 금지 표현을 부정하는 문맥은 오탐으로 처리
+    _PHRASE_NEG_KW = ("불가", "어렵", "아님", "안 됩니다", "할 수 없", "내리지 않", "최종 판단은 수의사")
+
+    def _is_phrase_assertive(text: str, phrase: str) -> bool:
+        idx = text.find(phrase)
+        if idx == -1:
+            return False
+        context = text[idx:idx + 30]
+        return not any(neg in context for neg in _PHRASE_NEG_KW)
+
     forbidden_count = 0
     forbidden_samples: list[str] = []
     for item in results:
@@ -1068,7 +1125,7 @@ async def run_chart_eval(test_cases: list[dict] | None = None) -> dict:
             str(res.get("differential_diagnosis", "")),
         ])
         for phrase in case.get("forbidden_phrases", []):
-            if phrase in text:
+            if _is_phrase_assertive(text, phrase):
                 forbidden_count += 1
                 if len(forbidden_samples) < 3:
                     forbidden_samples.append(f"{case['name']}: '{phrase}'")

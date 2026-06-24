@@ -47,18 +47,8 @@ async def call_llm(
     prompt: str,
     temperature: float = 0.3,
 ):
-    from langfuse.decorators import langfuse_context
-
     llm = get_llm(temperature=temperature)
     response = await llm.ainvoke(prompt)
-
-    usage = getattr(response, "usage_metadata", None) or {}
-    if usage:
-        langfuse_context.update_current_observation(
-            usage={"input": usage.get("input_tokens", 0), "output": usage.get("output_tokens", 0)},
-            model=_resolve_model(),
-        )
-
     return response.content
 
 
@@ -99,19 +89,12 @@ async def call_llm_structured(
     schema: dict,
     temperature: float = 0,
 ):
-    from langfuse.decorators import langfuse_context
-
     llm = get_llm(temperature=temperature)
 
-    structured = llm.with_structured_output(schema, method="json_schema", strict=True, include_raw=True)
-    result = await structured.ainvoke(prompt)
+    structured = llm.with_structured_output(
+        schema,
+        method="json_schema",
+        strict=True,
+    )
 
-    raw = result.get("raw")
-    usage = getattr(raw, "usage_metadata", None) or {}
-    if usage:
-        langfuse_context.update_current_observation(
-            usage={"input": usage.get("input_tokens", 0), "output": usage.get("output_tokens", 0)},
-            model=_resolve_model(),
-        )
-
-    return result.get("parsed")
+    return await structured.ainvoke(prompt)
