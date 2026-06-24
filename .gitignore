@@ -72,6 +72,7 @@ ai/agents/test_data/
 # 평가 실행 산출물(리포트/결과) — 생성물이라 추적 안 함. 데이터셋(*_dataset.json, PetEVAL.json)은 유지.
 backend/data/validation/*_report.html
 backend/data/validation/*_report.json
+backend/data/validation/*_report.md
 backend/data/validation/*_result.json
 backend/data/validation/chat_eval_results.json
 backend/data/validation/followup_marathon.json
@@ -80,10 +81,16 @@ backend/data/validation/pet_archive_e2e.json
 backend/data/validation/peteval_pills.json
 
 # 루트에 생성되는 로컬 평가 산출물
-/chat_eval_report.html
-/chat_eval_results.json
-/pet_archive_e2e.json
-/test_report.md
+/*_report.html
+/*_report.md
+/*_results.json
+/*_result.json
+/*_e2e.json
+
+# 레포 내부 tmp에 생성되는 평가 산출물
+/tmp/**/*.json
+/tmp/**/*.html
+/tmp/**/*.md
 
 # CodeGraph 로컬 인덱스/프로세스 상태
 /.codegraph/
