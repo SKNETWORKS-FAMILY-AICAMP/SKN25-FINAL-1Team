@@ -26,6 +26,36 @@ class FollowupCreate(BaseModel):
     message: Optional[str] = None
 
 
+def _is_recent_emergency(emergency_alert, created_at, *, now=None, window_hours: int = 24) -> bool:
+    """직전 경과가 '최근(기본 24h) + 응급'인지 판정(순수 함수, 테스트 용이).
+
+    오래된 응급 경과가 나중의 일반 예약 변경에까지 영향 주는 것을 막기 위해 시간창으로 제한한다.
+    """
+    if not emergency_alert or created_at is None:
+        return False
+    from datetime import datetime, timedelta, timezone
+    now = now or datetime.now(timezone.utc)
+    ca = created_at
+    if getattr(ca, "tzinfo", None) is None:
+        ca = ca.replace(tzinfo=timezone.utc)
+    return (now - ca) <= timedelta(hours=window_hours)
+
+
+def _apply_urgent_slot_priority(recs: dict, urgent: bool) -> dict:
+    """긴급 경과면 '가장 빠른 슬롯(earliest)'을 기본 추천(recommended)으로 끌어올린다.
+
+    recommend_slots는 시작일 offset이 아니라 day-quota만 바꾸므로, 가장 빠른 슬롯을 확실히
+    우선 노출하려면 프론트가 먼저 보여주는 recommended 자리에 earliest를 싣는다(프론트 무변경).
+    자동 확정은 하지 않는다 — 추천 순서만 바꾼다.
+    """
+    if not urgent:
+        return recs
+    earliest = recs.get("earliest") or []
+    if not earliest:
+        return recs
+    return {**recs, "recommended": earliest, "urgent": True}
+
+
 async def _build_rebook_slots(db: AsyncSession, emrid: int, schedule) -> Optional[dict]:
     """재예약용 슬롯 추천 — 기존 예약의 의사/병원 + 이전 문진 기준으로 슬롯을 다시 계산.
 
@@ -49,15 +79,25 @@ async def _build_rebook_slots(db: AsyncSession, emrid: int, schedule) -> Optiona
     doctor = (await db.execute(select(Doctor).where(Doctor.doctorid == schedule.doctorid))).scalar_one_or_none()
     hospitalid = doctor.hospitalid if doctor else None
 
+    # 직전 followup 1건이 최근 24h 이내 응급 경과면, 원래 triage 응급도보다 이를 우선 반영한다.
+    # (booked 상태에서 발작·혈토·요폐·호흡곤란 등으로 emergency_alert=True 저장된 경우)
+    latest_fu = (await db.execute(
+        select(Followup).where(Followup.emrid == emrid).order_by(Followup.created_at.desc()).limit(1)
+    )).scalars().first()
+    urgent_followup = bool(latest_fu) and _is_recent_emergency(
+        getattr(latest_fu, "emergency_alert", None), getattr(latest_fu, "created_at", None)
+    )
+
     age = (date_type.today().year - pet.birth_date.year) if pet.birth_date else None
     pet_payload = {
         "name": pet.petname, "species": pet.species or "dog", "breed": pet.breed or "알 수 없음",
         "age": age, "gender": pet.gender, "weight": float(pet.weight_kg) if pet.weight_kg else None,
     }
-    # 문진 기록이 있으면 그 응급도로, 없으면(검진예약 등) 일반(GREEN) 기준으로 슬롯을 추천한다.
+    # 긴급 경과면 보수적으로 '가장 빠른' 기준(RED)으로 슬롯을 추천한다.
+    # 그 외엔 문진 응급도, 문진 없으면(검진예약 등) 일반(GREEN) 기준.
     triage_info = {
-        "urgency": triage.urgency_level if triage else "GREEN",
-        "urgency_level_num": triage.urgency_level_num if triage else 5,
+        "urgency": "RED" if urgent_followup else (triage.urgency_level if triage else "GREEN"),
+        "urgency_level_num": 1 if urgent_followup else (triage.urgency_level_num if triage else 5),
         "chief_complaint": triage.chief_complaint if triage else None,
         "suspected_diseases": (triage.suspected_diseases or []) if triage else [],
         "symptom_summary": triage.symptom_summary if triage else None,
@@ -73,6 +113,8 @@ async def _build_rebook_slots(db: AsyncSession, emrid: int, schedule) -> Optiona
     except Exception as e:
         logger.warning(f"[Followup] 재예약 슬롯 계산 실패 emrid={emrid}: {e}")
         return None
+    # 긴급이면 가장 빠른 슬롯을 기본 추천 자리로 끌어올린다(자동 확정 아님 — 노출 순서만).
+    recs = _apply_urgent_slot_priority(recs, urgent_followup)
     return {"schedule_id": schedule.scheduleid, **recs}
 
 
@@ -111,6 +153,51 @@ async def _list_upcoming_schedules(db: AsyncSession, userid: int, petid: int, li
             "status": sched.status,
         })
     return out
+
+
+async def _list_current_schedule(db: AsyncSession, emrid: int) -> list[dict]:
+    """현재 emrid에 매핑된 확정 예약 1건만 요약 형태로 반환."""
+    from app.models.schedule import Schedule
+    from app.models.pet import Pet
+    from app.models.doctor import Doctor
+    from app.models.hospital import Hospital
+    from app.models.guardian import Guardian
+    from app.utils.timezone import to_kst
+
+    try:
+        stmt = (
+            select(Schedule, Pet, Doctor, Hospital)
+            .join(Guardian, Guardian.emrid == Schedule.emrid)
+            .join(Pet, Pet.petid == Guardian.petid)
+            .outerjoin(Doctor, Doctor.doctorid == Schedule.doctorid)
+            .outerjoin(Hospital, Hospital.hospitalid == Doctor.hospitalid)
+            .where(Schedule.emrid == emrid, Schedule.deleted_at.is_(None))
+        )
+        row = (await db.execute(stmt)).first()
+    except Exception as e:
+        logger.warning(f"[Followup] 현재 예약 단건 조회 실패 emrid={emrid}: {e}")
+        return []
+
+    if not row:
+        return []
+
+    sched, pet, doctor, hospital = row
+    when = None
+    if sched.confirmed_time:
+        try:
+            k = to_kst(sched.confirmed_time)
+            when = f"{k.month}월 {k.day}일 {k.hour:02d}:{k.minute:02d}"
+        except Exception:
+            when = str(sched.confirmed_time)
+    
+    return [{
+        "schedule_id": sched.scheduleid,
+        "when": when,
+        "pet_name": getattr(pet, "petname", None),
+        "doctor_name": getattr(doctor, "doctor_name", None) if doctor else None,
+        "hospital_name": getattr(hospital, "hospital_name", None) if hospital else None,
+        "status": sched.status,
+    }]
 
 
 def _last_prep_instructions(chat_session) -> list[str]:
@@ -217,7 +304,10 @@ async def create_followup(
         )
 
     agent_result = await run_turn(ctx)
-    saved = any(ev.get("type") == "followup_saved" for ev in (agent_result.events or []))
+    # followup_saved 이벤트에서 응급 여부를 함께 읽는다(응급 경과는 알림을 구분하기 위함).
+    saved_ev = next((ev for ev in (agent_result.events or []) if ev.get("type") == "followup_saved"), None)
+    saved = saved_ev is not None
+    saved_emergency = bool(saved_ev and saved_ev.get("emergency"))
     # 재예약(예약 변경/앞당김) 요청 신호 — 프론트가 슬롯 선택 흐름을 다시 띄우는 데 사용.
     rebook = any(ev.get("type") == "rebook_request" for ev in (agent_result.events or []))
     # 재예약이면 emrid로 슬롯을 직접 계산해 응답에 실어준다(세션 ref 상태와 무관하게 동작).
@@ -227,8 +317,15 @@ async def create_followup(
     cancel_schedule_id = schedule.scheduleid if (cancel and schedule) else None
 
     # 예약 내역 보기 — 다가오는 확정 예약을 챗 카드로 보여주도록 목록을 실어준다.
-    show_schedules = any(ev.get("type") == "list_schedules" for ev in (agent_result.events or []))
-    schedules = await _list_upcoming_schedules(db, current_user.userid, guardian.petid) if show_schedules else []
+    list_sched_ev = next((ev for ev in (agent_result.events or []) if ev.get("type") == "list_schedules"), None)
+    show_schedules = list_sched_ev is not None
+    schedules = []
+    if show_schedules:
+        current_only = list_sched_ev.get("current_only", False)
+        if current_only:
+            schedules = await _list_current_schedule(db, request.emrid)
+        else:
+            schedules = await _list_upcoming_schedules(db, current_user.userid, guardian.petid)
 
     # '문진 작성 후 예약하기' — 같은 챗에서 새 문진을 돌리도록 new_booking 플래그를 켠다(아래 commit에 포함).
     start_triage = any(ev.get("type") == "start_inchat_triage" for ev in (agent_result.events or []))
@@ -254,15 +351,22 @@ async def create_followup(
     prep_instructions = _last_prep_instructions(chat_session) if show_prep else []
 
     # 실제로 경과가 저장됐을 때만 수의사에게 알림(잡담/병원질문 등은 저장 안 됨).
+    # 응급 경과(emergency_alert)는 일반 경과와 다른 알림 타입/문구로 구분해 눈에 띄게 한다.
     if saved and schedule:
         try:
             from app.crud.alarm import create_alarm
+            if saved_emergency:
+                _alarm_type = "followup_urgent"
+                _alarm_contents = "⚠️ 응급 경과 보고가 등록되었습니다."
+            else:
+                _alarm_type = "followup_received"
+                _alarm_contents = "보호자가 경과 보고를 등록했습니다."
             await create_alarm(
                 db=db,
                 doctor_id=schedule.doctorid,
                 schedule_id=schedule.scheduleid,
-                alarm_type="followup_received",
-                contents="보호자가 경과 보고를 등록했습니다.",
+                alarm_type=_alarm_type,
+                contents=_alarm_contents,
             )
         except Exception as e:
             logger.warning(f"[Followup] 수의사 알람 발송 실패 emrid={request.emrid}: {e}")
@@ -279,8 +383,37 @@ async def create_followup(
             if request.images:
                 user_msg["image_url"] = request.images[0]
             msgs.append(user_msg)
-            if agent_result.reply:
-                msgs.append({"role": "assistant", "content": agent_result.reply})
+            card_data = None
+            if show_schedules and schedules:
+                card_data = {
+                    "kind": "schedules",
+                    "items": [
+                        {
+                            "schedule_id": s["schedule_id"],
+                            "when": s["when"],
+                            "petName": s["pet_name"],
+                            "doctorName": s["doctor_name"],
+                            "hospitalName": s["hospital_name"],
+                            "status": s["status"],
+                        }
+                        for s in schedules
+                    ]
+                }
+            elif show_prep and prep_instructions:
+                card_data = {
+                    "kind": "instructions",
+                    "items": prep_instructions
+                }
+
+            if agent_result.reply or card_data:
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": agent_result.reply or "",
+                    "meta": {"quick_replies": agent_result.quick_replies or []}
+                }
+                if card_data:
+                    assistant_msg["meta"]["card"] = card_data
+                msgs.append(assistant_msg)
             chat_session.messages = msgs
             flag_modified(chat_session, "messages")
             if start_triage or followup_state_changed:

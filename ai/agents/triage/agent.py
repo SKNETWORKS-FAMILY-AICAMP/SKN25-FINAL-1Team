@@ -12,6 +12,7 @@
 
 설계: prompts.py(질문/추출/확인), engine.py(디스크리미네이터), vision.py(CNN+VLM), ai.rag(유사사례).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -51,8 +52,44 @@ HIGH_MAX_TURNS = 3
 NORMAL_MIN_TURNS = 3
 NORMAL_MAX_TURNS = 5
 
-_YES_KW = ("예", "네", "넹", "응", "어", "그래", "좋아", "해줘", "부탁", "ㅇㅇ", "할게", "진행", "당연")
+_YES_KW = (
+    "예",
+    "네",
+    "넹",
+    "응",
+    "어",
+    "그래",
+    "좋아",
+    "해줘",
+    "부탁",
+    "ㅇㅇ",
+    "할게",
+    "진행",
+    "당연",
+)
 _NO_KW = ("아니", "아뇨", "싫", "안 할", "안할", "나중", "괜찮", "ㄴㄴ", "노")
+_DANGEROUS_ACTION_KW = (
+    "과산화수소",
+    "빨간약",
+    "알코올 솜",
+    "알코올솜",
+    "된장",
+    "식초물",
+    "소주",
+    "바늘로",
+    "실을 잡아당",
+    "억지로 물",
+    "억지로 토",
+    "사람 약",
+    "사람약",
+    "타이레놀",
+    "남은 항생제",
+    "사람 구충제",
+)
+_DANGEROUS_ACTION_NOTE = (
+    "말씀하신 자가처치나 약 사용은 일단 멈추시고, "
+    "지금 바로 또는 되도록 빨리 수의사 선생님께 확인받는 게 안전해요."
+)
 
 
 def _pet_call(name: str | None) -> str:
@@ -62,6 +99,7 @@ def _pet_call(name: str | None) -> str:
     if "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28:
         return n + "이"
     return n
+
 
 # 문진 전 '바로 예약' 차단 안내 — 증상 먼저 / 그래도 바로 예약은 홈 탭으로.
 _BOOKING_BLOCKED_REPLY = (
@@ -108,8 +146,8 @@ def _keyword_yesno(text: str) -> str:
     return "unclear"
 
 
-_RAG_TOP_K = 10     # 검색은 top-10을 가져오고(쿼리확장 ON),
-_RAG_RERANK_N = 5   # LLM 리랭킹으로 증상에 맞는 상위 5개만 선별해 의심질환 생성에 넘긴다.
+_RAG_TOP_K = 10  # 검색은 top-10을 가져오고(쿼리확장 ON),
+_RAG_RERANK_N = 5  # LLM 리랭킹으로 증상에 맞는 상위 5개만 선별해 의심질환 생성에 넘긴다.
 
 
 async def _run_rag(query: str) -> tuple[list, list]:
@@ -143,9 +181,17 @@ async def _safety_screen(history: list[dict], user_message: str) -> dict:
     """
     try:
         out = await call_llm_json(build_safety_screen_prompt(history, user_message))
-        return {"urgent": bool(out.get("urgent")), "note": (out.get("note") or "").strip()}
+        result = {
+            "urgent": bool(out.get("urgent")),
+            "note": (out.get("note") or "").strip(),
+        }
+        if any(keyword in (user_message or "") for keyword in _DANGEROUS_ACTION_KW):
+            return {"urgent": True, "note": _DANGEROUS_ACTION_NOTE}
+        return result
     except Exception as e:
         logger.warning("[triage] 안전 선별 콜 실패(폴백): %s", e)
+        if any(keyword in (user_message or "") for keyword in _DANGEROUS_ACTION_KW):
+            return {"urgent": True, "note": _DANGEROUS_ACTION_NOTE}
         return {"urgent": False, "note": ""}
 
 
@@ -160,7 +206,7 @@ class TriageAgent:
         if ctx.active_flow == Flow.AWAITING_BOOKING_CONFIRM:
             return await self._confirm(ctx)
         if ctx.emrid is not None and ctx.active_flow != Flow.TRIAGING:
-            return await self._rebook(ctx)        # 문진 완료 후 '다시 예약'
+            return await self._rebook(ctx)  # 문진 완료 후 '다시 예약'
         return await self._triage_turn(ctx)
 
     # ── 일반 문진 턴 ──────────────────────────────────────────────
@@ -181,10 +227,14 @@ class TriageAgent:
             )
 
         # 0) 초기 진입 pill 클릭 → 추출/판정 없이 바로 증상부터 묻는다(첫 턴·첨부 없을 때).
-        if ctx.user_message == INITIAL_TRIAGE_PILL and turn_count == 0 and not ctx.attachments:
+        if (
+            ctx.user_message == INITIAL_TRIAGE_PILL
+            and turn_count == 0
+            and not ctx.attachments
+        ):
             return AgentResult(
                 reply=f"네! {pet_name}가 어디가 어떻게 불편한지 편하게 말씀해 주세요. "
-                      "살펴보고 예약까지 도와드릴게요. 🐾",
+                "살펴보고 예약까지 도와드릴게요. 🐾",
                 quick_replies=INITIAL_SYMPTOM_PILLS,
                 state_patch={"triage_state": state, "active_flow": "triaging"},
             )
@@ -192,12 +242,12 @@ class TriageAgent:
         # 1) 이미지/영상 분석(있으면) — VLM 먼저 판단 → 피부/안구면 CNN 보조 → RAG에 투입
         vis = None
         if ctx.attachments:
-            _push_status(ctx, "image_analysis")   # 📷 이미지 분석중
+            _push_status(ctx, "image_analysis")  # 📷 이미지 분석중
             try:
                 vis = await vision.analyze(ctx.attachments, ctx.user_message)
             except Exception as e:
                 logger.warning("[triage] vision 분석 실패: %s", e)
-            _push_status(ctx, "generating")        # 분석 끝 → 💬 응답 작성중
+            _push_status(ctx, "generating")  # 분석 끝 → 💬 응답 작성중
         vision_note = (vis or {}).get("note", "")
         vision_evidence = (vis or {}).get("evidence") or state.get("vision_evidence")
         vision_rag = (vis or {}).get("rag_text") or state.get("vision_rag", "")
@@ -210,15 +260,19 @@ class TriageAgent:
             if not text_has_content and turn_count == 0:
                 return AgentResult(
                     reply="📷 보내주신 사진은 반려동물 증상과 관련이 없어 보여요. "
-                          "어디가 불편한지 글로 알려주시거나, 증상이 보이는 사진을 보내주세요.",
+                    "어디가 불편한지 글로 알려주시거나, 증상이 보이는 사진을 보내주세요.",
                     state_patch={"active_flow": "idle"},
                 )
 
         # 2) 추출 콜 + 안전 선별 콜 — 동시에(asyncio) 돌려 latency를 늘리지 않는다.
         #    안전 선별은 '지금 바로/빨리 진료가 필요할 수 있나'만 보고, 해당되면 첫 응답에 한 줄 덧붙인다.
-        extraction_task = asyncio.create_task(call_llm_json(
-            build_extraction_prompt(history, ctx.user_message, prev_section, extracted, vision_note)
-        ))
+        extraction_task = asyncio.create_task(
+            call_llm_json(
+                build_extraction_prompt(
+                    history, ctx.user_message, prev_section, extracted, vision_note
+                )
+            )
+        )
         safety_task = asyncio.create_task(_safety_screen(history, ctx.user_message))
         try:
             out = await extraction_task
@@ -230,7 +284,11 @@ class TriageAgent:
         # 안전 안내 한 줄 — urgent로 판단됐고 이번 세션에서 아직 안 띄웠으면 첫 응답 앞에 차분히 덧붙인다.
         #   문진 흐름·라우팅은 그대로 두고(additive), 위험 자가처치 만류 + 빠른 진료 권유만 보탠다.
         safety_note = ""
-        if safety.get("urgent") and safety.get("note") and not state.get("safety_noted"):
+        if (
+            safety.get("urgent")
+            and safety.get("note")
+            and not state.get("safety_noted")
+        ):
             safety_note = safety["note"].strip() + "\n\n"
             state["safety_noted"] = True
         # 증상 질문/완료 멘트 앞에 안전 한 줄을 먼저 보이게 image_notice에 합친다(둘 다 첫 응답 prefix).
@@ -244,7 +302,7 @@ class TriageAgent:
         if ctx.attachments or tier_signal in ("critical", "high"):
             intent = "symptom"
         if intent == "vague_help" and turn_count > 0:
-            intent = "chitchat"   # 막연한 도움요청은 '진입 시점'에만 의미 — 진행 중엔 잡담으로
+            intent = "chitchat"  # 막연한 도움요청은 '진입 시점'에만 의미 — 진행 중엔 잡담으로
         # 증상 없이 '바로 예약'만 원하는 경우 → 예약은 문진 후에. 증상 먼저 / 그래도 바로면 홈 탭 안내.
         #   (문진 흐름은 유지 — 이어서 증상을 말하면 그대로 문진 진행. 턴카운트·추출은 건드리지 않음.)
         if intent == "booking_request" and ctx.emrid is None:
@@ -259,8 +317,9 @@ class TriageAgent:
                 state_patch={"triage_state": state, "active_flow": "idle"},
             )
         if intent in ("meta", "chitchat", "vague_help"):
-            return await self._nonsymptom_turn(ctx, intent, history, prev_section, pet_name, state,
-                                               safety_note)
+            return await self._nonsymptom_turn(
+                ctx, intent, history, prev_section, pet_name, state, safety_note
+            )
 
         section = out.get("section") or prev_section or "GENERAL"
         # LLM이 값에 대괄호/따옴표를 붙이거나("[recent_single]") 없는 변수를 지어내도 엔진 매칭이
@@ -295,18 +354,28 @@ class TriageAgent:
         elif tier == "high":
             terminate = enough or turn_count >= HIGH_MAX_TURNS
         else:
-            terminate = (turn_count >= NORMAL_MIN_TURNS and enough) or turn_count >= NORMAL_MAX_TURNS
+            terminate = (
+                turn_count >= NORMAL_MIN_TURNS and enough
+            ) or turn_count >= NORMAL_MAX_TURNS
 
-        state.update({"extracted": extracted, "section": section,
-                      "turn_count": turn_count, "vision_evidence": vision_evidence,
-                      "vision_rag": vision_rag})
+        state.update(
+            {
+                "extracted": extracted,
+                "section": section,
+                "turn_count": turn_count,
+                "vision_evidence": vision_evidence,
+                "vision_rag": vision_rag,
+            }
+        )
 
         if not terminate:
             # 5) 질문 콜 (트리 비노출, 따뜻하게)
             try:
                 q = await call_llm_json(
-                    build_question_prompt(pet_name, history, ctx.user_message, section, extracted),
-                    temperature=0.75,   # 표현 다양성 ↑ (똑같은 인사 반복 완화)
+                    build_question_prompt(
+                        pet_name, history, ctx.user_message, section, extracted
+                    ),
+                    temperature=0.75,  # 표현 다양성 ↑ (똑같은 인사 반복 완화)
                 )
             except Exception:
                 q = {}
@@ -314,7 +383,8 @@ class TriageAgent:
             # 막연한 포괄/회피성 보기('기타·여기저기' 등)는 프롬프트에서 안 만들게 지시.
             pills = [p for p in (q.get("quick_replies") or []) if p][:5]
             return AgentResult(
-                reply=image_notice + (q.get("reply") or "조금 더 자세히 알려주시겠어요?"),
+                reply=image_notice
+                + (q.get("reply") or "조금 더 자세히 알려주시겠어요?"),
                 quick_replies=pills,
                 state_patch={"triage_state": state, "active_flow": "triaging"},
             )
@@ -323,29 +393,57 @@ class TriageAgent:
         urgency = urgency or "GREEN"
         # RAG 쿼리 = 추출 LLM이 만든 '보호자 말투 자연어 한 문장'. 짧은 응급 대화(노이즈 多)도
         # 깨끗한 서술형이라 narrative 문서(input_text)와 유사도가 잘 나온다. 없으면 대화 전체로 폴백.
-        convo_texts = [m.get("content", "") for m in (ctx.history or [])
-                       if isinstance(m, dict) and m.get("content")]
-        rag_query = (out.get("rag_query") or "").strip() or " ".join(convo_texts).strip()
+        convo_texts = [
+            m.get("content", "")
+            for m in (ctx.history or [])
+            if isinstance(m, dict) and m.get("content")
+        ]
+        rag_query = (out.get("rag_query") or "").strip() or " ".join(
+            convo_texts
+        ).strip()
         if vision_rag:  # 이미지/영상 소견·CNN 병명도 RAG 검색에 반영
             rag_query = f"{rag_query} {vision_rag}".strip()
-        _push_status(ctx, "searching")   # 🔍 증상 검색중(RAG)
+        _push_status(ctx, "searching")  # 🔍 증상 검색중(RAG)
         rag_context, rag_answers = await _run_rag(rag_query)
         _push_status(ctx, "generating")  # 검색 끝 → 💬 응답(의심질환 멘트) 작성중
         # 의심질환 + 안내 멘트 = RAG 답변(수의사 답변)에서 LLM이 도출(꾸며내지 않음). 단일 출처.
-        symptom_text = " ".join([m.get("content", "") for m in (ctx.history or [])
-                                 if isinstance(m, dict) and m.get("role") == "user" and m.get("content")])
+        symptom_text = " ".join(
+            [
+                m.get("content", "")
+                for m in (ctx.history or [])
+                if isinstance(m, dict) and m.get("role") == "user" and m.get("content")
+            ]
+        )
         try:
             gen = await call_llm_json(
-                build_suspected_confirm_prompt(pet_name, symptom_text, [a[:500] for a in rag_answers[:5]]),
+                build_suspected_confirm_prompt(
+                    pet_name,
+                    symptom_text,
+                    [a[:500] for a in rag_answers[:5]],
+                    final_urgency=urgency,
+                    urgency_tier=tier,
+                    safety_noted=bool(state.get("safety_noted")),
+                ),
                 temperature=0.5,
             )
         except Exception:
             gen = {}
-        suspected = list(dict.fromkeys(d for d in (gen.get("suspected_diseases") or []) if d))
-        reply = (gen.get("message") or "").strip() or build_suspected_confirm_message(pet_name, suspected)
+        suspected = list(
+            dict.fromkeys(d for d in (gen.get("suspected_diseases") or []) if d)
+        )
+        reply = (gen.get("message") or "").strip() or build_suspected_confirm_message(
+            pet_name,
+            suspected,
+            final_urgency=urgency,
+            urgency_tier=tier,
+            safety_noted=bool(state.get("safety_noted")),
+        )
         reply = image_notice + _format_confirm_reply(reply)
         vtl_basis = engine.build_vtl_basis(
-            matched, urgency, evidence=vision_note, reason=out.get("summary") or "",
+            matched,
+            urgency,
+            evidence=vision_note,
+            reason=out.get("summary") or "",
         )
         symptom_keywords = [kw for kw in (out.get("keywords") or []) if kw]
         title = (out.get("title") or "").strip()[:60]  # 채팅 목록 요약 제목
@@ -366,7 +464,9 @@ class TriageAgent:
                 if emrid is None or ctx.new_booking:
                     guardian = await create_triage_guardian(ctx.db, ctx.petid)
                     emrid = guardian.emrid
-                    await update_session_emrid(ctx.db, ctx.session, emrid, force=ctx.new_booking)
+                    await update_session_emrid(
+                        ctx.db, ctx.session, emrid, force=ctx.new_booking
+                    )
                     ctx.emrid = emrid
                 info = {
                     "urgency_level": urgency,
@@ -405,7 +505,9 @@ class TriageAgent:
             "data": {
                 "is_triage_complete": True,
                 "urgency": urgency,
-                "chief_complaints": [out.get("chief_complaint")] if out.get("chief_complaint") else [],
+                "chief_complaints": [out.get("chief_complaint")]
+                if out.get("chief_complaint")
+                else [],
                 "suspected_conditions": suspected,
                 "symptom_keywords": symptom_keywords,
                 "triage_summary": out.get("summary"),
@@ -414,7 +516,13 @@ class TriageAgent:
         # 제목은 지금(완료 시점) 바로 푸시 → 채팅 목록 제목 실시간 갱신
         events = []
         if final_title:
-            events.append({"type": "chat_title", "session_id": ctx.session_id, "title": final_title})
+            events.append(
+                {
+                    "type": "chat_title",
+                    "session_id": ctx.session_id,
+                    "title": final_title,
+                }
+            )
         return AgentResult(
             reply=reply,
             quick_replies=["예", "아니오"],
@@ -429,23 +537,32 @@ class TriageAgent:
 
     # ── 비증상 발화(메타·잡담·막연한 도움요청) → 응대 후 본론 복귀 ──────────────
     #    상태(extracted·turn_count·section)는 그대로 둔다 = 노이즈가 종료 보험을 깎지 않음.
-    async def _nonsymptom_turn(self, ctx: SessionContext, intent: str, history: list[dict],
-                               prev_section: str | None, pet_name: str, state: dict,
-                               safety_note: str = "") -> AgentResult:
+    async def _nonsymptom_turn(
+        self,
+        ctx: SessionContext,
+        intent: str,
+        history: list[dict],
+        prev_section: str | None,
+        pet_name: str,
+        state: dict,
+        safety_note: str = "",
+    ) -> AgentResult:
         try:
             r = await call_llm_json(
-                build_redirect_reply_prompt(pet_name, history, ctx.user_message, intent, prev_section),
+                build_redirect_reply_prompt(
+                    pet_name, history, ctx.user_message, intent, prev_section
+                ),
                 temperature=0.7,
             )
         except Exception:
             r = {}
         fallback = {
             "meta": f"방금까지 {pet_name} 얘기를 나누고 있었어요. 지금 가장 신경 쓰이는 증상을 "
-                    "한 가지만 더 알려주시면 이어서 살펴볼게요.",
+            "한 가지만 더 알려주시면 이어서 살펴볼게요.",
             "chitchat": f"{pet_name}의 증상을 조금 더 들려주시면 살펴보고 도와드릴게요. "
-                        "어디가 불편해 보이는지 편하게 알려주실래요?",
+            "어디가 불편해 보이는지 편하게 알려주실래요?",
             "vague_help": f"많이 걱정되시겠어요. {pet_name}가 어떤 상태인지 조금 더 들려주시면 "
-                          "살펴보고, 필요하면 예약까지 도와드릴게요.",
+            "살펴보고, 필요하면 예약까지 도와드릴게요.",
         }.get(intent, "")
         # pill은 응대 에이전트처럼 고정 2지선다 — 증상 더 들을지 / 여기서 마칠지.
         return AgentResult(
@@ -458,23 +575,33 @@ class TriageAgent:
     async def _confirm(self, ctx: SessionContext) -> AgentResult:
         state = dict(ctx.triage_state or {})
         try:
-            ans = (await call_llm_json(build_confirm_prompt(ctx.user_message))).get("answer")
+            ans = (await call_llm_json(build_confirm_prompt(ctx.user_message))).get(
+                "answer"
+            )
         except Exception:
             ans = _keyword_yesno(ctx.user_message)
         if ans not in ("yes", "no"):
             ans = _keyword_yesno(ctx.user_message)
 
         if ans == "yes":
-            return self._emit_booking(state, "네! 예약을 도와드릴게요. 아래에서 시간을 골라주세요. 🐾")
+            return self._emit_booking(
+                state, "네! 예약을 도와드릴게요. 아래에서 시간을 골라주세요. 🐾"
+            )
         if ans == "no":
             return AgentResult(
                 reply="알겠습니다. 추가로 궁금한 점이 있거나 예약을 원하시면 언제든 편하게 말씀해 주세요. 🐾",
-                state_patch={"active_flow": "idle", "triage_state": state},  # last_complete 유지(재예약용)
+                state_patch={
+                    "active_flow": "idle",
+                    "triage_state": state,
+                },  # last_complete 유지(재예약용)
             )
         return AgentResult(
             reply="예약을 도와드릴까요? '예' 또는 '아니오'로 알려주세요.",
             quick_replies=["예", "아니오"],
-            state_patch={"active_flow": "awaiting_booking_confirm", "triage_state": state},
+            state_patch={
+                "active_flow": "awaiting_booking_confirm",
+                "triage_state": state,
+            },
         )
 
     # ── 재예약(문진 완료 후 '다시 예약') ──────────────────────────
@@ -485,16 +612,26 @@ class TriageAgent:
             if payload:
                 state["last_complete"] = payload
         if state.get("last_complete"):
-            return self._emit_booking(state, "네, 예약을 다시 도와드릴게요. 아래에서 시간을 골라주세요. 🐾")
+            return self._emit_booking(
+                state, "네, 예약을 다시 도와드릴게요. 아래에서 시간을 골라주세요. 🐾"
+            )
         return AgentResult(reply="예약을 도와드릴게요. 잠시만 기다려 주세요!")
 
     def _emit_booking(self, state: dict, reply: str) -> AgentResult:
         payload = state.get("last_complete") or {}
         return AgentResult(
             reply=reply,
-            state_patch={"active_flow": "idle", "triage_state": state},  # last_complete 유지
-            events=[{"type": "triage_complete", "emrid": payload.get("emrid"),
-                     "data": payload.get("data") or {}}],
+            state_patch={
+                "active_flow": "idle",
+                "triage_state": state,
+            },  # last_complete 유지
+            events=[
+                {
+                    "type": "triage_complete",
+                    "emrid": payload.get("emrid"),
+                    "data": payload.get("data") or {},
+                }
+            ],
         )
 
     async def _payload_from_db(self, ctx: SessionContext) -> dict | None:
@@ -504,19 +641,31 @@ class TriageAgent:
             from sqlalchemy import select
 
             from app.models.triage_result import TriageResult
-            tr = (await ctx.db.execute(
-                select(TriageResult).where(TriageResult.emrid == ctx.emrid)
-            )).scalars().first()
+
+            tr = (
+                (
+                    await ctx.db.execute(
+                        select(TriageResult).where(TriageResult.emrid == ctx.emrid)
+                    )
+                )
+                .scalars()
+                .first()
+            )
             if not tr:
                 return None
-            return {"emrid": ctx.emrid, "data": {
-                "is_triage_complete": True,
-                "urgency": tr.urgency_level,
-                "chief_complaints": [tr.chief_complaint] if tr.chief_complaint else [],
-                "suspected_conditions": tr.suspected_diseases or [],
-                "symptom_keywords": tr.symptom_keywords or [],
-                "triage_summary": tr.symptom_summary,
-            }}
+            return {
+                "emrid": ctx.emrid,
+                "data": {
+                    "is_triage_complete": True,
+                    "urgency": tr.urgency_level,
+                    "chief_complaints": [tr.chief_complaint]
+                    if tr.chief_complaint
+                    else [],
+                    "suspected_conditions": tr.suspected_diseases or [],
+                    "symptom_keywords": tr.symptom_keywords or [],
+                    "triage_summary": tr.symptom_summary,
+                },
+            }
         except Exception:
             return None
 
