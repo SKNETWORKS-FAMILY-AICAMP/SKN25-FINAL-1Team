@@ -1055,12 +1055,19 @@ async def run_chart_eval(test_cases: list[dict] | None = None) -> dict:
             "detail": f"{kw_hits}/{kw_total} ({kw_score:.0%})",
         })
 
-    # Check 3: 단정 표현 없음
+    # Check 3: 단정 표현 없음 (thinking 필드 제외 — LLM이 금지 지침 언급 시 false positive 방지)
     forbidden_count = 0
     forbidden_samples: list[str] = []
     for item in results:
         case, res = item["case"], item.get("res") or {}
-        text = str(res)
+        soap = res.get("soap") or {}
+        intake = res.get("intake_summary") or {}
+        text = " ".join([
+            str(soap.get("S", "")),
+            str(soap.get("A", "")),
+            str(intake.get("suspected_diseases", "")),
+            str(res.get("differential_diagnosis", "")),
+        ])
         for phrase in case.get("forbidden_phrases", []):
             if phrase in text:
                 forbidden_count += 1
