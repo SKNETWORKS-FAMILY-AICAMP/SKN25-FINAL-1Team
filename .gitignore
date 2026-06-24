@@ -73,4 +73,17 @@ ai/agents/test_data/
 backend/data/validation/*_report.html
 backend/data/validation/*_report.json
 backend/data/validation/*_result.json
+backend/data/validation/chat_eval_results.json
+backend/data/validation/followup_marathon.json
+backend/data/validation/kin_safety*.json
+backend/data/validation/pet_archive_e2e.json
+backend/data/validation/peteval_pills.json
 
+# 루트에 생성되는 로컬 평가 산출물
+/chat_eval_report.html
+/chat_eval_results.json
+/pet_archive_e2e.json
+/test_report.md
+
+# CodeGraph 로컬 인덱스/프로세스 상태
+/.codegraph/
