@@ -1,0 +1,41 @@
+# medipaw.app HTTPS 종단 — Caddy 리버스 프록시.
+# Let's Encrypt 인증서를 자동 발급/갱신(HTTP-01)하고 443에서 받아
+# 도커 네트워크 내부의 각 프론트/백엔드 컨테이너로 분배한다.
+#
+# 전제(운영자가 1회 설정):
+#   - Route53 A레코드: guardian/vet/company/admin/api .medipaw.app → EC2 퍼블릭 IP
+#   - EC2 보안그룹 인바운드 80, 443 오픈 (ACME 챌린지 + HTTPS)
+#
+# 음성인식(getUserMedia/Web Speech)은 secure context 전용이라
+# https://guardian.medipaw.app 로 접속해야 마이크가 열린다.
+
+{
+	email kcy960812@gmail.com
+}
+
+# 보호자 앱 (음성인식)
+guardian.medipaw.app {
+	reverse_proxy guardian:5173
+}
+
+# 수의사 웹
+vet.medipaw.app {
+	reverse_proxy vet:5174
+}
+
+# 소개/운영 사이트 (company-web)
+company.medipaw.app {
+	reverse_proxy company:5175
+}
+
+# 운영진 콘솔 — company-web의 /admin 라우트. 루트 진입 시 /admin 으로.
+admin.medipaw.app {
+	@root path /
+	redir @root /admin
+	reverse_proxy company:5175
+}
+
+# 백엔드 API 직접 노출 (백엔드 라우트는 prefix 없는 루트: /auth/login 등)
+api.medipaw.app {
+	reverse_proxy backend:8000
+}

@@ -1,16 +1,36 @@
 # syntax=docker/dockerfile:1.7
-# company-web 정적 소개 사이트 — 미리 빌드한 dist를 nginx로 서빙한다.
+# company-web 소개/운영 사이트 — multi-stage 빌드.
 #
-# Mac(arm64)에서 amd64 이미지를 크로스빌드할 때 컨테이너 안에서 vite/esbuild를
-# QEMU 에뮬레이션으로 돌리면 `fatal error: lfstack.push`로 죽는 알려진 버그가 있어,
-# 빌드(npm run build)는 호스트에서 네이티브로 끝낸 뒤 그 결과물(dist)만 복사한다.
-#
-# 빌드 전 호스트에서:
-#   cd frontend/company-web
-#   VITE_GUARDIAN_URL=http://3.37.22.158:5173 VITE_VET_URL=http://3.37.22.158:5174 npm run build
+# (구) Mac(arm64)에서 amd64 크로스빌드 시 컨테이너 안 esbuild가 QEMU 위에서
+# `fatal error: lfstack.push`로 죽어, dist를 호스트에서 빌드해 COPY만 했었다.
+# 이제 빌드는 GitHub Actions(docker-build.yml)에서 도는데 ubuntu-latest 러너는
+# amd64 네이티브 → QEMU 자체가 없어 컨테이너 내 빌드가 안전하다. 그래서 guardian/vet
+# 과 동일한 multi-stage로 통일하고 자동배포 파이프라인에 편입했다.
+FROM node:20-alpine AS builder
+
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ARG VITE_GUARDIAN_URL=http://localhost:5173
+ENV VITE_GUARDIAN_URL=$VITE_GUARDIAN_URL
+ARG VITE_VET_URL=http://localhost:5174
+ENV VITE_VET_URL=$VITE_VET_URL
+
+WORKDIR /frontend/company-web
+
+# BuildKit 캐시 마운트로 npm 다운로드를 호스트에 보존 → 콜드 빌드 재다운로드 0.
+COPY frontend/company-web/package*.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
+
+# shared assets는 ../shared (@shared) 로 참조되므로 구조 보존
+COPY frontend/shared/ ../shared/
+COPY frontend/company-web/ ./
+
+RUN npm run build
+
+# ── production stage ──
 FROM nginx:alpine
 
-COPY frontend/company-web/dist /usr/share/nginx/html
+COPY --from=builder /frontend/company-web/dist /usr/share/nginx/html
 COPY ai/docker/nginx-company.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 5175

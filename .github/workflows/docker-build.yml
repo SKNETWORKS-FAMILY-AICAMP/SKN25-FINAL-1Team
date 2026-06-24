@@ -52,7 +52,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=/api
-            VITE_COMPANY_URL=http://3.37.22.158:5175
+            VITE_COMPANY_URL=https://company.medipaw.app
           tags: |
             ${{ env.IMAGE_PREFIX }}/medipaw-guardian:latest
             ${{ env.IMAGE_PREFIX }}/medipaw-guardian:${{ github.sha }}
@@ -69,9 +69,27 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=/api
-            VITE_COMPANY_URL=http://3.37.22.158:5175
+            VITE_COMPANY_URL=https://company.medipaw.app
           tags: |
             ${{ env.IMAGE_PREFIX }}/medipaw-vet:latest
             ${{ env.IMAGE_PREFIX }}/medipaw-vet:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Company Frontend (소개/운영 사이트 + admin) ──────────────────
+      - name: Build & Push company
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ai/docker/Dockerfile.company
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api
+            VITE_GUARDIAN_URL=https://guardian.medipaw.app
+            VITE_VET_URL=https://vet.medipaw.app
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/medipaw-company:latest
+            ${{ env.IMAGE_PREFIX }}/medipaw-company:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
