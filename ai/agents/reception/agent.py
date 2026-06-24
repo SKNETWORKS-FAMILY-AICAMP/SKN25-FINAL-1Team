@@ -203,6 +203,23 @@ async def _hospital_facts(db, hospitalid: int | None, question: str,
     return "\n".join(lines)
 
 
+def _detect_mcp_tool(question: str) -> str | None:
+    """질문 키워드로 어떤 MCP tool에 해당하는지 판단 — DB 직접 조회 결과에 prefix 붙일 때 사용."""
+    q = question or ""
+    # 슬롯 가용성 — 예약+가능/언제 패턴
+    if "예약" in q and any(k in q for k in ("가능", "언제", "빈", "할 수 있")):
+        return "find_open_slots"
+    # 운영시간 체크를 병원 정보보다 먼저 (오탐 방지: "어떻게" 같은 일반 단어 제외)
+    _STRICT_SCHEDULE_KW = ("운영", "휴진", "점심", "몇 시", "몇시", "영업", "진료 시간", "진료시간")
+    if any(k in q for k in _STRICT_SCHEDULE_KW) or "진료" in q:
+        return "get_operating_hours"
+    # 병원 위치·전화·수의사·소개 ("어떻게" 제외 — 너무 일반적이라 오탐 유발)
+    _STRICT_PROFILE_KW = ("소개", "특징", "설명", "정보")
+    if any(k in q for k in _ADDRESS_KW + _PHONE_KW + _DOCTOR_KW + _STRICT_PROFILE_KW):
+        return "get_hospital_info"
+    return None
+
+
 class ReceptionAgent:
     name = "reception"
     # 이 description은 라우터 LLM이 담당을 고를 때 그대로 읽는다(router._AGENT_DESC 단일 출처).
@@ -282,7 +299,11 @@ class ReceptionAgent:
     async def collect_facts(self, ctx: SessionContext) -> str:
         import os
         if os.getenv("RECEPTION_USE_MCP", "").lower() not in {"1", "true", "yes"}:
-            return await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message, ctx.history)
+            facts = await _hospital_facts(ctx.db, ctx.hospitalid, ctx.user_message, ctx.history)
+            tool = _detect_mcp_tool(ctx.user_message)
+            if tool and facts and "등록된 병원 정보가 없습니다" not in facts:
+                return f"[{tool}] {facts}"
+            return facts
         try:
             from ai.orchestrator.mcp.client import get_mcp_tools
             tools = await get_mcp_tools()

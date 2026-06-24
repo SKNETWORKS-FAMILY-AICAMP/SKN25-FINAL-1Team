@@ -311,6 +311,8 @@ interface TriageMetrics {
   urgency_errors?: { name: string; expected: string; got: string }[];
   red_flag_recall?: string;
   slot_f1?: number | null;
+  extra_grounded?: number;
+  extra_ungrounded?: number;
   slot_precision?: number | null;
   slot_recall?: number | null;
   hallucination_count?: number;
@@ -396,10 +398,10 @@ function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
           </div>
           <div>
             <p className="text-xs text-slate-400">환각 의심</p>
-            <p className={`mt-1 text-3xl font-black ${(m.hallucination_count ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>
-              {m.hallucination_count ?? "—"}건
+            <p className={`mt-1 text-3xl font-black ${(m.extra_ungrounded ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>
+              {m.extra_ungrounded ?? 0}건
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">예상 외 변수 추출</p>
+            <p className="mt-0.5 text-xs text-slate-400">발화 근거 없는 추출 · 근거 있음 {m.extra_grounded ?? 0}건</p>
           </div>
           <div>
             <p className="text-xs text-slate-400">요약 완전성</p>

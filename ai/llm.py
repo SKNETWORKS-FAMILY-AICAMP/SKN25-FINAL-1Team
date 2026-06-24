@@ -47,12 +47,8 @@ async def call_llm(
     prompt: str,
     temperature: float = 0.3,
 ):
-    llm = get_llm(
-        temperature=temperature,
-    )
-
+    llm = get_llm(temperature=temperature)
     response = await llm.ainvoke(prompt)
-
     return response.content
 
 
