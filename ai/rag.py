@@ -119,3 +119,45 @@ async def search_similar_triage_cases(
             distance=float(distance_value),
         ))
     return matches
+
+
+_RERANK_PROMPT = (
+    "너는 수의 트리아지 RAG 검색결과 '리랭커'야. 아래 [증상]에 임상적으로 가장 관련 있는 사례 순으로 "
+    "후보를 재정렬해. 신체계통(예: 정형/신경/소화기/안과 등)이 증상과 다른 사례는 뒤로 보내라. "
+    "추측으로 새 사례를 만들지 말고, 주어진 인덱스만 사용해라.\n\n"
+    "[증상]\n{query}\n\n[후보 사례]\n{candidates}\n\n"
+    'JSON으로만 반환: {{"order": [관련 높은 순서대로 후보 인덱스]}}'
+)
+
+
+def _candidate_brief(m: TriageRagMatch, limit: int = 200) -> str:
+    parts = [p for p in (m.department, m.disease) if p]
+    head = " · ".join(parts)
+    body = " ".join((m.input_text or "").split())[:limit]
+    return f"[{head}] {body}" if head else body
+
+
+# 검색된 후보를 LLM으로 리랭킹해 상위 top_n만 반환 (fail-open: 실패 시 원래 순서 상위 top_n).
+async def rerank_matches_llm(
+    query: str, matches: list[TriageRagMatch], *, top_n: int = 5,
+) -> list[TriageRagMatch]:
+    q = " ".join((query or "").split())
+    if not q or len(matches) <= 1:
+        return matches[:top_n]
+    candidates = "\n".join(f"{i}) {_candidate_brief(m)}" for i, m in enumerate(matches))
+    try:
+        data = await call_llm_json(_RERANK_PROMPT.format(query=q, candidates=candidates))
+        order = [int(i) for i in (data or {}).get("order", []) if isinstance(i, (int, str)) and str(i).isdigit()]
+    except Exception as exc:
+        logger.warning("[RAG] rerank skipped: %s", exc)
+        return matches[:top_n]
+    seen: set[int] = set()
+    reranked: list[TriageRagMatch] = []
+    for idx in order:  # LLM이 고른 순서 먼저
+        if 0 <= idx < len(matches) and idx not in seen:
+            seen.add(idx)
+            reranked.append(matches[idx])
+    for i, m in enumerate(matches):  # LLM이 누락한 후보는 원래 순서로 뒤에 보충
+        if i not in seen:
+            reranked.append(m)
+    return reranked[:top_n]

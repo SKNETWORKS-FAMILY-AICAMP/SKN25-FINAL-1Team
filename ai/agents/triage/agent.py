@@ -108,7 +108,8 @@ def _keyword_yesno(text: str) -> str:
     return "unclear"
 
 
-_RAG_TOP_K = 5  # threshold 컷 대신 top-k를 가져와 LLM이 증상에 맞는 것만 리랭크/선별한다.
+_RAG_TOP_K = 10     # 검색은 top-10을 가져오고(쿼리확장 ON),
+_RAG_RERANK_N = 5   # LLM 리랭킹으로 증상에 맞는 상위 5개만 선별해 의심질환 생성에 넘긴다.
 
 
 async def _run_rag(query: str) -> tuple[list, list]:
@@ -116,17 +117,19 @@ async def _run_rag(query: str) -> tuple[list, list]:
 
     ⚠️ 요청 진행 중인 세션(ctx.db)이 아니라 '전용 새 세션'으로 검색한다 — pgvector 검색을
     진행 중 세션에서 돌리면 앱에서 실패하던 문제(post-booking이 새 세션 쓰는 이유와 동일).
-    threshold로 자르지 않고 top-k를 그대로 넘겨, 증상과 맞는지(리랭크)·질환 추출은 LLM이 한다.
+    검색(top-10, 쿼리확장) → LLM 리랭킹(상위 5) 순. 증상과 동떨어진 사례(다른 신체계통)를
+    리랭커가 뒤로 밀어내, 다리/허탈 증상에 눈 사례가 끌려오던 오배치를 줄인다.
     """
     try:
         from app.db.session import AsyncSessionLocal
 
-        from ai.rag import search_similar_triage_cases
+        from ai.rag import rerank_matches_llm, search_similar_triage_cases
         q = (query or "").strip()
         if not q:
             return [], []
         async with AsyncSessionLocal() as db:
             matches = await search_similar_triage_cases(db, q, top_k=_RAG_TOP_K)
+        matches = await rerank_matches_llm(q, matches, top_n=_RAG_RERANK_N)
         return [m.to_dict() for m in matches], [m.output_text for m in matches if m.output_text]
     except Exception as e:
         logger.warning("[triage] RAG 검색 실패: %s", e)
