@@ -639,7 +639,6 @@ async def run_orchestrator_eval(db: AsyncSession) -> dict:
     _PHASE_MAP = {
         "PRE_BOOKING": Phase.PRE_BOOKING,
         "BOOKED": Phase.BOOKED,
-        "CLOSED": Phase.CLOSED,
     }
     _FLOW_MAP = {
         "IDLE": Flow.IDLE,

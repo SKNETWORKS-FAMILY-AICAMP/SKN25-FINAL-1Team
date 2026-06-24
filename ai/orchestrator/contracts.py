@@ -12,6 +12,10 @@ from typing import Any, Protocol
 # 채팅 시작 시 노출되는 '문진 시작' 진입 pill — chat.py/router/triage가 공유하는 단일 출처.
 INITIAL_TRIAGE_PILL = "증상을 말하고 예약할래요"
 
+# 문진 중 비증상 응대(메타·잡담 등) 뒤 띄우는 '여기서 마칠게요' 종료 pill — 단일 출처.
+# 글자가 'OO 괜찮아요?'의 증상 답과 안 겹치게 명확한 종료어로 둔다(router/triage가 결정론 처리).
+TRIAGE_CLOSE_PILL = "아니요, 괜찮아요"
+
 # 문진 시작 직후 보호자가 증상 범주를 빠르게 고를 수 있게 노출하는 기본 pill.
 INITIAL_SYMPTOM_PILLS = [
     "구토",
@@ -25,10 +29,13 @@ INITIAL_SYMPTOM_PILLS = [
 
 
 class Phase(str, Enum):
-    """대화 국면 — 후보 에이전트를 결정한다."""
+    """대화 국면 — 후보 에이전트를 결정한다.
+
+    실제로 산출되는 값은 PRE_BOOKING / BOOKED 둘뿐이다(state._compute_phase 참고).
+    과거 예약도 채팅방을 닫지 않고 BOOKED로 다루므로 별도 종료 국면은 두지 않는다.
+    """
     PRE_BOOKING = "PRE_BOOKING"   # 예약 전: 응대 + 문진 + 예약
-    BOOKED = "BOOKED"             # 예약 후: 응대 + 경과필터
-    CLOSED = "CLOSED"             # legacy: 과거 예약. 채팅방은 닫지 않는다.
+    BOOKED = "BOOKED"             # 예약 후(과거 예약 포함): 응대 + 경과필터
 
 
 class Flow(str, Enum):
@@ -40,13 +47,12 @@ class Flow(str, Enum):
 
 
 class Intent(str, Enum):
-    """라우터가 한 턴을 보낼 곳."""
-    RECEPTION = "reception"               # 병원 정보 응대
-    TRIAGE = "triage"                     # 증상 문진
-    SCHEDULE = "schedule"                 # 예약 시간 추천
-    FOLLOWUP_FILTER = "followup_filter"   # 예약 후 경과 필터
-    PET_GENERAL = "pet_general"           # "비타민 먹여도 돼?" → 응대 가드레일로 처리
-    UNRELATED = "unrelated"               # "파이썬" 등 → 정중히 차단
+    """에이전트가 '다음 턴을 누구에게 넘길지' 알리는 handoff 힌트(AgentResult.handoff).
+
+    라우팅 자체는 Intent가 아니라 노드 이름 문자열로 동작한다(router.route 반환값).
+    실제로 쓰이는 handoff 값은 RECEPTION 하나뿐이라 그것만 둔다.
+    """
+    RECEPTION = "reception"               # 병원 정보 응대로 넘김
 
 
 @dataclass
@@ -59,7 +65,7 @@ class SessionContext:
     pet_info: dict                        # petDB (이름/종/품종/나이/체중/성별)
     hospitalid: int | None                # guardian_hospitalDB.is_primary
     emrid: int | None                     # chat_historyDB.emrid (문진 완료 시 발급)
-    scheduleid: int | None                # scheduleDB (예약 확정 시)
+    scheduleid: int | None                # 현재 예약(scheduleDB.scheduleid) — BOOKED일 때 채워짐
     # --- 이번 턴 대화 ---
     user_message: str                     # 이번 턴 사용자 발화
     attachments: list[str] = field(default_factory=list)  # 첨부 이미지/영상 URL
