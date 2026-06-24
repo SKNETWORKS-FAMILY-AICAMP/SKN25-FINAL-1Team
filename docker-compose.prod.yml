@@ -107,9 +107,32 @@ services:
     networks:
       - medipaw_net
 
+  # HTTPS 종단(리버스 프록시). Let's Encrypt 인증서 자동 발급/갱신.
+  # medipaw.app 서브도메인을 받아 내부 프론트/백엔드로 분배한다.
+  # 음성인식(getUserMedia/Web Speech)이 secure context를 요구하므로 필수.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # 발급된 인증서 영속화(재시작 시 재발급 방지 → ACME rate limit 회피)
+      - caddy_config:/config
+    depends_on:
+      - guardian
+      - vet
+      - company
+      - backend
+    networks:
+      - medipaw_net
+
 volumes:
   postgres_data:
   uploads_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   medipaw_net:
