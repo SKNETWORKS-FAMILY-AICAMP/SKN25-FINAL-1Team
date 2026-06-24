@@ -194,6 +194,22 @@ async def get_available(
 ):
     slots, reason = await get_available_slots(db, date, duration_min, doctorid, hospitalid)
 
+    # 같은 시작시간에 여러 원장이 비어 있으면(병원 단위 조회) 보호자에겐 시간 1개만 노출하고
+    # 원장 배정은 자동(diversify)으로 처리한다 — 직접선택에서 동일 시간이 중복으로 뜨던 문제.
+    # 시간 오름차순으로 훑으며 누적 배정이 가장 적은 원장을 골라 한 의사 쏠림을 막는다.
+    deduped: list = []
+    used: dict[int, int] = {}
+    seen: set[str] = set()
+    for slot in slots:  # slots는 (start_time, doctorid) 오름차순
+        if slot.start_time in seen:
+            continue
+        seen.add(slot.start_time)
+        same_time = [s for s in slots if s.start_time == slot.start_time]
+        min_used = min(used.get(s.doctorid, 0) for s in same_time)
+        chosen = next(s for s in same_time if used.get(s.doctorid, 0) == min_used)
+        used[chosen.doctorid] = used.get(chosen.doctorid, 0) + 1
+        deduped.append(chosen)
+
     return {
         "code": 200,
         "message": reason,
@@ -204,7 +220,7 @@ async def get_available(
                 "doctorid": slot.doctorid,
                 "doctor_name": slot.doctor_name,
             }
-            for slot in slots
+            for slot in deduped
         ]
     }
 
