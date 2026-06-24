@@ -540,22 +540,27 @@ export const useAgentPipeline = ({
     label: string,
   ) => {
     setShowDatePicker(false);
+    // 이미 확정했거나 확정 진행 중이면 메시지 말풍선도 띄우지 않고 무시(중복 클릭).
+    // 가드가 handleSlotSelect 내부에만 있으면 메시지는 보내지고 답장만 안 와 어색하므로 append 앞에서 차단.
+    if (bookingLockRef.current) return;
     const emrid = emridRef.current;
     if (!emrid) {
       appendBot(t("chatbot.noTriageDataRestart"));
       return;
     }
-    // 슬롯맵에 등록 후 기존 handleSlotSelect 재사용
+    // 슬롯맵에 등록 후 기존 handleSlotSelect 재사용.
+    // 날짜 피커는 '모달에서 시간을 고른 동작'이라 채팅 발화가 아니다 — 유저 말풍선("6월 25일 10:00")을
+    // 남기지 않고 바로 확정으로 보낸다(선택한 시간은 확정 카드에 그대로 표시됨). 추천 슬롯 칩 경로와 달리
+    // 여기서 말풍선을 띄우면, 확정이 막히거나 라벨이 안 맞을 때 '답장 없는 빈 메시지'로 남는다.
     slotMapRef.current[label] = { date, time, doctorid };
-    setMessages((prev) => [
-      ...prev,
-      { id: nextId(), role: "user" as const, content: label },
-    ]);
     setQuickReplies([]);
     await handleSlotSelect(label, currentPetRef.current?.pet_id ?? 0);
   };
 
   const isSlotLabel = (label: string) => label in slotMapRef.current;
+
+  // 예약 확정 완료/진행 중 여부 — 슬롯 재클릭 시 '메시지 전송' 자체를 막기 위해 호출부에서 사전 검사.
+  const isBookingLocked = () => bookingLockRef.current;
 
   const getSlotLabels = () => Object.keys(slotMapRef.current);
 
@@ -615,6 +620,7 @@ export const useAgentPipeline = ({
     showDatePicker,
     setShowDatePicker,
     isSlotLabel,
+    isBookingLocked,
     getSlotLabels,
     getScheduleDurationMin,
     startSchedulePhase,

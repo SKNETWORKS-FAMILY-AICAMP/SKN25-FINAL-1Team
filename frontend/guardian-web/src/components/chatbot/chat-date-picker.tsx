@@ -174,7 +174,7 @@ const ChatDatePicker = ({ onSelectSlot, onCancel, durationMin, hospitalId }: Cha
                 });
                 return (
                   <button
-                    key={s.start_time}
+                    key={`${s.start_time}-${s.doctorid ?? "x"}`}
                     type="button"
                     onClick={() =>
                       onSelectSlot(toDateStr(selectedDate), time, s.doctorid ?? 1, label)
