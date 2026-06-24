@@ -116,7 +116,7 @@ async def _load_data(scheduleid: int, db: AsyncSession) -> dict | None:
 
 # ── Check 1 — Triage ────────────────────────────────────────────
 
-def validate_triage(
+async def validate_triage(
     triage: TriageResult | None,
     chat_history: ChatHistory | None,
 ) -> dict:
@@ -135,7 +135,7 @@ def validate_triage(
     checks = [
         _check_1a(triage, chat_history),
         _check_1b(triage),
-        _check_1c(triage, chat_history),
+        await _check_1c(triage, chat_history),
         _check_1d(triage),
     ]
     return {"status": _module_status(checks), "checks": checks}
@@ -209,8 +209,8 @@ def _check_1b(triage: TriageResult) -> dict:
     }
 
 
-def _check_1c(triage: TriageResult, chat_history: ChatHistory | None) -> dict:
-    """1C: 추출 슬롯이 보호자 발화에 근거하는지 확인 (symptom_keywords 기반)."""
+async def _check_1c(triage: TriageResult, chat_history: ChatHistory | None) -> dict:
+    """1C: 추출 슬롯이 보호자 발화에 근거하는지 확인 (하이브리드: string match → LLM 의미 판단)."""
     if chat_history is None:
         return {"item": "컨텍스트 연속성", "status": "SKIPPED", "detail": "chat_history 없음"}
 
@@ -227,17 +227,43 @@ def _check_1c(triage: TriageResult, chat_history: ChatHistory | None) -> dict:
     if not keywords:
         return {"item": "컨텍스트 연속성", "status": "PASS", "detail": "증상 키워드 없음 — 연속성 N/A"}
 
+    # 1차: string match (공백 제거 포함 — 의학용어 띄어쓰기 변형 대응)
     user_nospace = user_text.replace(" ", "")
-    hit = sum(1 for kw in keywords if kw in user_text or kw.replace(" ", "") in user_nospace)
+    hit_flags = [kw in user_text or kw.replace(" ", "") in user_nospace for kw in keywords]
+
+    # 1차 실패 키워드만 LLM으로 의미 판단 ("식욕부진" ≈ "밥을 안 먹어요" 유형 대응)
+    failed_idx = [i for i, h in enumerate(hit_flags) if not h]
+    if failed_idx:
+        failed_kws = [keywords[i] for i in failed_idx]
+        try:
+            from ai.llm import call_llm_json
+            kw_lines = "\n".join(f"{j + 1}. {kw}" for j, kw in enumerate(failed_kws))
+            prompt = (
+                "동물병원 보호자의 발화에서 각 증상 키워드의 의미가 반영되는지 판단하세요.\n"
+                "표현이 달라도 의미가 같으면 포함으로 봅니다. (예: '식욕부진' ≈ '밥을 안 먹어요')\n\n"
+                f"[보호자 발화]\n{user_text[:1500]}\n\n"
+                f"[증상 키워드]\n{kw_lines}\n\n"
+                'JSON만 출력: {"results": [{"keyword": "키워드명", "included": true}, ...]}'
+            )
+            raw = await call_llm_json(prompt)
+            mapping = {
+                r.get("keyword", ""): bool(r.get("included", False))
+                for r in (raw.get("results") or [])
+            }
+            for i, kw in zip(failed_idx, failed_kws):
+                hit_flags[i] = mapping.get(kw, False)
+        except Exception as exc:
+            logger.warning("[Evaluation] 1C LLM 의미 판단 실패: %s", exc)
+            # LLM 실패 시 string match 결과(False) 유지
+
+    hit = sum(hit_flags)
     ratio = hit / len(keywords)
 
-    # 0.3 기준: symptom_keywords는 의학 용어("식욕부진")이고 보호자 발화는 구어("밥을 안 먹어요")라
-    # string-match 자체가 낮게 나오는 구조. 1/3 이상만 확인되면 연속성 인정.
-    if ratio >= 0.3:
+    if ratio >= 0.7:
         return {
             "item": "컨텍스트 연속성",
             "status": "PASS",
-            "detail": f"증상 키워드 {hit}/{len(keywords)}개 보호자 발화에서 확인됨",
+            "detail": f"증상 키워드 {hit}/{len(keywords)}개 발화에서 확인됨 (의미 포함 판단 포함)",
         }
     return {
         "item": "컨텍스트 연속성",
@@ -587,6 +613,44 @@ async def _check_chart_quality(
     return {"item": "임상 품질", "status": "SKIPPED", "detail": "LLM 평가 실패"}
 
 
+def _check_soap_sections(soap: dict) -> dict:
+    """SOAP 섹션별 최소 요건 체크 (rule-based).
+
+    S: 30자 이상 — 주증상·경과를 쓰면 한 줄 이상
+    O: '내원' 포함 — 차트 프롬프트가 "내원 시 확인 필요를 명시하고" 명시
+    A: 추정 표현 포함 — 확정 진단 금지 지침에 따라 의심/가능성/감별/추정 중 하나 필수
+    P: 계획 표현 포함 — 권장 검사·처치·재진·모니터링 중 하나 필수
+    """
+    _A_KEYWORDS = ("의심", "가능성", "감별", "추정")
+    _P_KEYWORDS = ("검사", "처치", "재진", "모니터링")
+
+    issues = []
+
+    s_text = str(soap.get("S", "")).strip()
+    if len(s_text) < 30:
+        issues.append("S(주증상·경과 미흡)")
+
+    o_text = str(soap.get("O", "")).strip()
+    if "내원" not in o_text:
+        issues.append("O(신체검사 항목 미언급)")
+
+    a_text = str(soap.get("A", "")).strip()
+    if not a_text or not any(kw in a_text for kw in _A_KEYWORDS):
+        issues.append("A(추정·감별 표현 없음)")
+
+    p_text = str(soap.get("P", "")).strip()
+    if not p_text or not any(kw in p_text for kw in _P_KEYWORDS):
+        issues.append("P(다음 단계 계획 없음)")
+
+    if not issues:
+        return {"item": "SOAP 섹션 완전성", "status": "PASS", "detail": "S/O/A/P 최소 요건 충족"}
+    return {
+        "item": "SOAP 섹션 완전성",
+        "status": "WARN",
+        "detail": f"미흡 섹션: {', '.join(issues)}",
+    }
+
+
 async def validate_chart(
     triage: TriageResult | None,
     report: Report | None,
@@ -618,8 +682,10 @@ async def validate_chart(
             "checks": [{"item": "정합성", "status": "WARN", "detail": "key_symptoms 비어있음 (증상 미기록)"}],
         }
 
+    soap_check = _check_soap_sections(draft.get("soap") or {})
     quality_check = await _check_chart_quality(triage, draft, intake)
-    return {"status": _module_status([quality_check]), "checks": [quality_check]}
+    checks = [soap_check, quality_check]
+    return {"status": _module_status(checks), "checks": checks}
 
 
 # ── 결과 조립 ───────────────────────────────────────────────────
@@ -757,7 +823,7 @@ async def run_case_evaluation(scheduleid: int, db: AsyncSession) -> dict:
     emrid: int = data["emrid"]
 
     try:
-        triage_v = validate_triage(triage, chat_history)
+        triage_v = await validate_triage(triage, chat_history)
     except Exception as exc:
         logger.exception("[Evaluation] Check 1 오류 scheduleid=%s", scheduleid)
         triage_v = {
