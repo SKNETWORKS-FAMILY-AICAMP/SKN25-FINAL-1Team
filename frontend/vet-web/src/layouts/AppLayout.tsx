@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useAlarms } from "../contexts/AlarmContext";
 import { OperatingHoursProvider } from "../contexts/OperatingHoursContext";
 import {
+  AlertTriangle,
   Bell,
   Building2,
   CalendarCheck,
@@ -99,6 +100,13 @@ const alarmTypeMeta: Record<
     bgCls: "bg-slate-50",
     iconCls: "text-slate-500",
     labelCls: "text-slate-600",
+  },
+  followup_urgent: {
+    label: "응급 경과",
+    Icon: AlertTriangle,
+    bgCls: "bg-red-50",
+    iconCls: "text-red-500",
+    labelCls: "text-red-600",
   },
 };
 
@@ -412,7 +420,7 @@ function NotificationPanel({
   );
 }
 
-const emrAlarmTypes: AlarmType[] = ["chart_ready", "followup_received"];
+const emrAlarmTypes: AlarmType[] = ["chart_ready", "followup_received", "followup_urgent"];
 
 function AlarmRow({
   alarm,

@@ -6,6 +6,7 @@ phase로 '후보 에이전트'를 정하고(하드 제약), 그 안에서 누가
 라벨→if 매핑이 아니라, 각 에이전트 description을 LLM에 주고 직접 담당을 고르게 한다.
 버튼 클릭·예약확정(예/아니오)·첨부 같은 '확정 입력'만 LLM 없이 결정론으로 처리.
 """
+
 from __future__ import annotations
 
 import logging
@@ -14,7 +15,13 @@ from langfuse import observe
 
 from ai.llm import call_llm_json
 
-from .contracts import INITIAL_TRIAGE_PILL, TRIAGE_CLOSE_PILL, Flow, Phase, SessionContext
+from .contracts import (
+    INITIAL_TRIAGE_PILL,
+    TRIAGE_CLOSE_PILL,
+    Flow,
+    Phase,
+    SessionContext,
+)
 from .registry import REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -23,7 +30,9 @@ logger = logging.getLogger(__name__)
 # 단일 출처: 각 에이전트의 .description 을 그대로 읽어 라우터-에이전트 설명 드리프트를 없앤다.
 # redirect 는 REGISTRY에 없는 그래프 전용 노드라 여기서만 설명을 단다.
 _AGENT_DESC = {name: agent.description for name, agent in REGISTRY.items()}
-_AGENT_DESC["redirect"] = "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단."
+_AGENT_DESC["redirect"] = (
+    "반려동물 건강·병원·예약과 무관한 잡담/일반지식 → 정중히 차단."
+)
 
 # 시스템이 직접 제공한 pill — LLM 없이 결정론 처리 (버튼 클릭은 판단이 아니다).
 _RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 있어요"}
@@ -31,13 +40,107 @@ _RECEPTION_PILLS = {"궁금한 게 있어요", "아니요, 괜찮아요", "네, 
 _TRIAGE_PILLS = {INITIAL_TRIAGE_PILL}
 
 # LLM 실패 시 폴백용 키워드 — 후보 집합 안에서만 매핑.
-_SYMPTOM_KW = ("토", "설사", "아파", "아프", "발작", "경련", "기침", "피", "출혈",
-               "절뚝", "절어", "다리", "숨", "호흡", "열", "기력", "안 먹", "구토", "쓰러")
-_HOSPITAL_KW = ("병원", "주소", "위치", "어디", "시간", "운영", "전화", "휴진", "몇 시", "몇시",
-                "의사", "선생님", "수의사", "원장", "소개", "특징")
-_CARE_KW = ("비타민", "영양제", "보충제", "사료", "간식", "추천", "먹여도", "급여",
-            "케어", "관리", "목욕", "양치", "빗질", "미용", "산책")
+_SYMPTOM_KW = (
+    "토",
+    "설사",
+    "아파",
+    "아프",
+    "발작",
+    "경련",
+    "기침",
+    "피",
+    "출혈",
+    "절뚝",
+    "절어",
+    "다리",
+    "숨",
+    "호흡",
+    "열",
+    "기력",
+    "안 먹",
+    "구토",
+    "쓰러",
+)
+_HOSPITAL_KW = (
+    "병원",
+    "주소",
+    "위치",
+    "어디",
+    "시간",
+    "운영",
+    "전화",
+    "휴진",
+    "몇 시",
+    "몇시",
+    "의사",
+    "선생님",
+    "수의사",
+    "원장",
+    "소개",
+    "특징",
+)
+_CARE_KW = (
+    "비타민",
+    "영양제",
+    "보충제",
+    "사료",
+    "간식",
+    "추천",
+    "먹여도",
+    "급여",
+    "케어",
+    "관리",
+    "목욕",
+    "양치",
+    "빗질",
+    "미용",
+    "산책",
+)
+_DANGEROUS_CARE_KW = (
+    "과산화수소",
+    "빨간약",
+    "알코올 솜",
+    "알코올솜",
+    "된장",
+    "식초물",
+    "소주",
+    "바늘로",
+    "실을 잡아당",
+    "억지로 물",
+    "억지로 토",
+    "사람 약",
+    "사람약",
+    "타이레놀",
+    "남은 항생제",
+    "사람 구충제",
+    "입마개를 하루 종일",
+    "하루 굶기",
+)
 _AFFIRMATIVE_KW = ("확인", "응", "네", "그래", "보여", "해줘", "해 줘", "좋아")
+_BOOKED_VET_PERSON_WORDS = ("수의사", "의사", "담당", "선생님", "원장")
+_BOOKED_VET_QUESTION_WORDS = (
+    "누구",
+    "누가",
+    "어떤",
+    "어느",
+    "이름",
+    "친절",
+    "잘 봐",
+    "잘봐",
+    "실력",
+    "어때",
+)
+
+
+def _asks_booked_vet(message: str) -> bool:
+    """병원 전체 소개가 아니라 '이번 예약 담당 수의사'를 묻는 BOOKED 발화."""
+    text = message or ""
+    if "진료받" in text or "진료 받" in text or "봐줘" in text or "봐 줘" in text:
+        return any(k in text for k in ("누구", "누가", "어떤", "어느", "선생님", "의사", "담당"))
+    return (
+        any(k in text for k in _BOOKED_VET_PERSON_WORDS)
+        and any(k in text for k in _BOOKED_VET_QUESTION_WORDS)
+    )
 
 
 def _candidates(ctx: SessionContext) -> list[str]:
@@ -45,13 +148,15 @@ def _candidates(ctx: SessionContext) -> list[str]:
     if ctx.phase == Phase.BOOKED:
         # 예약 후 자연스러운 후속 질문(사진 못 찍음·상태 얘기 등)을 redirect로 차단하지 않고
         # followup_filter가 받아 되묻게 한다. 병원 정보(위치/시간/전화)만 reception.
-        return ["reception", "followup_filter"]   # triage·redirect 불가
+        return ["reception", "followup_filter"]  # triage·redirect 불가
 
-    return ["reception", "triage", "redirect"]                # 예약 전: followup 불가
+    return ["reception", "triage", "redirect"]  # 예약 전: followup 불가
 
 
 def _recent_convo(ctx: SessionContext, n: int = 5) -> str:
-    msgs = [m for m in (ctx.history or []) if isinstance(m, dict) and m.get("content")][-n:]
+    msgs = [m for m in (ctx.history or []) if isinstance(m, dict) and m.get("content")][
+        -n:
+    ]
     return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in msgs)
 
 
@@ -80,20 +185,26 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
         # 예약 후엔: 아이 상태 관련 모든 대화·질문 + 예약 변경/재예약 + '내 예약 시각 확인'은
         # followup_filter가 받아 챗 안에서 처리한다(홈으로 떠넘기지 않음).
         # reception은 '병원 위치·운영시간·전화·수의사 소개' 같은 순수 병원 정보만.
-        phase_hint = ("지금은 '예약 후'야. 아이 상태 관련 대화·질문, 예약 변경·재예약, "
-                      "'내 예약 시각이 언제인지' 확인은 모두 followup_filter. "
-                      "병원 위치·운영시간·전화 같은 순수 병원 정보만 reception. (증상 문진은 더 안 한다)")
+        phase_hint = (
+            "지금은 '예약 후'야. 아이 상태 관련 대화·질문, 예약 변경·재예약, "
+            "'내 예약 시각이 언제인지' 확인은 모두 followup_filter. "
+            "병원 위치·운영시간·전화 같은 순수 병원 정보만 reception. (증상 문진은 더 안 한다)"
+        )
     else:
-        phase_hint = ("지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
-                      "병원 정보·비타민·영양제·사료·간식 추천 같은 일반 케어 질문은 reception. "
-                      "예약은 문진을 거쳐야 가능하므로, 증상 설명 없이 '바로 예약'만 원하는 발화도 "
-                      "reception이 아니라 triage가 받아서 안내한다.")
+        phase_hint = (
+            "지금은 '예약 전'이야. 증상 문진·증상 호소는 triage, "
+            "병원 정보·비타민·영양제·사료·간식 추천 같은 일반 케어 질문은 reception. "
+            "예약은 문진을 거쳐야 가능하므로, 증상 설명 없이 '바로 예약'만 원하는 발화도 "
+            "reception이 아니라 triage가 받아서 안내한다."
+        )
         if ctx.emrid is not None:
             phase_hint += " 문진은 이미 완료됨(재문진하지 말 것)."
 
     if ctx.active_flow == Flow.TRIAGING:
-        phase_hint += (" 지금 증상 문진이 진행 중이야 — 직전 봇 질문의 답·증상·되묻기·잡담이면 "
-                       "triage로 이어가고, 분명히 병원 정보로 화제를 바꿀 때만 reception.")
+        phase_hint += (
+            " 지금 증상 문진이 진행 중이야 — 직전 봇 질문의 답·증상·되묻기·잡담이면 "
+            "triage로 이어가고, 분명히 병원 정보로 화제를 바꿀 때만 reception."
+        )
 
     prompt = (
         "동물병원 챗봇의 라우터야. 아래 보호자 발화를 '누가' 처리해야 할지 후보 중 하나의 이름만 골라.\n"
@@ -146,13 +257,25 @@ async def route(ctx: SessionContext) -> str:
             return "triage"
         return "reception"
 
+    # 위험한 자가처치/약물 질문은 일반 케어가 아니라 안전 선별이 필요한 증상 문진이다.
+    if ctx.phase == Phase.PRE_BOOKING and any(
+        keyword in (ctx.user_message or "") for keyword in _DANGEROUS_CARE_KW
+    ):
+        return "triage"
+
     # (예전엔 PRE_BOOKING + CARE_KW면 무조건 reception으로 단락시켰는데, "산책하면 내려가나요?"처럼
     #  증상·응급 발화가 케어 단어를 품으면 triage(+안전 선별)를 건너뛰는 오라우팅이 났다. 케어 vs 증상
     #  판단은 LLM 라우터에 맡긴다 — phase_hint가 이미 '케어 질문은 reception'을 안내한다.)
 
     if ctx.phase == Phase.BOOKED:
         text = ctx.user_message or ""
-        if "예약" in text and any(k in text for k in ("병원", "시간", "시각", "몇 시", "몇시", "내역", "목록")):
+        # BOOKED의 "누가 진료해/담당 수의사 누구야"는 병원 전체 의료진 소개가 아니라
+        # 현재 schedule의 doctorid를 확인해야 하므로 reception보다 followup_filter가 우선한다.
+        if _asks_booked_vet(text):
+            return "followup_filter"
+        if "예약" in text and any(
+            k in text for k in ("병원", "시간", "시각", "몇 시", "몇시", "내역", "목록")
+        ):
             return "followup_filter"
 
     # 4) phase로 후보를 정하고(하드 제약), 그 안에서 LLM이 직접 담당을 고른다.
@@ -160,17 +283,25 @@ async def route(ctx: SessionContext) -> str:
 
     # BOOKED 상태에서 followup_filter가 아닌 에이전트로 가면 "저장 안 됨(N)" 로그 기록
     # emrid가 없으면 eval 테스트 컨텍스트이므로 로그 생략
-    if ctx.phase == Phase.BOOKED and picked != "followup_filter" and ctx.emrid is not None:
+    if (
+        ctx.phase == Phase.BOOKED
+        and picked != "followup_filter"
+        and ctx.emrid is not None
+    ):
         from ai.monitoring import push_log
+
         _CATEGORY_MAP = {"reception": "병원안내", "redirect": "무관발화"}
-        push_log("followup_filter", {
-            "emrid": ctx.emrid,
-            "scheduleid": ctx.scheduleid,
-            "message": (ctx.user_message or "")[:80],
-            "category": _CATEGORY_MAP.get(picked, picked),
-            "severity": "none",
-            "is_saved": False,
-            "has_media": bool(ctx.attachments),
-        })
+        push_log(
+            "followup_filter",
+            {
+                "emrid": ctx.emrid,
+                "scheduleid": ctx.scheduleid,
+                "message": (ctx.user_message or "")[:80],
+                "category": _CATEGORY_MAP.get(picked, picked),
+                "severity": "none",
+                "is_saved": False,
+                "has_media": bool(ctx.attachments),
+            },
+        )
 
     return picked

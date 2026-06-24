@@ -7,16 +7,30 @@ build_context → route → (조건부) 담당 노드 → END
 """
 from __future__ import annotations
 
+from contextvars import ContextVar
 import logging
 
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
-from .contracts import AgentResult, SessionContext
+from .contracts import INITIAL_TRIAGE_PILL, AgentResult, SessionContext
 from .registry import REGISTRY
 from .router import route
 
 logger = logging.getLogger(__name__)
+
+_route_trace: ContextVar[str | None] = ContextVar("orchestrator_route_trace", default=None)
+
+
+def reset_route_trace() -> None:
+    """Reset per-task route diagnostics before an observed turn."""
+    _route_trace.set(None)
+
+
+def get_route_trace() -> str | None:
+    """Return the route selected in the current asyncio task."""
+    return _route_trace.get()
+
 
 NODES = [*REGISTRY.keys(), "redirect"]   # reception/triage/schedule/followup_filter + redirect
 
@@ -29,6 +43,7 @@ class OrchState(TypedDict, total=False):
 
 async def _route_node(state: OrchState) -> dict:
     target = await route(state["ctx"])
+    _route_trace.set(target)
     logger.info("[orch] route → %s (flow=%s phase=%s)",
                 target, state["ctx"].active_flow, state["ctx"].phase)
     return {"target": target}
@@ -74,7 +89,12 @@ async def _redirect_node(state: OrchState) -> dict:
                 return {"result": AgentResult(reply=out["reply"].strip())}
         except Exception as e:
             logger.warning("[orch] redirect 회상 처리 실패: %s", e)
-    return {"result": AgentResult(reply=_DEFLECT)}
+    return {
+        "result": AgentResult(
+            reply=_DEFLECT,
+            quick_replies=[INITIAL_TRIAGE_PILL, "궁금한 게 있어요"],
+        )
+    }
 
 
 def _pick(state: OrchState) -> str:

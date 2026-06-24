@@ -546,15 +546,23 @@ function FollowupPanel({ items }: { items: FollowupItem[] }) {
   const latest = items[items.length - 1];
   if (!latest) return null;
 
+  const isEmergency = latest.emergency_alert === true;
+
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
+    <div
+      className={`rounded-lg border p-2.5 ${
+        isEmergency
+          ? "border-red-300 bg-red-50 text-red-900"
+          : "border-blue-200 bg-blue-50 text-slate-800"
+      }`}
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-sm font-extrabold text-slate-800">
-          <ClipboardList className="h-4 w-4 text-blue-500" strokeWidth={2.2} />
-          경과 보고
+        <p className="flex items-center gap-1.5 text-sm font-extrabold">
+          <ClipboardList className={`h-4 w-4 ${isEmergency ? "text-red-500" : "text-blue-500"}`} strokeWidth={2.2} />
+          {isEmergency ? "🚨 긴급 응급 경과" : "경과 보고"}
         </p>
       </div>
-      <p className="text-xs font-bold leading-5 text-slate-600">
+      <p className={`text-xs font-bold leading-5 ${isEmergency ? "text-red-800" : "text-slate-600"}`}>
         {latest.ai_summary ?? "경과 요약을 생성 중입니다."}
       </p>
     </div>
