@@ -1,594 +1,203 @@
-![MediPaw Logo](frontend/shared/assets/logo/medipaw-symbol.png)
+# MediPaw
 
-> # **"반려동물의 골든타임, AI가 먼저 읽어냅니다."**
->
-> 소형 동물병원의 진료 공백과 업무 과부하를 줄이는  
-> **AI 기반 응급도 분류 및 동물병원 업무 자동화 플랫폼**
+<p align="center">
+  <img src="frontend/shared/assets/logo/AngelOfJazz.png" alt="Angel of Jazz 팀 로고" width="420" />
+</p>
 
----
+<p align="center"><strong>Team Angel of Jazz</strong></p>
 
-## **1. 팀원 소개**
+<p align="center">
+  <img src="frontend/shared/assets/logo/medipaw-logo.png" alt="MediPaw 서비스 로고" width="360" />
+</p>
 
-| 이름 | 주요 역할 | 핵심 기술 |
-| :--- | :--- | :--- |
-| 김지현 | Frontend / UI·UX | React · TypeScript · TailwindCSS |
-| 박지현 | Frontend / UI·UX / Backend | React · TypeScript · FastAPI |
-| 조민서 | Backend / DB / API / Finetuning | Python · FastAPI · PostgreSQL · PyTorch |
-| 이채림 | Backend / DB / AI Agent / RAG / Finetuning | LangGraph · RAG · pgvector · Langfuse |
-| 김찬영 | AI Agent / Backend / Frontend / DevOps / 서비스 통합 / 배포 | LangGraph · FastAPI · Docker · AWS |
+MediPaw는 보호자 상담과 동물병원 업무를 연결하는 반려동물 진료 지원 플랫폼입니다.
 
----
+보호자는 반려동물을 등록하고 AI 문진을 거쳐 병원을 예약할 수 있습니다. 병원은 예약, 환자, EMR, 처방, 운영 일정을 관리하며, 운영자는 병원 입점과 서비스 상태를 관리합니다.
 
-## **2. 개발 배경**
+| 구분 | 내용 |
+|---|---|
+| 수행 프로젝트 | 다중 에이전트 협업 기반 업무 자동화 시스템 |
+| 프로젝트명 | 소형 동물병원을 위한 LLM 멀티에이전트 기반 진료 워크플로우 통합 자동화 플랫폼 |
 
-### **소형 동물병원의 구조적 한계와 골든타임 문제**
+## 팀원 소개
 
-국내 반려동물 의료 시장은 빠르게 성장하고 있지만, 많은 중소형 동물병원은 여전히 1인 원장 또는 소규모 인력 중심으로 운영되고 있습니다.
+| 이름 | 담당 영역 | 주요 역할 | 사용 기술 |
+|---|---|---|---|
+| 김지현 | Frontend | Frontend 개발, UI·UX 설계, 웹 서비스 배포 구성 | React, TypeScript, Vite, Tailwind CSS, Zustand, Axios, Nginx |
+| 김찬영 | Full Stack · AI Agent · DevOps | AI Agent, Backend, Frontend, DB 연동, 서비스 통합, 인프라 및 배포 | Python, FastAPI, LangGraph, OpenAI API, RAG, pgvector, PostgreSQL, SQLAlchemy, Alembic, React, TypeScript, Docker, Nginx, AWS EC2·RDS·S3, Langfuse |
+| 박지현 | Full Stack · UI·UX | Frontend 및 UI·UX, Backend API 개발, AI·DB 연동 | React, TypeScript, Vite, Tailwind CSS, Zustand, FastAPI, OpenAI API, PostgreSQL, Alembic |
+| 조민서 | Backend · DB · Fine-tuning | Backend, DB 설계, API 개발, AI 모델 Fine-tuning 및 평가, Frontend API 연동 | Python, FastAPI, SQLAlchemy, Pydantic, Alembic, PostgreSQL, asyncpg, React API Integration, PyTorch, Docker |
+| 이채림 | Backend · DB · AI Agent · Fine-tuning | Backend, DB 설계, AI Agent, RAG, AI 모델 Fine-tuning 및 평가, LLMOps | Python, FastAPI, LangGraph, OpenAI API, RAG, PostgreSQL, pgvector, SQLAlchemy, Alembic, Langfuse, React API Integration, PyTorch, Docker |
 
-수의사는 진료와 수술뿐 아니라 예약 관리, 전화 응대, 보호자 상담, 차트 작성까지 동시에 처리해야 합니다.  
-이 과정에서 응급 환자의 연락이 지연되거나, 진료 중 부재중 전화가 누락되면 신규 환자 이탈뿐 아니라 반려동물의 **골든타임 손실**로 이어질 수 있습니다.
+## 접속 주소
 
-### **보호자 관찰 데이터의 단절**
+| 서비스 | 주소 | 로컬 테스트 계정 |
+|---|---|---|
+| 보호자 앱 | http://localhost:5173 | `guardian_test` / `Test1234!` |
+| 수의사 앱 | http://localhost:5174 | `admin` / `Test1234!` |
+| 회사·운영자 웹 | http://localhost:5175 | 운영자: `admin` / `Admin1234!` |
+| API 문서 | http://localhost:8000/docs | - |
+| MCP 서버 | http://localhost:8765/mcp | - |
+| PostgreSQL | `localhost:5432` | DB: `medipaw` |
 
-반려동물은 자신의 증상을 직접 설명할 수 없기 때문에 보호자의 관찰 기록과 사진, 영상 자료가 매우 중요합니다.  
-하지만 실제 진료 현장에서는 이러한 자료가 병원 시스템에 체계적으로 누적되지 못하고, 보호자가 매 진료마다 다시 찾아 전달해야 하는 불편이 발생합니다.
 
-이는 진료 연속성을 떨어뜨리고, 수의사가 환자의 상태 변화를 정확히 파악하는 데 어려움을 만듭니다.
+## 주요 기능
 
-### **반복적인 차팅 업무와 의료진 번아웃**
+### 보호자 앱
 
-수의사는 진료 이후 SOAP 형식의 의무기록을 직접 작성해야 합니다.  
-문진 내용 정리, 증상 요약, 보호자 설명 기록, 치료 계획 작성은 많은 시간을 소모하며 의료진의 피로도를 높입니다.
+- 회원가입, 로그인, 토큰 갱신, 로그아웃
+- 아이디·비밀번호 찾기
+- 보호자 프로필과 비밀번호 관리
+- 반려동물 등록, 수정, 보관, 복원, 영구 삭제
+- 병원 검색과 관심 병원·주 병원 설정
+- AI 상담 세션 생성, 조회, 삭제
+- 텍스트·사진·영상·음성 기반 상담
+- 문진 결과를 이용한 예약 가능 시간 추천과 예약 확정
+- 예약 목록 조회, 취소, 일정 변경
+- 예약 후 상태 변화와 첨부 자료 전달
+- 다국어 번역 지원
 
-MediPaw는 보호자 문진, 이미지 업로드, 응급도 판단, 예약 관리, EMR 초안 생성을 하나의 흐름으로 연결해  
-수의사가 더 중요한 진료 판단에 집중할 수 있도록 돕고자 합니다.
+### 수의사 앱
 
----
+- 병원 계정 로그인과 최초 비밀번호 변경
+- 오늘의 예약·환자 현황 대시보드
+- 예약 생성, 수정, 취소, 상태 변경
+- 월간·주간·일간 예약 일정 관리
+- 환자 검색과 진료 이력 조회
+- 문진 결과, 리포트, 후속 경과 확인
+- EMR 메모와 반려동물 정보 수정
+- 약품 검색, 처방 생성·조회·삭제
+- AI 처방 초안 생성
+- 병원 프로필과 의료진 관리
+- 병원·수의사 운영 시간과 휴진일 관리
+- 알림 조회와 일괄 읽음 처리
 
-## **3. 서비스 소개**
+### 회사·운영자 웹
 
-MediPaw는 보호자 웹과 수의사 웹을 분리하여 각 사용자의 업무 흐름에 맞춘 기능을 제공합니다.
+- 서비스 소개와 보호자·수의사 데모
+- 병원 입점 신청과 파일 업로드
+- 입점 신청 승인·반려
+- 병원, 의료진, 운영 시간, 활성 상태 관리
+- 고객 문의 조회와 이메일 답변
+- AI 검증 결과 조회 및 평가 실행
 
-### **Guardian Web**
+## AI 상담 흐름
 
-보호자는 반려동물 정보를 등록하고, AI 챗봇 문진을 통해 증상을 입력할 수 있습니다.  
-필요한 경우 증상 이미지를 업로드하고, 진료 예약을 신청하거나 기존 예약을 확인할 수 있습니다.
+보호자 메시지는 FastAPI에서 SSE 스트림으로 처리됩니다. 대화와 현재 상태를 불러온 뒤 LangGraph 오케스트레이터가 담당 에이전트를 선택합니다.
 
-주요 기능은 다음과 같습니다.
+```mermaid
+flowchart LR
+    U[보호자 메시지] --> API[FastAPI Chat API]
+    API --> C[세션·대화 상태 구성]
+    C --> R[LangGraph Router]
+    R --> RE[Reception]
+    R --> TR[Triage]
+    R --> SC[Schedule]
+    R --> FU[Follow-up Filter]
+    RE --> S[(PostgreSQL)]
+    TR --> S
+    SC --> S
+    FU --> S
+    TR --> V[(pgvector RAG)]
+    RE --> M[MCP 병원 조회]
+    API --> SSE[SSE 상태·응답 스트림]
+```
 
-- 보호자 회원가입 / 로그인
-- 반려동물 등록 및 관리
-- AI 챗봇 기반 문진 작성
-- 증상 이미지 업로드
-- 진료 예약 신청
-- 예약 확인, 변경, 취소
-- 진료 후 Follow-up 기록 업로드
+| 에이전트 | 역할 |
+|---|---|
+| Reception | 병원 정보, 운영 시간, 의료진, 일반 케어 문의 응대 |
+| Triage | 증상 문진, 응급도 분류, 이미지·영상 분석, 문진 결과 생성 |
+| Schedule | 문진 결과와 병원 운영 일정을 바탕으로 예약 슬롯 처리 |
+| Follow-up Filter | 예약 후 상태 변화, 추가 자료, 예약 변경 요청 처리 |
+| Prescription | 수의사 화면에서 진료 정보를 바탕으로 처방 초안 생성 |
 
-### **Veterinarian Web**
+라우터는 예약 전·후 상태와 현재 진행 중인 흐름을 제한 조건으로 사용합니다. 버튼 입력, 예약 확인, 첨부 파일처럼 명확한 입력은 규칙으로 처리하고, 나머지 자연어 발화는 모델 분류와 키워드 폴백을 사용합니다.
 
-수의사는 병원 대시보드에서 예약 현황과 환자 정보를 확인할 수 있습니다.  
-보호자가 작성한 문진과 이미지 정보를 바탕으로 환자의 상태를 빠르게 파악하고, EMR 작성 화면에서 진료 기록을 관리할 수 있습니다.
-
-주요 기능은 다음과 같습니다.
-
-- 수의사 로그인
-- 최초 로그인 시 비밀번호 변경
-- 병원 대시보드
-- 예약 현황 조회
-- 예약 추가, 수정, 삭제
-- 환자 목록 및 상세 정보 조회
-- EMR 작성 화면
-- 병원 설정 관리
-
----
-
-## **4. 기술 스택**
-
-### **Frontend**
-
-![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Zustand](https://img.shields.io/badge/Zustand-43392A?style=for-the-badge&logo=react&logoColor=white)
-![Axios](https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white)
-
-### **Backend**
-
-![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![FastAPI](https://img.shields.io/badge/FastAPI-00584D?style=for-the-badge&logo=fastapi&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-CB0000?style=for-the-badge&logo=sqlalchemy&logoColor=white)
-![Alembic](https://img.shields.io/badge/Alembic-333333?style=for-the-badge&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-
-### **AI / Agent**
-
-![OpenAI](https://img.shields.io/badge/OpenAI-0081A5?style=for-the-badge&logo=openai&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
-![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
-![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-
-### **Infrastructure**
-
-![AWS](https://img.shields.io/badge/AWS-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Amazon RDS](https://img.shields.io/badge/Amazon_RDS-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)
-![Amazon S3](https://img.shields.io/badge/Amazon_S3-569A31?style=for-the-badge&logo=amazon-s3&logoColor=white)
-![CloudFront](https://img.shields.io/badge/CloudFront-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-
----
-
-## **5. 프로젝트 구조**
+## 시스템 구성
 
 ```text
-MediPaw/
-    ├── ai/                         # AI 멀티에이전트 (LangGraph) 파이프라인
-    │   ├── agents/                 # 에이전트별 모듈(프롬프트+로직): reception · triage ·
-    │   │                           #   schedule · chart · prescription · followup_filter
-    │   ├── orchestrator/           # LangGraph 오케스트레이터(router/registry/state/graph) + MCP
-    │   ├── services/               # 에이전트 공용 서비스
-    │   ├── graph.py / llm.py / rag.py   # 그래프 배선 · LLM 클라이언트 · RAG(pgvector)
-    │   ├── docker/                 # Dockerfile + nginx conf + docker-compose (인프라 정의)
-    │   └── README.md
-    │
-    ├── backend/                    # FastAPI 백엔드
-    │   ├── app/
-    │   │   ├── api/                # API 라우터
-    │   │   ├── core/               # 환경 설정, 보안, 의존성
-    │   │   ├── crud/               # DB CRUD 로직
-    │   │   ├── db/                 # DB 세션 및 Base
-    │   │   ├── middleware/         # 미들웨어
-    │   │   ├── models/             # SQLAlchemy ORM 모델
-    │   │   ├── prompts/            # 에이전트 프롬프트
-    │   │   ├── schemas/            # Pydantic 요청/응답 스키마
-    │   │   ├── services/           # 도메인 서비스(오케스트레이션 등)
-    │   │   └── utils/              # 공통 유틸(s3 등)
-    │   ├── migrations/             # Alembic 마이그레이션
-    │   ├── scripts/                # seed / 평가 스크립트
-    │   ├── alembic.ini
-    │   └── requirements.txt
-    │
-    ├── frontend/
-    │   ├── guardian-web/           # 보호자용 React 웹 (5173)
-    │   ├── vet-web/                # 수의사용 React 웹 (5174)
-    │   ├── company-web/            # 소개·입점신청·운영진 admin 웹 (5175)
-    │   └── shared/                 # 공통 자산 및 shared 리소스
-    │       └── src/{api,components,hooks,pages,routes,stores}  # 각 앱 공통 구조
-    │
-    ├── dev.sh / dev.ps1            # 로컬 실행 스크립트 (mac·linux / windows)
-    ├── docker-compose.prod.yml     # 운영 배포 compose
-    └── README.md
+medipaw_final/
+├── frontend/
+│   ├── guardian-web/   # 보호자 React 앱
+│   ├── vet-web/        # 수의사 React 앱
+│   ├── company-web/    # 회사 소개·운영자 React 앱
+│   └── shared/         # 공용 로고와 유틸리티
+├── backend/
+│   ├── app/
+│   │   ├── api/        # FastAPI 라우터
+│   │   ├── crud/       # 데이터 접근 계층
+│   │   ├── models/     # SQLAlchemy 모델
+│   │   ├── schemas/    # 요청·응답 스키마
+│   │   ├── services/   # 오케스트레이터·번역 등 서비스
+│   │   └── main.py     # API 진입점
+│   ├── migrations/     # Alembic 마이그레이션
+│   ├── scripts/        # 시드·평가·데이터 처리 도구
+│   └── tests/          # 백엔드·AI 회귀 테스트
+├── ai/
+│   ├── agents/         # 상담·문진·예약·처방 에이전트
+│   ├── orchestrator/   # LangGraph 라우터와 세션 상태
+│   ├── services/       # 비전 모델과 영상 프레임 처리
+│   └── docker/         # 개발 스택과 서비스 이미지
+├── dev.sh
+├── dev.ps1
+└── docker-compose.prod.yml
 ```
 
----
+### 기술 스택
 
-## **6. 시스템 아키텍처**
+| 영역 | 구성 |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, React Router, Zustand, Tailwind CSS |
+| Backend | Python 3.11, FastAPI, SQLAlchemy Async, Alembic |
+| AI | OpenAI, LangChain, LangGraph, Langfuse OpenAI 계측 |
+| Database | PostgreSQL 16, pgvector |
+| Media | AWS S3, CloudFront, Pillow, OpenCV, 선택적 CNN 비전 모델 |
+| Speech | Groq Whisper STT |
+| Serving | Docker Compose, Nginx, Uvicorn |
 
-### **6-1. Service Workflow**
+세 프론트엔드는 Nginx에서 정적 파일로 제공됩니다. `/api` 요청은 FastAPI로 프록시되며, 상담 응답을 위해 프록시 버퍼링이 비활성화되어 있습니다.
 
-```text
-Guardian Web
-    │
-    │ 1. 보호자 로그인 / 반려동물 등록
-    │ 2. AI 챗봇 문진 작성
-    │ 3. 증상 이미지 업로드
-    ▼
-FastAPI Backend
-    │
-    │ 4. 인증 / 예약 / 문진 / 이미지 URL 처리
-    │ 5. DB 저장 및 Agent Task 연동
-    ▼
-PostgreSQL / AWS S3
-    │
-    │ 6. 사용자, 반려동물, 예약, 문진, 이미지 기록 저장
-    ▼
-AI Multi-Agent System
-    │
-    │ 7. 응급도 판단 / 예약 우선순위 / EMR 초안 생성
-    ▼
-Veterinarian Web
-    │
-    │ 8. 수의사 대시보드에서 환자 상태 및 예약 확인
-    │ 9. EMR 작성 및 Follow-up 관리
-```
+## 환경변수
 
-### **6-2. Multi-Agent Architecture**
+로컬 개발의 기본 설정 파일은 `backend/.env`입니다.
 
-MediPaw는 보호자의 문진 데이터와 이미지 분석 결과를 기반으로 수의사의 진료 의사결정을 보조하는 Multi-Agent 구조를 **LangGraph 오케스트레이터**로 구현해 운영합니다.
+| 변수 | 용도 | 필수 여부 |
+|---|---|---|
+| `OPENAI_API_KEY` | AI 상담, 문진, 처방, 번역, RAG 임베딩 | AI 기능 사용 시 |
+| `OPENAI_MODEL` | 공통 텍스트 모델 | 선택 |
+| `OPENAI_VISION_MODEL` | 첨부 이미지 분석 모델 | 선택 |
+| `USE_CNN_VISION` | 로컬 CNN 피부·안구 모델 사용 여부 | 선택 |
+| `GROQ_API_KEY` | 음성 입력 STT | 음성 기능 사용 시 |
+| `DATABASE_URL` | PostgreSQL 연결 주소 | Docker가 기본값 제공 |
+| `SECRET_KEY` | JWT 서명 | 운영 환경 필수 |
+| `AWS_ACCESS_KEY_ID` | S3 접근 키 | S3 사용 시 |
+| `AWS_SECRET_ACCESS_KEY` | S3 비밀 키 | S3 사용 시 |
+| `AWS_REGION` | S3 리전 | 선택 |
+| `S3_BUCKET_NAME` | 업로드 버킷 | S3 사용 시 |
+| `CLOUDFRONT_URL` | 업로드 파일 CDN 주소 | 선택 |
+| `SMTP_USER` | 메일 서버 계정 | 이메일 발송 시 |
+| `SMTP_PASSWORD` | 메일 서버 비밀번호 | 이메일 발송 시 |
+| `SMTP_FROM` | 발신 주소 | 이메일 발송 시 |
+| `CS_EMAIL` | 고객 문의 수신 주소 | 문의 알림 사용 시 |
+| `ALLOWED_ORIGINS` | CORS 허용 출처 | 선택 |
+| `DEBUG` | 상세 오류 응답 활성화 | 선택 |
 
-| Agent | 역할 |
-| :--- | :--- |
-| **Triage Agent** | 보호자 문진과 이미지 분석 결과를 바탕으로 응급도 판단 |
-| **Schedule Agent** | 응급도 기반 예약 우선순위 판단 및 가능 시간 탐색 |
-| **Chart Agent** | SOAP 형식의 EMR 초안 생성 |
-| **Validation Agent** | 응급도, 증상, 이미지 분석 결과 간 논리적 모순 검증 |
-| **Judge Agent** | 최종 응답 품질 및 의료 안전성 평가 |
-| **Follow-up Agent** | 진료 이후 경과 기록 요약 및 위험 상황 감지 |
+API 키가 없어도 로컬 서버와 UI는 실행되지만 해당 외부 연동 기능은 사용할 수 없습니다.
 
-> 에이전트는 [`ai/`](./ai/) 에 LangGraph 오케스트레이터(`ai/orchestrator/`)와 에이전트별 모듈(`ai/agents/`)로 구현되어 있습니다. 위 표는 역할 기준 요약이며, 실제 에이전트 구성(응대·문진·예약·차트·처방·경과필터, validation/judge 평가 계층)은 현재 리팩토링 중이라 세부 아키텍처는 정리 후 갱신 예정입니다.
+## 팀 회고
 
-### **6-3. Backend Architecture**
+### 김찬영
 
-FastAPI 백엔드는 전체 서비스의 API Gateway 역할을 수행합니다.
+처음에는 AI를 활용한 바이브 코딩만으로도 큰 시스템을 만들 수 있을 것이라고 생각했습니다. 하지만 실제 프로젝트를 진행하면서 데이터베이스, 배포 환경, Git 협업, 테스트, 품질 검증 등 코드 작성 외에도 고려해야 할 요소가 많다는 것을 깨달았습니다. 특히 코드 리뷰는 생각보다 훨씬 어려웠지만, 그만큼 많은 것을 배울 수 있었던 과정이었습니다. 무엇보다 팀원들과 함께 시스템을 지속적으로 개선하며 중간 발표 때보다 훨씬 완성도 높은 결과물을 만들 수 있어 유종의 미를 거둔 것 같습니다.
 
-- 보호자 인증 API
-- 수의사 인증 API
-- 반려동물 관리 API
-- 예약 관리 API
-- AI 문진 채팅 API
-- 환자 관리 API
-- 대시보드 API
-- Follow-up API
-- S3 Presigned URL 발급 API
+### 박지현
 
-### **6-4. Storage Architecture**
+프론트엔드를 중점적으로 맡으면서 비전공자로서 가장 깊이 공부할 수 있었던 프로젝트였습니다. 프론트엔드뿐만 아니라 백엔드, 데이터, 에이전트 등 시스템 전반의 코드를 직접 접하면서 각 파트가 어떻게 연결되는지 몸으로 익힐 수 있었습니다. 특히 수의사 화면을 담당하면서 “수의사라면 어떤 흐름이 가장 편할까?”를 계속 고민하다 보니, 기능 구현보다 사용자 입장에서 생각하는 것에 더 집중하게 됐습니다. 좋은 팀원들 덕분에 이상적인 협업으로 마무리할 수 있어서 감사했습니다.
 
-이미지 데이터는 AWS S3와 CloudFront 기반 구조를 목표로 합니다.
+### 이채림
 
-- 보호자 증상 이미지
-- 경과 관찰 이미지
-- 진료 관련 첨부 이미지
+실제로 에이전트 구현과 RAG 평가를 진행하면서, 에이전트의 핵심은 답변 생성보다 사용자의 상황을 이해하고 다음 행동으로 자연스럽게 연결하는 흐름 설계에 있다는 것을 느꼈습니다. 특히 멀티턴 대화에서 어떤 정보를 유지하고, 검색된 문서를 어떻게 답변에 반영할지 고민하는 과정이 가장 어려웠습니다. RAGAS 평가와 다양한 검색 조합 실험을 통해 에이전트의 성능을 감각이 아니라 지표로 확인할 수 있었고, 데이터 품질과 평가 설계가 AI 서비스의 신뢰도에 얼마나 중요한지도 배울 수 있었습니다.
 
-Presigned URL 방식을 사용하여 클라이언트가 S3에 직접 업로드할 수 있도록 설계했습니다.  
-이를 통해 백엔드 서버 부하를 줄이고 이미지 업로드 속도를 개선할 수 있습니다.
+### 조민서
 
----
-
-## **7. ERD 주요 모델**
-
-MediPaw는 보호자, 수의사, 반려동물, 예약, 문진, EMR, 분석 결과를 하나의 진료 흐름으로 연결합니다.
-
-| 모델 | 설명 |
-| :--- | :--- |
-| **User** | 공통 사용자 인증 정보 |
-| **Guardian** | 보호자 상세 정보 |
-| **Doctor** | 수의사 계정 정보 |
-| **Hospital** | 병원 정보 |
-| **Pet** | 반려동물 프로필 |
-| **Schedule** | 보호자 예약 정보 |
-| **VetSchedule** | 수의사 진료 가능 일정 |
-| **ChatHistory** | AI 문진 대화 기록 |
-| **TriageResult** | 응급도 분류 결과 |
-| **PhotoAnalysis** | 이미지 분석 결과 |
-| **ValidationResult** | Agent 검증 결과 |
-| **EMR** | 전자 의무 기록 |
-| **Report** | 진료 리포트 |
-| **Prescription** | 처방 정보 |
-| **Drug** | 약물 데이터 |
-| **Followup** | 진료 후 경과 기록 |
-| **DoctorAlarm** | 수의사 알림 |
-
----
-
-## **8. 핵심 기능**
-
-### **1. AI 챗봇 기반 사전 문진**
-
-보호자는 진료 전 AI 챗봇을 통해 반려동물의 증상, 상태 변화, 식욕, 통증 여부 등을 입력할 수 있습니다.
-
-이를 통해 수의사는 진료 전 환자의 상태를 미리 파악할 수 있고, 단순 접수/문진 업무에 드는 시간을 줄일 수 있습니다.
-
-### **2. 증상 이미지 업로드**
-
-보호자는 피부, 눈, 상처 등 증상이 나타난 부위를 이미지로 업로드할 수 있습니다.
-
-이미지는 S3 Presigned URL 구조를 통해 업로드되도록 설계되어 있으며, 추후 이미지 분석 모델과 연결해 응급도 판단에 활용할 수 있습니다.
-
-### **3. 응급도 기반 예약 관리**
-
-보호자의 문진 결과와 이미지 분석 결과를 기반으로 응급도를 판단하고, 수의사 예약 관리 화면에서 우선 확인할 수 있도록 설계했습니다.
-
-이를 통해 병원은 단순 선착순 예약이 아닌, 환자의 위험도에 기반한 진료 우선순위 판단이 가능해집니다.
-
-### **4. 수의사용 대시보드**
-
-수의사는 대시보드에서 당일 예약, 환자 정보, 진료 흐름을 확인할 수 있습니다.
-
-예약 관리 화면에서는 예약 추가, 수정, 취소, 상태 변경을 수행할 수 있습니다.
-
-### **5. 환자 관리 및 EMR**
-
-수의사는 환자 목록과 상세 정보를 조회하고, EMR 화면에서 진료 기록을 작성할 수 있습니다.
-
-MediPaw는 추후 Chart Agent와 연동하여 보호자 문진 기반 SOAP 형식의 EMR 초안을 자동 생성하는 것을 목표로 합니다.
-
-### **6. Follow-up 관리**
-
-진료 이후 보호자가 경과 이미지와 상태 변화를 업로드할 수 있도록 설계했습니다.
-
-Follow-up Agent는 추가 관찰이 필요한 환자에 대해 경과 내용을 요약하고, 위험 상황 발생 시 즉각 내원 안내를 지원하는 역할을 목표로 합니다.
-
----
-
-## **9. API 명세 요약**
-
-### **Guardian Auth**
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/auth/signup` | 보호자 회원가입 |
-| POST | `/auth/login` | 보호자 로그인 |
-| POST | `/auth/refresh` | 토큰 재발급 |
-| POST | `/auth/logout` | 로그아웃 |
-| POST | `/auth/find-id` | 아이디 찾기 |
-| POST | `/auth/find-password` | 비밀번호 찾기 |
-
-### **Pet**
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| GET | `/pets` | 반려동물 목록 조회 |
-| POST | `/pets` | 반려동물 등록 |
-| GET | `/pets/{pet_id}` | 반려동물 상세 조회 |
-| PUT | `/pets/{pet_id}` | 반려동물 정보 수정 |
-| DELETE | `/pets/{pet_id}` | 반려동물 삭제 |
-
-### **Chat**
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/chat/sessions` | 채팅 세션 생성 |
-| POST | `/chat/sessions/{session_id}/messages` | 채팅 메시지 전송 |
-| GET | `/chat/upload/presigned-url` | 이미지 업로드 URL 발급 |
-| GET | `/chat/sessions` | 채팅 세션 목록 |
-| GET | `/chat/sessions/{session_id}` | 채팅 세션 상세 |
-| DELETE | `/chat/sessions/{session_id}` | 채팅 세션 삭제 |
-
-### **Schedule**
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/schedules/checkup` | 검진 예약 신청 |
-| GET | `/schedules` | 보호자 예약 목록 |
-| GET | `/schedules/available` | 예약 가능 시간 조회 |
-| GET | `/schedules/{schedule_id}` | 예약 상세 조회 |
-| PATCH | `/schedules/{schedule_id}` | 예약 수정 |
-| DELETE | `/schedules/{schedule_id}` | 예약 취소 |
-| POST | `/schedules/confirm` | 예약 확정 |
-
-### **Doctor**
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/doctor/auth/login` | 수의사 로그인 |
-| PUT | `/doctor/auth/password/change` | 비밀번호 변경 |
-| POST | `/doctor/auth/password/reset` | 비밀번호 초기화 |
-| GET | `/doctor/reservations` | 병원 예약 목록 |
-| POST | `/doctor/reservations` | 예약 등록 |
-| PUT | `/doctor/reservations/{schedule_id}` | 예약 수정 |
-| PATCH | `/doctor/reservations/{schedule_id}` | 예약 상태 변경 |
-| DELETE | `/doctor/reservations/{schedule_id}` | 예약 삭제 |
-| GET | `/doctor/patient/list` | 환자 목록 |
-| GET | `/doctor/patient/{petid}` | 환자 상세 |
-| PUT | `/doctor/patient/{petid}` | 환자 정보 수정 |
-
----
-
-## **10. 실행 방법**
-
-> 📘 더 자세한 트러블슈팅은 [`DEV_DOCKER.md`](./DEV_DOCKER.md) 참고.
-
-### **🟢 빠른 시작 (권장)**
-
-**공통 준비물**: Docker Desktop 켜기 🐳 (안 켜면 모든 docker 명령이 에러)
-
-```bash
-# 맥 / 리눅스        # 윈도우(PowerShell)
-./dev.sh             .\dev.ps1
-```
-
-이 한 줄이면 **.env 자동 생성 → 포트 정리 → 빌드·실행 → 약 데이터 seed → 테스트 계정 생성**까지 끝.
-
-이미 한 번 빌드한 뒤 Docker를 껐다 켜는 정도라면 빠른 실행 모드를 쓰면 됩니다.
-
-```bash
-./dev.sh fast
-```
-
-`fast`는 재빌드 없이 **DB + 백엔드 + 보호자 앱 + 수의사 앱** 전체를 기존 이미지로 다시 띄웁니다. 보호자 앱만 수정했다면 `./dev.sh guardian`, 수의사 앱만 수정했다면 `./dev.sh vet`로 해당 프론트만 다시 빌드/재시작할 수 있습니다. Dockerfile, `requirements.txt`, `package.json`처럼 의존성이나 이미지 구성이 바뀐 뒤에는 기존처럼 `./dev.sh`를 쓰세요.
-
-| 앱 | 주소 | 테스트 계정 |
-| :--- | :--- | :--- |
-| 보호자 | http://localhost:5173 | `guardian_test` / `Test1234!` |
-| 수의사 | http://localhost:5174 | `admin` / `Test1234!` |
-| API 문서 | http://localhost:8000/docs | — |
-
-끄기: `./dev.sh down` (윈도우 `.\dev.ps1 down`) · 초기화: `./dev.sh reset`
-
-| 상황 | 명령어 | 설명 |
-| :--- | :--- | :--- |
-| 처음 켜거나 의존성 변경 후 | `./dev.sh` | 전체 빌드 후 실행 |
-| Docker만 껐다가 다시 켤 때 | `./dev.sh fast` | 재빌드 없이 전체 스택 실행 |
-| 보호자 화면만 수정 후 | `./dev.sh guardian` | guardian 프론트만 빌드/재시작 |
-| 수의사 화면만 수정 후 | `./dev.sh vet` | vet 프론트만 빌드/재시작 |
-| 끄기 | `./dev.sh down` | DB 데이터 유지 |
-| 완전 초기화 | `./dev.sh reset` | DB 데이터까지 삭제 |
-
-> 💡 `OPENAI_API_KEY` 가 비어 있어도 서버는 뜹니다(AI 기능만 비활성). `backend/.env`에 팀 공용 키를 넣으면 활성화.
-
-### **⚠️ 개발 방식 2가지 — 하나만 켜세요 (포트 충돌 주의)**
-
-5173/5174/8000 포트를 두 방식이 똑같이 쓰므로, **동시에 켜면 충돌**합니다.
-
-| 방식 | 실행 | 비고 |
-| :--- | :--- | :--- |
-| **A. 풀 도커** | `./dev.sh` / `.\dev.ps1` | 세팅 간편. 이때 `npm run dev` 따로 켜지 말 것 |
-| **B. 하이브리드** | DB만 도커 + 백엔드/프론트는 로컬 | 빌드 없이 빠른 개발 |
-
-**B(하이브리드) 실행:**
-```bash
-docker compose -f ai/docker/docker-compose.yml up -d db   # DB만 도커
-cd backend && uvicorn app.main:app --reload --port 8000   # 백엔드 로컬
-cd frontend/guardian-web && npm run dev                    # 5173
-cd frontend/vet-web && npm run dev                         # 5174
-```
-
-**`Port already in use` 가 뜨면** (대개 도커 프론트가 떠 있어서):
-```bash
-docker compose -f ai/docker/docker-compose.yml stop guardian vet backend   # db는 유지
-# 그래도 잡혀있으면 포트 점유 프로세스 종료
-#   맥:      lsof -nP -iTCP:5174 -sTCP:LISTEN  →  kill -9 <PID>
-#   윈도우:  netstat -ano | findstr :5174      →  taskkill /PID <PID> /F
-```
-
-### **수동 실행 (방식 B 상세)**
-
-### **Backend**
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-`.env.example`을 참고해 `.env` 파일을 설정합니다.
-
-```env
-# 로컬 백엔드 → 도커 DB(5432) 연결
-DATABASE_URL=postgresql://medipaw:medipaw_secret@localhost:5432/medipaw
-SECRET_KEY=dev-secret-change-me-in-production
-
-# OpenAI (AI 기능 쓰려면. 비우면 서버는 뜨고 AI만 비활성)
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.4-mini
-
-# AWS S3 (이미지 업로드 쓸 사람만. 비워도 됨)
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_REGION=ap-northeast-2
-S3_BUCKET_NAME=medipaw-images
-CLOUDFRONT_URL=
-
-DEBUG=true
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
-```
-
-> 비워둔 값들은 기본값으로 동작하므로, 로컬에선 보통 `OPENAI_API_KEY`만 채우면 됩니다.
-
-마이그레이션 실행:
-
-```bash
-alembic upgrade head
-```
-
-서버 실행:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-API 문서:
-
-```text
-http://localhost:8000/docs
-```
-
-### **Guardian Web**
-
-```bash
-cd frontend/guardian-web
-npm install
-npm run dev
-```
-
-환경 변수:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-기본 실행 주소:
-
-```text
-http://localhost:5173
-```
-
-### **Vet Web**
-
-```bash
-cd frontend/vet-web
-npm install
-npm run dev
-```
-
-환경 변수:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_ENABLE_DEV_LOGIN=false
-```
-
-기본 실행 주소:
-
-```text
-http://localhost:5174
-```
-
----
-
-## **11. 화면 구성**
-
-### **Guardian Web**
-
-| Route | Description |
-| :--- | :--- |
-| `/login` | 보호자 로그인 |
-| `/signup` | 회원가입 |
-| `/find-id` | 아이디 찾기 |
-| `/find-password` | 비밀번호 찾기 |
-| `/home` | 보호자 홈 |
-| `/reservations` | 예약 목록 |
-| `/chatbot` | AI 문진 챗봇 |
-| `/mypage` | 마이페이지 |
-| `/mypage/password` | 비밀번호 변경 |
-| `/pets/register` | 반려동물 등록 |
-| `/pets/:petId` | 반려동물 수정 |
-
-### **Vet Web**
-
-| Route | Description |
-| :--- | :--- |
-| `/login` | 수의사 로그인 |
-| `/first-password-change` | 최초 비밀번호 변경 |
-| `/home` | 대시보드 |
-| `/emr` | EMR |
-| `/reservation` | 예약 관리 |
-| `/patients` | 환자 관리 |
-| `/settings` | 병원 설정 |
-
----
-
-## **12. 기대 효과**
-
-| 대상 | 기대 효과 |
-| :--- | :--- |
-| **보호자** | 반려동물 증상을 진료 전 체계적으로 전달하고 예약 현황을 쉽게 관리 |
-| **수의사** | 문진, 예약, 환자 정보를 한 화면에서 확인하여 진료 준비 시간 단축 |
-| **병원** | 전화 응대와 수기 차팅 부담을 줄이고 응급 환자 우선순위 판단 가능 |
-| **반려동물** | 위험 신호를 빠르게 포착해 골든타임 확보 가능성 향상 |
-
----
-
-## **13. 향후 개선 방향**
-
-- LangGraph 기반 Multi-Agent 실제 연동
-- 피부 질환 / 안구 질환 이미지 분류 모델 연결
-- SOAP 형식 EMR 초안 자동 생성 고도화
-- 수의사 알림 시스템 고도화
-- 병원별 진료 가능 시간 자동 추천
-- Follow-up 멀티턴 대화 관리
-- 배포 환경 Docker Compose 구성 확장
-
----
-
-## **14. 회고**
-
-| 이름 | 회고 내용 |
-| :---- | :--- |
-| **김지현** &nbsp;&nbsp;&nbsp;&nbsp; | 보호자와 수의사라는 서로 다른 사용자의 화면을 설계하면서 실제 서비스 흐름을 고려한 UI 구현의 중요성을 배웠습니다. |
-| **박지현** &nbsp;&nbsp;&nbsp;&nbsp; | 프론트엔드 화면을 구현하며 사용자 경험과 데이터 흐름을 함께 고민할 수 있었습니다. 특히 보호자와 병원 양쪽의 니즈를 연결하는 과정이 의미 있었습니다. |
-| **조민서** &nbsp;&nbsp;&nbsp;&nbsp; | 백엔드와 DB를 설계하며 인증, 예약, 환자 정보가 하나의 진료 흐름 안에서 연결되는 구조를 고민할 수 있었습니다. |
-| **이채림** &nbsp;&nbsp;&nbsp;&nbsp; | API와 데이터베이스를 구현하면서 실제 서비스에서 데이터 정합성과 확장 가능한 모델 설계가 얼마나 중요한지 경험했습니다. |
-| **김찬영** &nbsp;&nbsp;&nbsp;&nbsp; | Multi-Agent 구조를 설계하며 단일 LLM 응답보다 역할을 분리한 Agent 기반 흐름이 의료 보조 서비스에 더 적합하다는 점을 배웠습니다. |
+백엔드와 DB, 에이전트 평가 등 여러 파트를 담당하면서, 코드 리뷰를 거치며 서버부터 데이터, 평가까지 각 레이어가 어떻게 연결되는지 조금씩 보이기 시작했습니다. 피드백을 받고 수정하는 과정에서도 단순히 오류를 고치는 것이 아니라, 어떤 방식으로 짜야 더 나은 결과를 낼 수 있을지 끊임없이 고민하게 됐고, 그 고민이 쌓이면서 처음보다 훨씬 나아진 코드를 작성할 수 있었습니다. 각자 맡은 파트에서 묵묵히 잘해 준 팀원들 덕분에 저도 제 역할에 집중할 수 있었고, 좋은 팀과 함께한 덕분에 혼자였다면 만들지 못했을 결과물을 완성할 수 있었습니다.
