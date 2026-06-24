@@ -25,9 +25,9 @@ MediPaw는 보호자 상담과 동물병원 업무를 연결하는 반려동물 
 |---|---|---|---|
 | 김지현 | Frontend | Frontend 개발, UI·UX 설계, 웹 서비스 배포 구성 | React, TypeScript, Vite, Tailwind CSS, Zustand, Axios, Nginx |
 | 김찬영 | Full Stack · AI Agent · DevOps | AI Agent, Backend, Frontend, DB 연동, 서비스 통합, 인프라 및 배포 | Python, FastAPI, LangGraph, OpenAI API, RAG, pgvector, PostgreSQL, SQLAlchemy, Alembic, React, TypeScript, Docker, Nginx, AWS EC2·RDS·S3, Langfuse |
-| 박지현 | Full Stack · UI·UX | Frontend 및 UI·UX, Backend API 개발, AI·DB 연동 | React, TypeScript, Vite, Tailwind CSS, Zustand, FastAPI, OpenAI API, PostgreSQL, Alembic |
-| 조민서 | Backend · DB · Fine-tuning | Backend, DB 설계, API 개발, AI 모델 Fine-tuning 및 평가, Frontend API 연동 | Python, FastAPI, SQLAlchemy, Pydantic, Alembic, PostgreSQL, asyncpg, React API Integration, PyTorch, Docker |
-| 이채림 | Backend · DB · AI Agent · Fine-tuning | Backend, DB 설계, AI Agent, RAG, AI 모델 Fine-tuning 및 평가, LLMOps | Python, FastAPI, LangGraph, OpenAI API, RAG, PostgreSQL, pgvector, SQLAlchemy, Alembic, Langfuse, React API Integration, PyTorch, Docker |
+| 박지현 | Full Stack · AI Agent · UI·UX | Frontend 및 UI·UX, Backend API 개발, AI·DB 연동, Reception Agent 개발 | React, TypeScript, Vite, Tailwind CSS, Zustand, FastAPI, OpenAI API, PostgreSQL, Alembic |
+| 조민서 | Backend · DB · AI Agent · Fine-tuning | Backend, DB 설계, API 개발, 에이전트 평가 시스템 개발, AI 모델 Fine-tuning, Frontend API 연동 | Python, FastAPI, SQLAlchemy, Pydantic, Alembic, PostgreSQL, asyncpg, Langfuse, React API Integration, PyTorch |
+| 이채림 | Full Stack · DB · AI Agent · Fine-tuning | Frontend, Backend, DB 설계, AI Agent, RAG, AI 모델 Fine-tuning 및 평가, LLMOps | Python, FastAPI, LangGraph, OpenAI API, RAG, PostgreSQL, pgvector, SQLAlchemy, Alembic, Langfuse, React, TypeScript, React API Integration, PyTorch, Docker |
 
 ## 접속 주소
 
