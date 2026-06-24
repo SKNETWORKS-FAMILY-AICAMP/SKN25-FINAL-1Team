@@ -12,6 +12,10 @@ from typing import Any, Protocol
 # 채팅 시작 시 노출되는 '문진 시작' 진입 pill — chat.py/router/triage가 공유하는 단일 출처.
 INITIAL_TRIAGE_PILL = "증상을 말하고 예약할래요"
 
+# 문진 중 비증상 응대(메타·잡담 등) 뒤 띄우는 '여기서 마칠게요' 종료 pill — 단일 출처.
+# 글자가 'OO 괜찮아요?'의 증상 답과 안 겹치게 명확한 종료어로 둔다(router/triage가 결정론 처리).
+TRIAGE_CLOSE_PILL = "아니요, 괜찮아요"
+
 # 문진 시작 직후 보호자가 증상 범주를 빠르게 고를 수 있게 노출하는 기본 pill.
 INITIAL_SYMPTOM_PILLS = [
     "구토",

@@ -14,7 +14,7 @@ from langfuse import observe
 
 from ai.llm import call_llm_json
 
-from .contracts import INITIAL_TRIAGE_PILL, Flow, Phase, SessionContext
+from .contracts import INITIAL_TRIAGE_PILL, TRIAGE_CLOSE_PILL, Flow, Phase, SessionContext
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +122,10 @@ async def _llm_pick(ctx: SessionContext, candidates: list[str]) -> str:
 async def route(ctx: SessionContext) -> str:
     """반환: 처리 노드 이름 {reception|triage|schedule|followup_filter|redirect}."""
     # 0) 시스템 pill 텍스트 — 결정론 (버튼 클릭은 판단 아님)
+    # 문진 중 띄운 '아니요, 괜찮아요'(종료 pill)는 같은 글자가 reception 종료 pill과 겹치므로
+    # 문진 진행 중일 때만 triage로 보내 결정론 종료시킨다(reception으로 새 증상 캐묻기 방지).
+    if ctx.active_flow == Flow.TRIAGING and ctx.user_message == TRIAGE_CLOSE_PILL:
+        return "triage"
     if ctx.user_message in _RECEPTION_PILLS:
         return "reception"
     if ctx.user_message in _TRIAGE_PILLS:
