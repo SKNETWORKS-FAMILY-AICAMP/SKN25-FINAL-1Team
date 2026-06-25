@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -239,10 +239,12 @@ async def _check_1c(triage: TriageResult, chat_history: ChatHistory | None) -> d
             from ai.llm import call_llm_json
             kw_lines = "\n".join(f"{j + 1}. {kw}" for j, kw in enumerate(failed_kws))
             prompt = (
-                "동물병원 보호자의 발화에서 각 증상 키워드의 의미가 반영되는지 판단하세요.\n"
-                "표현이 달라도 의미가 같으면 포함으로 봅니다. (예: '식욕부진' ≈ '밥을 안 먹어요')\n\n"
+                "보호자의 일상 발화가 아래 의학 증상 키워드와 같은 증상을 나타내는지 판단하세요.\n"
+                "보호자는 의학 용어를 쓰지 않으므로 일상 표현도 동일 증상으로 봅니다.\n"
+                "예: '숨이 가빠요' = '호흡곤란', '밥을 안 먹어요' = '식욕부진', '움직일 때만 힘들어해요' = '운동불내성'\n"
+                "AI가 해당 증상을 보호자 발화로부터 도출할 수 있으면 included=true로 판단하세요.\n\n"
                 f"[보호자 발화]\n{user_text[:1500]}\n\n"
-                f"[증상 키워드]\n{kw_lines}\n\n"
+                f"[의학 증상 키워드]\n{kw_lines}\n\n"
                 'JSON만 출력: {"results": [{"keyword": "키워드명", "included": true}, ...]}'
             )
             raw = await call_llm_json(prompt)
@@ -404,31 +406,40 @@ async def _has_same_day_slots(
     if not work.start_time or not work.end_time:
         return None
 
-    total_min = int(
+    # 접속 시각 이후 잔여 운영 시간만 계산 (하루 전체가 아닌 접속 시점 기준)
+    effective_start = max(work.start_time, created.time())
+    if effective_start >= work.end_time:
+        return False  # 이미 마감 후 접속 → 당일 슬롯 없음
+
+    remaining_min = int(
         (datetime.combine(created.date(), work.end_time)
-         - datetime.combine(created.date(), work.start_time)).total_seconds() / 60
+         - datetime.combine(created.date(), effective_start)).total_seconds() / 60
     )
+
+    # 점심 시간이 잔여 구간 안에 걸치면 그만큼 차감
     if work.lunch_start and work.lunch_end:
-        total_min -= int(
-            (datetime.combine(created.date(), work.lunch_end)
-             - datetime.combine(created.date(), work.lunch_start)).total_seconds() / 60
-        )
+        overlap_start = max(effective_start, work.lunch_start)
+        overlap_end = min(work.end_time, work.lunch_end)
+        if overlap_start < overlap_end:
+            remaining_min -= int(
+                (datetime.combine(created.date(), overlap_end)
+                 - datetime.combine(created.date(), overlap_start)).total_seconds() / 60
+            )
 
-    day_start = datetime.combine(created.date(), time(0, 0)).replace(tzinfo=KST)
-    day_end = datetime.combine(created.date(), time(23, 59, 59)).replace(tzinfo=KST)
-
+    # 접속 시각 이후에 이미 잡힌 예약만 차감 (과거 예약은 이미 선택 불가)
+    close_dt = datetime.combine(created.date(), work.end_time).replace(tzinfo=KST)
     booked_rows = await db.execute(
         select(Schedule).where(
             Schedule.doctorid == schedule.doctorid,
-            Schedule.confirmed_time >= day_start,
-            Schedule.confirmed_time <= day_end,
+            Schedule.confirmed_time >= created,
+            Schedule.confirmed_time < close_dt,
             Schedule.scheduleid != schedule.scheduleid,
             Schedule.deleted_at.is_(None),
         )
     )
     booked_min = sum(s.duration_min or 0 for s in booked_rows.scalars().all())
 
-    return (total_min - booked_min) >= (schedule.duration_min or 30)
+    return (remaining_min - booked_min) >= (schedule.duration_min or 30)
 
 
 async def _check_2a(
