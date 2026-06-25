@@ -592,6 +592,8 @@ function AgentBenchmarkTab({
   logsEndpoint,
   cachedResult,
   fullLoading,
+  recentRow,
+  agentKey,
 }: {
   label: string;
   endpoint: string | null;
@@ -599,6 +601,8 @@ function AgentBenchmarkTab({
   logsEndpoint?: string | null;
   cachedResult?: AgentEvalResult | null;
   fullLoading: boolean;
+  recentRow?: ValidationRow | null;
+  agentKey?: "triage" | "schedule" | "chart";
 }) {
   const [logs, setLogs] = useState<MonitoringLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -621,6 +625,11 @@ function AgentBenchmarkTab({
 
   return (
     <div className="space-y-8">
+      {/* ── 최근 케이스 결과 (triage/schedule/chart 탭만) ── */}
+      {recentRow && agentKey && (
+        <RecentAgentResult row={recentRow} agentKey={agentKey} />
+      )}
+
       {/* ── 운영 모니터링 (logsEndpoint 있을 때만) ── */}
       {logsEndpoint && (
         <MonitoringTable logs={logs} loading={logsLoading} onRefresh={fetchLogs} />
@@ -643,6 +652,10 @@ function AgentBenchmarkTab({
             <p className="text-sm text-slate-400">{description}</p>
             <BenchmarkReport result={cachedResult} />
           </>
+        ) : recentRow ? (
+          <p className="text-xs text-slate-400 py-4">
+            전체 성능 탭에서 "전체 에이전트 평가 실행"을 누르면 테스트셋 벤치마크 결과가 여기에 표시됩니다.
+          </p>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center">
             <FlaskConical className="mx-auto mb-3 h-8 w-8 text-slate-200" />
@@ -920,65 +933,271 @@ function WarnPatternBar({ rows }: { rows: ValidationRow[] }) {
   );
 }
 
+// ── 최근 케이스 end-to-end 카드 ──────────────────────────────
+function RecentCaseCard({ row }: { row: ValidationRow }) {
+  const checksDict = (!Array.isArray(row.checks) && row.checks && typeof row.checks === "object")
+    ? (row.checks as ValidationChecks)
+    : {};
+  const trgMod = checksDict.triage;
+  const schMod = checksDict.schedule;
+  const chtMod = checksDict.chart;
+
+  // 각 단계 핵심 요약
+  const trgSub = (() => {
+    const signal = trgMod?.checks.find((c) => c.item === "완료 신호");
+    if (!signal) return "";
+    const um = signal.detail.match(/urgency=([A-Z]+)\((\d)\)/);
+    const cm = signal.detail.match(/chief_complaint='([^']+)'/);
+    return [um ? `${um[1]}(${um[2]})` : null, cm ? cm[1] : null].filter(Boolean).join(" · ");
+  })();
+
+  const schSub = (() => {
+    const timing = schMod?.checks.find((c) => c.item === "예약 타이밍");
+    if (!timing) return "";
+    if (timing.status === "WARN") return "기준 초과 ⚠";
+    const m = timing.detail.match(/(\d+일 후 예약)/);
+    return m ? m[1] : "";
+  })();
+
+  const chtSub = (() => {
+    const soap = chtMod?.checks.find((c) => c.item === "SOAP 섹션 완전성");
+    if (!soap) return "";
+    return soap.status === "PASS" ? "SOAP 완전" : "SOAP 미흡 ⚠";
+  })();
+
+  const steps = [
+    { label: "챗봇 진입", status: "OK" as const, sub: "접수 완료" },
+    { label: "문진 (Triage)", status: trgMod?.status ?? null, sub: trgSub },
+    { label: "예약 (Schedule)", status: schMod?.status ?? null, sub: schSub },
+    { label: "차트 (Chart)", status: chtMod?.status ?? null, sub: chtSub },
+  ];
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">최근 케이스 흐름</span>
+          <span className="ml-2 font-mono text-sm font-bold text-slate-700">#{row.emrid}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">{fmtTime(row.createdAt)}</span>
+          <span className={`text-xs font-bold ${row.overall === "ATTENTION" ? "text-amber-600" : "text-slate-700"}`}>
+            {row.overall}
+          </span>
+        </div>
+      </div>
+
+      {/* 흐름 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {steps.map((step, i) => (
+          <div key={step.label} className="flex items-center gap-2">
+            <div className={`rounded-lg border px-3 py-2 text-center min-w-[90px] ${
+              step.status === "WARN"
+                ? "border-amber-200 bg-amber-50"
+                : "border-slate-100 bg-slate-50"
+            }`}>
+              <p className="text-xs text-slate-400">{step.label}</p>
+              <p className={`mt-0.5 text-sm font-bold ${
+                step.status === "WARN"
+                  ? "text-amber-600"
+                  : step.status === "PASS" || step.status === "OK"
+                  ? "text-slate-800"
+                  : "text-slate-300"
+              }`}>
+                {step.status === "OK" ? "PASS" : step.status ?? "—"}
+              </p>
+              {step.sub && (
+                <p className="mt-0.5 text-xs text-slate-400 leading-tight">{step.sub}</p>
+              )}
+            </div>
+            {i < steps.length - 1 && (
+              <span className="text-slate-300 text-sm">→</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {row.summary && (
+        <p className="mt-3 text-xs text-slate-400">{row.summary}</p>
+      )}
+    </div>
+  );
+}
+
+// ── 에이전트 탭용 최근 케이스 결과 ───────────────────────────
+function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "triage" | "schedule" | "chart" }) {
+  const checksDict = (!Array.isArray(row.checks) && row.checks && typeof row.checks === "object")
+    ? (row.checks as ValidationChecks)
+    : {};
+  const mod = checksDict[agentKey];
+
+  if (!mod) return null;
+
+  // ── Triage 핵심 지표 파싱
+  let triageHighlight: { urgency: string | null; level: string | null; complaint: string | null } | null = null;
+  if (agentKey === "triage") {
+    const signal = mod.checks.find((c) => c.item === "완료 신호");
+    const um = signal?.detail.match(/urgency=([A-Z]+)\((\d)\)/);
+    const cm = signal?.detail.match(/chief_complaint='([^']+)'/);
+    triageHighlight = {
+      urgency: um ? um[1] : null,
+      level: um ? um[2] : null,
+      complaint: cm ? cm[1] : null,
+    };
+  }
+
+  // ── Schedule 핵심 지표 파싱
+  let scheduleHighlight: { days: string | null; warn: boolean } | null = null;
+  if (agentKey === "schedule") {
+    const timing = mod.checks.find((c) => c.item === "예약 타이밍");
+    const dm = timing?.detail.match(/(\d+)일 후 예약/);
+    scheduleHighlight = { days: dm ? dm[1] : null, warn: timing?.status === "WARN" };
+  }
+
+  // ── Chart 핵심 지표 파싱
+  let chartHighlight: { soapStatus: CheckStatus | null; kwDetail: string | null } | null = null;
+  if (agentKey === "chart") {
+    const soap = mod.checks.find((c) => c.item === "SOAP 섹션 완전성");
+    const kw   = mod.checks.find((c) => c.item.includes("키워드"));
+    chartHighlight = { soapStatus: soap?.status ?? null, kwDetail: kw?.detail ?? null };
+  }
+
+  const AGENT_LABEL: Record<string, string> = { triage: "문진", schedule: "예약", chart: "차트" };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            {AGENT_LABEL[agentKey]} 에이전트 · 최근 케이스 자동 평가
+          </span>
+          <span className="font-mono text-xs text-slate-500">#{row.emrid}</span>
+        </div>
+        <span className={`rounded px-2 py-0.5 text-xs font-bold ${
+          mod.status === "WARN" ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-600"
+        }`}>
+          {mod.status === "PASS" ? "정상" : mod.status === "WARN" ? "주의" : mod.status}
+        </span>
+      </div>
+
+      {/* ── Triage 핵심 요약 */}
+      {triageHighlight && (triageHighlight.urgency || triageHighlight.complaint) && (
+        <div className="mb-5 flex items-center gap-6 rounded-lg bg-slate-50 px-4 py-3">
+          {triageHighlight.urgency && (
+            <div className="text-center">
+              <p className="text-xs text-slate-400 mb-1">응급도</p>
+              <p className="text-base font-black text-slate-800">{triageHighlight.urgency}</p>
+              {triageHighlight.level && (
+                <p className="text-xs text-slate-400">Lv.{triageHighlight.level}</p>
+              )}
+            </div>
+          )}
+          {triageHighlight.complaint && (
+            <div className="border-l border-slate-200 pl-5">
+              <p className="text-xs text-slate-400 mb-1">주증상</p>
+              <p className="text-sm font-semibold text-slate-800">{triageHighlight.complaint}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Schedule 핵심 요약 */}
+      {scheduleHighlight && (
+        <div className="mb-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+          {scheduleHighlight.warn ? (
+            <p className="text-sm font-semibold text-amber-600">예약 타이밍 기준 초과</p>
+          ) : scheduleHighlight.days ? (
+            <>
+              <span className="text-2xl font-black text-slate-800">{scheduleHighlight.days}일 후</span>
+              <span className="text-sm text-slate-400">예약 확정</span>
+            </>
+          ) : (
+            <p className="text-xs text-slate-400">예약 타이밍 정보 없음</p>
+          )}
+        </div>
+      )}
+
+      {/* ── Chart 핵심 요약 */}
+      {chartHighlight && (
+        <div className="mb-5 flex items-center gap-5 rounded-lg bg-slate-50 px-4 py-3">
+          <div>
+            <p className="text-xs text-slate-400 mb-1">SOAP 완전성</p>
+            <p className={`text-sm font-bold ${chartHighlight.soapStatus === "WARN" ? "text-amber-600" : "text-slate-800"}`}>
+              {chartHighlight.soapStatus === "PASS" ? "4개 섹션 완전" : chartHighlight.soapStatus === "WARN" ? "섹션 누락" : "—"}
+            </p>
+          </div>
+          {chartHighlight.kwDetail && (
+            <div className="border-l border-slate-200 pl-4">
+              <p className="text-xs text-slate-400 mb-1">키워드</p>
+              <p className="text-xs text-slate-700">{chartHighlight.kwDetail}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 체크 항목 목록 */}
+      <div className="space-y-1.5 border-t border-slate-100 pt-4">
+        <p className="text-xs font-semibold text-slate-400 mb-2">항목별 평가 결과</p>
+        {mod.checks.map((c, i) => (
+          <div key={i} className={`flex items-start gap-3 rounded-lg px-3 py-2.5 ${
+            c.status === "WARN" ? "bg-amber-50" : "bg-slate-50"
+          }`}>
+            <span className={`mt-0.5 shrink-0 text-xs font-bold ${
+              c.status === "WARN" ? "text-amber-500" : "text-slate-400"
+            }`}>
+              {c.status === "WARN" ? "⚠" : "✓"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-700">{c.item}</span>
+                <span className={`shrink-0 text-xs font-bold ${
+                  c.status === "WARN" ? "text-amber-600" : "text-slate-400"
+                }`}>
+                  {c.status === "PASS" ? "통과" : c.status === "WARN" ? "주의" : c.status}
+                </span>
+              </div>
+              {c.detail && (
+                <p className="mt-1 text-xs text-slate-400 leading-relaxed">{c.detail}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── 전체 성능 탭 ──────────────────────────────────────────────
 function OverallTab({
   fullReport,
   fullLoading,
   fullError,
   onRunFull,
+  rows,
+  loading,
+  batchLoading,
+  error,
+  onRunRecent,
 }: {
   fullReport: FullReport | null;
   fullLoading: boolean;
   fullError: string | null;
   onRunFull: () => void;
+  rows: ValidationRow[] | null;
+  loading: boolean;
+  batchLoading: boolean;
+  error: string | null;
+  onRunRecent: () => void;
 }) {
-  const [rows, setRows] = useState<ValidationRow[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [batchLoading, setBatchLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchResults();
-  }, []);
-
-  async function fetchResults() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/admin/validation/results`, {
-        headers: authHeader(),
-      });
-      const json = await res.json();
-      setRows(json.result ?? []);
-    } catch {
-      setError("결과를 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function runRecentValidation() {
-    setBatchLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `${API}/admin/validation/run-recent?limit=10`,
-        { method: "POST", headers: authHeader() }
-      );
-      if (!res.ok) throw new Error(`${res.status}`);
-      await fetchResults();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "오류");
-    } finally {
-      setBatchLoading(false);
-    }
-  }
-
   const total = rows?.length ?? 0;
   const attentionCount = rows?.filter((r) => r.overall === "ATTENTION").length ?? 0;
 
   return (
     <div className="space-y-6">
+      {/* 최근 케이스 end-to-end 흐름 */}
+      {rows && rows.length > 0 && <RecentCaseCard row={rows[0]} />}
+
       {/* 전체 에이전트 평가 */}
       <AgentFullReportSection report={fullReport} loading={fullLoading} error={fullError} onRunAll={onRunFull} />
 
@@ -1018,7 +1237,7 @@ function OverallTab({
       {/* 최근 10건 재검증 */}
       <div className="flex items-center gap-2">
         <button
-          onClick={runRecentValidation}
+          onClick={onRunRecent}
           disabled={batchLoading}
           className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
         >
@@ -1120,7 +1339,7 @@ const AGENT_CONFIG: Record<Exclude<TabId, "overall">, {
   triage:    { label: "Triage",    endpoint: "/admin/eval/triage",    desc: "응급도 정확도 · Red flag 감지율 (결정론) + 슬롯 추출 F1 · 환각 · 요약 완전성 (LLM). 15개 케이스 기준." },
   schedule:  { label: "Schedule",  endpoint: "/admin/eval/schedule",  desc: "소요시간 범위 · 응급도 순서 · 형식 유효성 (20 케이스 기준)." },
   chart:     { label: "Chart",     endpoint: "/admin/eval/chart",     desc: "SOAP 구조 완전성 · 키워드 포함율 · 단정 표현 없음 (19 케이스 기준)." },
-  reception: { label: "Reception", endpoint: "/admin/eval/reception", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 10케이스). MCP 서버 가동 필요." },
+  reception: { label: "Reception", endpoint: "/admin/eval/reception", logsEndpoint: "/admin/eval/reception/logs", desc: "MCP 도구 선택 정확도 (병원정보·운영시간·슬롯·무관질문 10케이스). MCP 서버 가동 필요." },
   followup:  { label: "경과 필터", endpoint: "/admin/eval/followup",  logsEndpoint: "/admin/eval/followup/logs", desc: "경과 필터 에이전트 분류 성능 측정. 테스트 케이스 100개 기준." },
 };
 
@@ -1130,6 +1349,47 @@ export default function EvalPanel() {
   const [fullReport, setFullReport] = useState<FullReport | null>(null);
   const [fullLoading, setFullLoading] = useState(false);
   const [fullError, setFullError] = useState<string | null>(null);
+
+  // 케이스 검증 결과 (OverallTab + 각 에이전트 탭 공유)
+  const [rows, setRows] = useState<ValidationRow[] | null>(null);
+  const [rowsLoading, setRowsLoading] = useState(false);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [rowsError, setRowsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchResults();
+  }, []);
+
+  async function fetchResults() {
+    setRowsLoading(true);
+    setRowsError(null);
+    try {
+      const res = await fetch(`${API}/admin/validation/results`, { headers: authHeader() });
+      const json = await res.json();
+      setRows(json.result ?? []);
+    } catch {
+      setRowsError("결과를 불러오지 못했습니다.");
+    } finally {
+      setRowsLoading(false);
+    }
+  }
+
+  async function runRecentValidation() {
+    setBatchLoading(true);
+    setRowsError(null);
+    try {
+      const res = await fetch(`${API}/admin/validation/run-recent?limit=10`, {
+        method: "POST",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      await fetchResults();
+    } catch (e) {
+      setRowsError(e instanceof Error ? e.message : "오류");
+    } finally {
+      setBatchLoading(false);
+    }
+  }
 
   async function runFullEval() {
     setFullLoading(true);
@@ -1190,6 +1450,11 @@ export default function EvalPanel() {
           fullLoading={fullLoading}
           fullError={fullError}
           onRunFull={runFullEval}
+          rows={rows}
+          loading={rowsLoading}
+          batchLoading={batchLoading}
+          error={rowsError}
+          onRunRecent={runRecentValidation}
         />
       ) : (
         <AgentBenchmarkTab
@@ -1199,6 +1464,12 @@ export default function EvalPanel() {
           description={AGENT_CONFIG[activeTab as Exclude<TabId, "overall">].desc}
           cachedResult={cachedAgentResult}
           fullLoading={fullLoading}
+          recentRow={rows?.[0] ?? null}
+          agentKey={
+            (activeTab === "triage" || activeTab === "schedule" || activeTab === "chart")
+              ? activeTab
+              : undefined
+          }
         />
       )}
     </div>

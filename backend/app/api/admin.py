@@ -23,6 +23,7 @@ from app.api.settings import (
     _update_hospital_weekly_schedule,
 )
 from app.models.validation_result import ValidationResult
+from app.models.schedule import Schedule
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -290,16 +291,21 @@ async def run_validation_endpoint(
 
 @router.post("/validation/run-recent")
 async def run_recent_validations(
-    limit: int = Query(default=10, le=50, description="재검증할 최근 케이스 수"),
+    limit: int = Query(default=10, le=50, description="평가할 최근 케이스 수"),
     db: AsyncSession = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    """최근 N개 ValidationResult의 scheduleid를 꺼내 case_eval 재실행."""
+    """최근 N개 Schedule을 꺼내 case_eval 실행 후 validation_resultDB에 저장."""
     from ai.agents.evaluation import run_case_evaluation
 
-    q = select(ValidationResult).order_by(ValidationResult.created_at.desc()).limit(limit)
+    q = (
+        select(Schedule)
+        .where(Schedule.deleted_at.is_(None))
+        .order_by(Schedule.created_at.desc())
+        .limit(limit)
+    )
     rows = await db.execute(q)
-    schedule_ids = [v.scheduleid for v in rows.scalars().all() if v.scheduleid is not None]
+    schedule_ids = [s.scheduleid for s in rows.scalars().all()]
 
     results = []
     for sid in schedule_ids:
@@ -356,6 +362,12 @@ async def eval_orchestrator(db: AsyncSession = Depends(get_db), current_admin=De
 async def eval_reception(db: AsyncSession = Depends(get_db), current_admin=Depends(get_current_admin)):
     from ai.agents.evaluation import run_reception_eval
     return await run_reception_eval(db)
+
+
+@router.get("/eval/reception/logs")
+async def reception_logs(current_admin=Depends(get_current_admin)):
+    from ai.monitoring import recent_logs
+    return {"code": 200, "result": recent_logs("reception", limit=200)}
 
 
 @router.post("/eval/full-report")
