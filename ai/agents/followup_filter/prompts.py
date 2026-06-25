@@ -410,6 +410,9 @@ REPLY_SAVED_VARIANTS = (
     "상태가 더 달라지면 그 변화도 함께 살펴봐 주세요.",
     "새로운 변화가 보이면 편하게 말씀해 주세요.",
 )
+# 응급(urgent_possible) 경과의 fallback — '변화 있으면 말씀해 주세요' 같은 한가한 문구 대신
+# 공감만 짧게 둔다. 뒤에 더 빠른 예약 제안(URGENT_SAFETY_NOTE)이 ensure_safe_reply에서 붙는다.
+REPLY_SAVED_URGENT = "그런 변화가 있으셨군요, 많이 걱정되시겠어요."
 # 사진·영상이 첨부돼서 (글이 경과로 안 잡혀도) 저장하는 경우의 fallback.
 REPLY_SAVED_MEDIA_VARIANTS = (
     "사진·영상에서 보이는 변화가 이어지는지 살펴봐 주세요.",

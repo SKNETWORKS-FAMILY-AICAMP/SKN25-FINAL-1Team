@@ -228,16 +228,21 @@ def parse_classification(raw: dict | None, message: str) -> FollowupClassificati
 
 # --- 보호자 응답 안전 보정 ------------------------------------------------
 
-# urgent_possible인데 LLM이 안내를 빠뜨렸을 때 코드가 덧붙이는 안전 문구.
-URGENT_SAFETY_NOTE = (
-    "지금 예약 시간을 기다리지 말고 가까운 응급 동물병원에 바로 연락해 내원해 주세요."
-)
+# urgent_possible인데 LLM이 안내를 빠뜨렸을 때 코드가 덧붙이는 문구.
+# '가까운 응급병원으로 가라'처럼 겁주거나 다른 병원으로 보내지 않는다 — 우리 병원에 예약된
+# 보호자이므로, 공감(아래 fallback) 뒤에 '더 빠른 진료'를 제안한다('더 빠른 시간 찾기' pill과 짝).
+URGENT_SAFETY_NOTE = "더 빠른 예약 시간을 찾아봐 드릴까요?"
 
 
 def _has_emergency_guidance(text: str) -> bool:
-    """답변에 이미 즉시 응급 내원을 권하는 안내가 있는지 판단."""
+    """응급 경과 답변에 이미 '더 빠른 진료'(앞당김 제안/병원 즉시 연락) 유도가 있는지 판단."""
     t = text or ""
-    return "응급" in t and any(k in t for k in ("바로", "즉시", "지금", "연락", "내원"))
+    if any(k in t for k in ("빠른 예약", "빠른 시간", "앞당", "더 빨리", "더 일찍")):
+        return True
+    has_place = ("병원" in t) or ("내원" in t) or ("응급" in t)
+    has_now = any(k in t for k in ("바로", "즉시", "지금", "당장"))
+    has_contact = any(k in t for k in ("연락", "전화", "내원"))
+    return has_place and has_now and has_contact
 
 
 def ensure_safe_reply(cls: "FollowupClassification", fallback: str) -> str:
