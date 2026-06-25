@@ -94,14 +94,18 @@ def build_reception_prompt(
     streak_hint: str,
     user_message: str,
     booking_hint: str = "",
+    memory: str = "",
 ) -> str:
     # 예약 요청 처리 규칙은 '지금 예약이 있는지'에 따라 달라지므로 호출 시점에 주입한다.
     booking_block = f"\n[예약 요청 처리]\n{booking_hint}\n" if booking_hint else ""
+    # 직전 문진 결론(주증상·요약) — 예약을 부른 맥락을 응대도 잊지 않도록 참고로 준다(읽기 전용).
+    memory_block = f"{memory}\n" if (memory or "").strip() else ""
     return (
         f"{RECEPTION_SYSTEM}\n"
         f"반려동물 이름은 '{pet_name}'야. 이름에 맞는 조사를 자연스럽게 써줘."
         f"{streak_hint}\n"
         f"{booking_block}\n"
+        f"{memory_block}"
         f"[우리 병원 정보]\n{facts}"
         f"{history_block}\n"
         f"[보호자 말]\n{user_message}\n\n"

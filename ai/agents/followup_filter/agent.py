@@ -7,8 +7,6 @@
 """
 from __future__ import annotations
 
-import re
-
 from langfuse import observe
 
 from ai.llm import call_llm_json
@@ -51,13 +49,29 @@ from .prompts import (
 )
 from app.utils.followup_policy import BOOKING_CHANGE_LIMITED_REPLY, FOLLOWUP_LIMITED_REPLY
 
+from .handlers import (
+    _confirmed_time_text,
+    _run_pending_action,
+    _visit_note_summary_reply,
+    appointment_time_reply,
+    hospital_info_reply,
+    vet_info_reply,
+)
+from .reply_policy import (
+    _LIMITED_QUICK_REPLIES,
+    _avoid_consecutive_request_ending,
+    _avoid_observation_overload,
+    _patch_pending,
+    _quick_replies_for_result,
+    _reply_state_patch,
+)
+
 # 사진 속 동물과 등록 펫의 종 대조 — 둘 다 이 집합 안에서 확실할 때만 불일치로 판정.
 _KNOWN_SPECIES = {"dog", "cat", "rabbit"}
 _AFFIRMATIVE_SHORTS = {
     "확인해줘", "확인해 줘", "확인", "응", "네", "그래", "좋아", "보여줘", "보여 줘",
     "해줘", "해 줘", "응 보여줘", "네 보여줘", "그래 보여줘", "응 확인해줘",
 }
-_REQUEST_ENDINGS = ("알려주세요", "함께 알려주세요", "말씀해 주세요", "말씀해주세요")
 # 병원 인물(수의사/원장 등) 질문 감지 — 사실(누구) vs 주관 평가(친절해?/잘 봐?)를 가른다.
 _VET_PERSON_WORDS = ("수의사", "의사", "담당", "선생님", "원장")
 _VET_FACTUAL_WORDS = ("누구", "누가", "누군", "어떤", "어느", "이름")
@@ -88,19 +102,6 @@ _REBOOK_EXEC_PHRASES = (
 _REBOOK_CHANGE_WORDS = (
     "바꾸", "바꿔", "바꿀", "변경", "옮기", "옮겨", "당기", "당겨", "앞당", "다른 날", "다른 시간",
 )
-_ENDING_ALTERNATIVES = (
-    "지금 보이는 모습이 더 달라지는지 지켜봐 주세요.",
-    "그때 이어서 남겨 주세요.",
-    "함께 살펴봐 주세요.",
-    "붉어지는 범위나 진물 여부를 함께 살펴봐 주세요.",
-)
-_LIMITED_QUICK_REPLIES = [
-    HOSPITAL_INFO_PILL,
-    SCHEDULE_LIST_PILL,
-    PREP_INSTRUCTIONS_PILL,
-    CONTINUE_STATUS_PILL,
-    VISIT_NOTE_SUMMARY_PILL,
-]
 
 
 # 관리방법 질문(상태보고 아님) — '해도 되나/어떻게 관리'. clarify로 새지 않게 한다.
@@ -113,15 +114,20 @@ _CARE_Q_MARKS = ("되나", "되요", "돼요", "돼", "될까", "해야", "해�
 # 감정 표현 — 공감 먼저, clarify 금지.
 _EMOTION_WORDS = ("걱정", "불안", "무서", "겁나", "겁이", "속상", "눈물", "마음이", "신경 쓰", "신경쓰",
                   "괜찮은 거 맞", "괜찮은거 맞", "별일 아니", "안심", "초조", "무섭")
-# 반복 관찰안내 종결 — 3턴 연속이면 마지막 관찰문장을 덜어낸다.
-_OBSERVATION_ENDINGS = ("살펴봐 주세요", "살펴봐주세요", "봐 주세요", "봐주세요", "지켜봐 주세요",
-                        "지켜봐주세요", "확인해 주세요", "확인해주세요")
 _CRITICAL_FOLLOWUP_KW = (
     "피를 토",
     "토혈",
     "숨을 헐떡",
+    "헐떡",
     "숨을 못",
+    "숨쉬기 힘",
+    "숨 쉬기 힘",
+    "숨이 가쁘",
     "호흡곤란",
+    "혀가 파",
+    "혀가 보라",
+    "잇몸이 파래",
+    "입술이 파",
     "발작",
     "쓰러",
     "의식이 없",
@@ -161,11 +167,6 @@ def _is_emotional(message: str) -> bool:
     return any(w in (message or "") for w in _EMOTION_WORDS)
 
 
-def _ends_with_observation(text: str) -> bool:
-    t = (text or "").strip().rstrip(".!?。！？ ")
-    return any(t.endswith(e) for e in _OBSERVATION_ENDINGS)
-
-
 def _is_cancel_execution(message: str) -> bool:
     """'예약 취소해줘/취소할래' 같은 실제 취소 실행 의도. 문의/가정형이면 False."""
     t = message or ""
@@ -193,6 +194,8 @@ def _enforce_safety_classification(cls, message: str):
             severity_hint=SeverityHint.URGENT_POSSIBLE,
             reply_kind=ReplyKind.URGENT_REBOOK,
         )
+        if any(k in (cls.assistant_reply or "") for k in ("예약 시간", "현재 예약", "예약을 확인", "예약 내역")):
+            updates["assistant_reply"] = ""
     elif (
         any(keyword in text for keyword in _TREATMENT_PROGRESS_KW)
         and any(keyword in text for keyword in _PROGRESS_SIGNAL_KW)
@@ -212,70 +215,6 @@ def _is_affirmative_for_pending(message: str) -> bool:
             x in text for x in ("말고", "아니", "취소")
         )
     )
-
-
-def _patch_pending(action: str = "") -> dict:
-    return {"pending_confirmation_action": action}
-
-
-def _has_request_ending(text: str) -> bool:
-    stripped = (text or "").strip().rstrip(".!?。！？")
-    return stripped.endswith(_REQUEST_ENDINGS)
-
-
-# 답변을 문장 단위로 나눈다(되짚은 앞문장은 살리고 마지막 종결만 교체하기 위함).
-_SENTENCE_SPLIT_RE = re.compile(r"[^.!?。！？\n]+(?:[.!?。！？]+|$)")
-
-
-def _avoid_consecutive_request_ending(reply: str, history: list[dict] | None) -> str:
-    """직전 봇 답변도 요청형('알려주세요')으로 끝났으면 같은 종결 반복을 피한다.
-
-    ★ 답변을 통째로 캔드 문장으로 갈아치우지 않는다. 보호자 발화를 되짚은 앞문장은 그대로 두고
-    마지막 '요청형 문장'만 다른 종결로 바꿔, 맥락 반영을 잃지 않게 한다.
-    """
-    if not _has_request_ending(reply):
-        return reply
-    last = ""
-    for item in reversed(history or []):
-        if item.get("role") == "assistant":
-            last = item.get("content") or ""
-            break
-    if not _has_request_ending(last):
-        return reply
-    alt = next((a for a in _ENDING_ALTERNATIVES if a not in last), _ENDING_ALTERNATIVES[0])
-    sentences = [m.group(0).strip() for m in _SENTENCE_SPLIT_RE.finditer((reply or "").strip())]
-    sentences = [s for s in sentences if s]
-    head = sentences[:-1]   # 마지막 요청형 문장만 교체, 되짚은 앞부분은 보존
-    if head:
-        return " ".join([*head, alt])
-    return alt
-
-
-def _avoid_observation_overload(reply: str, history: list[dict] | None) -> str:
-    """관찰 지시('~봐 주세요')가 직전 2턴 연속이었고 이번도 그러면, 체크리스트 반복을 끊는다.
-
-    이번 답변의 마지막 관찰 지시 문장만 덜어내 공감/반영 문장만 남기고, 머리가 없으면 안심 마무리로.
-    """
-    if not _ends_with_observation(reply):
-        return reply
-    streak = 0
-    for m in reversed(history or []):
-        if m.get("role") != "assistant":
-            continue
-        if _ends_with_observation(m.get("content") or ""):
-            streak += 1
-            if streak >= 2:
-                break
-        else:
-            break
-    if streak < 2:
-        return reply
-    sentences = [m.group(0).strip() for m in _SENTENCE_SPLIT_RE.finditer((reply or "").strip())]
-    sentences = [s for s in sentences if s]
-    head = sentences[:-1]
-    if head:
-        return " ".join(head)
-    return "지금은 특별히 더 해주실 건 없어요. 달라지는 모습이 보이면 그때 편하게 알려주세요."
 
 
 from .schema import (
@@ -319,6 +258,7 @@ async def classify_followup(
         asked_fields=ctx.asked_followup_fields,
         prev_question=prev_question,
         last_media_summary=last_media_summary,
+        conversation_memory=ctx.conversation_memory,
     )
     try:
         raw = await call_llm_json(prompt)
@@ -350,229 +290,6 @@ async def analyze_media(ctx: SessionContext, user_message: str) -> tuple[str, bo
     findings = (vis.get("note") or "").strip() \
         or ((vis.get("evidence") or {}).get("vlm_description") or "").strip()
     return findings, vis.get("relevant"), (vis.get("species") or "").strip().lower()
-
-
-def _reply_state_patch(ctx: SessionContext, cls) -> dict:
-    """이번 답변의 '목적'과 '물은 항목'을 가벼운 상태로 누적 — 다음 턴 반복 회피용.
-
-    asked_followup_fields는 같은 대화에서 이미 물은 항목을 모아 재질문을 막는다(최근 12개).
-    """
-    asked = list(dict.fromkeys([*(ctx.asked_followup_fields or []), *cls.asked_fields]))[-12:]
-    return {
-        "last_followup_reply_kind": cls.reply_kind.value,
-        "asked_followup_fields": asked,
-    }
-
-
-async def appointment_time_reply(ctx: SessionContext) -> str:
-    """보호자의 '실제' 예약 시각(confirmed_time)을 안내. 병원 운영시간이 아니라 본인 예약 시각."""
-    if ctx.db is None or ctx.emrid is None:
-        return "아직 확정된 예약 정보를 찾지 못했어요. 예약을 도와드릴까요?"
-    try:
-        from sqlalchemy import select
-
-        from app.models.schedule import Schedule
-        sched = (await ctx.db.execute(
-            select(Schedule).where(Schedule.emrid == ctx.emrid, Schedule.deleted_at.is_(None))
-        )).scalars().first()
-    except Exception:
-        sched = None
-    if not sched or not sched.confirmed_time:
-        return "아직 확정된 예약이 없어요. 예약을 도와드릴까요?"
-    try:
-        from app.utils.timezone import to_kst
-        k = to_kst(sched.confirmed_time)
-        when = f"{k.month}월 {k.day}일 {k.hour:02d}:{k.minute:02d}"
-    except Exception:
-        when = str(sched.confirmed_time)
-    return f"예약 시간은 {when}이에요. 변경을 원하시면 말씀해 주세요."
-
-
-async def _confirmed_time_text(ctx: SessionContext) -> str:
-    """현재 예약 confirmed_time을 'M월 D일 HH:MM'로. 없거나 조회 불가면 ''.
-
-    rebook/cancel 문의에서 '현재 예약'을 한 번 되짚어 맥락 기억을 살리는 데 쓴다(저장·이벤트 없음).
-    """
-    if ctx.db is None or ctx.emrid is None:
-        return ""
-    try:
-        from sqlalchemy import select
-
-        from app.models.schedule import Schedule
-        sched = (await ctx.db.execute(
-            select(Schedule).where(Schedule.emrid == ctx.emrid, Schedule.deleted_at.is_(None))
-        )).scalars().first()
-        if not sched or not sched.confirmed_time:
-            return ""
-        from app.utils.timezone import to_kst
-        k = to_kst(sched.confirmed_time)
-        return f"{k.month}월 {k.day}일 {k.hour:02d}:{k.minute:02d}"
-    except Exception:
-        return ""
-
-
-async def hospital_info_reply(ctx: SessionContext) -> str:
-    """예약된 병원 이름을 우선 안내하고, 있으면 주소/전화까지 짧게 붙인다."""
-    if ctx.db is None or ctx.hospitalid is None:
-        return "예약된 병원 정보를 바로 확인하지 못했어요. 예약 내역에서 병원 정보를 함께 확인할 수 있어요."
-    try:
-        from sqlalchemy import select
-
-        from app.models.hospital import Hospital
-        hospital = (await ctx.db.execute(
-            select(Hospital).where(Hospital.hospitalid == ctx.hospitalid)
-        )).scalar_one_or_none()
-    except Exception:
-        hospital = None
-    if not hospital:
-        return "예약된 병원 정보를 바로 확인하지 못했어요. 예약 내역에서 병원 정보를 함께 확인할 수 있어요."
-    parts = [f"현재 예약된 병원은 {hospital.hospital_name}이에요."]
-    if getattr(hospital, "hospital_address", None):
-        parts.append(f"주소는 {hospital.hospital_address}입니다.")
-    if getattr(hospital, "hospital_number", None):
-        parts.append(f"전화번호는 {hospital.hospital_number}입니다.")
-    return " ".join(parts[:2])
-
-
-async def _lookup_vet_name(ctx: SessionContext) -> str:
-    """이번 예약(scheduleDB.doctorid → doctorDB.doctor_name)의 담당 수의사 이름. 없으면 ''."""
-    if ctx.db is None or ctx.emrid is None:
-        return ""
-    try:
-        from sqlalchemy import select
-
-        from app.models.schedule import Schedule
-        sched = (await ctx.db.execute(
-            select(Schedule).where(Schedule.emrid == ctx.emrid, Schedule.deleted_at.is_(None))
-        )).scalars().first()
-        if sched and sched.doctorid is not None:
-            from app.models.doctor import Doctor
-            doctor = (await ctx.db.execute(
-                select(Doctor).where(Doctor.doctorid == sched.doctorid)
-            )).scalar_one_or_none()
-            return (getattr(doctor, "doctor_name", "") or "").strip()
-    except Exception:
-        return ""
-    return ""
-
-
-async def vet_info_reply(ctx: SessionContext, *, subjective: bool = False) -> str:
-    """담당 수의사 안내. 예약 컨텍스트(누가 진료하는지)를 그대로 활용한다.
-
-    subjective=True: "친절해?/잘 봐?" 같은 주관 평가 질문 — 단정 대신 따뜻한 일반 안내를 붙인다.
-    이름을 못 찾아도 절대 '정보가 없습니다'로 끝내지 않는다(유형 4).
-    """
-    name = await _lookup_vet_name(ctx)
-    if name:
-        suffix = "" if name.endswith(("선생님", "원장님", "수의사")) else " 선생님"
-        if subjective:
-            return (
-                f"이번 예약은 {name}{suffix}이 맡아요. "
-                "친절도나 진료 스타일은 제가 단정해서 말씀드리기 어려워요."
-            )
-        return f"이번 예약은 {name}{suffix}으로 잡혀 있어요."
-    if subjective:
-        return (
-            "현재 예약에서 담당 수의사 정보는 확인되지 않아요. "
-            "친절도나 진료 스타일도 제가 단정해서 말씀드리기 어려워요."
-        )
-    return (
-        "현재 예약에서 담당 수의사 정보는 확인되지 않아요. "
-        "병원에 확인해보시는 게 가장 정확해요."
-    )
-
-
-async def _run_pending_action(ctx: SessionContext, action: str) -> AgentResult:
-    if ctx.followup_limited and action in {"rebook", "cancel"}:
-        return AgentResult(
-            reply=BOOKING_CHANGE_LIMITED_REPLY,
-            quick_replies=_LIMITED_QUICK_REPLIES,
-            state_patch=_patch_pending(""),
-        )
-    if action == "hospital_info":
-        return AgentResult(
-            reply=await hospital_info_reply(ctx),
-            quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [SCHEDULE_LIST_PILL, NEW_BOOKING_DIRECT_PILL],
-            state_patch=_patch_pending(""),
-        )
-    if action == "appointment_time":
-        return AgentResult(
-            reply=await appointment_time_reply(ctx),
-            quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [REBOOK_ACTION_PILL, SCHEDULE_LIST_PILL, HOSPITAL_INFO_PILL],
-            state_patch=_patch_pending(""),
-        )
-    if action == "vet_info":
-        return AgentResult(
-            reply=await vet_info_reply(ctx),
-            quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [HOSPITAL_INFO_PILL, SCHEDULE_LIST_PILL],
-            state_patch=_patch_pending(""),
-        )
-    if action == "schedule_list":
-        return AgentResult(
-            reply=REPLY_SCHEDULE_LIST,
-            quick_replies=_LIMITED_QUICK_REPLIES if ctx.followup_limited else [REBOOK_ACTION_PILL, HOSPITAL_INFO_PILL],
-            events=[{"type": "list_schedules", "emrid": ctx.emrid}],
-            state_patch=_patch_pending(""),
-        )
-    if action == "new_booking":
-        return AgentResult(
-            reply=REPLY_NEW_BOOKING_CONFIRM,
-            quick_replies=[NEW_BOOKING_DIRECT_PILL, NEW_BOOKING_TRIAGE_PILL],
-            state_patch=_patch_pending(""),
-        )
-    if action == "rebook":
-        return AgentResult(
-            reply=REPLY_REBOOK,
-            events=[{"type": "rebook_request", "emrid": ctx.emrid}],
-            state_patch=_patch_pending(""),
-        )
-    if action == "prep":
-        return AgentResult(
-            reply=REPLY_PREP_INSTRUCTIONS,
-            events=[{"type": "show_prep", "emrid": ctx.emrid}],
-            state_patch=_patch_pending(""),
-        )
-    return AgentResult(state_patch=_patch_pending(""))
-
-
-def _visit_note_summary_reply(ctx: SessionContext) -> str:
-    summary = (ctx.followup_summary or "").strip()
-    if summary:
-        return (
-            "진료 때는 최근 상태 변화와 함께 지금까지 남긴 내용을 차례로 말씀해 주세요. "
-            f"요약하면 {summary[:120]}입니다."
-        )
-    return "진료 때는 증상이 시작된 시점, 오늘 달라진 점, 식욕·배변·기운 변화를 함께 말씀해 주세요."
-
-
-def _quick_replies_for_result(
-    result: AgentResult,
-    *,
-    saved: bool = False,
-    emergency: bool = False,
-    limited: bool = False,
-) -> list[str]:
-    if limited:
-        return _LIMITED_QUICK_REPLIES
-    events = {e.get("type") for e in (result.events or [])}
-    if "rebook_request" in events:
-        return [SCHEDULE_LIST_PILL, HOSPITAL_INFO_PILL]
-    if "list_schedules" in events:
-        return [REBOOK_ACTION_PILL, HOSPITAL_INFO_PILL, NEW_BOOKING_DIRECT_PILL]
-    if "show_prep" in events:
-        return [REBOOK_ACTION_PILL, SCHEDULE_LIST_PILL, HOSPITAL_INFO_PILL]
-    if "start_inchat_triage" in events:
-        return []
-    if result.handoff == Intent.RECEPTION:
-        return [SCHEDULE_LIST_PILL, NEW_BOOKING_DIRECT_PILL]
-    if saved:
-        if emergency:
-            # 응급 경과: 다음 행동을 바로 할 수 있게 '더 빠른 시간 찾기'를 맨 앞에 둔다.
-            replies = [REBOOK_PILL, CONTINUE_STATUS_PILL, REBOOK_ACTION_PILL]
-        else:
-            replies = [CONTINUE_STATUS_PILL, REBOOK_ACTION_PILL]
-        return list(dict.fromkeys(replies))
-    return result.quick_replies or []
 
 
 class FollowupFilterAgent:
@@ -683,9 +400,13 @@ class FollowupFilterAgent:
         asks_schedule_list = (
             msg == SCHEDULE_LIST_PILL
             or msg == "예약 내역 보기"
-            or ("예약" in msg and any(k in msg for k in ("내역", "목록", "볼래", "보여", "확인", "알려", "보여줘", "알려줘")))
-            or (cls.asks_schedule_list and not cls.is_followup)
-            or any(k in msg for k in ("현재 예약", "내 예약", "여기서 예약", "이 대화의 예약", "지금 예약"))
+            or (
+                not cls.is_followup and (
+                    ("예약" in msg and any(k in msg for k in ("내역", "목록", "볼래", "보여", "확인", "알려", "보여줘", "알려줘")))
+                    or cls.asks_schedule_list
+                    or any(k in msg for k in ("현재 예약", "내 예약", "여기서 예약", "이 대화의 예약", "지금 예약"))
+                )
+            )
         )
         # 내원 전 준비사항 다시 보기.
         asks_prep = (msg == PREP_INSTRUCTIONS_PILL) or (cls.asks_prep_instructions and not cls.is_followup)

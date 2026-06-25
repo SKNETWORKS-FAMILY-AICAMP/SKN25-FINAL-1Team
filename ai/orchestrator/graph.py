@@ -118,7 +118,21 @@ def build_orchestrator():
 orchestrator = build_orchestrator()
 
 
+# LLM(OpenAI) 장애 등으로 한 턴 처리가 통째로 실패했을 때 보호자에게 보일 안내.
+# 챗봇 추론은 LLM 없이 대체할 수 없으므로, '전면 에러' 대신 다음 행동을 안내하며 부드럽게 떨어진다.
+_DEGRADED = (
+    "지금 상담 응답을 불러오는 데 일시적인 문제가 있어요. 잠시 후 다시 보내주세요.\n"
+    "증상이 급해 보이면 등록하신 병원으로 바로 전화해 주세요."
+)
+
+
 async def run_turn(ctx: SessionContext) -> AgentResult:
     """한 턴 실행 진입점 — 나중에 chat.py(send_message)가 이걸 호출."""
-    out = await orchestrator.ainvoke({"ctx": ctx})
-    return out["result"]
+    try:
+        out = await orchestrator.ainvoke({"ctx": ctx})
+        return out["result"]
+    except Exception:
+        # 한 에이전트의 LLM 호출이 실패해도 스트림을 'error'로 끊지 않고, 같은 채팅 안에서
+        # 재시도를 유도하는 정상 메시지로 응답한다(상태는 저장 안 되어 다음 턴에 영향 없음).
+        logger.exception("[orch] run_turn 실패 — degraded 응답으로 폴백 (session=%s)", ctx.session_id)
+        return AgentResult(reply=_DEGRADED)

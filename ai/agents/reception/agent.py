@@ -17,6 +17,7 @@ from sqlalchemy import and_, select
 from ai.llm import call_llm_json
 from ai.monitoring import push_log
 from ai.orchestrator.contracts import AgentResult, Flow, Phase, SessionContext
+from ai.orchestrator.conversation import format_history
 
 from .prompts import build_reception_prompt
 
@@ -234,11 +235,8 @@ class ReceptionAgent:
         pet_name = ctx.pet_info.get("name") or "아이"
         streak = (ctx.reception_streak or 0) + 1
 
-        history_lines = [
-            f"{'보호자' if m.get('role') == 'user' else '봇'}: {m.get('content', '')}"
-            for m in (ctx.history or [])[-6:]
-        ]
-        history_block = "\n[이전 대화]\n" + "\n".join(history_lines) + "\n" if history_lines else ""
+        hist_str = format_history(ctx.history, 6, user_label="보호자", bot_label="봇")
+        history_block = "\n[이전 대화]\n" + hist_str + "\n" if hist_str else ""
         streak_hint = f"\n[현재 안내 횟수: {streak}회 — 이미 안내한 적 있음]" if streak >= 2 else ""
 
         # 문진 중 잠깐 들른 '병원 정보 우회'면 → 답한 뒤 자연스럽게 증상 문진으로 돌아오도록 마무리.
@@ -263,7 +261,8 @@ class ReceptionAgent:
             )
 
         prompt = build_reception_prompt(facts, pet_name, history_block, streak_hint,
-                                        ctx.user_message, booking_hint)
+                                        ctx.user_message, booking_hint,
+                                        memory=ctx.conversation_memory)
 
         try:
             out = await call_llm_json(prompt)

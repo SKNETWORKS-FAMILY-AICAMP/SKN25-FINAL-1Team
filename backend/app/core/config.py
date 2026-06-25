@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import Optional
+
+_DEFAULT_SECRET_KEY = "dev-secret-change-me-in-production"
+
 
 class Settings(BaseSettings):
     # 모든 항목에 안전한 기본값을 둬서, .env가 비어 있어도 backend가 일단 뜬다.
@@ -10,7 +14,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://medipaw:medipaw_secret@localhost:5432/medipaw"
 
     # JWT
-    SECRET_KEY: str = "dev-secret-change-me-in-production"
+    SECRET_KEY: str = _DEFAULT_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
@@ -50,6 +54,20 @@ class Settings(BaseSettings):
         "http://192.168.0.2:5173,http://192.168.0.32:5173,"
         "http://192.168.0.11:5173,http://192.168.0.2:5174"
     )
+
+    @model_validator(mode="after")
+    def _warn_default_secret_in_prod(self) -> "Settings":
+        # 운영(DEBUG=False)에서 기본 SECRET_KEY 로 뜨면 JWT 위조가 가능하다.
+        # 단, 하드 실패는 prod compose 의 `${SECRET_KEY:?}` 가 책임진다(미설정 시 컨테이너 자체가 안 뜸).
+        # 여기서 raise 하면 .env 없는 로컬/테스트 실행까지 죽으므로, 코드 레벨은 '큰 경고'까지만 한다.
+        if not self.DEBUG and self.SECRET_KEY == _DEFAULT_SECRET_KEY:
+            import warnings
+            warnings.warn(
+                "SECRET_KEY 가 기본 개발용 키입니다(DEBUG=false). 운영 배포라면 즉시 교체하세요 — "
+                "기본키로는 JWT 위조가 가능합니다.",
+                stacklevel=2,
+            )
+        return self
 
     class Config:
         env_file = ".env"

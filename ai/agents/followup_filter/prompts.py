@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from ai.orchestrator.conversation import format_history
+
 # 분류 지시문 (시스템 역할) — 진단 금지, 경과 여부만 판단, JSON만 출력.
 FOLLOWUP_SYSTEM = """너는 동물병원 챗봇의 '경과 필터'다. 수의사가 아니다.
 너의 유일한 일은, 예약 확정 뒤 보호자가 보낸 메시지가 '수의사에게 전달할 진짜 경과 보고'인지 분류하는 것이다.
@@ -237,8 +239,7 @@ symptom_change | medication_response | appetite_energy | stool_urine | pain_beha
 def _format_history(history: list[dict] | None, n: int = 6) -> str:
     if not history:
         return "(없음)"
-    recent = history[-n:]
-    return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in recent)
+    return format_history(history, n)
 
 
 # ── P0: 직전 봇 질문 ↔ 짧은 답변 연결 (맥락 유지) ─────────────────────────────
@@ -320,6 +321,7 @@ def build_classification_prompt(
     asked_fields: list[str] | None = None,
     prev_question: str | None = None,
     last_media_summary: str | None = None,
+    conversation_memory: str | None = None,
 ) -> str:
     """분류용 최종 프롬프트 조립.
 
@@ -354,9 +356,11 @@ def build_classification_prompt(
             "위 소견을 한 번 되짚고, 사용자가 더한 새 정보('갑자기 생김', '더 빨개짐', '같은 부위')는 "
             "반영하되 원인·진단은 단정하지 않는다. 이건 직전 사진 상태에 대한 경과이므로 is_followup=true 로 본다.\n\n"
         )
+    memory_block = f"{conversation_memory}\n\n" if (conversation_memory or "").strip() else ""
     return (
         f"{FOLLOWUP_SYSTEM}\n\n"
         f"[반려동물 정보]\n{pet_info or '(없음)'}\n\n"
+        f"{memory_block}"
         f"[이전 누적 경과 메모]\n{(followup_summary or '아직 없음')}\n\n"
         f"[최근 대화]\n{_format_history(history)}\n\n"
         f"[직전 답변 목적]\n{last_reply_kind or '(없음)'}\n"

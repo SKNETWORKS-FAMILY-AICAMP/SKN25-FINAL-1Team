@@ -119,11 +119,11 @@ _log = logging.getLogger(__name__)
 # ── lifespan (startup / shutdown) ──────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """앱 시작/종료 훅.
+    """앱 시작/종료 훅 — 현재는 시작/종료 로그만 남긴다.
 
-    startup: 현재는 별도 초기화 불필요 (DB 커넥션 풀은 첫 요청 시 지연 생성).
-    shutdown: TASK_REGISTRY에 등록된 모든 background task를 정상 취소하여
-              진행 중인 AI 에이전트 작업이 orphan으로 남지 않도록 한다.
+    startup: 별도 초기화 불필요 (DB 커넥션 풀은 첫 요청 시 지연 생성).
+    shutdown: 별도 정리 불필요 (background task는 요청 단위로 생성·완료되고,
+              AI 에이전트 작업은 process_turn 내 await로 끝까지 기다린 뒤 반환된다).
     """
     _log.info("[Startup] MediPaw API 서버 시작")
     yield
@@ -132,6 +132,14 @@ async def lifespan(app: FastAPI):
 
 # ── FastAPI 앱 인스턴스 ────────────────────────────────────────────
 app = FastAPI(title="MediPaw API", lifespan=lifespan)
+
+
+# ── 헬스체크 ───────────────────────────────────────────────────────
+# 컨테이너/로드밸런서 헬스체크용 경량 엔드포인트. DB·외부연동을 건드리지 않아
+# 무겁고 prod에서 끌 수도 있는 /docs 대신 쓴다.
+@app.get("/health", include_in_schema=False)
+async def health() -> dict:
+    return {"status": "ok"}
 
 
 # ── 예외 핸들러 ────────────────────────────────────────────────────

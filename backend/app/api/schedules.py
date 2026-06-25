@@ -231,6 +231,7 @@ async def get_available(
 async def recommend_schedule_api(
     body: dict,
     current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """문진 완료 후 예약 단계. duration + 추천/수의사별/가장가까운 3모드를 한 번에 반환."""
     from ai.graph import run_schedule_pipeline
@@ -241,6 +242,61 @@ async def recommend_schedule_api(
         hospitalid=body.get("hospitalid"),
         doctorid=body.get("doctorid"),
     )
+
+    emrid = body.get("emrid")
+    if emrid is not None and result:
+        try:
+            from app.models.chat_history import ChatHistory
+            from app.crud.chat import add_message
+            chat_row = await db.execute(
+                select(ChatHistory).where(
+                    ChatHistory.emrid == emrid, ChatHistory.is_deleted == False  # noqa: E712
+                )
+            )
+            chat = chat_row.scalar_one_or_none()
+            if chat:
+                duration_min = result.get("estimated_duration_min", 30)
+                recs = result.get("recommendations", {})
+                
+                def to_slot_option(s):
+                    date_val = s.get("date")
+                    time_val = s.get("start_time", "")[:5]
+                    _, m, d = date_val.split("-")
+                    label = f"{int(m)}월 {int(d)}일 {time_val}"
+                    return {
+                        "label": label,
+                        "date": date_val,
+                        "time": time_val,
+                        "durationMin": duration_min,
+                        "doctorid": s.get("doctorid"),
+                        "doctorName": s.get("doctor_name"),
+                    }
+                
+                recommended = [to_slot_option(s) for s in recs.get("recommended", [])]
+                earliest = [to_slot_option(s) for s in recs.get("earliest", [])]
+                by_doctor = []
+                for doc_id, doc_data in recs.get("by_doctor", {}).items():
+                    by_doctor.append({
+                        "doctorid": int(doc_id),
+                        "doctorName": doc_data.get("doctor_name"),
+                        "slots": [to_slot_option(s) for s in doc_data.get("slots", [])]
+                    })
+                
+                slots_base = recommended if recommended else earliest
+                
+                card_data = {
+                    "kind": "slots",
+                    "slots": slots_base,
+                    "recommended": recommended,
+                    "earliest": earliest,
+                    "byDoctor": by_doctor
+                }
+                
+                await add_message(db, chat, "assistant", "", meta={"card": card_data})
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"[Recommend] 슬롯 카드 메시지 저장 실패 emrid={emrid}: {e}")
+
     return {"code": 200, "message": "", "result": result}
 
 
