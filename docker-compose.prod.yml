@@ -60,7 +60,10 @@ services:
 
   migrate:
     image: chany0812/medipaw-backend:latest
-    command: bash -c "cd /app/backend && alembic upgrade head"
+    # alembic 은 스키마만 만든다 → 앱이 실제로 필요로 하는 참조데이터(약품 마스터)는
+    # 멱등 시드로 매 배포 채운다. 비어 있으면 처방전 자동생성이 후보 약품 0개라
+    # 조용히 빈 결과를 내기 때문(에러 아님). seed_drugs.py 는 이미 있으면 스킵.
+    command: bash -c "cd /app/backend && alembic upgrade head && python scripts/seed_drugs.py"
     environment:
       DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
       # migrate 는 alembic 만 돌리고 JWT 서명을 하지 않아 SECRET_KEY 값 자체는 안 쓰이지만,
