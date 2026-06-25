@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, select
 
 from ai.llm import call_llm_json
+from ai.monitoring import push_log
 from ai.orchestrator.contracts import AgentResult, Flow, Phase, SessionContext
 from ai.orchestrator.conversation import format_history
 
@@ -278,6 +279,14 @@ class ReceptionAgent:
         last_line = reply.rstrip().split("\n")[-1] if reply else ""
         if reply and not last_line.endswith("?") and not any(k in last_line for k in _CLOSING_KW):
             reply = reply.rstrip() + "\n\n" + random.choice(_CLOSING_QUESTIONS)
+
+        intent = _reception_title(ctx.user_message)
+        push_log("reception", {
+            "message": (ctx.user_message or "")[:120],
+            "category": intent or "기타",
+            "severity": f"streak={streak}",
+            "reply_preview": reply[:100] if reply else "",
+        })
 
         return AgentResult(
             reply=reply,
