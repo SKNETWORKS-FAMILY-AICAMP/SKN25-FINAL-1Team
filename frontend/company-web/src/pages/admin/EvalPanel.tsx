@@ -114,8 +114,8 @@ function StatusText({ status }: { status: CheckStatus | OverallStatus }) {
     status === "WARN" || status === "ATTENTION"
       ? "text-amber-600 font-bold"
       : status === "PASS" || status === "OK"
-      ? "text-slate-800 font-bold"
-      : "text-slate-600 font-medium";
+      ? "text-black font-bold"
+      : "text-black font-medium";
   return <span className={cls}>{status}</span>;
 }
 
@@ -123,9 +123,9 @@ function StatusText({ status }: { status: CheckStatus | OverallStatus }) {
 function ComingSoon({ label, desc }: { label: string; desc: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 py-12 text-center">
-      <Construction className="h-7 w-7 text-slate-600" />
-      <p className="text-sm font-semibold text-slate-600">{label}</p>
-      <p className="max-w-xs text-xs text-slate-600">{desc}</p>
+      <Construction className="h-7 w-7 text-black" />
+      <p className="text-sm font-semibold text-black">{label}</p>
+      <p className="max-w-xs text-sm text-black">{desc}</p>
     </div>
   );
 }
@@ -135,13 +135,13 @@ function ReportHeader({ result }: { result: AgentEvalResult }) {
   const m = result.metrics;
   return (
     <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
-      <span className="font-sans text-base font-bold text-slate-800">
+      <span className="font-sans text-base font-bold text-black">
         {result.agent} 벤치마크 결과
         {m.total_cases != null && (
-          <span className="ml-2 text-sm font-normal text-slate-600">(케이스: {m.total_cases}개)</span>
+          <span className="ml-2 text-sm font-normal text-black">(케이스: {m.total_cases}개)</span>
         )}
       </span>
-      <span className="text-xs text-slate-600">{result.ran_at ?? new Date().toLocaleString("ko-KR")}</span>
+      <span className="text-sm text-black">{result.ran_at ?? new Date().toLocaleString("ko-KR")}</span>
     </div>
   );
 }
@@ -169,15 +169,15 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
   const urgentWarn = urgentTotal > 0 && urgentDetected < urgentTotal;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-black">
       <ReportHeader result={result} />
 
       {/* 분류 정확도 비교표 */}
       <div className="mt-10">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-600">분류 정확도</p>
-        <table className="w-full text-xs">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-black">분류 정확도</p>
+        <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 text-slate-600">
+            <tr className="border-b border-slate-100 text-black">
               <th className="pb-2 text-left font-medium w-40"></th>
               <th className="pb-2 text-center font-medium">Recall</th>
               <th className="pb-2 text-center font-medium">Precision</th>
@@ -186,11 +186,11 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
           </thead>
           <tbody>
             <tr className="border-b border-slate-50">
-              <td className="py-3 font-semibold text-slate-800">Keyword (fallback)</td>
-              <td className={`py-3 text-center text-base font-bold ${kwRecallWarn ? "text-amber-600" : "text-slate-800"}`}>
+              <td className="py-3 font-semibold text-black">Keyword (fallback)</td>
+              <td className={`py-3 text-center text-base font-bold ${kwRecallWarn ? "text-amber-600" : "text-black"}`}>
                 {pct(kwRecall)}
               </td>
-              <td className={`py-3 text-center text-base font-bold ${kwPrecWarn ? "text-amber-600" : "text-slate-800"}`}>
+              <td className={`py-3 text-center text-base font-bold ${kwPrecWarn ? "text-amber-600" : "text-black"}`}>
                 {pct(kwPrec)}
               </td>
               <td className="py-3 text-center">
@@ -198,11 +198,11 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
               </td>
             </tr>
             <tr>
-              <td className="py-3 font-semibold text-slate-800">LLM (classify)</td>
-              <td className={`py-3 text-center text-base font-bold ${llmRecallWarn ? "text-amber-600" : "text-slate-800"}`}>
+              <td className="py-3 font-semibold text-black">LLM (classify)</td>
+              <td className={`py-3 text-center text-base font-bold ${llmRecallWarn ? "text-amber-600" : "text-black"}`}>
                 {pct(llmRecall)}
               </td>
-              <td className={`py-3 text-center text-base font-bold ${llmPrecWarn ? "text-amber-600" : "text-slate-800"}`}>
+              <td className={`py-3 text-center text-base font-bold ${llmPrecWarn ? "text-amber-600" : "text-black"}`}>
                 {pct(llmPrec)}
               </td>
               <td className="py-3 text-center">
@@ -216,10 +216,10 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
       {/* 악화 신호 감지 */}
       {urgentTotal > 0 && (
         <div className="mt-10 flex items-center gap-4 border-t border-slate-100 pt-6">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-            악화 신호 감지 <span className="normal-case font-normal text-slate-600">(urgent, 100% 필수)</span>
+          <span className="text-sm font-semibold uppercase tracking-wide text-black">
+            악화 신호 감지 <span className="normal-case font-normal text-black">(urgent, 100% 필수)</span>
           </span>
-          <span className={`text-base font-bold ${urgentWarn ? "text-amber-600" : "text-slate-800"}`}>
+          <span className={`text-base font-bold ${urgentWarn ? "text-amber-600" : "text-black"}`}>
             {urgentDetected} / {urgentTotal}
           </span>
           <StatusText status={urgentWarn ? "WARN" : "PASS"} />
@@ -229,26 +229,26 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
       {/* LLM 판단 확신도 */}
       {m.avg_confidence != null && (
         <div className="mt-10 border-t border-slate-100 pt-6">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-600">LLM 판단 확신도</p>
+          <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-black">LLM 판단 확신도</p>
           <div className="flex items-center gap-6">
             <div>
-              <p className="text-xs text-slate-600">평균 confidence</p>
-              <p className={`mt-1 text-2xl font-black ${m.avg_confidence < 0.7 ? "text-amber-600" : "text-slate-800"}`}>
+              <p className="text-sm text-black">평균 confidence</p>
+              <p className={`mt-1 text-2xl font-black ${m.avg_confidence < 0.7 ? "text-amber-600" : "text-black"}`}>
                 {Math.round(m.avg_confidence * 100)}%
               </p>
             </div>
             {m.low_confidence_cases && m.low_confidence_cases.length > 0 && (
               <div>
-                <p className="text-xs text-slate-600">저신뢰 케이스 <span className="text-slate-600">(&lt; 70%)</span></p>
+                <p className="text-sm text-black">저신뢰 케이스 <span className="text-black">(&lt; 70%)</span></p>
                 <p className="mt-1 text-2xl font-black text-amber-600">{m.low_confidence_cases.length}건</p>
               </div>
             )}
           </div>
 
           {m.low_confidence_cases && m.low_confidence_cases.length > 0 && (
-            <table className="mt-4 w-full text-xs">
+            <table className="mt-4 w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-600">
+                <tr className="border-b border-slate-100 text-black">
                   <th className="pb-2 text-left font-medium">메시지</th>
                   <th className="pb-2 text-center font-medium">확신도</th>
                   <th className="pb-2 text-center font-medium">정답</th>
@@ -257,11 +257,11 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
               <tbody>
                 {(m.low_confidence_cases as LowConfidenceCase[]).map((c, i) => (
                   <tr key={i} className="border-b border-slate-50">
-                    <td className="py-2 text-slate-600 max-w-xs truncate">{c.message}</td>
+                    <td className="py-2 text-black max-w-xs truncate">{c.message}</td>
                     <td className="py-2 text-center font-bold text-amber-600">{Math.round(c.confidence * 100)}%</td>
                     <td className="py-2 text-center">
                       {c.correct
-                        ? <span className="font-bold text-slate-800">O</span>
+                        ? <span className="font-bold text-black">O</span>
                         : <span className="font-bold text-amber-600">X</span>}
                     </td>
                   </tr>
@@ -275,10 +275,10 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
       {/* 카테고리별 Keyword recall */}
       {m.category_stats && Object.keys(m.category_stats).length > 0 && (
         <div className="mt-10 border-t border-slate-100 pt-6">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-600">카테고리별 Keyword recall</p>
-          <table className="w-full text-xs">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-black">카테고리별 Keyword recall</p>
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-slate-600">
+              <tr className="border-b border-slate-100 text-black">
                 <th className="pb-2 text-left font-medium">카테고리</th>
                 <th className="pb-2 text-center font-medium">감지</th>
                 <th className="pb-2 text-center font-medium">전체</th>
@@ -291,10 +291,10 @@ function FollowupBenchmarkReport({ result }: { result: AgentEvalResult }) {
                 const warn = r < 0.9;
                 return (
                   <tr key={cat} className="border-b border-slate-100">
-                    <td className="py-2.5 font-semibold text-slate-700">{cat}</td>
-                    <td className="py-2.5 text-center text-slate-800 font-semibold">{stat.kw_hit}</td>
-                    <td className="py-2.5 text-center text-slate-600">{stat.total}</td>
-                    <td className={`py-2.5 text-center font-bold ${warn ? "text-amber-600" : "text-slate-800"}`}>
+                    <td className="py-2.5 font-semibold text-black">{cat}</td>
+                    <td className="py-2.5 text-center text-black font-semibold">{stat.kw_hit}</td>
+                    <td className="py-2.5 text-center text-black">{stat.total}</td>
+                    <td className={`py-2.5 text-center font-bold ${warn ? "text-amber-600" : "text-black"}`}>
                       {Math.round(r * 100)}%
                     </td>
                   </tr>
@@ -337,28 +337,28 @@ function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-black">
       <ReportHeader result={result} />
 
       {/* 응급도 + Red flag */}
       <div className="mt-10">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-600">결정론 체크 (엔진)</p>
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-black">결정론 체크 (엔진)</p>
         <div className="flex gap-12">
           <div>
-            <p className="text-xs text-slate-600">응급도 정확도</p>
-            <p className={`mt-1 text-3xl font-black ${urgAcc != null && urgAcc < 0.95 ? "text-amber-600" : "text-slate-800"}`}>
+            <p className="text-sm text-black">응급도 정확도</p>
+            <p className={`mt-1 text-3xl font-black ${urgAcc != null && urgAcc < 0.95 ? "text-amber-600" : "text-black"}`}>
               {urgAcc != null ? `${Math.round(urgAcc * 100)}%` : "—"}
             </p>
             {m.urgency_cases != null && (
-              <p className="mt-0.5 text-xs text-slate-600">{m.urgency_cases}개 케이스 · 기준 95%</p>
+              <p className="mt-0.5 text-sm text-black">{m.urgency_cases}개 케이스 · 기준 95%</p>
             )}
           </div>
           <div>
-            <p className="text-xs text-slate-600">Red flag 감지율</p>
-            <p className={`mt-1 text-3xl font-black ${!rfOk && rfRaw !== "N/A" ? "text-amber-600" : "text-slate-800"}`}>
+            <p className="text-sm text-black">Red flag 감지율</p>
+            <p className={`mt-1 text-3xl font-black ${!rfOk && rfRaw !== "N/A" ? "text-amber-600" : "text-black"}`}>
               {rfRaw}
             </p>
-            <p className="mt-0.5 text-xs text-slate-600">100% 필수</p>
+            <p className="mt-0.5 text-sm text-black">100% 필수</p>
           </div>
         </div>
       </div>
@@ -366,10 +366,10 @@ function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
       {/* 응급도 오분류 */}
       {m.urgency_errors && m.urgency_errors.length > 0 && (
         <div className="mt-6 border-t border-slate-100 pt-4">
-          <p className="mb-3 text-xs font-semibold text-slate-600">응급도 오분류</p>
-          <table className="w-full text-xs">
+          <p className="mb-3 text-sm font-semibold text-black">응급도 오분류</p>
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-slate-600">
+              <tr className="border-b border-slate-100 text-black">
                 <th className="pb-2 text-left font-medium">케이스</th>
                 <th className="pb-2 text-center font-medium">예상</th>
                 <th className="pb-2 text-center font-medium">결과</th>
@@ -378,8 +378,8 @@ function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
             <tbody>
               {m.urgency_errors.map((e, i) => (
                 <tr key={i} className="border-b border-slate-50">
-                  <td className="py-2 text-slate-600 max-w-xs truncate">{e.name}</td>
-                  <td className="py-2 text-center font-bold text-slate-700">{e.expected}</td>
+                  <td className="py-2 text-black max-w-xs truncate">{e.name}</td>
+                  <td className="py-2 text-center font-bold text-black">{e.expected}</td>
                   <td className="py-2 text-center font-bold text-amber-600">{e.got}</td>
                 </tr>
               ))}
@@ -390,46 +390,46 @@ function TriageBenchmarkReport({ result }: { result: AgentEvalResult }) {
 
       {/* LLM 체크 */}
       <div className="mt-10 border-t border-slate-100 pt-6">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-600">LLM 체크</p>
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-black">LLM 체크</p>
         <div className="flex gap-12">
           <div>
-            <p className="text-xs text-slate-600">슬롯 추출 F1</p>
-            <p className={`mt-1 text-3xl font-black ${m.slot_f1 != null && m.slot_f1 < 0.8 ? "text-amber-600" : "text-slate-800"}`}>
+            <p className="text-sm text-black">슬롯 추출 F1</p>
+            <p className={`mt-1 text-3xl font-black ${m.slot_f1 != null && m.slot_f1 < 0.8 ? "text-amber-600" : "text-black"}`}>
               {m.slot_f1 != null ? m.slot_f1.toFixed(2) : "—"}
             </p>
             {m.slot_precision != null && m.slot_recall != null && (
-              <p className="mt-0.5 text-xs text-slate-600">P={m.slot_precision.toFixed(2)} R={m.slot_recall.toFixed(2)} · 기준 0.80</p>
+              <p className="mt-0.5 text-sm text-black">P={m.slot_precision.toFixed(2)} R={m.slot_recall.toFixed(2)} · 기준 0.80</p>
             )}
           </div>
           <div>
-            <p className="text-xs text-slate-600">환각 의심</p>
-            <p className={`mt-1 text-3xl font-black ${(m.extra_ungrounded ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>
+            <p className="text-sm text-black">환각 의심</p>
+            <p className={`mt-1 text-3xl font-black ${(m.extra_ungrounded ?? 0) > 0 ? "text-amber-600" : "text-black"}`}>
               {m.extra_ungrounded ?? 0}건
             </p>
-            <p className="mt-0.5 text-xs text-slate-600">발화 근거 없는 추출 · 근거 있음 {m.extra_grounded ?? 0}건</p>
+            <p className="mt-0.5 text-sm text-black">발화 근거 없는 추출 · 근거 있음 {m.extra_grounded ?? 0}건</p>
           </div>
           <div>
-            <p className="text-xs text-slate-600">요약 완전성</p>
-            <p className={`mt-1 text-3xl font-black ${m.summary_score != null && m.summary_score < 0.8 ? "text-amber-600" : "text-slate-800"}`}>
+            <p className="text-sm text-black">요약 완전성</p>
+            <p className={`mt-1 text-3xl font-black ${m.summary_score != null && m.summary_score < 0.8 ? "text-amber-600" : "text-black"}`}>
               {m.summary_score != null ? `${Math.round(m.summary_score * 100)}%` : "—"}
             </p>
-            <p className="mt-0.5 text-xs text-slate-600">키워드 포함율 · 기준 80%</p>
+            <p className="mt-0.5 text-sm text-black">키워드 포함율 · 기준 80%</p>
           </div>
         </div>
         {m.llm_errors != null && m.llm_errors > 0 && (
-          <p className="mt-3 text-xs text-amber-500">LLM 오류 {m.llm_errors}건</p>
+          <p className="mt-3 text-sm text-amber-500">LLM 오류 {m.llm_errors}건</p>
         )}
       </div>
 
       {/* 체크 목록 */}
       <div className="mt-10 border-t border-slate-100 pt-6">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">체크 목록</p>
+        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-black">체크 목록</p>
         <div className="space-y-3">
           {result.checks.map((c, i) => (
             <div key={c.item}>
-              <div className="text-xs text-slate-600">[{i + 1}] {c.item}</div>
-              <div className="mt-0.5 pl-4 text-xs">결과: <StatusText status={c.status} /></div>
-              <div className="mt-0.5 pl-4 text-xs text-slate-600">{c.detail}</div>
+              <div className="text-sm text-black">[{i + 1}] {c.item}</div>
+              <div className="mt-0.5 pl-4 text-sm">결과: <StatusText status={c.status} /></div>
+              <div className="mt-0.5 pl-4 text-sm text-black">{c.detail}</div>
             </div>
           ))}
         </div>
@@ -449,20 +449,20 @@ function BenchmarkReport({ result }: { result: AgentEvalResult }) {
 
   const m = result.metrics;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm text-slate-700">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm text-black">
       <ReportHeader result={result} />
 
       <div className="mt-5 space-y-4">
         {result.checks.map((c, i) => (
           <div key={c.item}>
-            <div className="text-xs text-slate-600">[{i + 1}] {c.item}</div>
-            <div className="mt-0.5 pl-4 text-xs">결과: <StatusText status={c.status} /></div>
-            <div className="mt-0.5 pl-4 text-xs text-slate-600">{c.detail}</div>
+            <div className="text-sm text-black">[{i + 1}] {c.item}</div>
+            <div className="mt-0.5 pl-4 text-sm">결과: <StatusText status={c.status} /></div>
+            <div className="mt-0.5 pl-4 text-sm text-black">{c.detail}</div>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-3 text-xs text-slate-600">
+      <div className="mt-6 border-t border-slate-200 pt-3 text-sm text-black">
         {[
           m.keyword_recall != null && `keyword_recall ${pct(m.keyword_recall)}`,
           m.keyword_precision != null && `keyword_precision ${pct(m.keyword_precision)}`,
@@ -494,18 +494,18 @@ function MonitoringTable({
   const pageLogs = logs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-800">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-black">
       <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
-        <span className="font-sans text-base font-bold text-slate-800">
+        <span className="font-sans text-base font-bold text-black">
           실시간 운영 로그
-          <span className="ml-2 text-sm font-normal text-slate-600">
+          <span className="ml-2 text-sm font-normal text-black">
             ({logs.length}건 / 최대 200건)
           </span>
         </span>
         <button
           onClick={() => { setPage(0); onRefresh(); }}
           disabled={loading}
-          className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-sm text-black hover:bg-slate-50 disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
           새로고침
@@ -513,14 +513,14 @@ function MonitoringTable({
       </div>
 
       {logs.length === 0 && !loading ? (
-        <p className="py-8 text-center text-xs text-slate-600">
+        <p className="py-8 text-center text-sm text-black">
           아직 로그가 없습니다. 채팅으로 경과 메시지를 보내면 기록됩니다.
         </p>
       ) : (
         <>
           <div className="mt-5 overflow-hidden rounded-lg border border-slate-100">
-            <table className="w-full text-xs">
-              <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-100 bg-slate-50 text-black">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">EMR</th>
                   <th className="px-3 py-2 text-left font-medium">시간</th>
@@ -533,26 +533,26 @@ function MonitoringTable({
               <tbody className="divide-y divide-slate-100">
                 {pageLogs.map((log, i) => (
                   <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-mono font-bold text-slate-700">
+                    <td className="px-3 py-2 font-mono font-bold text-black">
                       {log.emrid != null ? `#${log.emrid}` : "—"}
                     </td>
-                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
+                    <td className="px-3 py-2 text-black whitespace-nowrap">
                       {log.ts?.slice(11, 16) ?? "—"}
                     </td>
-                    <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">
+                    <td className="px-3 py-2 text-black max-w-[200px] truncate">
                       {log.message ?? "—"}
                     </td>
-                    <td className="px-3 py-2 text-slate-600">{log.category ?? "—"}</td>
+                    <td className="px-3 py-2 text-black">{log.category ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <span className={log.severity === "urgent_possible" ? "text-amber-600 font-bold" : "text-slate-600"}>
+                      <span className={log.severity === "urgent_possible" ? "text-amber-600 font-bold" : "text-black"}>
                         {log.severity ?? "—"}
                       </span>
                     </td>
                     <td className="px-3 py-2">
                       {log.is_saved ? (
-                        <span className="font-bold text-slate-700">Y</span>
+                        <span className="font-bold text-black">Y</span>
                       ) : (
-                        <span className="text-slate-600">N</span>
+                        <span className="text-black">N</span>
                       )}
                     </td>
                   </tr>
@@ -562,7 +562,7 @@ function MonitoringTable({
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+            <div className="mt-3 flex items-center justify-between text-sm text-black">
               <span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, logs.length)} / {logs.length}건</span>
               <div className="flex gap-1">
                 <button
@@ -572,7 +572,7 @@ function MonitoringTable({
                 >
                   이전
                 </button>
-                <span className="px-2 py-1 font-semibold text-slate-600">{page + 1} / {totalPages}</span>
+                <span className="px-2 py-1 font-semibold text-black">{page + 1} / {totalPages}</span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page === totalPages - 1}
@@ -625,7 +625,7 @@ function SoapBreakdown({ rows }: { rows: ValidationRow[] }) {
 
   return (
     <div className="mt-4 border-t border-slate-100 pt-4">
-      <p className="mb-2 text-xs text-slate-600">SOAP 섹션별 미흡 빈도 ({total}건 평가)</p>
+      <p className="mb-2 text-sm text-black">SOAP 섹션별 미흡 빈도 ({total}건 평가)</p>
       <div className="flex gap-2">
         {PATTERNS.map(({ key, label, desc }) => {
           const n = failCounts[key] ?? 0;
@@ -633,9 +633,9 @@ function SoapBreakdown({ rows }: { rows: ValidationRow[] }) {
             <div key={key} className={`flex flex-1 flex-col items-center rounded-lg border px-3 py-2 ${
               n > 0 ? "border-amber-200 bg-amber-50" : "border-slate-100 bg-slate-50"
             }`}>
-              <span className="text-sm font-black text-slate-700">{label}</span>
-              <span className="text-xs text-slate-600">{desc}</span>
-              <span className={`mt-1 text-xs font-semibold ${n > 0 ? "text-amber-600" : "text-slate-600"}`}>
+              <span className="text-sm font-black text-black">{label}</span>
+              <span className="text-sm text-black">{desc}</span>
+              <span className={`mt-1 text-sm font-semibold ${n > 0 ? "text-amber-600" : "text-black"}`}>
                 {n > 0 ? `${n}건 미흡` : "이슈 없음"}
               </span>
             </div>
@@ -678,10 +678,10 @@ function LiveMetricsSection({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-4 flex items-baseline justify-between">
-        <p className="text-xs font-semibold text-slate-600">
+        <p className="text-sm font-semibold text-black">
           {LABEL[agentKey]} 에이전트 · 실운영 케이스 집계
         </p>
-        <span className="text-xs text-slate-600">{rows.length}건 기준</span>
+        <span className="text-sm text-black">{rows.length}건 기준</span>
       </div>
 
       <div className="space-y-4">
@@ -692,16 +692,16 @@ function LiveMetricsSection({
           return (
             <div key={item}>
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs text-slate-600">
-                  <span className="mr-1.5 text-slate-600">[{i + 1}]</span>
+                <span className="text-sm text-black">
+                  <span className="mr-1.5 text-black">[{i + 1}]</span>
                   {item}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${warn ? "text-amber-600" : "text-slate-700"}`}>
+                  <span className={`text-sm font-bold ${warn ? "text-amber-600" : "text-black"}`}>
                     {pass}/{total} ({Math.round(rate * 100)}%)
                   </span>
-                  <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${
-                    warn ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-600"
+                  <span className={`rounded px-1.5 py-0.5 text-sm font-bold ${
+                    warn ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-black"
                   }`}>
                     {warn ? "주의" : "PASS"}
                   </span>
@@ -868,35 +868,35 @@ function AgentFullReportSection({
   const verdictColor = !report ? "" :
     report.overall_verdict === "CRITICAL_FAIL" ? "text-red-600" :
     report.overall_verdict === "PARTIAL_FAIL"  ? "text-amber-600" :
-    "text-slate-800";
+    "text-black";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-700">에이전트 성능 벤치마크</p>
-          <p className="text-xs text-slate-600">Triage · 경과필터 · 라우터 · Reception · MCP 일괄 평가</p>
+          <p className="text-sm font-semibold text-black">에이전트 성능 벤치마크</p>
+          <p className="text-sm text-black">Triage · 경과필터 · 라우터 · Reception · MCP 일괄 평가</p>
         </div>
         <button
           onClick={onRunAll}
           disabled={loading}
-          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-slate-50 disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           {loading ? "평가 중..." : "전체 에이전트 평가 실행"}
         </button>
       </div>
 
-      {error && <p className="text-xs text-red-400">오류: {error}</p>}
+      {error && <p className="text-sm text-red-400">오류: {error}</p>}
 
       {report && (
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           {/* 판정 헤더 */}
           <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3">
-            <span className="text-xs font-semibold text-slate-600">종합 판정</span>
+            <span className="text-sm font-semibold text-black">종합 판정</span>
             <span className={`text-base font-black ${verdictColor}`}>{report.overall_verdict}</span>
             {report.critical_reasons.length > 0 && (
-              <span className="text-xs text-red-500">{report.critical_reasons.join(" / ")}</span>
+              <span className="text-sm text-red-500">{report.critical_reasons.join(" / ")}</span>
             )}
           </div>
 
@@ -906,15 +906,15 @@ function AgentFullReportSection({
             if (warnMods.length === 0) return null;
             return (
               <div className="border-b border-amber-100 bg-amber-50 px-5 py-4 space-y-1.5">
-                <p className="text-xs font-semibold text-amber-700 mb-2">해결이 필요한 항목</p>
+                <p className="text-sm font-semibold text-amber-700 mb-2">해결이 필요한 항목</p>
                 {warnMods.map(({ module, items }) => (
-                  <div key={module} className="flex gap-2 text-xs">
-                    <span className="font-semibold text-slate-700 w-20 shrink-0">{module}</span>
-                    <span className="text-slate-600">{items.join(", ")}</span>
+                  <div key={module} className="flex gap-2 text-sm">
+                    <span className="font-semibold text-black w-20 shrink-0">{module}</span>
+                    <span className="text-black">{items.join(", ")}</span>
                   </div>
                 ))}
                 {passMods.length > 0 && (
-                  <p className="pt-1 text-xs text-slate-600">
+                  <p className="pt-1 text-sm text-black">
                     정상 동작 중: {passMods.join(" · ")}
                   </p>
                 )}
@@ -923,8 +923,8 @@ function AgentFullReportSection({
           })()}
 
           {/* 모듈별 요약 테이블 */}
-          <table className="w-full text-xs">
-            <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
+          <table className="w-full text-sm">
+            <thead className="border-b border-slate-100 bg-slate-50 text-black">
               <tr>
                 <th className="px-5 py-2 text-left font-medium">에이전트</th>
                 <th className="px-5 py-2 text-center font-medium w-20">결과</th>
@@ -935,15 +935,15 @@ function AgentFullReportSection({
             <tbody className="divide-y divide-slate-100">
               {Object.entries(report.modules).map(([key, mod]) => (
                 <tr key={key} className="hover:bg-slate-50">
-                  <td className="px-5 py-3 font-semibold text-slate-700">{MODULE_LABEL[key] ?? key}</td>
+                  <td className="px-5 py-3 font-semibold text-black">{MODULE_LABEL[key] ?? key}</td>
                   <td className="px-5 py-3 text-center">
                     <StatusText status={mod.overall} />
                   </td>
-                  <td className="px-5 py-3 text-slate-600">{moduleKeyMetric(key, mod)}</td>
+                  <td className="px-5 py-3 text-black">{moduleKeyMetric(key, mod)}</td>
                   <td className="px-5 py-3 text-center">
                     <button
                       onClick={() => setExpandedKey(expandedKey === key ? null : key)}
-                      className="text-slate-600 underline hover:text-slate-600"
+                      className="text-black underline hover:text-black"
                     >
                       {expandedKey === key ? "닫기" : "보기"}
                     </button>
@@ -956,12 +956,12 @@ function AgentFullReportSection({
           {/* 상세 체크 (토글) */}
           {expandedKey && report.modules[expandedKey as keyof typeof report.modules] && (
             <div className="border-t border-slate-100 bg-slate-50 px-5 py-4 space-y-2">
-              <p className="text-xs font-semibold text-slate-600">{MODULE_LABEL[expandedKey] ?? expandedKey} 체크 상세</p>
+              <p className="text-sm font-semibold text-black">{MODULE_LABEL[expandedKey] ?? expandedKey} 체크 상세</p>
               {(report.modules[expandedKey as keyof typeof report.modules]!.checks).map((c, i) => (
-                <div key={i} className="text-xs">
-                  <span className="text-slate-600">[{i+1}] {c.item}</span>
+                <div key={i} className="text-sm">
+                  <span className="text-black">[{i+1}] {c.item}</span>
                   {" "}<StatusText status={c.status} />
-                  <span className="ml-2 text-slate-600">{c.detail}</span>
+                  <span className="ml-2 text-black">{c.detail}</span>
                 </div>
               ))}
             </div>
@@ -971,7 +971,7 @@ function AgentFullReportSection({
 
       {!report && !loading && (
         <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center">
-          <p className="text-xs text-slate-600">버튼을 눌러 모든 에이전트를 한 번에 평가하세요.</p>
+          <p className="text-sm text-black">버튼을 눌러 모든 에이전트를 한 번에 평가하세요.</p>
         </div>
       )}
     </div>
@@ -1005,7 +1005,7 @@ function WarnPatternBar({ rows }: { rows: ValidationRow[] }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
-      <p className="mb-4 text-xs font-semibold text-slate-600">
+      <p className="mb-4 text-sm font-semibold text-black">
         최근 {rows.length}건 WARN 패턴
       </p>
       <div className="space-y-3">
@@ -1014,14 +1014,14 @@ function WarnPatternBar({ rows }: { rows: ValidationRow[] }) {
           const isHigh = ratio >= 0.6;
           return (
             <div key={item} className="flex items-center gap-3">
-              <span className="w-32 shrink-0 text-xs text-slate-700">{item}</span>
+              <span className="w-32 shrink-0 text-sm text-black">{item}</span>
               <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className={`h-full rounded-full ${isHigh ? "bg-amber-400" : "bg-slate-300"}`}
                   style={{ width: `${ratio * 100}%` }}
                 />
               </div>
-              <span className="w-24 shrink-0 text-right text-xs text-slate-600">
+              <span className="w-24 shrink-0 text-right text-sm text-black">
                 {warn}/{total} ({Math.round(ratio * 100)}%)
               </span>
             </div>
@@ -1075,12 +1075,12 @@ function RecentCaseCard({ row }: { row: ValidationRow }) {
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">최근 케이스 흐름</span>
-          <span className="ml-2 font-mono text-sm font-bold text-slate-700">#{row.emrid}</span>
+          <span className="text-sm font-semibold text-black uppercase tracking-wide">최근 케이스 흐름</span>
+          <span className="ml-2 font-mono text-sm font-bold text-black">#{row.emrid}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600">{fmtTime(row.createdAt)}</span>
-          <span className={`text-xs font-bold ${row.overall === "ATTENTION" ? "text-amber-600" : "text-slate-700"}`}>
+          <span className="text-sm text-black">{fmtTime(row.createdAt)}</span>
+          <span className={`text-sm font-bold ${row.overall === "ATTENTION" ? "text-amber-600" : "text-black"}`}>
             {row.overall}
           </span>
         </div>
@@ -1095,29 +1095,29 @@ function RecentCaseCard({ row }: { row: ValidationRow }) {
                 ? "border-amber-200 bg-amber-50"
                 : "border-slate-100 bg-slate-50"
             }`}>
-              <p className="text-xs text-slate-600">{step.label}</p>
+              <p className="text-sm text-black">{step.label}</p>
               <p className={`mt-1 text-sm font-bold ${
                 step.status === "WARN"
                   ? "text-amber-600"
                   : step.status === "PASS" || step.status === "OK"
-                  ? "text-slate-800"
-                  : "text-slate-600"
+                  ? "text-black"
+                  : "text-black"
               }`}>
                 {step.status === "OK" ? "PASS" : step.status ?? "—"}
               </p>
               {step.sub && (
-                <p className="mt-1 text-xs text-slate-600 leading-tight">{step.sub}</p>
+                <p className="mt-1 text-sm text-black leading-tight">{step.sub}</p>
               )}
             </div>
             {i < steps.length - 1 && (
-              <span className="text-slate-600 text-base">→</span>
+              <span className="text-black text-base">→</span>
             )}
           </div>
         ))}
       </div>
 
       {row.summary && (
-        <p className="mt-3 text-xs text-slate-600">{row.summary}</p>
+        <p className="mt-3 text-sm text-black">{row.summary}</p>
       )}
     </div>
   );
@@ -1186,13 +1186,13 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+          <span className="text-sm font-semibold text-black uppercase tracking-wide">
             {AGENT_LABEL[agentKey]} 에이전트 · 최근 케이스 자동 평가
           </span>
-          <span className="font-mono text-xs text-slate-600">#{row.emrid}</span>
+          <span className="font-mono text-sm text-black">#{row.emrid}</span>
         </div>
-        <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-          mod.status === "WARN" ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-600"
+        <span className={`rounded px-2 py-0.5 text-sm font-bold ${
+          mod.status === "WARN" ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-black"
         }`}>
           {mod.status === "PASS" ? "정상" : mod.status === "WARN" ? "주의" : mod.status}
         </span>
@@ -1203,17 +1203,17 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
         <div className="mb-5 flex items-center gap-6 rounded-lg bg-slate-50 px-4 py-3">
           {triageHighlight.urgency && (
             <div className="text-center">
-              <p className="text-xs text-slate-600 mb-1">응급도</p>
-              <p className="text-base font-black text-slate-800">{triageHighlight.urgency}</p>
+              <p className="text-sm text-black mb-1">응급도</p>
+              <p className="text-base font-black text-black">{triageHighlight.urgency}</p>
               {triageHighlight.level && (
-                <p className="text-xs text-slate-600">Lv.{triageHighlight.level}</p>
+                <p className="text-sm text-black">Lv.{triageHighlight.level}</p>
               )}
             </div>
           )}
           {triageHighlight.complaint && (
             <div className="border-l border-slate-200 pl-5">
-              <p className="text-xs text-slate-600 mb-1">주증상</p>
-              <p className="text-sm font-semibold text-slate-800">{triageHighlight.complaint}</p>
+              <p className="text-sm text-black mb-1">주증상</p>
+              <p className="text-sm font-semibold text-black">{triageHighlight.complaint}</p>
             </div>
           )}
         </div>
@@ -1226,11 +1226,11 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
             <p className="text-sm font-semibold text-amber-600">예약 타이밍 기준 초과</p>
           ) : scheduleHighlight.days ? (
             <>
-              <span className="text-2xl font-black text-slate-800">{scheduleHighlight.days}일 후</span>
-              <span className="text-sm text-slate-600">예약 확정</span>
+              <span className="text-2xl font-black text-black">{scheduleHighlight.days}일 후</span>
+              <span className="text-sm text-black">예약 확정</span>
             </>
           ) : (
-            <p className="text-xs text-slate-600">예약 타이밍 정보 없음</p>
+            <p className="text-sm text-black">예약 타이밍 정보 없음</p>
           )}
         </div>
       )}
@@ -1240,9 +1240,9 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
         <div className="mb-5 space-y-3">
           {/* SOAP 섹션별 — 규칙 기반 */}
           <div className="rounded-lg bg-slate-50 px-4 py-3">
-            <p className="text-xs text-slate-600 mb-2">
+            <p className="text-sm text-black mb-2">
               SOAP 섹션 완전성
-              <span className="ml-1 text-slate-600">· 규칙 기반</span>
+              <span className="ml-1 text-black">· 규칙 기반</span>
             </p>
             <div className="flex gap-2">
               {chartHighlight.soapSections.map(({ label, pass, desc, criteria }) => (
@@ -1252,9 +1252,9 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
                     : "border-amber-200 bg-amber-50"
                 }`}>
                   <span className={`text-sm font-black ${pass ? "text-blue-700" : "text-amber-700"}`}>{label}</span>
-                  <span className="text-xs font-semibold text-slate-600 mt-0.5">{desc}</span>
-                  <span className="mt-1 text-xs text-slate-600 text-center leading-tight">{criteria}</span>
-                  <span className={`mt-1.5 text-xs font-bold ${pass ? "text-blue-600" : "text-amber-600"}`}>
+                  <span className="text-sm font-semibold text-black mt-0.5">{desc}</span>
+                  <span className="mt-1 text-sm text-black text-center leading-tight">{criteria}</span>
+                  <span className={`mt-1.5 text-sm font-bold ${pass ? "text-blue-600" : "text-amber-600"}`}>
                     {pass ? "✓ 충족" : "✗ 미흡"}
                   </span>
                 </div>
@@ -1267,18 +1267,18 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
             <div className={`rounded-lg px-4 py-3 ${
               chartHighlight.quality.status === "WARN" ? "bg-amber-50" : "bg-slate-50"
             }`}>
-              <p className="text-xs text-slate-600 mb-1">
+              <p className="text-sm text-black mb-1">
                 임상 품질
-                <span className="ml-1 text-slate-600">· LLM 판정</span>
+                <span className="ml-1 text-black">· LLM 판정</span>
               </p>
               <div className="flex items-start gap-2">
-                <span className={`shrink-0 text-xs font-bold ${
-                  chartHighlight.quality.status === "WARN" ? "text-amber-600" : "text-slate-700"
+                <span className={`shrink-0 text-sm font-bold ${
+                  chartHighlight.quality.status === "WARN" ? "text-amber-600" : "text-black"
                 }`}>
                   {chartHighlight.quality.status === "PASS" ? "통과" : "주의"}
                 </span>
                 {chartHighlight.quality.detail && (
-                  <span className="text-xs text-slate-600 leading-relaxed">
+                  <span className="text-sm text-black leading-relaxed">
                     — {chartHighlight.quality.detail}
                   </span>
                 )}
@@ -1290,27 +1290,27 @@ function RecentAgentResult({ row, agentKey }: { row: ValidationRow; agentKey: "t
 
       {/* 체크 항목 목록 */}
       <div className="space-y-1.5 border-t border-slate-100 pt-4">
-        <p className="text-xs font-semibold text-slate-600 mb-2">항목별 평가 결과</p>
+        <p className="text-sm font-semibold text-black mb-2">항목별 평가 결과</p>
         {mod.checks.map((c, i) => (
           <div key={i} className={`flex items-start gap-3 rounded-lg px-3 py-2.5 ${
             c.status === "WARN" ? "bg-amber-50" : "bg-slate-50"
           }`}>
-            <span className={`mt-0.5 shrink-0 text-xs font-bold ${
-              c.status === "WARN" ? "text-amber-500" : "text-slate-600"
+            <span className={`mt-0.5 shrink-0 text-sm font-bold ${
+              c.status === "WARN" ? "text-amber-500" : "text-black"
             }`}>
               {c.status === "WARN" ? "⚠" : "✓"}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-slate-700">{c.item}</span>
-                <span className={`shrink-0 text-xs font-bold ${
-                  c.status === "WARN" ? "text-amber-600" : "text-slate-600"
+                <span className="text-sm font-semibold text-black">{c.item}</span>
+                <span className={`shrink-0 text-sm font-bold ${
+                  c.status === "WARN" ? "text-amber-600" : "text-black"
                 }`}>
                   {c.status === "PASS" ? "통과" : c.status === "WARN" ? "주의" : c.status}
                 </span>
               </div>
               {c.detail && (
-                <p className="mt-1 text-xs text-slate-600 leading-relaxed">{c.detail}</p>
+                <p className="mt-1 text-sm text-black leading-relaxed">{c.detail}</p>
               )}
             </div>
           </div>
@@ -1471,18 +1471,18 @@ function computeDashboardData(rows: ValidationRow[]): DashData {
 function DashScoreCard({ score, diff, total }: { score: number | null; diff: number | null; total: number }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-xs font-semibold text-slate-600">Overall Score</p>
-      <p className="mt-3 text-5xl font-black text-slate-800">
+      <p className="text-sm font-semibold text-black">Overall Score</p>
+      <p className="mt-3 text-5xl font-black text-black">
         {score != null ? `${score}%` : "—"}
       </p>
       {diff != null ? (
-        <p className={`mt-1.5 text-xs font-semibold ${diff >= 0 ? "text-slate-600" : "text-amber-600"}`}>
+        <p className={`mt-1.5 text-sm font-semibold ${diff >= 0 ? "text-black" : "text-amber-600"}`}>
           {diff >= 0 ? "▲" : "▼"} {Math.abs(diff)}% vs. last week
         </p>
       ) : (
-        <p className="mt-1.5 text-xs text-slate-600">지난 주 데이터 없음</p>
+        <p className="mt-1.5 text-sm text-black">지난 주 데이터 없음</p>
       )}
-      <p className="mt-4 text-xs text-slate-600">총 {total}건 기반</p>
+      <p className="mt-4 text-sm text-black">총 {total}건 기반</p>
     </div>
   );
 }
@@ -1496,7 +1496,7 @@ function DashDonutCard({ pass, warn, total }: { pass: number; warn: number; tota
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-xs font-semibold text-slate-600">판정 분포</p>
+      <p className="text-sm font-semibold text-black">판정 분포</p>
       <div className="relative mt-1">
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
@@ -1506,10 +1506,10 @@ function DashDonutCard({ pass, warn, total }: { pass: number; warn: number; tota
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-black text-slate-800">{passRate}%</span>
+          <span className="text-lg font-black text-black">{passRate}%</span>
         </div>
       </div>
-      <div className="mt-1 flex justify-center gap-5 text-xs">
+      <div className="mt-1 flex justify-center gap-5 text-sm">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#2f6f67" }} />
           PASS {pass}
@@ -1526,11 +1526,11 @@ function DashDonutCard({ pass, warn, total }: { pass: number; warn: number; tota
 function DashBarCard({ agents }: { agents: { name: string; score: number }[] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="mb-2 text-xs font-semibold text-slate-600">에이전트 평균 점수</p>
+      <p className="mb-2 text-sm font-semibold text-black">에이전트 평균 점수</p>
       <ResponsiveContainer width="100%" height={155}>
         <BarChart data={agents} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#000000" }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#000000" }} axisLine={false} tickLine={false} />
           <Tooltip
             formatter={(v) => [`${Number(v)}%`, "점수"]}
             contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0", boxShadow: "none" }}
@@ -1545,12 +1545,12 @@ function DashBarCard({ agents }: { agents: { name: string; score: number }[] }) 
 function DashTrendCard({ trend }: { trend: { date: string; score: number }[] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="mb-2 text-xs font-semibold text-slate-600">종합 점수 추이</p>
+      <p className="mb-2 text-sm font-semibold text-black">종합 점수 추이</p>
       <ResponsiveContainer width="100%" height={170}>
         <LineChart data={trend} margin={{ top: 4, right: 8, bottom: 0, left: -22 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#000000" }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#000000" }} axisLine={false} tickLine={false} />
           <Tooltip
             formatter={(v) => [`${Number(v)}%`, "점수"]}
             contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0", boxShadow: "none" }}
@@ -1565,18 +1565,18 @@ function DashTrendCard({ trend }: { trend: { date: string; score: number }[] }) 
 function DashWarnCard({ warns }: { warns: { agent: string; item: string; count: number; desc: string }[] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="mb-3 text-xs font-semibold text-slate-600">주요 경고 항목 (Top WARN)</p>
+      <p className="mb-3 text-sm font-semibold text-black">주요 경고 항목 (Top WARN)</p>
       {warns.length === 0 ? (
-        <p className="py-6 text-center text-xs text-slate-600">경고 항목 없음</p>
+        <p className="py-6 text-center text-sm text-black">경고 항목 없음</p>
       ) : (
         <div className="space-y-3.5">
           {warns.map(({ agent, desc, count }, i) => (
             <div key={i} className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-700">{agent}</p>
-                <p className="mt-0.5 text-xs leading-tight text-slate-600">{desc}</p>
+                <p className="text-sm font-bold text-black">{agent}</p>
+                <p className="mt-0.5 text-sm leading-tight text-black">{desc}</p>
               </div>
-              <span className="mt-0.5 shrink-0 rounded bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-600">
+              <span className="mt-0.5 shrink-0 rounded bg-amber-50 px-2 py-0.5 text-sm font-bold text-amber-600">
                 {count}건
               </span>
             </div>
@@ -1607,7 +1607,7 @@ function OverallTab({
     <div className="space-y-6">
       {/* ── 로딩 */}
       {loading && (
-        <div className="flex items-center gap-2 py-8 text-sm text-slate-600">
+        <div className="flex items-center gap-2 py-8 text-sm text-black">
           <Loader2 className="h-4 w-4 animate-spin" /> 불러오는 중...
         </div>
       )}
@@ -1637,30 +1637,30 @@ function OverallTab({
         <button
           onClick={onRunRecent}
           disabled={batchLoading}
-          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-slate-50 disabled:opacity-40"
         >
           {batchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           {batchLoading ? "재검증 중..." : "최근 10건 재검증"}
         </button>
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {/* ── EMR 별 케이스 테이블 */}
       {!loading && rows && rows.length === 0 && (
-        <p className="py-8 text-center text-sm text-slate-600">
+        <p className="py-8 text-center text-sm text-black">
           검증 결과가 없습니다. 최근 10건 재검증을 실행해보세요.
         </p>
       )}
 
       {!loading && rows && rows.length > 0 && (
         <div>
-          <p className="mb-3 text-xs font-semibold text-slate-600">
-            케이스별 상세 <span className="font-normal text-slate-600">({rows.length}건)</span>
+          <p className="mb-3 text-sm font-semibold text-black">
+            케이스별 상세 <span className="font-normal text-black">({rows.length}건)</span>
           </p>
           <div className="overflow-hidden rounded-xl border border-slate-200">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+            <thead className="border-b border-slate-200 bg-slate-50 text-sm text-black">
               <tr>
                 <th className="px-4 py-3 text-left">EMR</th>
                 <th className="px-4 py-3 text-left">종합</th>
@@ -1684,24 +1684,24 @@ function OverallTab({
                 const convTitle = row.conversation_status?.detail ?? "";
                 return (
                   <tr key={row.emrid} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-mono font-bold text-slate-700">#{row.emrid}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-black">#{row.emrid}</td>
                     <td className="px-4 py-3">
                       <StatusText status={row.overall} />
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
+                    <td className="px-4 py-3 text-sm text-black">
                       {trgStatus ? <StatusText status={trgStatus} /> : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
+                    <td className="px-4 py-3 text-sm text-black">
                       {schStatus ? <StatusText status={schStatus} /> : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
+                    <td className="px-4 py-3 text-sm text-black">
                       {chtStatus ? <StatusText status={chtStatus} /> : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600" title={convTitle}>
+                    <td className="px-4 py-3 text-sm text-black" title={convTitle}>
                       {convStatus ? <StatusText status={convStatus} /> : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{fmtTime(row.createdAt)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.summary}</td>
+                    <td className="px-4 py-3 text-sm text-black">{fmtTime(row.createdAt)}</td>
+                    <td className="px-4 py-3 text-sm text-black">{row.summary}</td>
                   </tr>
                 );
               })}
@@ -1809,10 +1809,10 @@ export default function EvalPanel() {
     <div className="mx-auto max-w-5xl p-8">
       {/* 헤더 */}
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-xl font-black text-slate-800">
-          <FlaskConical className="h-5 w-5 text-slate-600" /> AI 에이전트 평가
+        <h1 className="flex items-center gap-2 text-xl font-black text-black">
+          <FlaskConical className="h-5 w-5 text-black" /> AI 에이전트 평가
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-black">
           에이전트별 성능 벤치마크 및 케이스 단위 전체 흐름 검증.
         </p>
       </div>
@@ -1826,8 +1826,8 @@ export default function EvalPanel() {
             className={[
               "px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-px",
               activeTab === tab.id
-                ? "border-slate-800 text-slate-800"
-                : "border-transparent text-slate-600 hover:text-slate-600",
+                ? "border-slate-800 text-black"
+                : "border-transparent text-black hover:text-black",
             ].join(" ")}
           >
             {tab.label}
