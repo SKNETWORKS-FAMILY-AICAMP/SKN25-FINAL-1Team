@@ -73,14 +73,20 @@ class ChartAgent:
             history_section=self._history_section(patient_context),
             rag_section=_format_rag(rag_context),
         )
-        try:
-            result = await call_llm_json(prompt=prompt, temperature=0.2)
-            logger.info("[chart] 생성 완료 suspected=%s",
-                        (result.get("intake_summary") or {}).get("suspected_diseases"))
-            return result
-        except Exception as e:
-            logger.warning("[chart] 생성 실패: %s", e)
-            return {}
+        # JSON 파싱 실패로 빈 차트가 그대로 나가는 침묵 실패를 줄이려고 1회 재시도한다.
+        # (call_llm_json 은 코드펜스/잡설 섞인 응답을 못 파싱하면 예외를 던진다 → 재호출로 회복.)
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                result = await call_llm_json(prompt=prompt, temperature=0.2)
+                logger.info("[chart] 생성 완료 suspected=%s",
+                            (result.get("intake_summary") or {}).get("suspected_diseases"))
+                return result
+            except Exception as e:
+                last_exc = e
+                logger.warning("[chart] 생성 실패(시도 %d/2): %s", attempt + 1, e)
+        logger.warning("[chart] 재시도 후에도 생성 실패: %s", last_exc)
+        return {}
 
     # 반려동물 정보 한 줄
     def _pet_info(self, pet: dict) -> str:

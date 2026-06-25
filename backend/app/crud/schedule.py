@@ -122,9 +122,17 @@ async def has_time_overlap(
     ne = to_kst(new_end)
     target_date = ns.date()
 
+    # confirmed_time(timestamptz)을 '그 날(KST) 범위'로 SQL에서 미리 좁힌다.
+    # 예전엔 의사의 전 기간 확정예약을 모두 로드해 Python에서 날짜로 거른 탓에,
+    # 예약이력이 쌓일수록(의사당 수천~수만 행) 매 충돌검사가 선형으로 느려졌다.
+    # ct.date() == target_date 와 정확히 같은 집합만 조회한다(겹침은 같은 날에서만 발생).
+    day_start = datetime.combine(target_date, datetime.min.time(), tzinfo=KST)
+    day_end = day_start + timedelta(days=1)
+
     stmt = (
         select(Schedule).where(
-            Schedule.confirmed_time.isnot(None),
+            Schedule.confirmed_time >= day_start,
+            Schedule.confirmed_time < day_end,
             Schedule.deleted_at.is_(None),
             Schedule.status != "CANCELLED",
             Schedule.doctorid == doctorid,

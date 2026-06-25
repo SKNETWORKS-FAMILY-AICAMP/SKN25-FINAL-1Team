@@ -1,7 +1,7 @@
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from app.crud.hospital import (
 )
 from app.crud.doctor import get_doctors_by_hospital, get_doctor_by_license
 from app.db.session import get_db
+from app.utils.rate_limit import rate_limit
 from app.schemas.doctor import (
     DoctorLoginRequest,
     DoctorTokenResponse,
@@ -37,7 +38,9 @@ def _temp_password() -> str:
 
 # 수의사(병원) 로그인
 @router.post("/login", response_model=DoctorTokenResponse)
-async def doctor_login(request: DoctorLoginRequest, db: AsyncSession = Depends(get_db)):
+async def doctor_login(request: DoctorLoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+    # 무차별 대입(brute-force) 차단 — IP당 분당 10회. (guardian login 과 동일 정책)
+    rate_limit(http_request, key="doctor-login", limit=10, window_sec=60)
     hospital = await get_hospital_by_loginid(db, request.loginid)
 
     if not hospital or not verify_password(request.password, hospital.password):

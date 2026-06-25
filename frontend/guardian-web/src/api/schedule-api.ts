@@ -98,6 +98,7 @@ export const getScheduleRecommendation = async (body: {
   triage: unknown;
   hospitalid?: number;
   doctorid?: number;
+  emrid?: number;
 }): Promise<ScheduleRecommendationResponse> => {
   const response = await apiClient.post<ScheduleRecommendationResponse>(
     "/schedules/recommend",

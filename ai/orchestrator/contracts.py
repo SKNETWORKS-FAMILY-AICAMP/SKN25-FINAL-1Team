@@ -82,6 +82,9 @@ class SessionContext:
     pending_confirmation_action: str = ""
     # 직전(최근 1개) 사진/영상 분석 소견 요약 — 다음 턴의 '사진 후속' 발화에서 참조한다(원본 미보관).
     last_media_summary: str = ""
+    # 채팅 에이전트 공통 durable 맥락 — 직전 문진 결론(주증상·요약)을 reception/followup이 잇도록
+    # 오케스트레이터가 주입한다(읽기 전용 조합값, 저장 안 함). conversation.triage_context() 산출.
+    conversation_memory: str = ""
     followup_limited: bool = False
     # 예약 후(BOOKED) 챗에서 '문진 작성 후 새로 예약하기'를 고른 경우 — 같은 세션에서 새 문진을
     # 돌리도록 phase를 PRE_BOOKING으로 강등하고, 문진 완료 시 새 emrid를 발급한다(완료 시 해제).

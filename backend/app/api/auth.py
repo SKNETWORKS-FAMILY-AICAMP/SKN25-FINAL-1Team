@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
+from app.utils.rate_limit import rate_limit
 from jose import JWTError, jwt
 
 from app.schemas.user import UserCreate
@@ -33,7 +34,9 @@ async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 # 로그인
 @router.post("/login")
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(request: LoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+    # 무차별 대입(brute-force) 차단 — IP당 분당 10회.
+    rate_limit(http_request, key="login", limit=10, window_sec=60)
     user = await get_user_by_loginid(db, request.loginid)
 
     if not user or not verify_password(request.password, user.password):
@@ -105,7 +108,9 @@ async def logout(current_user = Depends(get_current_user)):
 
 # 아이디 찾기
 @router.post("/find-id")
-async def find_id(request: FindIdRequest, db: AsyncSession = Depends(get_db)):
+async def find_id(request: FindIdRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+    # 이름+전화번호 대입으로 loginid 를 수확하는 열거(enumeration) 차단 — IP당 분당 5회.
+    rate_limit(http_request, key="find-id", limit=5, window_sec=60)
     result = await db.execute(
         select(User).where(
             User.name == request.name,
@@ -130,7 +135,9 @@ async def find_id(request: FindIdRequest, db: AsyncSession = Depends(get_db)):
 
 # 비밀번호 찾기
 @router.post("/find-password")
-async def find_password(request: FindPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def find_password(request: FindPasswordRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+    # 비밀번호 재설정 남용 차단 — IP당 분당 5회.
+    rate_limit(http_request, key="find-password", limit=5, window_sec=60)
     result = await db.execute(
         select(User).where(
             User.loginid == request.loginid,

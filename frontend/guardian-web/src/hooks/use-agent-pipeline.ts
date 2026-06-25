@@ -234,6 +234,7 @@ export const useAgentPipeline = ({
         pet: toPetPayload(pet),
         triage: collectedInfo,
         hospitalid: (hospitalOverride ?? hospitalId) ?? undefined,
+        emrid: emrid ?? undefined,
       });
       if (requestId !== scheduleRequestRef.current) return;
       removeByPipelineKey("checking-slots");  // 로딩 버블 제거
