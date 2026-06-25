@@ -12,6 +12,7 @@ import argparse
 import asyncio
 import gzip
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,30 @@ from app.models.triage_rag_document import TriageRagDocument  # noqa: E402
 
 DEFAULT_IN = Path(__file__).parents[1] / "data" / "triage" / "triage_rag_export.jsonl.gz"
 BATCH_SIZE = 500
+
+
+def _maybe_fetch_from_s3(dest: Path) -> bool:
+    """로컬 덤프가 없을 때 S3에서 받아온다(임베딩 포함 덤프 → OpenAI 호출 불필요).
+
+    SEED_RAG_S3_BUCKET 가 설정됐을 때만 동작한다(전용 opt-in). 미설정이면 False 를 돌려
+    호출부가 기존처럼 '파일 없음 → 무해 스킵' 으로 흐르게 한다(dev/로컬엔 영향 없음).
+    git/이미지에 못 넣는 632MB 덤프를, 신규 EC2 프로비저닝 시에도 사람 손 없이 채우기 위한 경로.
+    """
+    bucket = os.getenv("SEED_RAG_S3_BUCKET")
+    if not bucket:
+        return False
+    key = os.getenv("SEED_RAG_S3_KEY", "seed/triage_rag_export.jsonl.gz")
+    try:
+        import boto3
+
+        s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION", "ap-northeast-2"))
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        print(f"[s3] 로컬 덤프 없음 → 다운로드: s3://{bucket}/{key} → {dest}")
+        s3.download_file(bucket, key, str(dest))
+        return dest.exists()
+    except Exception as e:  # 자격증명/키 없음 등 → 무해 스킵(배포 안 깨짐)
+        print(f"[s3] 다운로드 실패(스킵): {e}")
+        return False
 
 
 async def _count_rows() -> int:
@@ -59,9 +84,14 @@ async def load_dump(in_path: Path, force: bool) -> None:
         return
 
     if not in_path.exists():
-        print(f"[skip] 덤프 파일 없음: {in_path} → 적재 건너뜀 "
-              f"(임베딩 생성은 build_triage_pgvector_index.py 사용)")
-        return
+        # 마운트된 로컬 덤프가 없으면 S3 폴백을 시도(신규 EC2 자동 복구).
+        s3_dest = Path("/tmp/_seed_rag_dump.jsonl.gz")
+        if _maybe_fetch_from_s3(s3_dest):
+            in_path = s3_dest
+        else:
+            print(f"[skip] 덤프 파일 없음: {in_path} → 적재 건너뜀 "
+                  f"(임베딩 생성은 build_triage_pgvector_index.py 사용)")
+            return
 
     if force and existing > 0:
         async with AsyncSessionLocal() as db:

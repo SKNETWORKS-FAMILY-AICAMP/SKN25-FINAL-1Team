@@ -82,6 +82,36 @@ services:
       - medipaw_net
     restart: "no"
 
+  # ── Triage RAG 적재 ─────────────────────────────────────────────
+  # 문진 의심질환 추천이 근거로 삼는 과거 수의사 진료사례(임베딩 포함)를 prod DB에 적재.
+  # 덤프는 632MB라 .gitignore + Docker 이미지에 못 들어가므로(dev 는 레포 볼륨 마운트로 읽음),
+  # 운영은 EC2 호스트 ~/medipaw/seed/ 에 덤프를 두고 ./seed 로 마운트해 읽는다.
+  # deploy.yml 의 scp 는 compose/Caddyfile 만 덮으므로 ~/medipaw/seed 덤프는 배포 간 유지된다.
+  # 멱등: 이미 있으면 스킵, 덤프 파일이 없으면 에러 없이 스킵(배포는 안 깨짐). OpenAI 호출 없음.
+  seed-rag:
+    image: chany0812/medipaw-backend:latest
+    command: bash -c "cd /app/backend && python scripts/load_triage_rag.py --in /seed/triage_rag_export.jsonl.gz"
+    environment:
+      DATABASE_URL: postgresql://medipaw:${POSTGRES_PASSWORD:-medipaw_secret}@db:5432/medipaw
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in ~/medipaw/.env}
+      # 신규 EC2 등 ./seed 마운트에 덤프가 없을 때 S3 에서 자동 다운로드(임베딩 포함 → OpenAI 불필요).
+      # 마운트 파일이 있으면 그걸 우선 쓰고 S3 는 안 탄다(평소 배포는 egress 0). 자격증명은 backend 와 동일.
+      SEED_RAG_S3_BUCKET: ${SEED_RAG_S3_BUCKET:-medipaw-images}
+      SEED_RAG_S3_KEY: ${SEED_RAG_S3_KEY:-seed/triage_rag_export.jsonl.gz}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+    volumes:
+      - ./seed:/seed:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - medipaw_net
+    restart: "no"
+
   guardian:
     image: chany0812/medipaw-guardian:latest
     restart: unless-stopped
