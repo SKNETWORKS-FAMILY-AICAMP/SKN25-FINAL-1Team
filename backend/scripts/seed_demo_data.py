@@ -34,6 +34,7 @@ import argparse
 import asyncio
 import os
 import random
+import re
 import sys
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
@@ -774,7 +775,16 @@ async def delete_demo_data(db: AsyncSession) -> None:
         ('DELETE FROM "hospitalDB" WHERE hospitalid = ANY(:h)', {"h": hosp_ids or [-1]}),
         ('DELETE FROM "admin_userDB" WHERE loginid LIKE :p', {"p": f"%@{DEMO_DOMAIN}"}),
     ]
+    # 환경마다 마이그레이션 수준이 달라 일부 테이블이 없을 수 있다(예: prod에 agent_pipeline_resultDB 미생성).
+    # 존재하는 테이블만 삭제 대상으로 삼아 'relation does not exist'로 중단되지 않게 한다.
+    existing = set((await db.execute(
+        text("SELECT tablename FROM pg_tables WHERE schemaname='public'")
+    )).scalars().all())
+    _tbl_re = re.compile(r'(?:FROM|UPDATE|INTO)\s+"([^"]+)"', re.IGNORECASE)
     for sql, params in stmts:
+        m = _tbl_re.search(sql)
+        if m and m.group(1) not in existing:
+            continue
         await db.execute(text(sql), params)
     await db.commit()
     print(
