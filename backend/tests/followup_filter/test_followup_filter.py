@@ -17,10 +17,12 @@ import ai.agents.followup_filter.agent as agent_mod
 import ai.agents.followup_filter.repository as repo_mod
 from ai.agents.followup_filter.agent import followup_filter
 from ai.agents.followup_filter.prompts import (
+    CONTINUE_STATUS_PILL,
     HOSPITAL_INFO_PILL,
     NEW_BOOKING_DIRECT_PILL,
     PREP_INSTRUCTIONS_PILL,
     REBOOK_ACTION_PILL,
+    REBOOK_PILL,
     REPLY_SAVED_VARIANTS,
     SCHEDULE_LIST_PILL,
     VISIT_NOTE_SUMMARY_PILL,
@@ -190,7 +192,7 @@ def test_ensure_safe_reply_urgent_appends_guidance():
          "assistant_reply": "걱정되시겠어요. 남겨둘게요."}, "피 섞인 설사")
     reply = ensure_safe_reply(cls, "fallback")
     # 전화 없음 → '병원 연락'이 아니라 '더 빠른 예약(앞당김)'을 제안하는 문구가 붙어야 한다.
-    assert ("빠른" in reply) or ("앞당" in reply)
+    assert ("응급" in reply) or ("내원" in reply) or ("병원" in reply)
     print("✓ urgent safety guidance (rebook offer) appended")
 
 
@@ -340,16 +342,70 @@ def test_species_mismatch_asks_and_no_save(monkeypatch):
 
 
 def test_rebook_request_emits_event_and_no_save(monkeypatch):
-    # "예약 바꾸고 싶어요" → 저장 없이 재예약 신호(rebook_request)만 내보낸다.
+    # 명시적 실행 명령("바꿔줘") → 저장 없이 재예약 신호(rebook_request)만 내보낸다.
+    # (P1: '바꾸고 싶어요' 같은 막연한 요청은 별도 — test_rebook_inquiry_* 참고)
     _stub_vision(monkeypatch)
     _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
                             "severity_hint": "stable", "wants_rebooking": True,
                             "assistant_reply": "네, 가능한 빠른 예약 시간을 찾아볼게요."})
     calls = _stub_save(monkeypatch)
-    res = _run(followup_filter.run(_ctx("예약 다른 날로 바꾸고 싶어요"), {}))
+    res = _run(followup_filter.run(_ctx("예약 다른 날로 바꿔줘"), {}))
     assert len(calls) == 0                                       # 저장 안 함
     assert res.events and res.events[0]["type"] == "rebook_request"
-    print("✓ rebook request → event, no save")
+    print("✓ rebook 실행 명령 → event, no save")
+
+
+def test_rebook_inquiry_shows_options_without_lookup(monkeypatch):
+    # P1-1·P1-2. "예약 날짜 변경하고 싶어요"(막연) → 슬롯 조회 없이 선택지 안내 + pill.
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "wants_rebooking": False,
+                            "assistant_reply": "네, 가능한 빠른 예약 시간을 찾아볼게요."})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("예약 날짜 변경하고 싶어요"), {}))
+    assert len(calls) == 0
+    assert not any(e.get("type") == "rebook_request" for e in (res.events or []))   # 즉시 슬롯조회 금지
+    assert "어떻게 도와드릴까요" in res.reply                                        # 선택지 안내
+    assert "직접" in res.reply and "찾아드릴" in res.reply
+    assert res.quick_replies == [REBOOK_PILL, SCHEDULE_LIST_PILL]                    # 찾아줌 / 직접변경
+    assert res.state_patch.get("pending_confirmation_action") == "rebook"           # '응' → 그때 조회
+    print("✓ rebook 막연 요청 → 선택지 안내(이벤트 없음)")
+
+
+def test_rebook_explicit_command_triggers_lookup(monkeypatch):
+    # P1-3. "더 빠른 시간 없어요?"(명시적 빠른시간 요청) → 바로 슬롯 조회.
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "wants_rebooking": False,
+                            "assistant_reply": ""})
+    res = _run(followup_filter.run(_ctx("더 빠른 시간 없어요?"), {}))
+    assert res.events and res.events[0]["type"] == "rebook_request"
+    print("✓ '더 빠른 시간 없어요?' → 바로 슬롯 조회")
+
+
+def test_rebook_time_and_possibility_shows_options(monkeypatch):
+    # P1-4. "내 예약 언제였죠? 바꿀 수 있나요?" → 변경 가능 여부 문의 → 선택지 안내(즉시 조회 X).
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "wants_rebooking": False,
+                            "asks_appointment_time": True, "assistant_reply": ""})
+    res = _run(followup_filter.run(_ctx("내 예약 언제였죠? 바꿀 수 있나요?"), {}))
+    assert not any(e.get("type") == "rebook_request" for e in (res.events or []))
+    assert "어떻게 도와드릴까요" in res.reply
+    print("✓ '언제였죠? 바꿀 수 있나요?' → 선택지 안내")
+
+
+def test_cancel_and_rebook_inquiry_no_events(monkeypatch):
+    # P1-5. "예약 취소하고 다시 잡을 수 있나요?" → 취소/재예약 이벤트 없이 정책 안내만.
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "wants_cancel": False, "wants_rebooking": False,
+                            "assistant_reply": ""})
+    res = _run(followup_filter.run(_ctx("예약 취소하고 다시 잡을 수 있나요?"), {}))
+    types = {e.get("type") for e in (res.events or [])}
+    assert "cancel_request" not in types and "rebook_request" not in types
+    assert res.reply                                              # 정책/안내 응답 존재
+    print("✓ 취소+재예약 문의 → 이벤트 없음, 안내만")
 
 
 def test_rebook_pill_triggers_rebook(monkeypatch):
@@ -506,7 +562,7 @@ def test_five_turn_saved_reply_regression(monkeypatch):
             assert field in res.state_patch.get("asked_followup_fields", [])
         if llm_outs[idx]["severity_hint"] == "urgent_possible":
             assert "더 빠른 시간 찾기" in res.quick_replies
-            assert ("빠른" in res.reply) or ("앞당" in res.reply)
+            assert ("응급" in res.reply) or ("내원" in res.reply) or ("병원" in res.reply)
         else:
             assert "더 빠른 시간 찾기" not in res.quick_replies
         assert not any(term in res.reply for term in forbidden_medical)
@@ -935,6 +991,26 @@ def test_who_is_vet_uses_booking_context(monkeypatch):
     print("✓ A. '누구 의사지?' → 담당 수의사 안내(예약 컨텍스트 활용)")
 
 
+def test_who_treats_me_without_person_noun_uses_booking_context(monkeypatch):
+    """A-extra. '나 누구한테 진료받아?'도 병원 목록이 아니라 예약 담당의를 안내한다."""
+    class _VetRow:
+        doctorid = 7
+        doctor_name = "김메디"
+
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    ctx = _ctx("나 누구한테 진료받아?")
+    ctx.db = _FakeDb(_VetRow())
+    res = _run(followup_filter.run(ctx, {}))
+    assert "김메디" in res.reply
+    assert "저희 병원에는" not in res.reply
+    assert len(calls) == 0
+    assert not res.events
+    print("✓ A-extra. '나 누구한테 진료받아?' → 현재 예약 담당의 안내")
+
+
 def test_who_is_vet_via_llm_flag(monkeypatch):
     """A'. LLM이 asks_vet_info=true로 잡아도 동일하게 동작한다."""
     class _VetRow:
@@ -953,7 +1029,7 @@ def test_who_is_vet_via_llm_flag(monkeypatch):
 
 
 def test_vet_subjective_question_gives_reassurance(monkeypatch):
-    """유형4. "그 의사 친절해?" → 단정 없이 담당 이름 + 따뜻한 일반 안내(정보없음으로 안 끝남)."""
+    """유형4. "그 의사 친절해?" → 담당 이름은 안내하되 친절도를 단정하지 않는다."""
     class _VetRow:
         doctorid = 7
         doctor_name = "김민지"
@@ -966,14 +1042,15 @@ def test_vet_subjective_question_gives_reassurance(monkeypatch):
     ctx.db = _FakeDb(_VetRow())
     res = _run(followup_filter.run(ctx, {}))
     assert "김민지" in res.reply                          # 담당 이름 활용
-    assert "노력하고 있어요" in res.reply                 # 주관 질문 → 일반 안내
+    assert "단정해서 말씀드리기 어려워요" in res.reply      # 주관 평가 금지
     assert "무엇을 도와드릴까요" not in res.reply
     assert len(calls) == 0
-    print("✓ 유형4. '그 의사 친절해?' → 이름 + 따뜻한 일반 안내")
+    assert not res.events
+    print("✓ 유형4. '그 의사 친절해?' → 이름 + 주관 평가 유보")
 
 
 def test_vet_info_no_data_still_reassures(monkeypatch):
-    """유형4. 수의사 데이터가 없어도 '정보 없음'으로 끝내지 않고 일반 안내로 응답한다."""
+    """담당 수의사 데이터가 없으면 병원 전체 목록 대신 안전 fallback을 안내한다."""
     _stub_vision(monkeypatch)
     _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
                             "severity_hint": "stable", "asks_vet_info": True,
@@ -981,9 +1058,10 @@ def test_vet_info_no_data_still_reassures(monkeypatch):
     ctx = _ctx("누구 의사지?")
     ctx.db = _FakeDb(None)            # 조회 결과 없음
     res = _run(followup_filter.run(ctx, {}))
-    assert "노력하고 있어요" in res.reply                 # 따뜻한 일반 안내로 마무리
-    assert "정보가 없" not in res.reply and "확인하지 못" not in res.reply
-    print("✓ 유형4. 수의사 데이터 없음 → 일반 안내(정보없음 종결 금지)")
+    assert "담당 수의사 정보는 확인되지 않아요" in res.reply
+    assert "병원에 확인해보시는 게 가장 정확해요" in res.reply
+    assert "저희 병원에는" not in res.reply
+    print("✓ 담당 수의사 데이터 없음 → 안전 fallback")
 
 
 def test_short_affirmatives_link_to_pending(monkeypatch):
@@ -1080,6 +1158,39 @@ def test_pending_vet_info_confirmation(monkeypatch):
     assert "박수의" in res.reply
     assert res.state_patch["pending_confirmation_action"] == ""
     print("✓ E. pending vet_info + 긍정 → 담당 수의사 직접 안내")
+
+
+def test_urgent_followup_saves_emergency_and_pill_order(monkeypatch):
+    """P0-1·C·6. 응급 경과("피를 토했어요") → emergency_alert 저장 + '더 빠른 시간 찾기' 맨 앞 pill,
+    자동 재예약(rebook_request) 없이 followup_saved만."""
+    _stub_vision(monkeypatch)
+    # LLM이 안전 신호를 놓쳐도 _enforce_safety_classification가 키워드로 응급 승격을 보장한다.
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other", "severity_hint": "stable",
+                            "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("아이가 방금 피를 토했어요"), {}))
+    assert len(calls) == 1
+    assert calls[0]["emergency_alert"] is True                       # 응급 저장
+    assert res.quick_replies[0] == REBOOK_PILL                       # 더 빠른 시간 찾기 맨 앞
+    assert set(res.quick_replies) == {REBOOK_PILL, CONTINUE_STATUS_PILL, REBOOK_ACTION_PILL}
+    types = {e.get("type") for e in (res.events or [])}
+    assert "followup_saved" in types                                 # 저장 이벤트만
+    assert "rebook_request" not in types                             # 자동 재예약 금지
+    print("✓ 응급 경과 → emergency_alert 저장 + 빠른예약 pill 우선 + 자동 rebook 없음")
+
+
+def test_normal_followup_pill_order_unchanged(monkeypatch):
+    """P0-5. 일반 경과 → 기존 pill 구성 유지(빠른예약 pill 안 끼움)."""
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": True, "category": "symptom_change", "severity_hint": "worse",
+                            "summary_delta": "기침이 조금 늘었다", "assistant_reply": "기침이 늘었군요. 물은 잘 마시나요?"})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("기침이 조금 늘었어요"), {}))
+    assert len(calls) == 1
+    assert calls[0]["emergency_alert"] is False
+    assert REBOOK_PILL not in res.quick_replies                      # 일반은 빠른예약 pill 미노출
+    assert res.quick_replies == [CONTINUE_STATUS_PILL, REBOOK_ACTION_PILL]
+    print("✓ 일반 경과 → 기존 pill 구성 유지")
 
 
 if __name__ == "__main__":

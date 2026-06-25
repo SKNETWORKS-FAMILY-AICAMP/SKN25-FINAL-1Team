@@ -53,6 +53,35 @@ jobs:
         # ai/ 도 포함 — Docker 빌드가 파이썬을 실행하지 않아 ai/ 문법오류가 그냥 prod 로 샌다.
         run: python -m compileall -q backend/app ai
 
+  # 단위/회귀 테스트 게이트 — "테스트가 존재한다"가 아니라 "PR 머지 전에 실제로 돌아 회귀를 막는다".
+  # 외부 의존(실제 OpenAI/DB)이 필요한 테스트는 제외한다:
+  #   - `-m "not live"` : 실제 OpenAI 호출 테스트(test_triage_live) 비선택
+  #   - tests/conftest.py(collect_ignore) : 옛 API 참조하는 stale 테스트 수집 제외
+  # 게이트되는 테스트는 LLM 을 monkeypatch 로 stub 하고 DB 도 stub 하므로 외부 연동/DB 가 필요 없다.
+  # CNN 비전(torch)은 lazy import 라 에이전트 import 시 안 딸려와 vision 의존성도 불필요.
+  backend-pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            ai/requirements-ai.txt
+
+      - name: Install deps (backend + 경량 AI, vision/torch 제외)
+        run: pip install -r backend/requirements.txt -r ai/requirements-ai.txt "pytest>=8,<9"
+
+      - name: Run pytest (live/외부의존 제외)
+        working-directory: backend
+        env:
+          # 테스트는 JWT 서명을 하지 않으므로 기본 SECRET_KEY 경고만 억제(동작 영향 없음).
+          DEBUG: "true"
+        run: python -m pytest -m "not live" -q
+
   # 마이그레이션 안전성 검사 — 무거운 AI 의존성 없이 alembic 핵심만 가볍게.
   # ① 멀티 헤드(머지 실수) 차단  ② 빈 DB에 upgrade head 가 깨지지 않는지  ③ 모델↔DB 드리프트(비차단)
   backend-migrations:
