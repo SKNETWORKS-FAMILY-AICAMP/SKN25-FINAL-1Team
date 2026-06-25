@@ -14,6 +14,7 @@ from app.models.schedule import Schedule
 from app.utils.followup_policy import is_followup_limited
 
 from .contracts import Flow, Phase, SessionContext
+from .conversation import triage_context
 
 
 def _enum_value(x) -> str:
@@ -115,6 +116,8 @@ async def build_context(db, session, user_message: str,
         asked_followup_fields=orch.get("asked_followup_fields") or [],
         pending_confirmation_action=orch.get("pending_confirmation_action") or "",
         last_media_summary=orch.get("last_media_summary") or "",
+        # 직전 문진 결론을 채팅 에이전트 공통 맥락으로 주입(triage_state는 이미 영속 — 조합만).
+        conversation_memory=triage_context(orch.get("triage_state") or {}),
         followup_limited=followup_limited,
         new_booking=new_booking,
         db=db,

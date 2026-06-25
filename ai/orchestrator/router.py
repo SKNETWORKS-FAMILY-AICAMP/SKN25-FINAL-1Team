@@ -22,6 +22,7 @@ from .contracts import (
     Phase,
     SessionContext,
 )
+from .conversation import format_history
 from .registry import REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -154,10 +155,7 @@ def _candidates(ctx: SessionContext) -> list[str]:
 
 
 def _recent_convo(ctx: SessionContext, n: int = 5) -> str:
-    msgs = [m for m in (ctx.history or []) if isinstance(m, dict) and m.get("content")][
-        -n:
-    ]
-    return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in msgs)
+    return format_history(ctx.history, n, skip_empty=True)
 
 
 def _fallback(ctx: SessionContext, candidates: list[str]) -> str:

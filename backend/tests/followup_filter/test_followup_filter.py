@@ -23,6 +23,7 @@ from ai.agents.followup_filter.prompts import (
     PREP_INSTRUCTIONS_PILL,
     REBOOK_ACTION_PILL,
     REBOOK_PILL,
+    REPLY_EMOTION_ACK,
     REPLY_SAVED_VARIANTS,
     SCHEDULE_LIST_PILL,
     VISIT_NOTE_SUMMARY_PILL,
@@ -30,6 +31,7 @@ from ai.agents.followup_filter.prompts import (
 )
 from ai.agents.followup_filter.schema import (
     Category,
+    SeverityHint,
     allows_save_notice_question,
     ensure_safe_reply,
     keyword_fallback,
@@ -432,6 +434,28 @@ def test_urgent_offers_rebook_pill(monkeypatch):
     assert len(calls) == 1                                       # urgent 경과는 저장
     assert "더 빠른 시간 찾기" in res.quick_replies              # 재예약 pill 제안
     print("✓ urgent → saved + rebook pill")
+
+
+def test_booked_urgent_respiratory_beats_appointment_time(monkeypatch):
+    # 예약 문구가 섞여도 호흡 응급은 예약시간 조회보다 먼저 저장/응급 안내로 처리한다.
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other",
+                            "severity_hint": "stable", "summary_delta": "",
+                            "asks_appointment_time": True,
+                            "assistant_reply": "현재 예약 시간을 확인해드릴게요."})
+    calls = _stub_save(monkeypatch)
+    message = "예약은 내일인데 지금 숨을 엄청 헐떡이고 혀가 파래 보여요"
+    res = _run(followup_filter.run(_ctx(message), {}))
+
+    assert len(calls) == 1
+    assert calls[0]["message"] == message
+    assert calls[0]["emergency_alert"] is True
+    assert res.events and res.events[0]["type"] == "followup_saved"
+    assert res.events[0]["severity_hint"] == SeverityHint.URGENT_POSSIBLE.value
+    assert "현재 예약" not in res.reply and "확인해드릴게요" not in res.reply
+    assert ("응급" in res.reply) or ("병원" in res.reply) or ("내원" in res.reply)
+    assert "더 빠른 시간 찾기" in res.quick_replies
+    print("✓ booked respiratory urgent beats appointment-time intent")
 
 
 def test_relevant_photo_still_saves_even_if_text_not_followup(monkeypatch):
@@ -1191,6 +1215,110 @@ def test_normal_followup_pill_order_unchanged(monkeypatch):
     assert REBOOK_PILL not in res.quick_replies                      # 일반은 빠른예약 pill 미노출
     assert res.quick_replies == [CONTINUE_STATUS_PILL, REBOOK_ACTION_PILL]
     print("✓ 일반 경과 → 기존 pill 구성 유지")
+
+
+# --- 검증 사각 보완(갭1·갭2): 감정 발화 경로 / asks_time 키워드 부분일치 -------
+# 둘 다 결정론 키워드 가드(_is_emotional / asks_time 부분일치)에 의존하는데 전용 테스트가
+# 없었다. 나중에 followup_filter를 컴팩트화할 때 이 경로가 조용히 회귀하지 않도록 고정한다.
+
+def test_emotion_only_gives_empathy_not_clarify(monkeypatch):
+    """갭1. 감정 단독 발화("너무 불안해요") → clarify('무엇을 도와드릴까요')로 새지 않고 공감/안심.
+    경과 아님 → 저장·이벤트 없음. (키워드 가드 _is_emotional 경로 보호)"""
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "irrelevant",
+                            "severity_hint": "stable", "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("너무 불안해요"), {}))
+    assert res.reply == REPLY_EMOTION_ACK              # 공감 fallback 그대로
+    assert "무엇을 도와드릴까요" not in res.reply        # ★ clarify로 새지 않음
+    assert len(calls) == 0                             # 경과 아님 → 저장 안 함
+    assert not res.events
+    print("✓ 갭1. 감정 단독 → 공감 응답(clarify 차단), 저장 없음")
+
+
+def test_emotion_overrides_llm_clarify_drift(monkeypatch):
+    """갭1. 감정 발화인데 LLM이 의도 되묻기('예약을 바꾸시려는…')로 흐르면 무력화하고 공감으로 대체.
+    (agent.py is_emotional clarify-drift 무력화 가드 보호)"""
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other", "severity_hint": "stable",
+                            "assistant_reply": "혹시 예약을 바꾸시려는 걸까요?"})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("걱정돼 죽겠어요"), {}))
+    assert "예약을 바꾸" not in res.reply               # ★ LLM clarify 드리프트 무력화
+    assert "무엇을 도와드릴까요" not in res.reply
+    assert res.reply == REPLY_EMOTION_ACK               # 공감 fallback로 대체
+    assert len(calls) == 0
+    print("✓ 갭1. 감정+LLM clarify 드리프트 → 무력화 후 공감")
+
+
+def test_emotion_reply_has_no_save_notice_or_verdict(monkeypatch):
+    """갭1. 감정 발화 응답엔 과도한 저장 안내('기록해 둘게요')·진단 단정이 없어야 한다."""
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "irrelevant", "severity_hint": "stable",
+                            "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    res = _run(followup_filter.run(_ctx("무서워서 잠이 안 와요"), {}))
+    assert res.reply == REPLY_EMOTION_ACK
+    for banned in ("기록해", "남겨 둘게요", "전달하겠", "진단", "확실합니다", "틀림없"):
+        assert banned not in res.reply                 # 내부표현·단정·과도 저장안내 금지
+    assert len(calls) == 0
+    print("✓ 갭1. 감정 응답 → 저장안내·진단 단정 없음")
+
+
+def test_asks_time_keyword_returns_confirmed_time(monkeypatch):
+    """갭2. "예약 언제였죠?"(시간 키워드 부분일치, pending 아님) → 병원 운영시간/일반 안내가 아니라
+    현재 예약 confirmed_time을 직접 안내. LLM 플래그 없이 키워드만으로 라우팅."""
+    class _Schedule:
+        confirmed_time = datetime(2026, 6, 23, 3, 30, tzinfo=timezone.utc)
+
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other", "severity_hint": "stable",
+                            "asks_appointment_time": False, "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    ctx = _ctx("예약 언제였죠?")
+    ctx.db = _FakeDb(_Schedule())
+    res = _run(followup_filter.run(ctx, {}))
+    assert "예약 시간은" in res.reply and "12:30" in res.reply   # 실제 예약 시각(KST)
+    assert "운영" not in res.reply                              # 병원 운영시간 아님
+    assert "무엇을 도와드릴까요" not in res.reply
+    assert len(calls) == 0 and not res.events                  # 저장·이벤트 없음
+    print("✓ 갭2. '예약 언제였죠?' 키워드 → confirmed_time 직접 안내")
+
+
+def test_asks_time_explicit_hour_keyword(monkeypatch):
+    """갭2. "몇 시에 예약이었죠?"도 같은 경로(시간 키워드 부분일치)로 confirmed_time 안내."""
+    class _Schedule:
+        confirmed_time = datetime(2026, 6, 23, 3, 30, tzinfo=timezone.utc)
+
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other", "severity_hint": "stable",
+                            "asks_appointment_time": False, "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    ctx = _ctx("몇 시에 예약이었죠?")
+    ctx.db = _FakeDb(_Schedule())
+    res = _run(followup_filter.run(ctx, {}))
+    assert "예약 시간은" in res.reply and "12:30" in res.reply
+    assert len(calls) == 0
+    print("✓ 갭2. '몇 시에 예약이었죠?' → confirmed_time")
+
+
+def test_asks_time_via_llm_flag_not_pending(monkeypatch):
+    """갭2. 시간 키워드가 약한 발화("내일 맞죠 예약?")도 LLM asks_appointment_time=true면
+    pending 경유 없이 곧장 confirmed_time을 안내한다(되묻기로 새지 않음)."""
+    class _Schedule:
+        confirmed_time = datetime(2026, 6, 23, 3, 30, tzinfo=timezone.utc)
+
+    _stub_vision(monkeypatch)
+    _stub_llm(monkeypatch, {"is_followup": False, "category": "other", "severity_hint": "stable",
+                            "asks_appointment_time": True, "assistant_reply": ""})
+    calls = _stub_save(monkeypatch)
+    ctx = _ctx("내일 맞죠 예약?")
+    ctx.db = _FakeDb(_Schedule())
+    res = _run(followup_filter.run(ctx, {}))
+    assert "예약 시간은" in res.reply and "12:30" in res.reply
+    assert "무엇을 도와드릴까요" not in res.reply
+    assert len(calls) == 0
+    print("✓ 갭2. LLM asks_appointment_time 플래그 → 직접 confirmed_time(미pending)")
 
 
 if __name__ == "__main__":

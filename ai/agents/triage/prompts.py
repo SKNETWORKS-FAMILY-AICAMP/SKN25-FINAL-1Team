@@ -7,12 +7,13 @@
 """
 from __future__ import annotations
 
+from ai.orchestrator.conversation import format_history
+
 from . import engine
 
 
 def _convo(history: list[dict], limit: int | None = None) -> str:
-    msgs = history if limit is None else history[-limit:]
-    return "\n".join(f"{m.get('role')}: {m.get('content')}" for m in (msgs or []))
+    return format_history(history, limit)
 
 
 # 공통 말투 — triage가 보호자에게 직접 말하는 모든 콜(질문·리다이렉트·완료)에 입힌다.

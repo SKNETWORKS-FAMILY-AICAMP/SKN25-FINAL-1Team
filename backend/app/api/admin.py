@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.core.security import verify_password, create_access_token
 from app.core.dependencies import get_current_admin
 from app.crud.admin import get_admin_by_loginid
+from app.utils.rate_limit import rate_limit
 from app.crud import signup_request as sr_crud
 from app.crud import admin_hospital as ah_crud
 from app.crud import contact_inquiry as ci_crud
@@ -29,7 +30,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 # ── 로그인 ─────────────────────────────────────────────────
 @router.post("/login")
-async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
+async def admin_login(body: AdminLoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+    # 무차별 대입(brute-force) 차단 — IP당 분당 10회. (guardian login 과 동일 정책)
+    rate_limit(http_request, key="admin-login", limit=10, window_sec=60)
     admin = await get_admin_by_loginid(db, body.loginid)
     if not admin or not verify_password(body.password, admin.password):
         raise HTTPException(

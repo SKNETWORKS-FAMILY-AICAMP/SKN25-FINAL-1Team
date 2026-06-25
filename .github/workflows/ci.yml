@@ -18,9 +18,11 @@ jobs:
   frontend-build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # guardian 실패가 vet 검사를 가리지 않도록
+      fail-fast: false # 한 앱 실패가 다른 앱 검사를 가리지 않도록
       matrix:
-        app: [guardian-web, vet-web]
+        # company-web 도 배포 대상(docker-compose.prod.yml)이므로 함께 게이트한다 —
+        # 빠지면 company-web 의 tsc 에러가 CI 를 통과해 그대로 prod 로 샌다.
+        app: [guardian-web, vet-web, company-web]
     steps:
       - uses: actions/checkout@v4
 
