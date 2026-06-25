@@ -81,6 +81,7 @@ export default function HospitalManage() {
   const [draft, setDraft] = useState<EditHospital | null>(null);
   const [hours, setHours] = useState<DaySchedule[]>([]);
   const [msg, setMsg] = useState("");
+  const [savingAll, setSavingAll] = useState(false);
 
   const reload = async () => {
     const [d, h] = await Promise.all([getHospital(hid), getHospitalHours(hid)]);
@@ -108,31 +109,58 @@ export default function HospitalManage() {
     return <div className="mx-auto max-w-3xl px-6 py-8 text-sm font-semibold text-slate-400">불러오는 중…</div>;
   }
 
+  // 저장 페이로드 빌더 — 섹션별 저장과 전체 저장이 공유한다.
+  const hospitalPayload = (h: EditHospital) => ({
+    name: h.name,
+    tagline: h.tagline,
+    address: h.address,
+    phone: h.phone,
+    intro: h.intro,
+    bannerImage: h.bannerImage || undefined,
+    bannerImagePosition: h.bannerImagePosition,
+    features: h.features,
+  });
+  const doctorPayload = (doc: EditDoctor) => ({
+    name: doc.name,
+    specialty: doc.specialty,
+    education: doc.education,
+    bio: doc.bio,
+    specialtyAreas: doc.specialtyAreas,
+    profileImage: doc.profileImage || undefined,
+    profileImagePosition: doc.profileImagePosition,
+  });
+
   const saveProfile = async () => {
-    await updateHospitalProfile(hid, {
-      name: draft.name,
-      tagline: draft.tagline,
-      address: draft.address,
-      phone: draft.phone,
-      intro: draft.intro,
-      bannerImage: draft.bannerImage || undefined,
-      bannerImagePosition: draft.bannerImagePosition,
-      features: draft.features,
-    });
+    await updateHospitalProfile(hid, hospitalPayload(draft));
     flash("병원 정보 저장됨");
   };
 
+  const saveHours = async () => {
+    await updateHospitalHours(hid, hours);
+    flash("진료시간 저장됨");
+  };
+
   const saveDoctor = async (doc: EditDoctor) => {
-    await updateDoctorProfile(doc.doctorid, {
-      name: doc.name,
-      specialty: doc.specialty,
-      education: doc.education,
-      bio: doc.bio,
-      specialtyAreas: doc.specialtyAreas,
-      profileImage: doc.profileImage || undefined,
-      profileImagePosition: doc.profileImagePosition,
-    });
+    await updateDoctorProfile(doc.doctorid, doctorPayload(doc));
     flash("원장 정보 저장됨");
+  };
+
+  // 병원 정보 + 진료시간 + 모든 원장을 한 번에 저장.
+  // (영업/폐업·원장 활성화는 즉시 반영되는 토글이라 여기서 다루지 않음)
+  const saveAll = async () => {
+    setSavingAll(true);
+    try {
+      await updateHospitalProfile(hid, hospitalPayload(draft));
+      await updateHospitalHours(hid, hours);
+      for (const doc of draft.doctors) {
+        await updateDoctorProfile(doc.doctorid, doctorPayload(doc));
+      }
+      flash("전체 저장 완료");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "전체 저장 실패");
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   const toggleActive = async (doc: EditDoctor) => {
@@ -201,7 +229,7 @@ export default function HospitalManage() {
             <SaveButton onClick={saveProfile} />
           </Section>
 
-          <HoursForm hours={hours} onSave={async (next) => { await updateHospitalHours(hid, next); setHours(next); flash("진료시간 저장됨"); }} />
+          <HoursForm rows={hours} onChange={setHours} onSave={saveHours} />
 
           <Section title="원장">
             <div className="space-y-3">
@@ -224,6 +252,21 @@ export default function HospitalManage() {
           <p className="mb-2 text-xs font-bold text-slate-400">보호자 화면 미리보기</p>
           <HospitalPreview draft={draft} />
         </div>
+      </div>
+
+      {/* 하단 고정 전체 저장 바: 병원 정보 + 진료시간 + 모든 원장 한 번에 저장 */}
+      <div className="sticky bottom-0 z-20 mt-6 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 shadow-lg backdrop-blur">
+        <span className="text-xs font-semibold text-slate-400">
+          병원 정보·진료시간·원장 정보를 한 번에 저장합니다.
+        </span>
+        <button
+          type="button"
+          onClick={() => void saveAll()}
+          disabled={savingAll}
+          className="shrink-0 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:bg-slate-300"
+        >
+          {savingAll ? "전체 저장 중…" : "전체 저장"}
+        </button>
       </div>
     </div>
   );
@@ -455,13 +498,11 @@ function DoctorEditor({
 }
 
 // ── 진료시간 ────────────────────────────────────────────────
-function HoursForm({ hours, onSave }: { hours: DaySchedule[]; onSave: (h: DaySchedule[]) => Promise<void> }) {
-  const [rows, setRows] = useState<DaySchedule[]>(hours);
+function HoursForm({ rows, onChange, onSave }: { rows: DaySchedule[]; onChange: (h: DaySchedule[]) => void; onSave: () => Promise<void> }) {
   const [saving, setSaving] = useState(false);
-  useEffect(() => setRows(hours), [hours]);
 
   const patch = (dow: number, p: Partial<DaySchedule>) =>
-    setRows((cur) => cur.map((r) => (r.day_of_week === dow ? { ...r, ...p } : r)));
+    onChange(rows.map((r) => (r.day_of_week === dow ? { ...r, ...p } : r)));
 
   return (
     <Section title="진료시간">
@@ -478,7 +519,7 @@ function HoursForm({ hours, onSave }: { hours: DaySchedule[]; onSave: (h: DaySch
           </div>
         ))}
       </div>
-      <SaveButton onClick={async () => { setSaving(true); try { await onSave(rows); } finally { setSaving(false); } }} saving={saving} />
+      <SaveButton onClick={async () => { setSaving(true); try { await onSave(); } finally { setSaving(false); } }} saving={saving} />
     </Section>
   );
 }
