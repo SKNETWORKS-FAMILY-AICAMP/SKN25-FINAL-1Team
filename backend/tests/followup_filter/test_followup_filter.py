@@ -193,8 +193,8 @@ def test_ensure_safe_reply_urgent_appends_guidance():
          "severity_hint": "urgent_possible", "summary_delta": "혈변",
          "assistant_reply": "걱정되시겠어요. 남겨둘게요."}, "피 섞인 설사")
     reply = ensure_safe_reply(cls, "fallback")
-    # 전화 없음 → '병원 연락'이 아니라 '더 빠른 예약(앞당김)'을 제안하는 문구가 붙어야 한다.
-    assert ("응급" in reply) or ("내원" in reply) or ("병원" in reply)
+    # 겁주는 'ER로 가라'가 아니라 '더 빠른 예약(앞당김)'을 제안하는 문구가 붙어야 한다.
+    assert ("예약" in reply) or ("빠른" in reply) or ("병원" in reply)
     print("✓ urgent safety guidance (rebook offer) appended")
 
 
@@ -452,8 +452,8 @@ def test_booked_urgent_respiratory_beats_appointment_time(monkeypatch):
     assert calls[0]["emergency_alert"] is True
     assert res.events and res.events[0]["type"] == "followup_saved"
     assert res.events[0]["severity_hint"] == SeverityHint.URGENT_POSSIBLE.value
-    assert "현재 예약" not in res.reply and "확인해드릴게요" not in res.reply
-    assert ("응급" in res.reply) or ("병원" in res.reply) or ("내원" in res.reply)
+    assert "현재 예약 시간을 확인" not in res.reply and "확인해드릴게요" not in res.reply
+    assert ("예약" in res.reply) or ("빠른" in res.reply) or ("병원" in res.reply)
     assert "더 빠른 시간 찾기" in res.quick_replies
     print("✓ booked respiratory urgent beats appointment-time intent")
 
@@ -586,7 +586,7 @@ def test_five_turn_saved_reply_regression(monkeypatch):
             assert field in res.state_patch.get("asked_followup_fields", [])
         if llm_outs[idx]["severity_hint"] == "urgent_possible":
             assert "더 빠른 시간 찾기" in res.quick_replies
-            assert ("응급" in res.reply) or ("내원" in res.reply) or ("병원" in res.reply)
+            assert ("예약" in res.reply) or ("빠른" in res.reply) or ("병원" in res.reply)
         else:
             assert "더 빠른 시간 찾기" not in res.quick_replies
         assert not any(term in res.reply for term in forbidden_medical)

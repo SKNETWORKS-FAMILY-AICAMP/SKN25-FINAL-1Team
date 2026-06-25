@@ -45,6 +45,7 @@ from .prompts import (
     is_photo_followup,
     last_assistant_question,
     pick_saved_reply,
+    REPLY_SAVED_URGENT,
     short_answer_kind,
 )
 from app.utils.followup_policy import BOOKING_CHANGE_LIMITED_REPLY, FOLLOWUP_LIMITED_REPLY
@@ -634,6 +635,10 @@ class FollowupFilterAgent:
                     f"방금 사진에서는 {recent_media.rstrip(' .')}이 보였어요. "
                     "같은 부위가 더 달라지거나 진물이 생기는지 이어서 살펴봐 주세요."
                 )
+            elif emergency:
+                # 응급 경과: '변화 있으면 말씀해 주세요' 같은 한가한 저장 문구를 base로 쓰면
+                # 뒤에 붙는 응급 안내(URGENT_SAFETY_NOTE)와 충돌한다 → 공감 한 줄만 둔다.
+                fallback_reply = REPLY_SAVED_URGENT
             else:
                 fallback_reply = pick_saved_reply(cls.is_followup, ctx.history)
             raw_reply = ensure_safe_reply(cls, fallback_reply)
